@@ -13,11 +13,11 @@ Implementation of the function_symbol class
 function_symbol::function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters) :
     symbol(function_name, "global", 0, return_type, 0), formal_parameters(formal_parameters)
 {
-    // todo: misc
+    this->symbol_type = FUNCTION_DEFINITION;    // todo: will this be set if we delete it but keep it in the default constructor?
 }
 
 function_symbol::function_symbol(): symbol() {
-    // todo: constructor    
+    this->symbol_type = FUNCTION_DEFINITION;  
 }
 
 function_symbol::~function_symbol() {

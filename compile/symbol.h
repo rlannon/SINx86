@@ -24,6 +24,8 @@ class symbol {
     
     unsigned int stack_offset;  // the offset, in bytes, from the stack frame base
 protected:
+    SymbolType symbol_type;
+
     std::string name;
     std::string scope_name; // the name of the scope -- can be "global" or a function name
     unsigned int scope_level;   // the _level_ of the scope -- allows for block scopes
@@ -31,6 +33,8 @@ protected:
     DataType type;  // the symbol's type
 public:
     // our getters
+    SymbolType get_symbol_type() const;
+
     std::string get_name();
     std::string get_scope_name();
     unsigned int get_scope_level();
@@ -39,9 +43,9 @@ public:
     unsigned int get_stack_offset();
 
     // constructors
-    symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset);
+    explicit symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset);
     symbol();
-    ~symbol();
+    virtual ~symbol(); // the destructor must be virtual for the sake of the child class
 };
 
 class function_symbol: public symbol {

@@ -30,7 +30,7 @@ class compiler {
 
     // assignments
     std::stringstream assign(Assignment assign_stmt);
-    std::stringstream handle_assignment(symbol &sym, std::shared_ptr<Expression> value);
+    std::stringstream handle_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
 public:
     compiler();
     ~compiler();

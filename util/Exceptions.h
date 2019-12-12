@@ -44,6 +44,12 @@ public:
 	explicit SymbolNotFoundException(unsigned int line);
 };
 
+class InvalidSymbolException : public CompilerException
+{
+public:
+    explicit InvalidSymbolException(unsigned int line);
+};
+
 class ConstAssignmentException : public CompilerException
 {
 public:

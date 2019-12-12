@@ -18,4 +18,5 @@ Codes fall into the following categories:
 namespace compiler_errors {
     const unsigned int CONST_ASSIGNMENT_ERROR = 1;
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
+    const unsigned int INVALID_SYMBOL_TYPE_ERROR = 200;
 };

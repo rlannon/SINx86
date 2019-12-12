@@ -29,6 +29,15 @@ SymbolNotFoundException::SymbolNotFoundException(unsigned int line) :
 	// we don't need a function body because we called the super constructor
 }
 
+InvalidSymbolException::InvalidSymbolException(unsigned int line) :
+    CompilerException("Found a symbol, but it was of the improper type (e.g., VARIABLE instead of FUNCTION)", compiler_errors::INVALID_SYMBOL_TYPE_ERROR, line)
+{
+    /*
+    Since all symbols use the same table, we can't have conflicting names between functions and variables.
+    If a symbol is found, but the symbol is not a function, then we have an error.
+    */
+}
+
 ConstAssignmentException::ConstAssignmentException(unsigned int line) :
 	CompilerException("Cannot make assignment to const-qualified variable", compiler_errors::CONST_ASSIGNMENT_ERROR, line)
 {

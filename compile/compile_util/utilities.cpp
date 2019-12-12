@@ -85,18 +85,66 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
         case BINARY:
         {
             // get the type of a binary expression
+            Binary *binary = dynamic_cast<Binary*>(to_eval.get());
+
+            /*
+
+            Binary expressions are a little more tricky because they can involve multiple operands of different types
+
+            We must get the types of the left and right operands and compare them. The qualifiers (including sizes) might change:
+                - If one operand is signed, and the other is unsigned, the result may or may not be signed; it will generate a 'signed/unsigned mismatch' warning
+                - The width will change to match the widest operand
+            
+            In order to determine these operand types, this function is called recursively
+
+            */
+
+            DataType left = get_expression_data_type(binary->get_left(), symbol_table, line);
+            DataType right = get_expression_data_type(binary->get_right(), symbol_table, line);
+
+            // ensure the types are compatible
+            if (left.is_compatible(right)) {
+                if (left.get_width() >= right.get_width()) {
+                    type_information = left;
+                } else {
+                    type_information = right;
+                }
+            } else {
+                
+            }
+
             break;
         }
         case UNARY:
         {
             // get the type of a unary expression
+            Unary *u = dynamic_cast<Unary*>(to_eval.get());
+
+            // Unary expressions contain an expression inside of them; call this function recursively using said expression as a parameter
+            type_information = get_expression_data_type(u->get_operand(), symbol_table, line);
             break;
         }
         case VALUE_RETURNING_CALL:
         {
             // look into the symbol table to get the return type of the function
             ValueReturningFunctionCall *call_exp = dynamic_cast<ValueReturningFunctionCall*>(to_eval.get());
+            std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = symbol_table.find(call_exp->get_func_name());
 
+            // make sure it's in the table
+            if (it == symbol_table.end()) {
+                throw SymbolNotFoundException(line);
+            } else {
+                // ensure the symbol is a function symbol
+                if (it->second->get_symbol_type() == FUNCTION_DEFINITION) {
+                    // get the function symbol
+                    function_symbol *func_sym = dynamic_cast<function_symbol*>(it->second.get());
+
+                    // get the return type data
+                    type_information = func_sym->get_data_type();
+                } else {
+                    throw InvalidSymbolException(line);
+                }
+            }
             break;
         }
         case SIZE_OF:
