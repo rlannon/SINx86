@@ -348,6 +348,24 @@ DataType::DataType(Type primary, Type subtype, std::vector<SymbolQuality> qualit
 	this->set_width();
 }
 
+DataType::DataType(Type primary, Type subtype, SymbolQualities qualities) :
+    primary(primary),
+    subtype(subtype),
+    qualities(qualities)
+{
+    // if the type is int, set signed to true if it is not unsigned
+	if (primary == INT && !this->qualities.is_unsigned()) {
+		this->add_qualities({ SIGNED });
+	}
+	else if (primary == FLOAT)
+	{
+		this->add_qualities({ SIGNED });
+	}
+
+	// set the data width
+	this->set_width();
+}
+
 DataType::DataType()
 {
 	this->primary = NONE;

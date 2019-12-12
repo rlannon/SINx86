@@ -16,6 +16,8 @@ A class to contain all of our custom exceptions.
 #include <iostream>
 #include <bitset>
 
+#include "CompilerErrorCodes.h"
+
 /*
 
 	Exceptions.h
@@ -27,12 +29,25 @@ A class to contain all of our custom exceptions.
 
 class CompilerException : public std::exception
 {
+protected:
 	std::string message;
 	unsigned int code;
 	unsigned int line;
 public:
 	explicit CompilerException(const std::string& message, unsigned int code = 0, unsigned int line = 0);
 	virtual const char* what() const noexcept;
+};
+
+class SymbolNotFoundException : public CompilerException
+{
+public:
+	explicit SymbolNotFoundException(unsigned int line);
+};
+
+class ConstAssignmentException : public CompilerException
+{
+public:
+	explicit ConstAssignmentException(unsigned int line);
 };
 
 // sometimes, we want to print an error message, but we don't need to stop compilation

@@ -23,6 +23,17 @@ CompilerException::CompilerException(const std::string& message, unsigned int co
 	this->message = "**** Compiler Error " + std::to_string(this->code) + ": " + this->message + " (line " + std::to_string(this->line) + ")";
 }
 
+SymbolNotFoundException::SymbolNotFoundException(unsigned int line) :
+	CompilerException("Could not find referenced symbol", compiler_errors::SYMBOL_NOT_FOUND_ERROR, line)
+{
+	// we don't need a function body because we called the super constructor
+}
+
+ConstAssignmentException::ConstAssignmentException(unsigned int line) :
+	CompilerException("Cannot make assignment to const-qualified variable", compiler_errors::CONST_ASSIGNMENT_ERROR, line)
+{
+	// we don't need a function body because we called the super constructor
+}
 
 // Compiler Warning
 

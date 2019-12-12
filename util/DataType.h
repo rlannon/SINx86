@@ -75,6 +75,7 @@ public:
 	size_t get_width();
 
 	DataType(Type primary, Type subtype = NONE, std::vector<SymbolQuality> qualities = {}, size_t array_length = 0);
+    DataType(Type primary, Type subtype, SymbolQualities qualities);
 	DataType();
 	~DataType();
 };
