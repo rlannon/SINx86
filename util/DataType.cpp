@@ -46,31 +46,30 @@ void SymbolQualities::add_qualities(std::vector<SymbolQuality> to_add)
 	// simply populate the vector; since we are adding, we don't really care about the original values
 	for (std::vector<SymbolQuality>::iterator it = to_add.begin(); it != to_add.end(); it++)
 	{
-		if (*it == CONSTANT)
-		{
-			const_q = true;
-		}
-		else if (*it == STATIC)
-		{
-			static_q = true;
-		}
-		else if (*it == DYNAMIC)
-		{
-			dynamic_q = true;
-		}
-		else if (*it == SIGNED)
-		{
-			signed_q = true;
-		}
-		else if (*it == UNSIGNED)
-		{
-			unsigned_q = true;
-			signed_q = false;
-		}
-		else {
-			continue;
-		}
+		this->add_quality(*it);
 	}
+}
+
+void SymbolQualities::add_quality(SymbolQuality to_add)
+{
+    // Add a single quality to our qualities list
+    if (to_add == CONSTANT)
+    {
+        const_q = true;
+    } else if (to_add == STATIC)
+    {
+        static_q = true;
+    } else if (to_add == DYNAMIC)
+    {
+        dynamic_q = true;
+    } else if (to_add == SIGNED)
+    {
+        signed_q = true;
+    } else if (to_add == UNSIGNED)
+    {
+        unsigned_q = true;
+        signed_q = false;
+    }
 }
 
 SymbolQualities::SymbolQualities(std::vector<SymbolQuality> qualities)
@@ -321,6 +320,11 @@ void DataType::set_subtype(Type new_subtype) {
 void DataType::add_qualities(std::vector<SymbolQuality> to_add) {
 	// simply use the "SymbolQualities::add_qualities" function
 	this->qualities.add_qualities(to_add);
+}
+
+void DataType::add_quality(SymbolQuality to_add) {
+    // set the qualities of this variable to
+    this->qualities.add_quality(to_add);
 }
 
 size_t DataType::get_width() {

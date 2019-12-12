@@ -112,7 +112,37 @@ std::string Literal::get_value() {
 
 Literal::Literal(Type data_type, std::string value, Type subtype) : value(value) {
 	Literal::expression_type = LITERAL;
-	Literal::type = DataType(data_type, subtype);
+
+    // symbol qualities for our DataType object
+    bool const_q = true;
+    bool long_q = false;
+    bool short_q = false;
+    bool signed_q = false;
+    
+    // If we have an integer, parse the value to see if we can determine some qualities about it
+    if (data_type == INT) {
+        long val = std::stol(value);
+
+        // signed/unsigned
+        if (val < 0) {
+            signed_q = true;
+        }
+
+        // long/short
+        if (val >= 0x100000000) {
+            long_q = true;
+        } else if (val < 0x10000) {
+            short_q = true;
+        }
+
+        // todo: handle long/short for signed numbers?
+    }
+
+    // set our symbol qualities
+    SymbolQualities qualities(const_q, false, false, signed_q, !signed_q, long_q, short_q);  // literals are always considered const
+
+    // todo: set long/short qualities for ints and floats
+	Literal::type = DataType(data_type, subtype, qualities);
 }
 
 Literal::Literal() {

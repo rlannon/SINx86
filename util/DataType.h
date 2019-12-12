@@ -13,6 +13,9 @@ DataType contains the type, subtype, and qualities of a given expression alongsi
 #pragma once
 
 #include <vector>
+#include <cinttypes>
+#include <cstdlib>
+
 #include "EnumeratedTypes.h"
 #include "Exceptions.h"
 
@@ -35,6 +38,7 @@ public:
 	bool is_short();
 
 	void add_qualities(std::vector<SymbolQuality> to_add);
+    void add_quality(SymbolQuality to_add);
 
 	SymbolQualities(std::vector<SymbolQuality> qualities);
 	SymbolQualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long = false, bool is_short = false);
@@ -69,6 +73,7 @@ public:
 	void set_primary(Type new_primary);
 	void set_subtype(Type new_subtype);
 	void add_qualities(std::vector<SymbolQuality> to_add);
+    void add_quality(SymbolQuality to_add);
 
 	bool is_compatible(DataType to_compare);
 
