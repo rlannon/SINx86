@@ -24,7 +24,7 @@ StatementBlock Parser::create_ast() {
 
 	// creating an empty lexeme will allow us to test if the current token has nothing in it
 	// sometimes, the lexer will produce a null lexeme, so we want to skip over it if we find one
-	lexeme null_lexeme("", "", NULL);
+	lexeme null_lexeme("", "", 0);
 
 	// Parse a token file
 	// While we are within the program and we have not reached the end of a procedure block, keep parsing

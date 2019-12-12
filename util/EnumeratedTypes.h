@@ -51,7 +51,7 @@ enum SymbolType {
 };
 
 
-const size_t num_qualities = 5;	// we can have five symbol qualities, enumerated in 'enum SymbolQuality'
+const size_t num_qualities = 8;
 enum SymbolQuality {
 	// So that the symbol's quality does not need to be stored as a string
 	NO_QUALITY,
@@ -59,7 +59,9 @@ enum SymbolQuality {
 	STATIC,
 	DYNAMIC,
 	SIGNED,
-	UNSIGNED
+	UNSIGNED,
+	LONG,
+	SHORT
 };
 
 
@@ -75,12 +77,13 @@ enum exp_operator {
 	LESS,
 	GREATER_OR_EQUAL,
 	LESS_OR_EQUAL,
-	AND,	// 'AND' is equivalent to C++ &&
-	NOT,
-	OR,
+	AND,	// 'AND' is logical-AND (C++ &&) -- keyowrd 'and'
+	NOT,	// logical not
+	OR,		// logical or
 	MODULO,
-	BIT_AND,	// 'BIT_AND' is bitwise-AND (C++ &)
-	BIT_OR,
+	BIT_AND,	// 'BIT_AND' is bitwise-AND (C++ &) -- operator '&'
+	BIT_OR,		// same goes with BIT_OR
+	BIT_NOT,	// same with BIT_NOT
 	NO_OP
 };
 

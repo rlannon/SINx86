@@ -111,19 +111,33 @@ SymbolQualities::SymbolQualities(std::vector<SymbolQuality> qualities)
 	}
 }
 
-SymbolQualities::SymbolQualities(bool c, bool s, bool d, bool sg, bool us) :
-	const_q(c),
-	static_q(s),
-	dynamic_q(d),
-	signed_q(sg),
-	unsigned_q(us)
+SymbolQualities::SymbolQualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long, bool is_short) :
+	const_q(is_const),
+	static_q(is_static),
+	dynamic_q(is_dynamic),
+	signed_q(is_signed),
+	unsigned_q(is_unsigned),
+	long_q(is_long),
+	short_q(is_short)
 {
+	// unsigned always wins out over signed
 	if (SymbolQualities::unsigned_q) {
 		SymbolQualities::signed_q = false;
 	}
 
+	// const will always win out over static and dynamic
 	if (SymbolQualities::const_q) {
 		SymbolQualities::static_q, SymbolQualities::dynamic_q = false;
+	}
+
+	// if both long and short are set, generate a warning
+	if (SymbolQualities::long_q && SymbolQualities::short_q) {
+		// todo: warning
+		std::cerr << "Warning: 'long' and 'short' both used as qualifiers; this amounts to a regular integer" << std::endl;
+
+		// delete both qualities
+		SymbolQualities::long_q = false;
+		SymbolQualities::short_q = false;
 	}
 }
 
@@ -135,11 +149,64 @@ SymbolQualities::SymbolQualities()
 	dynamic_q = false;
 	signed_q = false;
 	unsigned_q = false;
+	long_q = false;
+	short_q = false;
 }
 
 SymbolQualities::~SymbolQualities()
 {
 
+}
+
+/*
+
+DataType methods
+
+*/
+
+void DataType::set_width() {
+	// Sets the width of the type based on its primary type and symbol qualities
+
+	if (this->primary == INT) {
+		// ints are usually 4 bytes wide (32-bit), but can be 2 bytes for a short or 8 for a long 
+
+		if (this->qualities.is_long()) {
+			this->width = 8;
+		} else if (this->qualities.is_short()) {
+			this->width = 2;
+		} else {
+			this->width = 4;
+		}
+	} else if (this->primary == FLOAT) {
+		// floats can also use the long and short keywords -- a long float is the same as a double, a short float is the same as a half
+
+		if (this->qualities.is_long()) {
+			this->width = 8;
+		} else if (this->qualities.is_short()) {
+			this->width = 2;
+		} else {
+			this->width = 4;
+		}
+	} else if (this->primary == BOOL) {
+		// bools are only a byte wide
+		this->width = 1;
+	} else if (this->primary == PTR) {
+		// because we are compiling to x86_64, pointers should be 64-bit
+		this->width = 8;
+	} else if (this->primary == STRING) {
+		// since strings are all implemented as pointers, they have widths of 8 bytes
+		// (they always point to dynamic memory, but syntactically don't behave like pointers)
+		this->width = 8;
+	} else {
+		/*
+		Everything else should use 0:
+			void	-	a void type is literally nothing
+			array	-	do not have defined widths, it depends on the array and its subtype
+			struct	-	require the compiler to look for the width in the struct table
+		*/
+
+		this->width = 0;
+	}
 }
 
 /*
@@ -256,12 +323,17 @@ void DataType::add_qualities(std::vector<SymbolQuality> to_add) {
 	this->qualities.add_qualities(to_add);
 }
 
+size_t DataType::get_width() {
+	return this->width;
+}
+
 DataType::DataType(Type primary, Type subtype, std::vector<SymbolQuality> qualities, size_t array_length) :
 	primary(primary),
 	subtype(subtype),
 	array_length(array_length)
 {
-	this->qualities = SymbolQualities(qualities);	// use the vector constructor
+	// add our symbol qualities
+	this->qualities = SymbolQualities(qualities);
 	
 	// if the type is int, set signed to true if it is not unsigned
 	if (primary == INT && !this->qualities.is_unsigned()) {
@@ -271,6 +343,9 @@ DataType::DataType(Type primary, Type subtype, std::vector<SymbolQuality> qualit
 	{
 		this->add_qualities({ SIGNED });
 	}
+
+	// set the data width
+	this->set_width();
 }
 
 DataType::DataType()

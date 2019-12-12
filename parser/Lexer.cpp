@@ -240,7 +240,7 @@ lexeme Lexer::read_next() {
 	char ch = this->peek();	// peek to see if we are still within the file
 
 	if (this->stream->eof()) {
-		next_lexeme = lexeme("", "", NULL);	// return an empty tuple if we have reached the end of the file
+		next_lexeme = lexeme("", "", 0);	// return an empty tuple if we have reached the end of the file
 		this->exit_flag = true;	// set our exit flag
 		return next_lexeme;
 	}
@@ -263,7 +263,7 @@ lexeme Lexer::read_next() {
 				ch = this->peek();
 
 				if (this->stream->eof() || this->eof()) {	// check to make sure we haven't gone past the end of the file
-					next_lexeme = lexeme("", "", NULL);	// if we are, set the exit flag return an empty tuple
+					next_lexeme = lexeme("", "", 0);	// if we are, set the exit flag return an empty tuple
 					this->exit_flag = true;	// set our exit flag
 					return next_lexeme;	// return the empty lexeme
 				}
@@ -344,7 +344,7 @@ lexeme Lexer::read_next() {
 		else if (ch == '\n') {	// if we encounter a newline character
 			this->peek();
 			if (this->stream->eof()) {
-				next_lexeme = lexeme("", "", NULL);	// if we have reached the end of file, set the exit flag and return an empty tuple
+				next_lexeme = lexeme("", "", 0);	// if we have reached the end of file, set the exit flag and return an empty tuple
 				this->exit_flag = true;
 				return next_lexeme;
 			}
