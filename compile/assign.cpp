@@ -29,9 +29,13 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
 
     // if we could find the symbol, perform the assignment; else, throw an exception
     if (it != this->symbol_table.end()) {
-        // ensure we aren't assigning to a const-qualified variable
+        // ensure we can make the assignment
         if (it->second->get_data_type().get_qualities().is_const()) {
+            // ensure we aren't assigning to a const-qualified variable
             throw ConstAssignmentException(assign_stmt.get_line_number());
+        } else if (it->second->get_symbol_type() == FUNCTION_DEFINITION) {
+            // if the symbol is a function symbol, then we have an error
+            throw InvalidSymbolException(assign_stmt.get_line_number());
         } else {
             // dispatch to the assignment handler
             return this->handle_assignment(*(it->second.get()), assign_stmt.get_rvalue(), assign_stmt.get_line_number());
@@ -58,19 +62,42 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
     DataType symbol_type = sym.get_data_type();
     DataType expression_type = get_expression_data_type(value, this->symbol_table, line);
 
-    if (symbol_type.get_primary() == INT) {
+    // ensure our expression's data type is compatible with our variable's data type
+    if (symbol_type.is_compatible(expression_type)) {
+        if (symbol_type.get_primary() == INT) {
+            return handle_assignment(sym, value, line);
+        } else if (symbol_type.get_primary() == FLOAT) {
 
-    } else if (symbol_type.get_primary() == FLOAT) {
+        } else if (symbol_type.get_primary() == BOOL) {
 
-    } else if (symbol_type.get_primary() == BOOL) {
+        } else if (symbol_type.get_primary() == PTR) {
 
-    } else if (symbol_type.get_primary() == PTR) {
+        } else if (symbol_type.get_primary() == STRING) {
 
-    } else if (symbol_type.get_primary() == STRING) {
+        } else if (symbol_type.get_primary() == ARRAY) {
 
-    } else if (symbol_type.get_primary() == ARRAY) {
+        } else if (symbol_type.get_primary() == STRUCT) {
 
-    } else if (symbol_type.get_primary() == STRUCT) {
-
+        }
+    } else {
+        throw TypeException(line);
     }
+}
+
+std::stringstream handle_int_assignment(symbol &symbol, std::shared_ptr<Expression> value, unsigned int line) {
+    /*
+
+    handle_int_assignment
+    Makes an assignment of the value given to the symbol
+
+    @param  symbol  The symbol containing the lvalue
+    @param  value   The rvalue
+    @return A stringstream containing the generated code
+
+    */
+
+    std::stringstream assign_ss;
+
+    // Generate the code to evaluate the expression; it should go into rax
+    // todo: make int assignment
 }

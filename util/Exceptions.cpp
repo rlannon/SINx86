@@ -38,6 +38,12 @@ InvalidSymbolException::InvalidSymbolException(unsigned int line) :
     */
 }
 
+TypeException::TypeException(unsigned int line) :
+    CompilerException("Types are not compatible", compiler_errors::TYPE_ERROR, line)
+{
+    // Exception should be used when types are incompatible
+}
+
 ConstAssignmentException::ConstAssignmentException(unsigned int line) :
 	CompilerException("Cannot make assignment to const-qualified variable", compiler_errors::CONST_ASSIGNMENT_ERROR, line)
 {

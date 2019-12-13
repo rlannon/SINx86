@@ -110,7 +110,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
                     type_information = right;
                 }
             } else {
-                
+                throw TypeException(line);  // throw an exception if the types are not compatible with one another
             }
 
             break;
@@ -153,7 +153,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             type_information.add_qualities(std::vector<SymbolQuality>{CONSTANT, UNSIGNED});
             break;
         default:
-            // todo: throw an exception if the type is invalid
+            throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
             break;
     };
 

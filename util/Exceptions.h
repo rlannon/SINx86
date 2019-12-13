@@ -50,6 +50,12 @@ public:
     explicit InvalidSymbolException(unsigned int line);
 };
 
+class TypeException : public CompilerException
+{
+public:
+    explicit TypeException(unsigned int line);
+};
+
 class ConstAssignmentException : public CompilerException
 {
 public:
