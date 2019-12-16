@@ -23,6 +23,7 @@ namespace compiler_errors {
 
     const unsigned int INVALID_SYMBOL_TYPE_ERROR = 200;
     const unsigned int TYPE_ERROR = 205;
+    const unsigned int UNICODE_ERROR = 215;
 
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;
 };

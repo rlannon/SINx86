@@ -91,6 +91,7 @@ enum exp_operator {
 enum Type {
 	// So that our types are all clearly defined
 	NONE,
+    CHAR,
 	INT,
 	FLOAT,
 	STRING,

@@ -51,6 +51,8 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
     handle_assignment
     Generates code to assign 'value' to 'sym'
 
+    We need this as a separate function because it will be called by the allocation code generator if the user uses alloc-assign syntax
+
     @param  sym The symbol to which we are assigning data
     @param  value   A shared pointer to the expression for the assignment
     @return A stringstream containing the generated code
@@ -66,6 +68,8 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
     if (symbol_type.is_compatible(expression_type)) {
         if (symbol_type.get_primary() == INT) {
             return handle_assignment(sym, value, line);
+        } else if (symbol_type.get_primary() == CHAR) {
+
         } else if (symbol_type.get_primary() == FLOAT) {
 
         } else if (symbol_type.get_primary() == BOOL) {
@@ -84,7 +88,7 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
     }
 }
 
-std::stringstream handle_int_assignment(symbol &symbol, std::shared_ptr<Expression> value, unsigned int line) {
+std::stringstream compiler::handle_int_assignment(symbol &symbol, std::shared_ptr<Expression> value, unsigned int line) {
     /*
 
     handle_int_assignment
@@ -98,6 +102,11 @@ std::stringstream handle_int_assignment(symbol &symbol, std::shared_ptr<Expressi
 
     std::stringstream assign_ss;
 
-    // Generate the code to evaluate the expression; it should go into rax
-    // todo: make int assignment
+    // Generate the code to evaluate the expression; it should go into the a register (rax, eax, ax, or al depending on the data width)
+    assign_ss << this->evaluate_expression(value, line).str();
+
+    // todo: make assignment
+
+    // return our generated code
+    return assign_ss;
 }
