@@ -10,8 +10,8 @@ A class to track the current general-purpose registers in use
 
 
 #include <unordered_map>
-#include "../util/EnumeratedTypes.h"
-#include "../util/Exceptions.h"
+#include "../../util/EnumeratedTypes.h"
+#include "../../util/Exceptions.h"
 
 
 class register_usage {
