@@ -15,10 +15,13 @@ Copyright 2019 Riley Lannon
 #include "symbol.h"
 #include "../parser/Parser.h"
 #include "compile_util/utilities.h"
+#include "../util/stack.h"  // the stack data structure
 
 class compiler {
     std::string current_scope_name; // the name of the current scope
     unsigned int current_scope_level;   // the current scope level
+
+    stack<register_usage> reg_stack;    // a stack for tracking which registers are in use in a given scope
 
     std::unordered_map<std::string, std::shared_ptr<symbol>> symbol_table;    // the symbol table will be implemented through an unordered map
 

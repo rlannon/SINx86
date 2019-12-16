@@ -16,5 +16,6 @@ Our various compiler utilities
 #include "data_widths.h"
 #include "../symbol.h"
 #include "../../util/Exceptions.h"
+#include "register_usage.h"
 
 DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, std::shared_ptr<symbol>> &symbol_table, unsigned int line);
