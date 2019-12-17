@@ -13,6 +13,26 @@ SymbolType symbol::get_symbol_type() const {
     return this->symbol_type;
 }
 
+std::string symbol::get_name() {
+	return this->name;
+}
+
+std::string symbol::get_scope_name() {
+	return this->scope_name;
+}
+
+unsigned int symbol::get_scope_level() {
+	return this->scope_level;
+}
+
+DataType symbol::get_data_type() {
+	return this->type;
+}
+
+unsigned int symbol::get_stack_offset() {
+	return this->stack_offset;
+}
+
 symbol::symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset) : 
     name(name),
     scope_name(scope_name),

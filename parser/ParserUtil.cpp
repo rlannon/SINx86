@@ -97,7 +97,7 @@ void Parser::skipPunc(char punc) {
 	// Skip a punctuation mark
 
 	if (this->current_token().type == "punc") {
-		if (this->current_token().value == &punc) {
+		if (this->current_token().value[0] == punc) {
 			this->position += 1;
 			return;
 		}

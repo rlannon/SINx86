@@ -1,2 +1,9 @@
 .vscode
 *.o
+*.sln
+Debug/*
+*.exe
+*.vcxproj*
+.vs/*
+x64/*
+*.obj

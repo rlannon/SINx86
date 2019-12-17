@@ -26,9 +26,9 @@ class register_usage {
 
     // using an unordered_map will allow much easier access to these booleans
     std::unordered_map<reg, bool&> regs;
-    static const std::unordered_map<reg, std::string> reg_strings;
-    static const std::unordered_map<reg, std::string> reg_32_strings;
-    static const std::unordered_map<reg, std::string> reg_16_strings;
+    static std::unordered_map<reg, std::string> reg_strings;
+    static std::unordered_map<reg, std::string> reg_32_strings;
+    static std::unordered_map<reg, std::string> reg_16_strings;
 
     // The four general-purpose named registers
     bool rax;
@@ -58,9 +58,9 @@ public:
     reg get_available_register();
     
     // get the name of a register
-    std::string get_register_name(reg to_get) const;    // full 64-bit register
-    std::string get_r32_name(reg to_get) const; // 32-bit name
-    std::string get_r16_name(reg to_get) const; // 16-bit name
+    std::string get_register_name(const reg to_get);    // full 64-bit register
+    // std::string get_r32_name(reg to_get); // 32-bit name
+    // std::string get_r16_name(reg to_get); // 16-bit name
 
     register_usage();
     ~register_usage();

@@ -10,7 +10,7 @@ The implementation of the register_usage class
 
 #include "register_usage.h"
 
-const std::unordered_map<reg, std::string> reg_strings {
+std::unordered_map<reg, std::string> register_usage::reg_strings {
     { RAX, "rax" },
     { RBX, "rbx" },
     { RCX, "rcx" },
@@ -27,7 +27,7 @@ const std::unordered_map<reg, std::string> reg_strings {
     { R15, "r15" }
 };
 
-const std::unordered_map<reg, std::string> reg_32_strings {
+std::unordered_map<reg, std::string> register_usage::reg_32_strings {
     { RAX, "eax" },
     { RBX, "ebx" },
     { RCX, "ecx" },
@@ -44,7 +44,7 @@ const std::unordered_map<reg, std::string> reg_32_strings {
     { R15, "r15d" }
 };
 
-const std::unordered_map<reg, std::string> reg_16_strings {
+std::unordered_map<reg, std::string> register_usage::reg_16_strings {
     { RAX, "ax" },
     { RBX, "bx" },
     { RCX, "cx" },
@@ -77,7 +77,7 @@ void register_usage::set(reg to_set) {
     
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
-        throw CompilerException("Invalid register choice");
+        throw CompilerException("Invalid register selection");
     } else {
         it->second = true;  // it is a reference, so it will update the original
     }
@@ -99,9 +99,15 @@ reg register_usage::get_available_register() {
     }
 }
 
-std::string register_usage::get_register_name(reg to_get) const {
+std::string register_usage::get_register_name(const reg to_get) {
     // Get the string value of a register name
-
+	std::unordered_map<reg, std::string>::iterator it = reg_strings.find(to_get);
+	if (it == reg_strings.end()) {
+		// todo: exception here?
+		throw CompilerException("Invalid register selection");
+	} else {
+		return it->second;
+	}
 }
 
 register_usage::register_usage(): 

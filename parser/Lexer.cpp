@@ -21,7 +21,7 @@ lexeme::lexeme(std::string type, std::string value, unsigned int line_number) : 
 const std::vector<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "catch", "const", "decl", "def", "dynamic", "else", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sizeof", "static", "string", "struct", "try", "unsigned", "void", "while", "xor"};
 
 // Our regular expressions
-const std::string Lexer::punc_exp = "[\\.',:;\\[\\]\\{\\}\\(\\)]";	// expression for punctuation
+const std::string Lexer::punc_exp = R"([\.',:;\[\]\{\}\(\)])";	// expression for punctuation
 const std::string Lexer::op_exp = "[\\+\\-\\*/%=\\&\\|\\^<>\\$\\?!@#]";	// expression for operations
 const std::string Lexer::id_exp = "[_0-9a-zA-Z]";	// expression for interior id letters
 const std::string Lexer::bool_exp = "[(true)|(false)]";
@@ -76,7 +76,7 @@ These are used to test whether a character is of a certain type.
 
 bool Lexer::match_character(char ch, std::string expression) {
 	try {
-		return (std::regex_match(&ch, std::regex(expression)));
+		return std::regex_match(std::string(1, ch), std::regex(expression));
 	}
 	catch (const std::regex_error &e) {
 		std::cerr << "REGEX ERROR:" << std::endl << e.what() << std::endl;	// todo: reevaluate whether these functions need to be static

@@ -140,7 +140,7 @@ T stack<T, Allocator>::peek()
 
 	if (this->_size != 0)
 	{
-		return this->buffer[this->size - 1];
+		return this->buffer[this->_size - 1];
 	}
 	else
 	{
