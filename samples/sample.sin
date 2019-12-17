@@ -1,0 +1,13 @@
+// sample.sin
+// A test file for our compiler
+
+def void main() {
+    // the main function
+    alloc int a;
+    alloc int x: 23;
+    
+    let a = 12;
+    let a = a + x;
+
+    return void;
+}
