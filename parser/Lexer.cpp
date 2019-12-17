@@ -76,6 +76,7 @@ These are used to test whether a character is of a certain type.
 
 bool Lexer::match_character(char ch, std::string expression) {
 	try {
+        // todo: is there a more efficient way to test one character?
 		return std::regex_match(std::string(1, ch), std::regex(expression));
 	}
 	catch (const std::regex_error &e) {

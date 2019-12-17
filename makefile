@@ -5,25 +5,37 @@ cc=g++
 cpp_version=c++17
 flags=-std=$(cpp_version) -g
 target=sinx86
+bin=bin/
 
-parser_dependencies=lexer.o parseexpression.o parsestatement.o parserutil.o statement.o expression.o
-util_dependencies=datatype.o exceptions.o binaryio.o
+# object file dependencies
+parser_objs=lexer.o parseexpression.o parsestatement.o parserutil.o statement.o expression.o
+util_objs=datatype.o exceptions.o binaryio.o
+build_objs=parser.o $(parser_objs) $(util_objs)
 
-build_depend=parser.o $(parser_dependencies) $(util_dependencies)
+# source file dependencies
+parser_dependencies=parser/*
+util_dependencies=util/*
+all_dependencies=$(parser_dependencies) $(util_dependencies)
+
+# todo: simplify builds, dependencies, etc.
+
+build: $(target)
 
 default: $(target)
 
 # Build the whole program
 
-sinx86: $(build_depend) main.cpp
-	$(cc) $(flags) -o $(target) -g main.cpp $(build_depend)
+$(target): $(build_objs)
+	@echo "Building target..."
+	$(cc) $(flags) -o $@ main.cpp $^
+	@echo "Build successful!"
 
 # Build the compiler
 # todo: build compiler
 
 # Build the parser
 
-parser.o: $(parser_dependencies) $(util_dependencies)
+parser.o: $(parser_objs) $(util_objs) $(parser_dependencies)
 	$(cc) $(flags) -o parser.o -c parser/Parser.cpp
 
 parseexpression.o: expression.o datatype.o exceptions.o
@@ -57,4 +69,7 @@ binaryio.o:
 
 # cleanup
 clean:
+	rm sinx86
 	rm *.o
+
+.PHONY: build clean

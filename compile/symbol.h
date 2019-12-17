@@ -35,12 +35,12 @@ public:
     // our getters
     SymbolType get_symbol_type() const;
 
-    std::string get_name();
-    std::string get_scope_name();
-    unsigned int get_scope_level();
+    std::string get_name() const;
+    std::string get_scope_name() const;
+    unsigned int get_scope_level() const;
 
-    DataType get_data_type();
-    unsigned int get_stack_offset();
+    DataType get_data_type() const;
+    unsigned int get_stack_offset() const;
 
     // constructors
     explicit symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset);

@@ -14,7 +14,7 @@ For a documentation of the language, see either the doc folder in this project o
 // All pre-existing headers used in this file are already included in other project files
 
 #include <fstream>
-#include <istream>
+#include <iostream>
 
 // Our headers
 #include "parser/Parser.h"
@@ -33,6 +33,7 @@ int main (int argc, char *argv[]) {
     // create new compiler and parser objects
 
     try {
+        // todo: refactor constructors to streamline this process
         std::ifstream infile;
         infile.open("samples/sample.sin", std::ios::in);
         Lexer l(infile);

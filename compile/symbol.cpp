@@ -13,23 +13,23 @@ SymbolType symbol::get_symbol_type() const {
     return this->symbol_type;
 }
 
-std::string symbol::get_name() {
+std::string symbol::get_name() const {
 	return this->name;
 }
 
-std::string symbol::get_scope_name() {
+std::string symbol::get_scope_name() const {
 	return this->scope_name;
 }
 
-unsigned int symbol::get_scope_level() {
+unsigned int symbol::get_scope_level() const {
 	return this->scope_level;
 }
 
-DataType symbol::get_data_type() {
+DataType symbol::get_data_type() const {
 	return this->type;
 }
 
-unsigned int symbol::get_stack_offset() {
+unsigned int symbol::get_stack_offset() const {
 	return this->stack_offset;
 }
 
