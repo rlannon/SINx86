@@ -21,6 +21,7 @@ Copyright 2019 Riley Lannon
 class compiler {
     std::string current_scope_name; // the name of the current scope
     unsigned int current_scope_level;   // the current scope level
+    bool is_in_scope(symbol &sym);  // check if the symbol is in scope
 
     stack<register_usage> reg_stack;    // a stack for tracking which registers are in use in a given scope
 

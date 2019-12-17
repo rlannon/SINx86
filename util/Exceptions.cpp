@@ -38,6 +38,12 @@ InvalidSymbolException::InvalidSymbolException(unsigned int line) :
     */
 }
 
+OutOfScopeException::OutOfScopeException(unsigned int line) :
+    CompilerException("Symbol is out of scope", compiler_errors::OUT_OF_SCOPE_ERROR)
+{
+    // No body necessary
+}
+
 TypeException::TypeException(unsigned int line) :
     CompilerException("Types are not compatible", compiler_errors::TYPE_ERROR, line)
 {

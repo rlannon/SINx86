@@ -217,7 +217,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
     // get the symbol for the lvalue
     std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.find(to_evaluate.getValue());
-    
+
     // it must be a variable symbol, not a function definition
     if (it->second->get_symbol_type() == FUNCTION_DEFINITION) {
         // todo: throw error
@@ -225,66 +225,77 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
         // get the symbol
         symbol &sym = *dynamic_cast<symbol*>(it->second.get());
 
-        // if the type of the symbol is not void, array, or struct, we can pass it in a register
-        if (sym.get_data_type().get_primary() != VOID && sym.get_data_type().get_primary() != ARRAY && sym.get_data_type().get_primary() != STRUCT) {
-            // the data width determines which register size to use
-            std::string reg;
-            if (sym.get_data_type().get_width() == 1 || sym.get_data_type().get_width() == 8) {
-                reg = "al";
-            } else if (sym.get_data_type().get_width() == 16) {
-                reg = "ax";
-            } else if (sym.get_data_type().get_width() == 32) {
-                reg = "eax";
-            } else if (sym.get_data_type().get_width() == 64) {
-                reg = "rax";
-            } else {
-                // todo: data width exception?
-            }
+        // ensure the symbol is accessible in the current scope
+        if (this->is_in_scope(sym)) {
+            // if the type of the symbol is not void, array, or struct, we can pass it in a register
+            if (sym.get_data_type().get_primary() != VOID && sym.get_data_type().get_primary() != ARRAY && sym.get_data_type().get_primary() != STRUCT) {
+                // the data width determines which register size to use
+                std::string reg;
+                if (sym.get_data_type().get_width() == 1 || sym.get_data_type().get_width() == 8) {
+                    reg = "al";
+                } else if (sym.get_data_type().get_width() == 16) {
+                    reg = "ax";
+                } else if (sym.get_data_type().get_width() == 32) {
+                    reg = "eax";
+                } else if (sym.get_data_type().get_width() == 64) {
+                    reg = "rax";
+                } else {
+                    // todo: is this necessary?
+                    throw CompilerException("Invalid data width for symbol", compiler_errors::DATA_WIDTH_ERROR, line);
+                }
 
-            if (sym.get_data_type().get_qualities().is_const()) {
-                // todo: const variables
-            } else if (sym.get_data_type().get_qualities().is_static()) {
-                // todo: static variables
-            } else if (sym.get_data_type().get_qualities().is_dynamic()) {
-                // dynamic memory
-                // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
+                if (sym.get_data_type().get_qualities().is_const()) {
+                    // const variables can be looked up by their name -- they are in the .data section
+                    eval_ss << "\t" << "mov " << reg << ", [" << sym.get_name() << "]" << std::endl;
+                } else if (sym.get_data_type().get_qualities().is_static()) {
+                    // static memory can be looked up by name -- variables are in the .bss section
 
-                // todo: how to handle strings? strings are dynamic but operate a little differently due to their nature
-                // todo: should dynamic variables be dereferenced here, or should they be dereferenced where they are used?
+                    // they do not need to be in the current scope, as they are accessible everywhere (unscoped)
+                    eval_ss << "\t" << "mov " << reg << ", [" << sym.get_name() << "]" << std::endl;
+                } else if (sym.get_data_type().get_qualities().is_dynamic() && sym.get_data_type().get_primary() != STRING) {
+                    // dynamic memory
+                    // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
 
-                // if the RBX register is currently in use, then we should check rsi; if it's in use, then push and pop it again
-                std::string reg_used = "";
-                bool reg_pushed = false;
-                if (this->reg_stack.peek().is_in_use(RBX)) {
-                    if (this->reg_stack.peek().is_in_use(RSI)) {
-                        eval_ss << "\t" << "push rsi" << std::endl;
-                        reg_pushed = true;
-                        reg_used = "rsi";
+                    // todo: further consider strings
+                    // Although strings use dynamic memory, they don't behave like it syntactically -- all string operations use _pointers_ to the strings
+
+                    // if the RBX register is currently in use, then we should check rsi; if it's in use, then push and pop it again
+                    std::string reg_used = "";
+                    bool reg_pushed = false;
+                    if (this->reg_stack.peek().is_in_use(RBX)) {
+                        if (this->reg_stack.peek().is_in_use(RSI)) {
+                            eval_ss << "\t" << "push rsi" << std::endl;
+                            reg_pushed = true;
+                            reg_used = "rsi";
+                        } else {
+                            reg_used = "rsi";
+                        }
                     } else {
-                        reg_used = "rsi";
+                        reg_used = "rbx";
+                    }
+
+                    // get the dereferenced pointer in A
+                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg << ", [" << reg_used << "]" << std::endl;
+
+                    // if we had to push a register, restore it
+                    if (reg_pushed) {
+                        eval_ss << "\t" << "pop rsi" << std::endl;
                     }
                 } else {
-                    reg_used = "rbx";
+                    // automatic memory
+                    // get the stack offset; instruction should be something like
+                    //      mov rax, [rbp - 4]
+                    eval_ss << "\t" << "mov " << reg << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
                 }
 
-                // get the dereferenced pointer in A
-                eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
-                eval_ss << "\t" << "mov " << reg << ", [" << reg_used << "]" << std::endl;
-
-                // if we had to push a register, restore it
-                if (reg_pushed) {
-                    eval_ss << "\t" << "pop rsi" << std::endl;
-                }
+                return eval_ss;
             } else {
-                // automatic memory
-                // get the stack offset; instruction should be something like
-                //      mov rax, [rbp - 4]
-                eval_ss << "\t" << "mov " << reg << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                // todo: return values on stack
             }
-
-            return eval_ss;
         } else {
-            // todo: return values on stack
+            // if the variable is out of scope, throw an exception
+            throw OutOfScopeException(line);
         }
     }
 }

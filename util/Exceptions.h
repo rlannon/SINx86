@@ -50,6 +50,12 @@ public:
     explicit InvalidSymbolException(unsigned int line);
 };
 
+class OutOfScopeException : public CompilerException
+{
+public:
+    explicit OutOfScopeException(unsigned int line);
+};
+
 class TypeException : public CompilerException
 {
 public:
