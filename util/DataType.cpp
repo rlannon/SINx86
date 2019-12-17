@@ -201,6 +201,8 @@ void DataType::set_width() {
 			struct	-	require the compiler to look for the width in the struct table
 		*/
 
+        // todo: look into struct table?
+
 		this->width = 0;
 	}
 }

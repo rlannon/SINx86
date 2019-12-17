@@ -44,7 +44,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             LValue &lvalue_exp = *dynamic_cast<LValue*>(to_evaluate.get());
 
             // dispatch to our evaluation function
-            evaluation_ss << this->evaluate_lvalue(lvalue_exp, line);
+            evaluation_ss = this->evaluate_lvalue(lvalue_exp, line);
             break;
         }
         case INDEXED:
@@ -89,7 +89,15 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int line) {
     /*
 
+    evaluate_literal
     Evaluates a literal expression
+
+    This function will generate code to put a literal value in the A register, or on the stack if necessary. Note that the value will be in RAX, EAX, AX, or AL depending on the data width.
+    This function will add data to the compiler's .data section if a string literal is used.
+
+    @param  to_evaluate The literal expression we are evaluating
+    @param  line    The line number of the expression (for error handling)
+    @return A stringstream containing the generated code
 
     */
 
@@ -197,9 +205,86 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
     /*
 
     Generate code for evaluating an lvalue (a variable)
-    Result will be returned on A, as usual
+    Result will be returned on A, as usual, or on the stack if that is required (depending on data type).
+
+    @param  to_evaluate The lvalue we are evaluating
+    @param  line    The line number (for error handling)
+    @return A stringstream containing the generated code
 
     */
 
-    // todo: evaluate lvalues
+    std::stringstream eval_ss;
+
+    // get the symbol for the lvalue
+    std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.find(to_evaluate.getValue());
+    
+    // it must be a variable symbol, not a function definition
+    if (it->second->get_symbol_type() == FUNCTION_DEFINITION) {
+        // todo: throw error
+    } else {
+        // get the symbol
+        symbol &sym = *dynamic_cast<symbol*>(it->second.get());
+
+        // if the type of the symbol is not void, array, or struct, we can pass it in a register
+        if (sym.get_data_type().get_primary() != VOID && sym.get_data_type().get_primary() != ARRAY && sym.get_data_type().get_primary() != STRUCT) {
+            // the data width determines which register size to use
+            std::string reg;
+            if (sym.get_data_type().get_width() == 1 || sym.get_data_type().get_width() == 8) {
+                reg = "al";
+            } else if (sym.get_data_type().get_width() == 16) {
+                reg = "ax";
+            } else if (sym.get_data_type().get_width() == 32) {
+                reg = "eax";
+            } else if (sym.get_data_type().get_width() == 64) {
+                reg = "rax";
+            } else {
+                // todo: data width exception?
+            }
+
+            if (sym.get_data_type().get_qualities().is_const()) {
+                // todo: const variables
+            } else if (sym.get_data_type().get_qualities().is_static()) {
+                // todo: static variables
+            } else if (sym.get_data_type().get_qualities().is_dynamic()) {
+                // dynamic memory
+                // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
+
+                // todo: how to handle strings? strings are dynamic but operate a little differently due to their nature
+                // todo: should dynamic variables be dereferenced here, or should they be dereferenced where they are used?
+
+                // if the RBX register is currently in use, then we should check rsi; if it's in use, then push and pop it again
+                std::string reg_used = "";
+                bool reg_pushed = false;
+                if (this->reg_stack.peek().is_in_use(RBX)) {
+                    if (this->reg_stack.peek().is_in_use(RSI)) {
+                        eval_ss << "\t" << "push rsi" << std::endl;
+                        reg_pushed = true;
+                        reg_used = "rsi";
+                    } else {
+                        reg_used = "rsi";
+                    }
+                } else {
+                    reg_used = "rbx";
+                }
+
+                // get the dereferenced pointer in A
+                eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                eval_ss << "\t" << "mov " << reg << ", [" << reg_used << "]" << std::endl;
+
+                // if we had to push a register, restore it
+                if (reg_pushed) {
+                    eval_ss << "\t" << "pop rsi" << std::endl;
+                }
+            } else {
+                // automatic memory
+                // get the stack offset; instruction should be something like
+                //      mov rax, [rbp - 4]
+                eval_ss << "\t" << "mov " << reg << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+            }
+
+            return eval_ss;
+        } else {
+            // todo: return values on stack
+        }
+    }
 }
