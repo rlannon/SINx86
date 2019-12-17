@@ -16,6 +16,8 @@ Codes fall into the following categories:
 
 */
 
+#pragma once
+
 namespace compiler_errors {
     // Illegal operations
     const unsigned int CONST_ASSIGNMENT_ERROR = 1;

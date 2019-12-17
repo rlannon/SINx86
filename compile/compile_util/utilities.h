@@ -14,7 +14,6 @@ Our various compiler utilities
 
 #include "../../util/DataType.h"
 #include "../../parser/Expression.h"
-#include "../../util/data_widths.h"
 #include "../symbol.h"
 #include "../../util/Exceptions.h"
 #include "register_usage.h"

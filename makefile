@@ -1,69 +1,60 @@
 # makefile
-# build the SIN compiler
+# build the SIN compile
 
 cc=g++
+cpp_version=c++17
+flags=-std=$(cpp_version) -g
+target=sinx86
+
+parser_dependencies=lexer.o parser.o parseexpression.o parsestatement.o parserutil.o statement.o expression.o
+util_dependencies=datatype.o exceptions.o binaryio.o
+
+build_depend=$(parser_dependencies) $(util_dependencies)
+
+default: $(target)
+
+# Build the whole program
+
+sinx86: $(build_depend) main.cpp
+	$(cc) $(flags) -o $(target) main.cpp $(build_depend)
 
 # Build the compiler
-#
-# todo:
-# Consider the following:
-#	symbol_table.o requires:
-#		symbol.o
-#		datatype.o
-#	symbol.o requires:
-#		datatype.o
-#	Does symbol_table.o need to list datatype.o as a dependency?
-
-default: sinx86
-
-sinx86: compiler.o
-	$(cc) -o sinx86 main.cpp
-
-compiler.o: compile/compile.cpp compile/compile.h allocate.o parser.o exceptions.o datatype.o
-	$(cc) -o compiler.o -c compile/compiler.cpp
-
-allocate.o: compile/allocation.cpp compile/compile.h statement.o symbol.o datatype.o
-	$(cc) -o allocate.o -c compile/allocation.cpp
-
-symbol.o: compile/symbol.cpp compile/symbol.h datatype.o
-	$(cc) -o symbol.o -c compile/symbol.cpp
+# todo: build compiler
 
 # Build the parser
 
-parser.o: parser/Parser.cpp parser/Parser.h parserutil.o parsestatement.o parseexpression.o exceptions.o datatype.o
-	$(cc) -o parser.o -c parser/Parser.cpp
+parser.o: lexer.o statement.o expression.o parseexpression.o parserutil.o parsestatement.o datatype.o exceptions.o
+	$(cc) $(flags) -o parser.o -c parser/Parser.cpp
 
-parserutil.o: parser/ParserUtil.cpp parser/Parser.h datatype.o statement.o expression.o
-	$(cc) -o parserutil.o -c parser/ParserUtil.cpp
+parseexpression.o: expression.o datatype.o exceptions.o
+	$(cc) $(flags) -o parseexpression.o -c parser/ParseExpression.cpp
 
-parsestatement.o: parser/ParseStatement.cpp parser/Parser.h statement.o datatype.o lexer.o
-	$(cc) -o parsestatement.o -c parser/ParseStatement.cpp
+parserutil.o: statement.o expression.o datatype.o exceptions.o
+	$(cc) $(flags) -o parserutil.o -c parser/ParserUtil.cpp
 
-parseexpression.o: parser/ParseExpression.cpp parser/Parser.h expression.o lexer.o
-	$(cc) -o parseexpression.o -c parser/ParseExpression.cpp
+parsestatement.o: statement.o expression.o datatype.o exceptions.o
+	$(cc) $(flags) -o parsestatement.o -c parser/ParseStatement.cpp
 
-statement.o: parser/Statement.cpp parser/Expression.h parser/Statement.h datatype.o
-	$(cc) -o statement.o -c parser/Statement.cpp
+statement.o: expression.o datatype.o
+	$(cc) $(flags) -o statement.o -c parser/Statement.cpp
 
-expression.o: parser/Expression.cpp parser/Expression.h datatype.o
-	$(cc) -o expression.o -c parser/Expression.cpp
+expression.o: datatype.o
+	$(cc) $(flags) -o expression.o -c parser/Expression.cpp
 
-lexer.o: parser/Lexer.cpp parser/Lexer.h
-	$(cc) -o lexer.o -c parser/Lexer.cpp
+lexer.o: parser/Lexer.h
+	$(cc) $(flags) -o lexer.o -c parser/Lexer.cpp
 
-# phase out 'TypeData', as the 'DataType' class is far better
-# typedata.o: parser/TypeData.cpp parser/TypeData.h util/EnumeratedTypes.h
-# 	$(cc) -o typedata.o -c parser/TypeData.cpp
+# Utilities
 
-# Build our utilities
-binaryio.o: util/BinaryIO/BinaryIO.cpp util/BinaryIO/BinaryIO.h
-	$(cc) -o binaryio.o -c util/BinaryIO/BinaryIO.cpp
+datatype.o: util/DataType.h util/EnumeratedTypes.h util/data_widths.h
+	$(cc) $(flags) -o datatype.o -c util/DataType.cpp
 
-datatype.o: util/DataType.cpp util/DataType.h EnumeratedTypes.h
-	$(cc) -o datatype.o -c util/DataType.cpp
+exceptions.o: util/Exceptions.h util/CompilerErrorCodes.h
+	$(cc) $(flags) -o exceptions.o -c util/Exceptions.cpp
 
-exceptions.o: util/Exceptions.cpp util/Exceptions.h
-	$(cc) -o exceptions.o -c util/Exceptions.cpp
+binaryio.o:
+	$(cc) $(flags) -o binaryio.o -c util/BinaryIO/BinaryIO.cpp
 
+# cleanup
 clean:
 	rm *.o

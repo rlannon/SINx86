@@ -8,7 +8,6 @@ Implementation of the assignment functions for the compiler
 */
 
 #include "compile.h"
-#include "../util/CompilerErrorCodes.h"
 
 std::stringstream compiler::assign(Assignment assign_stmt) {
     /*

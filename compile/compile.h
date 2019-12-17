@@ -9,6 +9,8 @@ Copyright 2019 Riley Lannon
 
 */
 
+#pragma once
+
 #include <string>
 #include <sstream>
 #include <unordered_map>

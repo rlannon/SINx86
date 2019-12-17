@@ -8,6 +8,7 @@ A class to track the current general-purpose registers in use
 
 */
 
+#pragma once
 
 #include <unordered_map>
 #include <string>

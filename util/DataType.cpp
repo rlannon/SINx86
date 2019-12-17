@@ -16,6 +16,16 @@ SymbolQualities implementation
 
 */
 
+bool SymbolQualities::is_long()
+{
+    return long_q;
+}
+
+bool SymbolQualities::is_short()
+{
+    return short_q;
+}
+
 bool SymbolQualities::is_const()
 {
 	return const_q;

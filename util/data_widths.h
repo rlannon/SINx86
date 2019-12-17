@@ -7,6 +7,8 @@ Contains the widts for our various data types.
 
 */
 
+#pragma once
+
 #include <cinttypes>
 #include <cstdlib>
 
