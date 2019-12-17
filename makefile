@@ -6,24 +6,24 @@ cpp_version=c++17
 flags=-std=$(cpp_version) -g
 target=sinx86
 
-parser_dependencies=lexer.o parser.o parseexpression.o parsestatement.o parserutil.o statement.o expression.o
+parser_dependencies=lexer.o parseexpression.o parsestatement.o parserutil.o statement.o expression.o
 util_dependencies=datatype.o exceptions.o binaryio.o
 
-build_depend=$(parser_dependencies) $(util_dependencies)
+build_depend=parser.o $(parser_dependencies) $(util_dependencies)
 
 default: $(target)
 
 # Build the whole program
 
 sinx86: $(build_depend) main.cpp
-	$(cc) $(flags) -o $(target) main.cpp $(build_depend)
+	$(cc) $(flags) -o $(target) -g main.cpp $(build_depend)
 
 # Build the compiler
 # todo: build compiler
 
 # Build the parser
 
-parser.o: lexer.o statement.o expression.o parseexpression.o parserutil.o parsestatement.o datatype.o exceptions.o
+parser.o: $(parser_dependencies) $(util_dependencies)
 	$(cc) $(flags) -o parser.o -c parser/Parser.cpp
 
 parseexpression.o: expression.o datatype.o exceptions.o
