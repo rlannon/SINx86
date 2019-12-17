@@ -10,6 +10,55 @@ The implementation of the register_usage class
 
 #include "register_usage.h"
 
+const std::unordered_map<reg, std::string> reg_strings {
+    { RAX, "rax" },
+    { RBX, "rbx" },
+    { RCX, "rcx" },
+    { RDX, "rdx" },
+    { RSI, "rsi" },
+    { RDI, "rdi" },
+    { R8, "r8" },
+    { R9, "r9" },
+    { R10, "r10" },
+    { R11, "r11" },
+    { R12, "r12" },
+    { R13, "r13" },
+    { R14, "r14" },
+    { R15, "r15" }
+};
+
+const std::unordered_map<reg, std::string> reg_32_strings {
+    { RAX, "eax" },
+    { RBX, "ebx" },
+    { RCX, "ecx" },
+    { RDX, "edx" },
+    { RSI, "esi" },
+    { RDI, "edi" },
+    { R8, "r8d" },
+    { R9, "r9d" },
+    { R10, "r10d" },
+    { R11, "r11d" },
+    { R12, "r12d" },
+    { R13, "r13d" },
+    { R14, "r14d" },
+    { R15, "r15d" }
+};
+
+const std::unordered_map<reg, std::string> reg_16_strings {
+    { RAX, "ax" },
+    { RBX, "bx" },
+    { RCX, "cx" },
+    { RDX, "dx" },
+    { R8, "r8w" },
+    { R9, "r9w" },
+    { R10, "r10w" },
+    { R11, "r11w" },
+    { R12, "r12w" },
+    { R13, "r13w" },
+    { R14, "r14w" },
+    { R15, "r15w" }
+};
+
 bool register_usage::is_in_use(reg to_test) {
     // Returns whether the specified register is in use
     std::unordered_map<reg, bool&>::iterator it = this->regs.find(to_test);
@@ -32,6 +81,27 @@ void register_usage::set(reg to_set) {
     } else {
         it->second = true;  // it is a reference, so it will update the original
     }
+}
+
+reg register_usage::get_available_register() {
+    // Returns the first available register
+
+    // iterate through the registers until we find one that isn't in use
+    std::unordered_map<reg, bool&>::iterator it = this->regs.begin();
+    while (it != this->regs.end() && it->second) {
+        it++;
+    }
+
+    if (it == this->regs.end()) {
+        throw CompilerException("No registers available");
+    } else {
+        return it->first;
+    }
+}
+
+std::string register_usage::get_register_name(reg to_get) const {
+    // Get the string value of a register name
+
 }
 
 register_usage::register_usage(): 

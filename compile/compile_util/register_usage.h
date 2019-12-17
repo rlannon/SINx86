@@ -10,6 +10,8 @@ A class to track the current general-purpose registers in use
 
 
 #include <unordered_map>
+#include <string>
+
 #include "../../util/EnumeratedTypes.h"
 #include "../../util/Exceptions.h"
 
@@ -23,6 +25,9 @@ class register_usage {
 
     // using an unordered_map will allow much easier access to these booleans
     std::unordered_map<reg, bool&> regs;
+    static const std::unordered_map<reg, std::string> reg_strings;
+    static const std::unordered_map<reg, std::string> reg_32_strings;
+    static const std::unordered_map<reg, std::string> reg_16_strings;
 
     // The four general-purpose named registers
     bool rax;
@@ -47,6 +52,14 @@ class register_usage {
 public:
     bool is_in_use(reg to_test);
     void set(reg to_set);
+
+    // for getting the first available register
+    reg get_available_register();
+    
+    // get the name of a register
+    std::string get_register_name(reg to_get) const;    // full 64-bit register
+    std::string get_r32_name(reg to_get) const; // 32-bit name
+    std::string get_r16_name(reg to_get) const; // 16-bit name
 
     register_usage();
     ~register_usage();

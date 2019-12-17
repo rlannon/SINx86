@@ -50,6 +50,12 @@ public:
     explicit InvalidSymbolException(unsigned int line);
 };
 
+class UnexpectedFunctionException : public CompilerException
+{
+public:
+    explicit UnexpectedFunctionException(unsigned int line);
+};
+
 class OutOfScopeException : public CompilerException
 {
 public:
@@ -60,6 +66,12 @@ class TypeException : public CompilerException
 {
 public:
     explicit TypeException(unsigned int line);
+};
+
+class VoidException : public CompilerException
+{
+public:
+    explicit VoidException(unsigned int line);
 };
 
 class ConstAssignmentException : public CompilerException

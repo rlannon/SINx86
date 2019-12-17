@@ -10,7 +10,7 @@ Contains the widts for our various data types.
 #include <cinttypes>
 #include <cstdlib>
 
-namespace sin_widts {
+namespace sin_widths {
     const size_t INT_WIDTH = 4;
     const size_t LONG_WIDTH = 8;
     const size_t SHORT_WIDTH = 2;

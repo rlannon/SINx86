@@ -38,6 +38,19 @@ InvalidSymbolException::InvalidSymbolException(unsigned int line) :
     */
 }
 
+UnexpectedFunctionException::UnexpectedFunctionException(unsigned int line):
+    CompilerException("Function name is not appropriate here without a call operator (@)", compiler_errors::UNEXPECTED_FUNCTION_SYMBOL, line)
+{
+    /*
+    
+    To be used when a function symbol is found, but it is not appropriate.
+    For example, when evaluating an lvalue, if we see a function symbol without a call, then it should generate this error
+
+    todo: introduce callable types that allow for this
+
+    */
+}
+
 OutOfScopeException::OutOfScopeException(unsigned int line) :
     CompilerException("Symbol is out of scope", compiler_errors::OUT_OF_SCOPE_ERROR)
 {
@@ -48,6 +61,12 @@ TypeException::TypeException(unsigned int line) :
     CompilerException("Types are not compatible", compiler_errors::TYPE_ERROR, line)
 {
     // Exception should be used when types are incompatible
+}
+
+VoidException::VoidException(unsigned int line) :
+    CompilerException("Void type cannot be used in expression of this type", compiler_errors::VOID_TYPE_ERROR, line)
+{
+    // Exception should be used when 'void' type was found, but cannot be used here
 }
 
 ConstAssignmentException::ConstAssignmentException(unsigned int line) :

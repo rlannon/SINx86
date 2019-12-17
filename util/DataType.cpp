@@ -167,32 +167,32 @@ void DataType::set_width() {
 		// ints are usually 4 bytes wide (32-bit), but can be 2 bytes for a short or 8 for a long 
 
 		if (this->qualities.is_long()) {
-			this->width = 8;
+			this->width = sin_widths::LONG_WIDTH;
 		} else if (this->qualities.is_short()) {
-			this->width = 2;
+			this->width = sin_widths::SHORT_WIDTH;
 		} else {
-			this->width = 4;
+			this->width = sin_widths::INT_WIDTH;
 		}
 	} else if (this->primary == FLOAT) {
 		// floats can also use the long and short keywords -- a long float is the same as a double, a short float is the same as a half
 
 		if (this->qualities.is_long()) {
-			this->width = 8;
+			this->width = sin_widths::DOUBLE_WIDTH;
 		} else if (this->qualities.is_short()) {
-			this->width = 2;
+			this->width = sin_widths::HALF_WIDTH;
 		} else {
-			this->width = 4;
+			this->width = sin_widths::FLOAT_WIDTH;
 		}
 	} else if (this->primary == BOOL) {
 		// bools are only a byte wide
-		this->width = 1;
+		this->width = sin_widths::BOOL_WIDTH;
 	} else if (this->primary == PTR) {
 		// because we are compiling to x86_64, pointers should be 64-bit
-		this->width = 8;
+		this->width = sin_widths::PTR_WIDTH;
 	} else if (this->primary == STRING) {
 		// since strings are all implemented as pointers, they have widths of 8 bytes
 		// (they always point to dynamic memory, but syntactically don't behave like pointers)
-		this->width = 8;
+		this->width = sin_widths::PTR_WIDTH;
 	} else {
 		/*
 		Everything else should use 0:

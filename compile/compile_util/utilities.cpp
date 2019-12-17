@@ -159,3 +159,14 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 
     return type_information;
 }
+
+bool can_pass_in_register(DataType to_check) {
+    // Checks whether the given DataType can be passed in a register or if it must be passed on the stack
+
+    Type primary = to_check.get_primary();
+    return (
+        primary != ARRAY &&
+        primary != STRUCT &&
+        primary != STRING
+    );
+}

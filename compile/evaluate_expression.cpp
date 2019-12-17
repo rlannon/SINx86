@@ -220,15 +220,21 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
     // it must be a variable symbol, not a function definition
     if (it->second->get_symbol_type() == FUNCTION_DEFINITION) {
-        // todo: throw error
+        throw UnexpectedFunctionException(line);
     } else {
         // get the symbol
         symbol &sym = *dynamic_cast<symbol*>(it->second.get());
 
         // ensure the symbol is accessible in the current scope
         if (this->is_in_scope(sym)) {
-            // if the type of the symbol is not void, array, or struct, we can pass it in a register
-            if (sym.get_data_type().get_primary() != VOID && sym.get_data_type().get_primary() != ARRAY && sym.get_data_type().get_primary() != STRUCT) {
+            // mark RAX as 'in use' (if it's already 'in use', this has no effect)
+            this->reg_stack.peek().set(RAX);
+
+            // pass differently depending on whether we can pass the argument in a register or if it must be passed on the stack and use a pointer
+            if (sym.get_data_type().get_primary() == VOID) {
+                // void types should generate a compiler error -- they cannot be evaluated
+                throw VoidException(line);
+            } else if (can_pass_in_register(sym.get_data_type())) {
                 // the data width determines which register size to use
                 std::string reg;
                 if (sym.get_data_type().get_width() == 1 || sym.get_data_type().get_width() == 8) {
@@ -252,26 +258,25 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
                     // they do not need to be in the current scope, as they are accessible everywhere (unscoped)
                     eval_ss << "\t" << "mov " << reg << ", [" << sym.get_name() << "]" << std::endl;
-                } else if (sym.get_data_type().get_qualities().is_dynamic() && sym.get_data_type().get_primary() != STRING) {
+                } else if (sym.get_data_type().get_qualities().is_dynamic() && sym.get_data_type().get_primary()) {
                     // dynamic memory
                     // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
 
                     // todo: further consider strings
                     // Although strings use dynamic memory, they don't behave like it syntactically -- all string operations use _pointers_ to the strings
 
-                    // if the RBX register is currently in use, then we should check rsi; if it's in use, then push and pop it again
+                    // get an unused register; if all are occupied, use rsi (but push it first)
                     std::string reg_used = "";
                     bool reg_pushed = false;
-                    if (this->reg_stack.peek().is_in_use(RBX)) {
-                        if (this->reg_stack.peek().is_in_use(RSI)) {
-                            eval_ss << "\t" << "push rsi" << std::endl;
-                            reg_pushed = true;
-                            reg_used = "rsi";
-                        } else {
-                            reg_used = "rsi";
-                        }
-                    } else {
-                        reg_used = "rbx";
+
+                    // if there is no register available, an exception is thrown
+                    try {
+                        reg_used = this->reg_stack.peek().get_register_name(this->reg_stack.peek().get_available_register());
+                    } catch (CompilerException e) {
+                        // since no register is available, push rsi
+                        eval_ss << "\t" << "push rsi" << std::endl;
+                        reg_used = "rsi";
+                        reg_pushed = true;
                     }
 
                     // get the dereferenced pointer in A

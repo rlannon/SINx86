@@ -16,6 +16,7 @@ DataType contains the type, subtype, and qualities of a given expression alongsi
 #include <cinttypes>
 #include <cstdlib>
 
+#include "data_widths.h"
 #include "EnumeratedTypes.h"
 #include "Exceptions.h"
 
