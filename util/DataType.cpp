@@ -367,10 +367,11 @@ DataType::DataType(Type primary, Type subtype, std::vector<SymbolQuality> qualit
 	this->set_width();
 }
 
-DataType::DataType(Type primary, Type subtype, SymbolQualities qualities) :
+DataType::DataType(Type primary, Type subtype, SymbolQualities qualities, size_t array_length) :
     primary(primary),
     subtype(subtype),
-    qualities(qualities)
+    qualities(qualities),
+	array_length(array_length)
 {
     // if the type is int, set signed to true if it is not unsigned
 	if (primary == INT && !this->qualities.is_unsigned()) {

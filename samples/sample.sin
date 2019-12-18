@@ -4,7 +4,7 @@
 def void main() {
     // the main function
     alloc int a;
-    alloc int x: 23;
+    alloc int x: 23 &unsigned;
     
     let a = 12;
     let a = a + x;

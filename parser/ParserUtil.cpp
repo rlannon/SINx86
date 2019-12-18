@@ -264,21 +264,23 @@ DataType Parser::get_type()
 	// the parse function that calls this one will have advanced the token iterator to the first token in the type data
 	lexeme current_lex = this->current_token();
 
-	// check our quality, if any
-	std::vector<SymbolQuality> qualities;
+	// todo: refactor this to use an unordered map as well? to map string and SymbolQuality together
+
+	// check our qualities, if any
+	SymbolQualities qualities;
 	if (current_lex.value == "const") {
 		// change the variable quality
-		qualities.push_back(CONSTANT);
+		qualities.add_quality(CONSTANT);
 
 		// get the actual variable type
 		current_lex = this->next();
 	}
 	else if (current_lex.value == "dynamic") {
-		qualities.push_back(DYNAMIC);
+		qualities.add_quality(DYNAMIC);
 		current_lex = this->next();
 	}
 	else if (current_lex.value == "static") {
-		qualities.push_back(STATIC);
+		qualities.add_quality(STATIC);
 		current_lex = this->next();
 	}
 
@@ -286,7 +288,7 @@ DataType Parser::get_type()
 	if (current_lex.value == "unsigned") {
 		// make sure the next value is 'int' by checking the 
 		if (this->peek().value == "int") {
-			qualities.push_back(UNSIGNED);
+			qualities.add_quality(UNSIGNED);
 			current_lex = this->next();
 		}
 		else {
@@ -296,17 +298,27 @@ DataType Parser::get_type()
 	else if (current_lex.value == "signed") {
 		// make sure the next value is 'int'
 		if (this->peek().value == "int") {
-			qualities.push_back(SIGNED);
+			qualities.add_quality(SIGNED);
 			current_lex = this->next();
 		}
 		else {
 			throw ParserException("Cannot use sign qualifier for variable of this type", 0, current_lex.line_number);
 		}
 	}
+	else if (current_lex.value == "long") {
+		// todo: validate type?
+		qualities.add_quality(LONG);
+		current_lex = this->next();
+	}
+	else if (current_lex.value == "short") {
+		// todo: validate type?
+		qualities.add_quality(SHORT);
+		current_lex = this->next();
+	}
 
 	// set the quality to DYNAMIC if we have a string
 	if (current_lex.value == "string") {
-		qualities.push_back(DYNAMIC);
+		qualities.add_quality(DYNAMIC);
 	}
 
 	Type new_var_type;
@@ -392,13 +404,9 @@ DataType Parser::get_type()
 	else {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {
-			// if the last quality in the list (which is our signed/unsigned specifier, if we have one) is not signed and also not unsigned, push back 'signed'
-			if (qualities.size() != 0 && (qualities[qualities.size() - 1] != SIGNED && qualities[qualities.size() - 1] != UNSIGNED)) {
-				qualities.push_back(SIGNED);
-			}
-			// if we don't have _any_ qualities, push back 'signed'
-			else if (qualities.size() == 0) {
-				qualities.push_back(SIGNED);
+			// if our symbol doesn't have signed or unsigned, set, it must be sigbed by default
+			if (!qualities.is_signed() && !qualities.is_unsigned()) {
+				qualities.add_quality(SIGNED);
 			}
 		}
 
@@ -459,8 +467,10 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 {
 	// Given a lexeme containing a quality, returns the appropriate member from SymbolQuality
 
-	const SymbolQuality qualities[5] = { CONSTANT, STATIC, DYNAMIC, SIGNED, UNSIGNED };
-	const std::string quality_string[5] = { "const", "static", "dynamic", "signed", "unsigned" };
+	// todo: change this lookup to use std::unordered_map<SymbolQuality, std::string>
+
+	const SymbolQuality qualities[7] = { CONSTANT, STATIC, DYNAMIC, SIGNED, UNSIGNED, LONG, SHORT };
+	const std::string quality_string[7] = { "const", "static", "dynamic", "signed", "unsigned", "long", "short" };
 	SymbolQuality to_return = NO_QUALITY;
 
 	// ensure the token is a kwd
