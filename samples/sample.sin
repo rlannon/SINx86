@@ -6,7 +6,7 @@ def void main() {
     alloc int a;
     alloc int x: 23 &unsigned;
     
-    let a = 12;
+    let a = sizeof<myStruct>;
     let a = a + x;
 
     return void;

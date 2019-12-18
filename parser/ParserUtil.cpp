@@ -415,7 +415,7 @@ DataType Parser::get_type()
 	return symbol_type_data;
 }
 
-std::vector<SymbolQuality> Parser::get_postfix_qualities()
+std::vector<SymbolQuality> Parser::get_postfix_qualities(std::string grouping_symbol)
 {
 	/*
 
@@ -426,6 +426,15 @@ std::vector<SymbolQuality> Parser::get_postfix_qualities()
 	This function begins on the first token of the postfix quality -- that is to say, "current_token" should be the ampersand.
 
 	*/
+
+	// get the closing grouping symbol, if applicable
+	std::string closing_symbol;
+	if (is_opening_grouping_symbol(grouping_symbol) || grouping_symbol == "<") {	// todo: include < in function?
+		closing_symbol = get_closing_grouping_symbol(grouping_symbol);
+	}
+	else {
+		closing_symbol = "";
+	}
 
 	std::vector<SymbolQuality> qualities = {};	// create our qualities vector, initialize to an empty vector
 
@@ -442,8 +451,8 @@ std::vector<SymbolQuality> Parser::get_postfix_qualities()
 				qualities.push_back(quality);
 			}
 
-			// the quality must be followed by either another quality or a semicolon
-			if (this->peek().value == ";") {
+			// the quality must be followed by either another quality, a semicolon, or a closing grouping symbol
+			if (this->peek().value == ";" || this->peek().value == closing_symbol) {
 				done = true;
 			}
 			// there's an error if the next token is not a keyword and also not a semicolon

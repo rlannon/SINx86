@@ -74,9 +74,15 @@ void SymbolQualities::add_quality(SymbolQuality to_add)
     } else if (to_add == UNSIGNED) {
         unsigned_q = true;
         signed_q = false;
-    }
-
-
+	}
+	else if (to_add == LONG) {
+		long_q = true;
+		short_q = false;
+	}
+	else if (to_add == SHORT) {
+		long_q = false;
+		short_q = true;
+	}
 }
 
 SymbolQualities::SymbolQualities(std::vector<SymbolQuality> qualities)
