@@ -32,7 +32,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         case LITERAL:
         {
             // get the literal
-            Literal &literal_exp = *dynamic_cast<Literal*>(to_evaluate.get());
+            Literal literal_exp = *dynamic_cast<Literal*>(to_evaluate.get());
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_literal(literal_exp, line);
@@ -41,7 +41,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         case LVALUE:
         {
             // get the lvalue
-            LValue &lvalue_exp = *dynamic_cast<LValue*>(to_evaluate.get());
+            LValue lvalue_exp = *dynamic_cast<LValue*>(to_evaluate.get());
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_lvalue(lvalue_exp, line);
@@ -77,6 +77,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case SIZE_OF:
         {
+            SizeOf sizeof_exp = *dynamic_cast<SizeOf*>(to_evaluate.get());
+            evaluation_ss = evaluate_sizeof(sizeof_exp, line);
             break;
         }
         default:
@@ -312,4 +314,53 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
             throw OutOfScopeException(line);
         }
     }
+}
+
+std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line) {
+    /*
+    
+    Since sizeof<T> always returns a const unsigned int, it should go into eax
+    Use sin_widths{} to fetch sizes
+
+    */
+
+    std::stringstream eval_ss;
+
+    if (to_evaluate.get_type().get_primary() == INT) {
+        eval_ss << "\t" << "mov eax, ";
+        if (to_evaluate.get_type().get_qualities().is_long()) {
+            eval_ss << sin_widths::LONG_WIDTH;
+        } else if (to_evaluate.get_type().get_qualities().is_short()) {
+            eval_ss << sin_widths::SHORT_WIDTH;
+        } else {
+            eval_ss << sin_widths::INT_WIDTH;
+        }
+        
+        eval_ss << std::endl;
+    } else if (to_evaluate.get_type().get_primary() == FLOAT) {
+        eval_ss << "\t" << "mov eax, ";
+        if (to_evaluate.get_type().get_qualities().is_long()) {
+            eval_ss << sin_widths::DOUBLE_WIDTH;
+        } else if (to_evaluate.get_type().get_qualities().is_short()) {
+            eval_ss << sin_widths::HALF_WIDTH;
+        } else {
+            eval_ss << sin_widths::FLOAT_WIDTH;
+        }
+        
+        eval_ss << std::endl;
+    } else if (to_evaluate.get_type().get_primary() == BOOL) {
+        eval_ss << "\t" << "mov eax, " << sin_widths::BOOL_WIDTH << std::endl;
+    } else if (to_evaluate.get_type().get_primary() == PTR) {
+        eval_ss << "\t" << "mov eax, " << sin_widths::PTR_WIDTH << std::endl;
+    } else {
+        // todo: look into compiler table to see if we have a struct -- then make sure this is a "compiler" method
+        
+        // todo: should a struct name be a valid sizeof argument? we should keep a note in the struct table that says whether its size is known or not
+        // todo: maybe structs can't have arrays inside them, only pointers to arrays (or dynamic arrays)
+        
+        // todo: sizeof<array> and sizeof<string> are invalid
+        throw CompilerException("Invalid argument for sizeof<T>; only fixed-width types can be used", compiler_errors::DATA_WIDTH_ERROR, line);
+    }
+
+    return eval_ss;
 }
