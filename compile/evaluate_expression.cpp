@@ -105,7 +105,12 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
     // act based on data type and width
     DataType type = to_evaluate.get_data_type();
-    if (type.get_primary() == INT) {
+
+    if (type.get_primary() == VOID) {
+        // A void literal gets loaded into rax as 0
+        // These are used in return statements for void-returning functions
+        eval_ss << "\t" << "mov rax, 0" << std::endl;
+    } else if (type.get_primary() == INT) {
         /*
 
         short ints are 16 bits wide and get loaded into ax
@@ -255,15 +260,10 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     eval_ss << "\t" << "mov " << reg << ", [" << sym.get_name() << "]" << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_static()) {
                     // static memory can be looked up by name -- variables are in the .bss section
-
-                    // they do not need to be in the current scope, as they are accessible everywhere (unscoped)
                     eval_ss << "\t" << "mov " << reg << ", [" << sym.get_name() << "]" << std::endl;
-                } else if (sym.get_data_type().get_qualities().is_dynamic() && sym.get_data_type().get_primary()) {
+                } else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory
                     // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
-
-                    // todo: further consider strings
-                    // Although strings use dynamic memory, they don't behave like it syntactically -- all string operations use _pointers_ to the strings
 
                     // get an unused register; if all are occupied, use rsi (but push it first)
                     std::string reg_used = "";
@@ -296,7 +296,16 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
                 return eval_ss;
             } else {
-                // todo: return values on stack
+                // values too large for registers will use _pointers_, although the syntax hides this fact
+                if (sym.get_data_type().get_qualities().is_const()) {
+                    // todo: const memory
+                } else if (sym.get_data_type().get_qualities().is_static()) {
+                    // todo: static memory
+                } else if (sym.get_data_type().get_qualities().is_dynamic()) {
+                    // todo: dynamic memory
+                } else {
+                    // todo: automatic memory
+                }
             }
         } else {
             // if the variable is out of scope, throw an exception

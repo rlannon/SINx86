@@ -172,10 +172,10 @@ public:
 
 class SizeOf : public Expression
 {
-	std::string to_check;	// because the sizeof expression could be a struct, the typename will be stored as a string
+	DataType to_check;	// because the sizeof expression could be a struct, the typename will be stored as a string
 public:
-	std::string get_type();
+	DataType get_type();
 
-	SizeOf(std::string to_check);
+	SizeOf(DataType to_check);
 	SizeOf();
 };

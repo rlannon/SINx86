@@ -94,13 +94,21 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			if (this->peek().value == "<") {
 				grouping_symbol = "<";
 				this->next();
-				// valid words in sizeof are idents and types, so long as the type is not a struct or an array
-				if (this->peek().type == "ident" || (is_type(this->peek().value) && this->peek().value != "struct" && this->peek().value != "array")) {
-					lexeme to_check = this->next();
+				// valid words in sizeof are types, so long as the type is not a struct or an array
+				if (is_type(this->peek().value) && this->peek().value != "struct" && this->peek().value != "array") {
+					this->next();   // "get_type" requires the _current_ lexeme to be the first lexeme of the type data
+                    DataType to_check = this->get_type();
 
+                    // check to see if we have any postfixed qualities
+                    if (this->peek().value == "&") {
+                        this->next();   // eat the ampersand
+                        to_check.add_qualities(this->get_postfix_qualities());
+                    }
+
+                    // finally, we must have a closing grouping symbol
 					if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
-						this->next();	// eat the end paren
-						left = std::make_shared<SizeOf>(to_check.value);
+						this->next();	// eat the closing symbol
+						left = std::make_shared<SizeOf>(to_check);
 					}
 					else {
 						throw ParserException("Syntax error; expected '>'", 0, current_lex.line_number);

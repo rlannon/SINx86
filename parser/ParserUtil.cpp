@@ -251,15 +251,11 @@ const bool Parser::has_return(StatementBlock to_test)
 
 DataType Parser::get_type()
 {
-	/*
+    /*
 
-	Gets the qualities and type data about a symbol in an allocation or declaration. The tuple contains:
-		0 - Type	-	The data type
-		1 - Type	-	The subtype
-		2 - vector	-	Symbol qualities
-		3 - size_t	-	The array size, if applicable
+    Parses type information and stores it in a DataType object
 
-	*/
+    */
 
 	// the parse function that calls this one will have advanced the token iterator to the first token in the type data
 	lexeme current_lex = this->current_token();

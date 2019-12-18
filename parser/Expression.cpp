@@ -57,8 +57,9 @@ const Type get_type_from_string(std::string candidate) {
 		}
 	}
 
-	// if we arrive here, we have not found the type we were looking for
-	return NONE;
+	// if we arrive here, we have not found a primitive type, and we should assume it's a struct
+    // if no such struct exists, then the compiler will notice
+	return STRUCT;
 }
 
 const std::string get_string_from_type(Type candidate) {
@@ -77,8 +78,8 @@ const std::string get_string_from_type(Type candidate) {
 		}
 	}
 
-	// if we arrive here, we have not found the type we are looking for
-	return "none (error occurred)";
+	// todo: throw exception?
+	return "struct";
 }
 
 
@@ -322,11 +323,11 @@ ValueReturningFunctionCall::ValueReturningFunctionCall() {
 
 // sizeof expressions
 
-std::string SizeOf::get_type() {
+DataType SizeOf::get_type() {
 	return this->to_check;
 }
 
-SizeOf::SizeOf(std::string to_check) : to_check(to_check) {
+SizeOf::SizeOf(DataType to_check) : to_check(to_check) {
 	this->expression_type = SIZE_OF;
 }
 

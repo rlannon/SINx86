@@ -19,8 +19,6 @@ all_dependencies=$(parser_dependencies) $(util_dependencies)
 
 # todo: simplify builds, dependencies, etc.
 
-build: $(target)
-
 default: $(target)
 
 # Build the whole program
@@ -69,7 +67,6 @@ binaryio.o:
 
 # cleanup
 clean:
-	rm sinx86
 	rm *.o
 
-.PHONY: build clean
+.PHONY: $(target) clean
