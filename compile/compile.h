@@ -44,6 +44,7 @@ class compiler {
     std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);
     std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line);
     std::stringstream evaluate_lvalue(LValue &to_evalue, unsigned int line);
+	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 
     // We need to track the number for string constants, if/else blocks, etc.
     size_t strc_num;

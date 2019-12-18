@@ -261,6 +261,7 @@ DataType Parser::get_type()
 	lexeme current_lex = this->current_token();
 
 	// todo: refactor this to use an unordered map as well? to map string and SymbolQuality together
+	// todo: refactor this so qualifiers can go in any order, not specifically "const, dynamic/static, signed/unsigned, long/short"
 
 	// check our qualities, if any
 	SymbolQualities qualities;
@@ -271,11 +272,13 @@ DataType Parser::get_type()
 		// get the actual variable type
 		current_lex = this->next();
 	}
-	else if (current_lex.value == "dynamic") {
+	
+	// check to see if we have an allocation specifier; these will override const in terms of the variable's memory location
+	if (current_lex.value == "dynamic") {	// todo: allow const dynamic variables
 		qualities.add_quality(DYNAMIC);
 		current_lex = this->next();
 	}
-	else if (current_lex.value == "static") {
+	else if (current_lex.value == "static") {	// todo: allow static const variables
 		qualities.add_quality(STATIC);
 		current_lex = this->next();
 	}
@@ -301,7 +304,9 @@ DataType Parser::get_type()
 			throw ParserException("Cannot use sign qualifier for variable of this type", 0, current_lex.line_number);
 		}
 	}
-	else if (current_lex.value == "long") {
+	
+	// check to see if we have a width specifier
+	if (current_lex.value == "long") {
 		// todo: validate type?
 		qualities.add_quality(LONG);
 		current_lex = this->next();
@@ -313,13 +318,15 @@ DataType Parser::get_type()
 	}
 
 	// set the quality to DYNAMIC if we have a string
-	if (current_lex.value == "string") {
-		qualities.add_quality(DYNAMIC);
-	}
+	// todo: is setting a string quality to dynamic necessary? strings have special handling by default, and 'dynamic' shouldn't really do anything
+	//if (current_lex.value == "string") {
+	//	qualities.add_quality(DYNAMIC);
+	//}
 
 	Type new_var_type;
 	Type new_var_subtype = NONE;
 	size_t array_length = 0;
+	std::string struct_name = "";
 
 	if (current_lex.value == "ptr") {
 		// set the type
@@ -408,10 +415,15 @@ DataType Parser::get_type()
 
 		// store the type name in our Type object
 		new_var_type = get_type_from_string(current_lex.value); // note: Type get_type_from_string() is found in "Expression" (.h and .cpp)
+
+		// if we have a struct, make a note of the name
+		if (new_var_type == STRUCT) {
+			struct_name = current_lex.value;
+		}
 	}
 
 	// create the symbol type data
-	DataType symbol_type_data(new_var_type, new_var_subtype, qualities, array_length);
+	DataType symbol_type_data(new_var_type, new_var_subtype, qualities, array_length, struct_name);
 	return symbol_type_data;
 }
 

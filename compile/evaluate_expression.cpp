@@ -78,7 +78,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         case SIZE_OF:
         {
             SizeOf sizeof_exp = *dynamic_cast<SizeOf*>(to_evaluate.get());
-            evaluation_ss = evaluate_sizeof(sizeof_exp, line);
+            evaluation_ss = this->evaluate_sizeof(sizeof_exp, line);
             break;
         }
         default:
@@ -316,7 +316,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
     }
 }
 
-std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_sizeof(SizeOf &to_evaluate, unsigned int line) {
     /*
     
     Since sizeof<T> always returns a const unsigned int, it should go into eax

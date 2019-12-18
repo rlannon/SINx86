@@ -55,6 +55,8 @@ class DataType
 	size_t array_length;	// if it's an array, track the length
 	size_t width;	// the width (in bytes) of the type
 
+	std::string struct_name;	// if the data type is 'struct', we need to know its name so we can look it up in the struct table
+
 	void set_width();	// sets the symbol's type based on the primary type
 public:
 	bool operator==(const DataType right);
@@ -66,22 +68,24 @@ public:
 	bool operator==(const Type right);
 	bool operator!=(const Type right);
 
-	Type get_primary();
-	Type get_subtype();
-	SymbolQualities get_qualities();
-	size_t get_array_length();
+	Type get_primary() const;
+	Type get_subtype() const;
+	SymbolQualities get_qualities() const;
+	size_t get_array_length() const;
+	std::string get_struct_name() const;
 
 	void set_primary(Type new_primary);
 	void set_subtype(Type new_subtype);
 	void add_qualities(std::vector<SymbolQuality> to_add);
     void add_quality(SymbolQuality to_add);
+	void set_struct_name(std::string name);
 
-	bool is_compatible(DataType to_compare);
+	bool is_compatible(DataType to_compare) const;
 
-	size_t get_width();
+	size_t get_width() const;
 
 	DataType(Type primary, Type subtype = NONE, std::vector<SymbolQuality> qualities = {}, size_t array_length = 0);
-    DataType(Type primary, Type subtype, SymbolQualities qualities, size_t array_length = 0);
+    DataType(Type primary, Type subtype, SymbolQualities qualities, size_t array_length = 0, std::string struct_name = "");
 	DataType();
 	~DataType();
 };

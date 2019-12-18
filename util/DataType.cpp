@@ -262,7 +262,7 @@ bool DataType::operator!=(const Type right)
 	return this->primary != right;
 }
 
-bool DataType::is_compatible(DataType to_compare)
+bool DataType::is_compatible(DataType to_compare) const
 {
 	/*
 	
@@ -306,22 +306,26 @@ bool DataType::is_compatible(DataType to_compare)
 	}
 }
 
-Type DataType::get_primary()
+Type DataType::get_primary() const
 {
 	return this->primary;
 }
 
-Type DataType::get_subtype()
+Type DataType::get_subtype() const
 {
 	return this->subtype;
 }
 
-SymbolQualities DataType::get_qualities() {
+SymbolQualities DataType::get_qualities() const {
 	return this->qualities;
 }
 
-size_t DataType::get_array_length() {
+size_t DataType::get_array_length() const {
 	return this->array_length;
+}
+
+std::string DataType::get_struct_name() const {
+	return this->struct_name;
 }
 
 void DataType::set_primary(Type new_primary) {
@@ -348,7 +352,12 @@ void DataType::add_quality(SymbolQuality to_add) {
     this->set_width();
 }
 
-size_t DataType::get_width() {
+void DataType::set_struct_name(std::string name) {
+	// Sets the name of the struct
+	this->struct_name = name;
+}
+
+size_t DataType::get_width() const {
 	return this->width;
 }
 
@@ -373,11 +382,12 @@ DataType::DataType(Type primary, Type subtype, std::vector<SymbolQuality> qualit
 	this->set_width();
 }
 
-DataType::DataType(Type primary, Type subtype, SymbolQualities qualities, size_t array_length) :
+DataType::DataType(Type primary, Type subtype, SymbolQualities qualities, size_t array_length, std::string struct_name) :
     primary(primary),
     subtype(subtype),
     qualities(qualities),
-	array_length(array_length)
+	array_length(array_length),
+	struct_name(struct_name)
 {
     // if the type is int, set signed to true if it is not unsigned
 	if (primary == INT && !this->qualities.is_unsigned()) {
@@ -398,6 +408,7 @@ DataType::DataType()
 	this->subtype = NONE;
 	this->qualities = SymbolQualities();	// no qualities to start
 	this->array_length = 0;
+	this->struct_name = "";
 }
 
 DataType::~DataType()
