@@ -8,11 +8,14 @@ target=sinx86
 bin=bin/
 
 # object file dependencies
+compiler_objs=allocation.o assign.o evaluate_expression.o function_symbol.o symbol.o
+compiler_util_objs=register_usage.o utilities.o
 parser_objs=lexer.o parseexpression.o parsestatement.o parserutil.o statement.o expression.o
 util_objs=datatype.o exceptions.o binaryio.o
 build_objs=parser.o $(parser_objs) $(util_objs)
 
 # source file dependencies
+compiler_dependencies=compile/*
 parser_dependencies=parser/*
 util_dependencies=util/*
 all_dependencies=$(parser_dependencies) $(util_dependencies)
@@ -29,7 +32,30 @@ $(target): $(build_objs)
 	@echo "Build successful!"
 
 # Build the compiler
-# todo: build compiler
+compiler.o: $(compiler_objs) $(parser_objs) $(util_objs) $(parser_dependencies) $(compiler_dependencies)
+	$(cc) $(flags) -o compiler.o -c compile/compile.cpp
+
+allocation.o: compile/allocation.cpp compile/compile.h
+	$(cc) $(flags) -o allocation.o -c compile/allocation.cpp
+
+assign.o: compile/assign.cpp compile/compile.h
+	$(cc) $(flags) -o assign.o -c compile/assign.cpp
+
+evaluate_expression.o: compile/evaluate_expression.cpp compile/compile.h
+	$(cc) $(flags) -o evaluate_expression.o -c compile/evaluate_expression.cpp
+
+function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h
+	$(cc) $(flags) -o function_symbol.o -c compile/function_symbol.cpp
+
+symbol.o: compile/symbol.cpp compile/symbol.h
+	$(cc) $(flags) -o symbol.o -c compile/symbol.cpp
+
+# compiler utilities
+register_usage.o: compile/compile_util/register_usage.cpp compile/compile_util/register_usage.h
+	$(cc) $(flags) -o register_usage.o -c compile/compile_util/register_usage.cpp
+
+utilities.o: compile/compile_util/*
+	$(cc) $(flags) -o utilities.o -c compile/compile_util/utilities.cpp
 
 # Build the parser
 

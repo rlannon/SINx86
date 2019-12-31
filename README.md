@@ -1,10 +1,12 @@
 # SIN-Language
 
-SIN is a custom procedural programming language based on C, C++, and Python, designed as an exercise in computer language design. It is named after the Spanish word meaning "without", because if anyone were to ask you about the language, you would reply that it is without any real utility or purpose. This repository contains a compiler for SIN with an x86 target. I may add other architectures as I go on, but this is the focus of the project for the time being.
+SIN is a custom procedural programming language based on C, C++, and Python, designed as an exercise in computer language design. It is named after the Spanish word meaning "without" because if anyone were to ask you about the language, you would reply that it is without any real utility or purpose. This repository contains a compiler for SIN with an x86 target; while I may add other architectures as I go on, x86 is the sole focus of the project for the time being.
 
 ## Goal of the Project
 
 This project is a hands-on way of learning compiler development. The purpose of this project is not to create a particularly good compiler; it is a first attempt, and as such it will likely be mediocre at best. The goal is to serve as a learning exercise in compiler writing and solving various programming problems in the C++ language.
+
+That said, I hope that this project will yield a functioning programming language compiler, one that can be improved and expanded in future projects.
 
 ## Getting Started
 
