@@ -24,23 +24,18 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
 
     // find the symbol
     LValue *lvalue = dynamic_cast<LValue*>(assign_stmt.get_lvalue().get());
-    std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.find(lvalue->getValue());
+    symbol &sym = *(this->lookup(lvalue->getValue(), assign_stmt.get_line_number()).get()); // will throw an exception if the symbol doesn't exist
 
-    // if we could find the symbol, perform the assignment; else, throw an exception
-    if (it != this->symbol_table.end()) {
-        // ensure we can make the assignment
-        if (it->second->get_data_type().get_qualities().is_const()) {
-            // ensure we aren't assigning to a const-qualified variable
-            throw ConstAssignmentException(assign_stmt.get_line_number());
-        } else if (it->second->get_symbol_type() == FUNCTION_DEFINITION) {
-            // if the symbol is a function symbol, then we have an error
-            throw InvalidSymbolException(assign_stmt.get_line_number());
-        } else {
-            // dispatch to the assignment handler
-            return this->handle_assignment(*(it->second.get()), assign_stmt.get_rvalue(), assign_stmt.get_line_number());
-        }
+    // ensure we can make the assignment
+    if (sym.get_data_type().get_qualities().is_const()) {
+        // ensure we aren't assigning to a const-qualified variable
+        throw ConstAssignmentException(assign_stmt.get_line_number());
+    } else if (sym.get_symbol_type() == FUNCTION_DEFINITION) {
+        // if the symbol is a function symbol, then we have an error
+        throw InvalidSymbolException(assign_stmt.get_line_number());
     } else {
-        throw SymbolNotFoundException(assign_stmt.get_line_number());
+        // dispatch to the assignment handler
+        return this->handle_assignment(sym, assign_stmt.get_rvalue(), assign_stmt.get_line_number());
     }
 }
 

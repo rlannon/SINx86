@@ -230,15 +230,12 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
     std::stringstream eval_ss;
 
     // get the symbol for the lvalue
-    std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.find(to_evaluate.getValue());
+    symbol &sym = *(this->lookup(to_evaluate.getValue(), line).get());
 
     // it must be a variable symbol, not a function definition
-    if (it->second->get_symbol_type() == FUNCTION_DEFINITION) {
+    if (sym.get_symbol_type() == FUNCTION_DEFINITION) {
         throw UnexpectedFunctionException(line);
     } else {
-        // get the symbol
-        symbol &sym = *dynamic_cast<symbol*>(it->second.get());
-
         // ensure the symbol is accessible in the current scope
         if (this->is_in_scope(sym)) {
             // mark RAX as 'in use' (if it's already 'in use', this has no effect)
