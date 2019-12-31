@@ -65,8 +65,9 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
 
     // ensure our expression's data type is compatible with our variable's data type
     if (symbol_type.is_compatible(expression_type)) {
+        // dispatch appropriately based on the data type
         if (symbol_type.get_primary() == INT) {
-            return handle_assignment(sym, value, line);
+            return handle_int_assignment(sym, value, line);
         } else if (symbol_type.get_primary() == CHAR) {
 
         } else if (symbol_type.get_primary() == FLOAT) {
@@ -105,6 +106,8 @@ std::stringstream compiler::handle_int_assignment(symbol &symbol, std::shared_pt
     assign_ss << this->evaluate_expression(value, line).str();
 
     // todo: make assignment
+
+    // todo: how the variable is allocated will determine how we make the assignment
 
     // return our generated code
     return assign_ss;

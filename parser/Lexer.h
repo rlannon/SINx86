@@ -119,7 +119,11 @@ public:
 	// read the next lexeme
 	lexeme read_next();
 
+	// add a file to be lexed
+	void add_file(std::istream &input);
+
 	Lexer(std::istream& input);
+	Lexer();
 	~Lexer();
 };
 

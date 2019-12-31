@@ -400,7 +400,7 @@ DataType Parser::get_type()
 			}
 		}
 		else {
-			throw ParserException("You must specify the size and type of an array", 0, current_lex.line_number);
+			throw ParserException("You must specify the size and type of an array (in that order)", 0, current_lex.line_number);
 		}
 	}
 	// otherwise, if it is not a pointer or an array,

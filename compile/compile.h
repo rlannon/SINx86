@@ -43,18 +43,22 @@ class compiler {
     // utilities that require compiler's data members
     std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);
     std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line);
-    std::stringstream evaluate_lvalue(LValue &to_evalue, unsigned int line);
-	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
+    std::stringstream evaluate_lvalue(LValue &to_evaluate, unsigned int line);
+	std::stringstream evaluate_indexed(Indexed &to_evaluate, unsigned int line);
+    std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 
     // We need to track the number for string constants, if/else blocks, etc.
     size_t strc_num;
-    size_t if_else_num;
+    size_t scope_block_num;
 
     // We have sections for the text, data, and bss segments here
     std::stringstream text_segment;
     std::stringstream data_segment;
     std::stringstream bss_segment;
 public:
+    // the compiler's entry function
+    void generate_asm(std::string filename, Parser &p);
+
     compiler();
     ~compiler();
 };

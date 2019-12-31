@@ -31,9 +31,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
             std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
 
             // make an assignment of 'initial_value' to 'allocated'
+            allocation_ss << this->handle_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
         }
+
+        // do not return yet in case we have any other code we wish to add later
     }
 
+    // return our allocation code
     return allocation_ss;
 }
 
@@ -49,6 +53,6 @@ symbol compiler::allocate_automatic(Allocation alloc_stmt) {
     // update the max offset
     this->max_offset += alloc_stmt.get_type_information().get_width();
 
-    // Generates no code, so it always returns an empty stringstream
+    // an automatic allocation generates no code, so return the allocated symbol
     return to_allocate;
 }

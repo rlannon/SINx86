@@ -9,6 +9,8 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 #include "compile.h"
 
+// todo: create an expression evaluation class and give it access to compiler members?
+
 std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line) {
     /*
 
@@ -49,6 +51,11 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case INDEXED:
         {
+            // get the indexed expression
+            Indexed indexed_exp = *dynamic_cast<Indexed*>(to_evaluate.get());
+            
+            // dispatch appropriately; evaluation of indexed expressions is sufficiently complicated to warrant it
+            
             break;
         }
         case LIST:
@@ -314,6 +321,24 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
             throw OutOfScopeException(line);
         }
     }
+}
+
+std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int line) {
+    /*
+
+    evaluate_indexed
+    Evaluates an indexed expression
+
+    Generates x86 to determine the result of an indexed expression.
+    Determines the byte offset based on data type and index, locates the symbol, and fetches the data accordingly
+
+    @param  to_evaluate The indexed expression we are examining
+    @param  line    The line number where the expression occurs (for error handling)
+    @return A stringstream containing the generated code
+
+    */
+
+    // todo: evaluate indexed
 }
 
 std::stringstream compiler::evaluate_sizeof(SizeOf &to_evaluate, unsigned int line) {

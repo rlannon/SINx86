@@ -432,6 +432,14 @@ std::ostream& Lexer::write(std::ostream& os) const {
 	return os << "{ \"" << this->current_lexeme.type << "\" : \"" << this->current_lexeme.value << "\" }";
 }
 
+// add a stream to be lexed
+void Lexer::add_file(std::istream &input) {
+	this->stream = &input;
+	this->position = 0;
+	this->current_line = 1;
+	this->exit_flag = false;
+}
+
 // Constructor and Destructor
 
 Lexer::Lexer(std::istream& input)
@@ -440,6 +448,10 @@ Lexer::Lexer(std::istream& input)
 	Lexer::position = 0;
 	Lexer::current_line = 1;
 	Lexer::exit_flag = false;
+}
+
+Lexer::Lexer() {
+	
 }
 
 
