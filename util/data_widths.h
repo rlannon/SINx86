@@ -11,6 +11,9 @@ Contains the widts for our various data types.
 
 #include <cinttypes>
 #include <cstdlib>
+#include <unordered_map>
+
+#include "EnumeratedTypes.h"
 
 namespace sin_widths {
     const size_t INT_WIDTH = 4;
@@ -24,4 +27,13 @@ namespace sin_widths {
     const size_t FLOAT_WIDTH = 4;
     const size_t DOUBLE_WIDTH = 8;
     const size_t HALF_WIDTH = 2;
+
+    const std::unordered_map<Type, size_t> widths({
+        {INT, INT_WIDTH},
+        {LONG, LONG_WIDTH},
+        {SHORT, SHORT_WIDTH},
+        {BOOL, BOOL_WIDTH},
+        {PTR, PTR_WIDTH},
+        {FLOAT, FLOAT_WIDTH}
+    });
 };

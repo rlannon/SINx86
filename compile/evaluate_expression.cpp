@@ -338,7 +338,51 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 
     */
 
-    // todo: evaluate indexed
+    // todo: evaluate indexed expressions
+    
+    std::stringstream eval_ss;
+
+    // first, get the symbol for the array or string we are indexing
+    symbol indexed_sym = *(this->lookup(to_evaluate.getValue(), line).get());
+
+    // ensure it is a valid type to be indexed; if so, get the offset in ebx
+    if (
+        indexed_sym.get_symbol_type() == VARIABLE && 
+        (
+            indexed_sym.get_data_type().get_primary() == ARRAY || indexed_sym.get_data_type().get_primary() == STRING)
+        ) {
+        // todo: perform bounds checking on arrays? the length is known, but we will need to figure out how to handle that error in the assembly, since SIN does not utilize exceptions (could print an error message and quit?)
+
+        // next, get the index and multiply it by the data width to get our byte offset
+        eval_ss << this->evaluate_expression(to_evaluate.get_index_value(), line).str();
+        // the integer value will now be in eax; multiply by the data width (use MUL for unsigned multiplication -- SIN does not support negative indices)
+        eval_ss << "\t" << "mul eax, " << std::dec << indexed_sym.get_data_type().get_width() << std::endl;
+        // move the offset into ebx -- we must use indexing
+        eval_ss << "\t" << "mov ebx, eax" << std::endl;
+        
+        // mark RBX as "in use" in case a future operation requires it
+        this->reg_stack.peek().set(RBX);
+    } else {
+        throw TypeException(line);
+    }
+
+    // now that we have the index in RBX, fetch the value
+    if (indexed_sym.get_data_type().get_qualities().is_const()) {
+        // todo: const arrays
+        // const arrays can use the name of the variable
+    } else if (indexed_sym.get_data_type().get_qualities().is_dynamic()) {
+        // todo: dynamic arrays
+        // dynamic arrays will use a pointer
+    } else if (indexed_sym.get_data_type().get_qualities().is_static()) {
+        // todo: static arrays
+        // static arrays can use the name of the variable since they're reserved as named variables prior to runtime
+    } else {
+        // todo: automatic arrays
+        // automatic arrays will live on the stack since the array's width is known at compile-time
+    }
+
+    // return our generated code
+    return eval_ss;
 }
 
 std::stringstream compiler::evaluate_sizeof(SizeOf &to_evaluate, unsigned int line) {

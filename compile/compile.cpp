@@ -11,6 +11,27 @@ Copyright 2019 Riley Lannon
 
 #include "compile.h"
 
+std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
+    /*
+
+    lookup
+    Finds a symbol in the symbol table
+
+    Looks up a symbol in the symbol table and returns it if found. Else, throws an exception.
+
+    */
+
+    // use the unordered_map::find function
+    std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.find(name);
+
+    // if the symbol wasn't found, throw an exception
+    if (it == this->symbol_table.end()) {
+        throw SymbolNotFoundException(line);
+    } else {
+        return it->second;
+    }
+}
+
 void compiler::generate_asm(std::string filename, Parser &p) {
     /*
 

@@ -28,6 +28,7 @@ class compiler {
     stack<register_usage> reg_stack;    // a stack for tracking which registers are in use in a given scope
 
     std::unordered_map<std::string, std::shared_ptr<symbol>> symbol_table;    // the symbol table will be implemented through an unordered map
+    std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
 
     unsigned int max_offset;    // the maximum offset within the current stack frame -- use for new variables, calls, etc
 
