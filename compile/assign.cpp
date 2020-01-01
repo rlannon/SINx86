@@ -136,6 +136,8 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
         // if we had to preserve RSI, restore it
         if (preserve_rsi) {
             assign_ss << "\t" << "popq rsi" << std::endl;
+        } else {
+            this->reg_stack.peek().clear(RSI);
         }
     } else {
         /*
@@ -155,8 +157,6 @@ std::stringstream compiler::handle_bool_assignment(symbol &sym, std::shared_ptr<
     handle_bool_assignment
     Handles an assignment to a boolean variable
 
-    Note that bool is the _only_ type in SIN that allows implicit type conversion, but this is only possible between booleans and integral types.
-
     @param  sym The variable's symbol
     @param  value   The expression containing the rvalue
     @param  line    The line number of the expression
@@ -166,7 +166,50 @@ std::stringstream compiler::handle_bool_assignment(symbol &sym, std::shared_ptr<
 
     std::stringstream assign_ss;
 
-    // todo: make boolean assignment
+    // todo: should the language allow implicit conversion between integers and booleans? or not allow any implicit conversions?
+
+    // ensure the types are compatible
+    if (sym.get_data_type().is_compatible(get_expression_data_type(value, this->symbol_table, line))) {
+        // evaluate the boolean expression -- the result will be in al
+        assign_ss << this->evaluate_expression(value, line).str();
+
+        // now, we have to assign based on how the boolean was allocated
+        if (sym.get_data_type().get_qualities().is_const()) {
+            // todo: eliminate this check?
+            throw ConstAssignmentException(line);
+        } else if (sym.get_data_type().get_qualities().is_static()) {
+            // assign to named variable
+            assign_ss << "\t" << "mov " << sym.get_name() << ", al" << std::endl;
+        } else if (sym.get_data_type().get_qualities().is_dynamic()) {
+            // get pointer to bool and assign; pointer should go in rsi
+            // if RSI is in use, push and restore; else, set to "in use"
+            bool restore_rsi = this->reg_stack.peek().is_in_use(RSI);
+            if (restore_rsi) {
+                assign_ss << "\t" << "pushq rsi" << std::endl;
+            } else {
+                this->reg_stack.peek().set(RSI);
+            }
+
+            // the pointer to dynamic memory is located on the stack
+            assign_ss << "\t" << "mov rsi, [rbp - " << std::dec << sym.get_stack_offset() << "]" << std::endl;
+
+            // move the contents of al into the location pointed to by RSI
+            assign_ss << "\t" << "mov [rsi], al" << std::endl;
+
+            // restore RSI, if needed
+            if (restore_rsi) {
+                assign_ss << "\t" << "popq rsi" << std::endl;
+            } else {
+                // clear the 'in use' status of RSI
+                this->reg_stack.peek().clear(RSI);
+            }
+        } else {
+            // automatic memory -- move the contents of al to [rbp - offset]
+            assign_ss << "\t" << "mov [rbp - " << sym.get_stack_offset() << "], al" << std::endl;
+        }
+    } else {
+        throw TypeException(line);
+    }
 
     return assign_ss;
 }

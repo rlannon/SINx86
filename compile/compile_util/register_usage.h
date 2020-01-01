@@ -53,6 +53,7 @@ class register_usage {
 public:
     bool is_in_use(reg to_test);
     void set(reg to_set);
+    void clear(reg to_clear);
 
     // for getting the first available register
     reg get_available_register();

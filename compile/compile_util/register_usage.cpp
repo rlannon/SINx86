@@ -83,6 +83,16 @@ void register_usage::set(reg to_set) {
     }
 }
 
+void register_usage::clear(reg to_clear) {
+    // Marks a register as available
+    std::unordered_map<reg, bool&>::iterator it = this->regs.find(to_clear);
+    if (it == this->regs.end()) {
+        throw CompilerException("Invalid register selection");
+    } else {
+        it->second = false; // since it's a reference, it will update the original
+    }
+}
+
 reg register_usage::get_available_register() {
     // Returns the first available register
 
