@@ -21,7 +21,8 @@ enum stmt_type {
 	RETURN_STATEMENT,
 	IF_THEN_ELSE,
 	WHILE_LOOP,
-	DEFINITION,
+	FUNCTION_DEFINITION,
+	STRUCT_DEFINITION,
 	CALL,
 	INLINE_ASM,
 	FREE_MEMORY
@@ -46,8 +47,8 @@ enum exp_type {
 enum SymbolType {
 	// So that we know whether a symbol is a variable, function definition, struct definition...
 	VARIABLE,
-	FUNCTION_DEFINITION,
-	STRUCT_DEFINITION
+	FUNCTION_SYMBOL,
+	STRUCT_SYMBOL
 };
 
 

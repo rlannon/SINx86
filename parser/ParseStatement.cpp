@@ -669,7 +669,7 @@ std::shared_ptr<Statement> Parser::parse_definition(lexeme current_lex)
 				if (returned) {
 					// Return the pointer to our function
 					std::shared_ptr<LValue> _func = std::make_shared<LValue>(func_name.value, "func");
-					stmt = std::make_shared<Definition>(_func, func_type_data, args, std::make_shared<StatementBlock>(procedure));
+					stmt = std::make_shared<FunctionDefinition>(_func, func_type_data, args, std::make_shared<StatementBlock>(procedure));
 					stmt->set_line_number(current_lex.line_number);
 
 					return stmt;

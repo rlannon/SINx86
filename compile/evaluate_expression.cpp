@@ -233,7 +233,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
     symbol &sym = *(this->lookup(to_evaluate.getValue(), line).get());
 
     // it must be a variable symbol, not a function definition
-    if (sym.get_symbol_type() == FUNCTION_DEFINITION) {
+    if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
         throw UnexpectedFunctionException(line);
     } else {
         // ensure the symbol is accessible in the current scope

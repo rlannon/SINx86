@@ -30,7 +30,7 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
     if (sym.get_data_type().get_qualities().is_const()) {
         // ensure we aren't assigning to a const-qualified variable
         throw ConstAssignmentException(assign_stmt.get_line_number());
-    } else if (sym.get_symbol_type() == FUNCTION_DEFINITION) {
+    } else if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
         // if the symbol is a function symbol, then we have an error
         throw InvalidSymbolException(assign_stmt.get_line_number());
     } else {

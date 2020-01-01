@@ -135,7 +135,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
                 throw SymbolNotFoundException(line);
             } else {
                 // ensure the symbol is a function symbol
-                if (it->second->get_symbol_type() == FUNCTION_DEFINITION) {
+                if (it->second->get_symbol_type() == FUNCTION_SYMBOL) {
                     // get the function symbol
                     function_symbol *func_sym = dynamic_cast<function_symbol*>(it->second.get());
 

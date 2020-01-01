@@ -268,36 +268,63 @@ WhileLoop::WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Stat
 WhileLoop::WhileLoop() {
 }
 
-/*******************	FUNCTION DEFINITION CLASS		********************/
+
+/*******************	DEFINITION CLASS		********************/
 
 std::shared_ptr<Expression> Definition::get_name() {
 	return this->name;
-}
-
-DataType Definition::get_return_type()
-{
-	return this->return_type;
 }
 
 std::shared_ptr<StatementBlock> Definition::get_procedure() {
 	return this->procedure;
 }
 
-std::vector<std::shared_ptr<Statement>> Definition::get_args() {
-	return this->args;
-}
-
-Definition::Definition(std::shared_ptr<Expression> name_ptr, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr):
-	name(name_ptr),
-	return_type(return_type),
-	args(args_ptr),
-	procedure(procedure_ptr)
+Definition::Definition(std::shared_ptr<Expression> name, std::shared_ptr<StatementBlock> procedure):
+	name(name),
+	procedure(procedure)
 {
-	Definition::statement_type = DEFINITION;
+	this->name = name;
+	this->procedure = procedure;
 }
 
 Definition::Definition() {
-	Definition::statement_type = DEFINITION;
+
+}
+
+Definition::~Definition() {
+	
+}
+
+/*******************	FUNCTION DEFINITION CLASS		********************/
+
+DataType FunctionDefinition::get_return_type()
+{
+	return this->return_type;
+}
+
+std::vector<std::shared_ptr<Statement>> FunctionDefinition::get_args() {
+	return this->args;
+}
+
+FunctionDefinition::FunctionDefinition(std::shared_ptr<Expression> name_ptr, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr):
+	Definition(name_ptr, procedure_ptr),
+	return_type(return_type),
+	args(args_ptr)
+{
+	FunctionDefinition::statement_type = FUNCTION_DEFINITION;
+}
+
+FunctionDefinition::FunctionDefinition() {
+	FunctionDefinition::statement_type = FUNCTION_DEFINITION;
+}
+
+
+/*******************	STRUCT DEFINITION CLASS		********************/
+
+StructDefinition::StructDefinition(std::shared_ptr<Expression> name_ptr, std::shared_ptr<StatementBlock> procedure_ptr):
+	Definition(name_ptr, procedure_ptr)
+{
+	this->statement_type = STRUCT_DEFINITION;
 }
 
 

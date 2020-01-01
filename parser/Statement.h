@@ -195,30 +195,42 @@ public:
 	WhileLoop();
 };
 
-class Definition : public Statement
+class Definition: public Statement
 {
-	// arguments are only used for function definitions, so they should be inaccessible to child classes
-	std::vector<std::shared_ptr<Statement>> args;
+	// The parent class for definitions
 protected:
 	std::shared_ptr<Expression> name;	// todo: why are function names Expressions but names in allocations are strings?
-	DataType return_type;
 	std::shared_ptr<StatementBlock> procedure;
+public:
+	std::shared_ptr<Expression> get_name();
+	std::shared_ptr<StatementBlock> get_procedure();
+	
+	Definition(std::shared_ptr<Expression> name, std::shared_ptr<StatementBlock> procedure);
+	Definition();
+	~Definition();
+};
+
+class FunctionDefinition : public Definition
+{
+	// arguments and return types are only used for function definitions, so they should be inaccessible to child classes
+	std::vector<std::shared_ptr<Statement>> args;
+	DataType return_type;
 
 	// TODO: add function qualities? currently, definitions just put "none" for the symbol's quality
 public:
-	std::shared_ptr<Expression> get_name();
 	DataType get_return_type();
-	std::shared_ptr<StatementBlock> get_procedure();
 	std::vector<std::shared_ptr<Statement>> get_args();
 
-	Definition(std::shared_ptr<Expression> name_ptr, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr);
-	Definition();
+	FunctionDefinition(std::shared_ptr<Expression> name_ptr, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr);
+	FunctionDefinition();
 };
 
 class StructDefinition : public Definition
 {
-	// A class for our struct definitions, because they differ from function definitions slightly
-
+	// A class for our struct definitions
+public:
+	StructDefinition(std::shared_ptr<Expression> name_ptr, std::shared_ptr<StatementBlock> producedure_ptr);
+	StructDefinition();
 };
 
 class Call : public Statement
