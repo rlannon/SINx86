@@ -195,6 +195,15 @@ public:
 	WhileLoop();
 };
 
+
+/*
+
+Our definitions
+
+There are two types of definitions in SIN - function definitions and struct definitions. Both statement classes inherit from 'definition', which has a name and a procedure associated with it
+
+*/
+
 class Definition: public Statement
 {
 	// The parent class for definitions
@@ -204,7 +213,7 @@ protected:
 public:
 	std::shared_ptr<Expression> get_name();
 	std::shared_ptr<StatementBlock> get_procedure();
-	
+
 	Definition(std::shared_ptr<Expression> name, std::shared_ptr<StatementBlock> procedure);
 	Definition();
 	~Definition();

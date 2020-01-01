@@ -155,7 +155,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		else if (current_lex.value == "while") {
 			return this->parse_while(current_lex);
 		}
-		// Parse a function declaration
+		// Parse a definition -- could be function or struct, call the delegator
 		else if (current_lex.value == "def") {
 			return this->parse_definition(current_lex);
 		}
@@ -609,86 +609,6 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 	}
 	else {
 		throw ParserException("Expected a condition", 331, current_lex.line_number);
-	}
-}
-
-std::shared_ptr<Statement> Parser::parse_definition(lexeme current_lex)
-{
-	std::shared_ptr<Statement> stmt;
-
-	// First, get the type of function that we have -- the return value
-	this->next();	// skip the 'def' keyword; 'get_type' begins parsing the function type _on the first token of the type data_
-	DataType func_type_data = this->get_type();
-
-	// Get the function name and verify it is of the correct type
-	lexeme func_name = this->next();
-	if (func_name.type == "ident") {
-		lexeme _peek = this->peek();
-		if (_peek.value == "(") {
-			this->next();
-			// Create our arguments vector and our StatementBlock variable
-			StatementBlock procedure;
-			std::vector<std::shared_ptr<Statement>> args;
-			// Populate our arguments vector if there are arguments
-			if (this->peek().value != ")") {
-				this->next();
-				while (this->current_token().value != ")") {
-					args.push_back(this->parse_statement());
-					this->next();
-
-					// if we have multiple arguments, current_token() will return a comma, but we don't want to advance twice in case we hit the closing paren; as a result, we only advance once more if there is a comma
-					if (this->current_token().value == ",") {
-						this->next();
-					}
-				}
-			}
-			else {
-				this->next();	// skip the closing paren
-			}
-
-			// Args should be empty if we don't have any
-			// Now, check to make sure we have a curly brace
-			if (this->peek().value == "{") {
-				this->next();
-
-				// if we have an empty definition, print a warning but continue parsing
-				if (this->peek().value != "}") {
-					this->next();	// if the definition isn't empty we can skip ahead, but we don't want to if it is (it will cause the parser to crash)
-				}
-				else {
-					parser_warning("Empty function definition", this->current_token().line_number);	// print a warning and don't advance the token pointer
-				}
-
-				procedure = this->create_ast();
-				this->next();	// skip closing curly brace
-
-				// check to see if 'procedure' has a return statement using has_return
-				bool returned = has_return(procedure);
-
-				// if so, return it; otherwise, throw an error
-				if (returned) {
-					// Return the pointer to our function
-					std::shared_ptr<LValue> _func = std::make_shared<LValue>(func_name.value, "func");
-					stmt = std::make_shared<FunctionDefinition>(_func, func_type_data, args, std::make_shared<StatementBlock>(procedure));
-					stmt->set_line_number(current_lex.line_number);
-
-					return stmt;
-				}
-				else {
-					throw ParserException("All functions must return a value (if type is void, use 'return void')", 0, current_lex.line_number);
-				}
-			}
-			else {
-				throw ParserException("Function definition requires use of curly braces after arguments", 331, current_lex.line_number);
-			}
-		}
-		else {
-			throw ParserException("Function definition requires '(' and ')'", 331, current_lex.line_number);
-		}
-	}
-	// if NOT "ident"
-	else {
-		throw ParserException("Expected identifier", 330, current_lex.line_number);
 	}
 }
 

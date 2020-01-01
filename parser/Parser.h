@@ -67,6 +67,7 @@ class Parser
 
 	// Parsing statements -- each statement type will use its own function to return a statement of that type
 	std::shared_ptr<Statement> parse_statement(bool is_function_parameter = false);		// entry function to parse a statement
+
 	std::shared_ptr<Statement> parse_include(lexeme current_lex);
 	std::shared_ptr<Statement> parse_declaration(lexeme current_lex, bool is_function_parameter = false);
 	std::shared_ptr<Statement> parse_ite(lexeme current_lex);
@@ -74,7 +75,12 @@ class Parser
 	std::shared_ptr<Statement> parse_assignment(lexeme current_lex);
 	std::shared_ptr<Statement> parse_return(lexeme current_lex);
 	std::shared_ptr<Statement> parse_while(lexeme current_lex);
+
+	// We have a few different types of definitions we could parse; delegate
 	std::shared_ptr<Statement> parse_definition(lexeme current_lex);
+	std::shared_ptr<Statement> parse_function_definition(lexeme current_lex);
+	std::shared_ptr<Statement> parse_struct_definition(lexeme current_lex);
+
 	std::shared_ptr<Statement> parse_function_call(lexeme current_lex);
 
 	// Parsing expressions
