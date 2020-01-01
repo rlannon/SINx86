@@ -354,10 +354,14 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
         eval_ss << this->evaluate_expression(to_evaluate.get_index_value(), line).str();
         // the integer value will now be in eax; multiply by the data width (use MUL for unsigned multiplication -- SIN does not support negative indices)
         eval_ss << "\t" << "mul eax, " << std::dec << indexed_sym.get_data_type().get_width() << std::endl;
+
+        // todo: preserve rbx?
+
         // move the offset into ebx -- we must use indexing
         eval_ss << "\t" << "mov ebx, eax" << std::endl;
         
         // mark RBX as "in use" in case a future operation requires it
+        // this will also cause any function that uses RBX to preserve it when called
         this->reg_stack.peek().set(RBX);
     } else {
         throw TypeException(line);

@@ -40,6 +40,9 @@ class compiler {
     std::stringstream assign(Assignment assign_stmt);
     std::stringstream handle_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
     std::stringstream handle_int_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
+    std::stringstream handle_bool_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
+    std::stringstream handle_string_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
+    // todo: handle assignments for char, float, etc.
 
     // utilities that require compiler's data members
     std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);

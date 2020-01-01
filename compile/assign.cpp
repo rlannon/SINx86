@@ -15,7 +15,7 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
     assign
     Generates code for an assignment statement
 
-    This function dispatches the work for making assignments to the appropriate functions
+    This function dispatches the work for making assignments to the appropriate handlers
 
     @param  assign_stmt The Assignment object that contains the information we need to make the assignment
     @return A stringstream containing the generated code
@@ -61,29 +61,33 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
     // ensure our expression's data type is compatible with our variable's data type
     if (symbol_type.is_compatible(expression_type)) {
         // dispatch appropriately based on the data type
-        if (symbol_type.get_primary() == INT) {
-            return handle_int_assignment(sym, value, line);
-        } else if (symbol_type.get_primary() == CHAR) {
-
-        } else if (symbol_type.get_primary() == FLOAT) {
-
-        } else if (symbol_type.get_primary() == BOOL) {
-
-        } else if (symbol_type.get_primary() == PTR) {
-
-        } else if (symbol_type.get_primary() == STRING) {
-
-        } else if (symbol_type.get_primary() == ARRAY) {
-
-        } else if (symbol_type.get_primary() == STRUCT) {
-
-        }
+        switch(symbol_type.get_primary()) {
+            case INT:
+                return handle_int_assignment(sym, value, line);
+            case CHAR:
+                break;
+            case FLOAT:
+                break;
+            case BOOL:
+                return handle_bool_assignment(sym, value, line);
+            case PTR:
+                // pointers are really just integers, so we can
+                return handle_int_assignment(sym, value, line);
+            case STRING:
+                break;
+            case ARRAY:
+                break;
+            case STRUCT:
+                break;
+            default:
+                throw TypeException(line);
+        };
     } else {
         throw TypeException(line);
     }
 }
 
-std::stringstream compiler::handle_int_assignment(symbol &symbol, std::shared_ptr<Expression> value, unsigned int line) {
+std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line) {
     /*
 
     handle_int_assignment
@@ -99,11 +103,93 @@ std::stringstream compiler::handle_int_assignment(symbol &symbol, std::shared_pt
 
     // Generate the code to evaluate the expression; it should go into the a register (rax, eax, ax, or al depending on the data width)
     assign_ss << this->evaluate_expression(value, line).str();
+    std::string src = (sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? "rax" : (sym.get_data_type().get_width == sin_widths::SHORT_WIDTH ? "ax" : "eax")); // get our source register based on the symbol's width
 
-    // todo: make assignment
+    // how the variable is allocated will determine how we make the assignment
+    if (sym.get_data_type().get_qualities().is_const()) {
+        throw ConstAssignmentException(line);   // todo: eliminate this check?
+    } else if (sym.get_data_type().get_qualities().is_static()) {
+        /*
+        static variables can be referenced by name
+        assignment should look like:
+            mov myVar, eax
+        */
+        assign_ss << "\t" << "mov " << sym.get_name() << ", " << src << std::endl;
+    } else if (sym.get_data_type().get_qualities().is_dynamic()) {
+        // get pointer for dynamic variable and assign to it
+        // the pointer should go in RSI; if it's in use, push it then restore
+        bool preserve_rsi = this->reg_stack.peek().is_in_use(RSI);
+        if (preserve_rsi) {
+            assign_ss << "\t" << "pushq rsi" << std::endl;
+        } else {
+            // mark the register as in use
+            this->reg_stack.peek().set(RSI);
+        }
 
-    // todo: how the variable is allocated will determine how we make the assignment
+        // make the assignment
+        // first, move the pointer to dynamic memory into rsi
+        assign_ss << "\t" << "mov rsi, [rbp - " << std::dec << sym.get_stack_offset() << "]" << std::endl;
+
+        // then, assign to the address pointed to by rsi
+        assign_ss << "\t" << "mov [rsi], " << src << std::endl;
+
+        // if we had to preserve RSI, restore it
+        if (preserve_rsi) {
+            assign_ss << "\t" << "popq rsi" << std::endl;
+        }
+    } else {
+        /*
+        automatic memory will write to the appropriate address on the stack for integral types
+        simply use the stack offset of the symbol in the assignment, subtracting from rbp
+        */
+        assign_ss << "\t" << "mov [rbp - " << std::dec << sym.get_stack_offset() << "], " << src << std::endl;
+    }
 
     // return our generated code
+    return assign_ss;
+}
+
+std::stringstream compiler::handle_bool_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line) {
+    /*
+
+    handle_bool_assignment
+    Handles an assignment to a boolean variable
+
+    Note that bool is the _only_ type in SIN that allows implicit type conversion, but this is only possible between booleans and integral types.
+
+    @param  sym The variable's symbol
+    @param  value   The expression containing the rvalue
+    @param  line    The line number of the expression
+    @return A stringstream containing the generated code
+
+    */
+
+    std::stringstream assign_ss;
+
+    // todo: make boolean assignment
+
+    return assign_ss;
+}
+
+std::stringstream compiler::handle_string_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line) {
+    /*
+
+    handle_string_assignment
+    Makes an assignment from one string value to another
+
+    Copy memory from one dynamic location to another. The string will be resized if necessary. 
+    Since strings are _not_ references (as they are in Java, for example), a string assignment will _always_ copy the string contents between locations and never re-assign the pointer to the rvalue. If that behavior is desired, use pointers.
+
+    @param  sym The symbol of the lvalue string
+    @param  value   The string value to copy
+    @param  line    The line number of the assignment
+    @return A stringstream containing the generated code
+
+    */
+
+    std::stringstream assign_ss;
+
+    // todo: string assignment
+
     return assign_ss;
 }
