@@ -170,3 +170,17 @@ bool can_pass_in_register(DataType to_check) {
         primary != STRING
     );
 }
+
+struct_info define_struct(StructDefinition definition) {
+    /*
+    
+    define_struct
+    Creates a struct_info object based on a syntax tree for a struct definition
+
+    @param  definition  The definition statement for the struct
+    @return A 'struct_info' object which may be added to the compiler's struct table
+
+    */
+
+    return struct_info();
+}

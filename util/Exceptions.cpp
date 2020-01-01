@@ -20,13 +20,19 @@ const char* CompilerException::what() const noexcept {
 }
 
 CompilerException::CompilerException(const std::string& message, unsigned int code, unsigned int line) : message(message), code(code), line(line) {
-	this->message = "**** Compiler Error " + std::to_string(this->code) + ": " + this->message + " (line " + std::to_string(this->line) + ")";
+	this->message = "**** Compiler Error " + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
 
 SymbolNotFoundException::SymbolNotFoundException(unsigned int line) :
 	CompilerException("Could not find referenced symbol", compiler_errors::SYMBOL_NOT_FOUND_ERROR, line)
 {
 	// we don't need a function body because we called the super constructor
+}
+
+DuplicateSymbolException::DuplicateSymbolException(unsigned int line) :
+	CompilerException("Symbol already defined in this scope", compiler_errors::DUPLICATE_SYMBOL_ERROR, line)
+{
+	// function body not necessary
 }
 
 InvalidSymbolException::InvalidSymbolException(unsigned int line) :

@@ -30,6 +30,9 @@ class compiler {
     std::unordered_map<std::string, std::shared_ptr<symbol>> symbol_table;    // the symbol table will be implemented through an unordered map
     std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
 
+    std::unordered_map<std::string, struct_info> struct_table;
+    struct_info get_struct_info(std::string struct_name);   // gets the data about a given struct
+
     unsigned int max_offset;    // the maximum offset within the current stack frame -- use for new variables, calls, etc
 
     // allocations

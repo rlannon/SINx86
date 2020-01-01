@@ -52,6 +52,8 @@ class register_usage {
     bool r15;
 public:
     bool is_in_use(reg to_test);
+
+    // todo: change to one function, 'set_available' ?
     void set(reg to_set);
     void clear(reg to_clear);
 

@@ -379,7 +379,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
         // static arrays can use the name of the variable since they're reserved as named variables prior to runtime
     } else {
         // todo: automatic arrays
-        // automatic arrays will live on the stack since the array's width is known at compile-time
+        // automatic arrays will live on the stack since the array's width is known at compile time
     }
 
     // return our generated code

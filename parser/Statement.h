@@ -197,9 +197,11 @@ public:
 
 class Definition : public Statement
 {
+	// arguments are only used for function definitions, so they should be inaccessible to child classes
+	std::vector<std::shared_ptr<Statement>> args;
+protected:
 	std::shared_ptr<Expression> name;	// todo: why are function names Expressions but names in allocations are strings?
 	DataType return_type;
-	std::vector<std::shared_ptr<Statement>> args;
 	std::shared_ptr<StatementBlock> procedure;
 
 	// TODO: add function qualities? currently, definitions just put "none" for the symbol's quality
@@ -211,6 +213,12 @@ public:
 
 	Definition(std::shared_ptr<Expression> name_ptr, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr);
 	Definition();
+};
+
+class StructDefinition : public Definition
+{
+	// A class for our struct definitions, because they differ from function definitions slightly
+
 };
 
 class Call : public Statement

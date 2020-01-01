@@ -44,6 +44,12 @@ public:
 	explicit SymbolNotFoundException(unsigned int line);
 };
 
+class DuplicateSymbolException : public CompilerException
+{
+public:
+	explicit DuplicateSymbolException(unsigned int line);
+};
+
 class InvalidSymbolException : public CompilerException
 {
 public:

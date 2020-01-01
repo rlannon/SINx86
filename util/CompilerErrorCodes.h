@@ -22,6 +22,7 @@ namespace compiler_errors {
     // Illegal operations
     const unsigned int CONST_ASSIGNMENT_ERROR = 1;
     const unsigned int DATA_WIDTH_ERROR = 3;
+    const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
     
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
