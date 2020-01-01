@@ -26,6 +26,7 @@ namespace compiler_errors {
     
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
+    const unsigned int UNDEFINED_ERROR = 101;
     const unsigned int OUT_OF_SCOPE_ERROR = 150;
 
     // Type errors

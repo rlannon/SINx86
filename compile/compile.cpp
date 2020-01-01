@@ -19,6 +19,11 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
 
     Looks up a symbol in the symbol table and returns it if found. Else, throws an exception.
 
+    @param  name    The name of the symbol to find
+    @param  line    The line where the lookup is needed
+    @return A shared_ptr containing the symbol in question
+    @throws Throws a SymbolNotFoundException if the symbol does not exist
+
     */
 
     // use the unordered_map::find function
@@ -27,6 +32,30 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
     // if the symbol wasn't found, throw an exception
     if (it == this->symbol_table.end()) {
         throw SymbolNotFoundException(line);
+    } else {
+        return it->second;
+    }
+}
+
+struct_info compiler::get_struct_info(std::string struct_name, unsigned int line) {
+    /*
+    
+    get_struct_info
+    Looks up a struct with the given name in the struct table
+
+    @param  struct_name The name of the struct to find
+    @param  line    The line where the lookup is needed
+    @return A struct_info object containing the information
+    @throws Throws an UndefinedException if the struct is not known
+
+    */
+
+    // look up our struct
+    std::unordered_map<std::string, struct_info>::iterator it = this->struct_table.find(struct_name);
+
+    // if found, return its data; else, throw an UndefinedException
+    if (it == this->struct_table.end()) {
+        throw UndefinedException(line);
     } else {
         return it->second;
     }

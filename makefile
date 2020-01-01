@@ -8,7 +8,7 @@ target=sinx86
 bin=bin/
 
 # object file dependencies
-compiler_objs=allocation.o assign.o evaluate_expression.o function_symbol.o symbol.o
+compiler_objs=allocation.o assign.o evaluate_expression.o function_symbol.o struct_info.o symbol.o
 compiler_util_objs=register_usage.o utilities.o
 parser_objs=lexer.o parseexpression.o parsestatement.o parserutil.o statement.o expression.o
 util_objs=datatype.o exceptions.o binaryio.o
@@ -46,6 +46,9 @@ evaluate_expression.o: compile/evaluate_expression.cpp compile/compile.h
 
 function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h
 	$(cc) $(flags) -o function_symbol.o -c compile/function_symbol.cpp
+
+struct_info.o: compile/struct_info.h compile/struct_info.h symbol.o exceptions.o
+	$(cc) $(flags) -o struct_info.o -c compile/struct_info.cpp
 
 symbol.o: compile/symbol.cpp compile/symbol.h
 	$(cc) $(flags) -o symbol.o -c compile/symbol.cpp

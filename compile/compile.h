@@ -16,6 +16,7 @@ Copyright 2019 Riley Lannon
 #include <unordered_map>
 
 #include "symbol.h"
+#include "struct_info.h"
 #include "../parser/Parser.h"
 #include "compile_util/utilities.h"
 #include "../util/stack.h"  // the stack data structure
@@ -31,7 +32,7 @@ class compiler {
     std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
 
     std::unordered_map<std::string, struct_info> struct_table;
-    struct_info get_struct_info(std::string struct_name);   // gets the data about a given struct
+    struct_info get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
 
     unsigned int max_offset;    // the maximum offset within the current stack frame -- use for new variables, calls, etc
 

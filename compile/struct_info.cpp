@@ -27,10 +27,18 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
 
     this->struct_name = name;
     this->struct_width = 0;
+    this->width_known = true;
 
     for (symbol s: members) {
         try {
             this->members.insert(std::make_pair(s.get_name(), s));
+
+            size_t sym_width = s.get_data_type().get_width();
+            if (sym_width != 0) {
+                this->struct_width += s.get_data_type().get_width();
+            } else {
+                this->width_known = false;
+            }
         } catch (std::exception &e) {
             throw DuplicateSymbolException(line);
         }
@@ -38,7 +46,9 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
 }
 
 struct_info::struct_info() {
-    // todo: default constructor
+    this->struct_name = "";
+    this->struct_width = 0;
+    this->width_known = false;
 }
 
 struct_info::~struct_info() {

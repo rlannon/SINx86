@@ -211,13 +211,15 @@ void DataType::set_width() {
 		this->width = sin_widths::PTR_WIDTH;
 	} else {
 		/*
+
 		Everything else should use 0:
 			void	-	a void type is literally nothing
 			array	-	do not have defined widths, it depends on the array and its subtype
 			struct	-	require the compiler to look for the width in the struct table
-		*/
+		
+		While it is possible to calculate the width of arrays and structs if all of that information is known at compile time, it is possible that a struct member would only be known to the compiler through the "decl" keyword, in which case it would be impossible to know the width when the allocation was occurring.
 
-        // todo: look into struct table?
+		*/
 
 		this->width = 0;
 	}

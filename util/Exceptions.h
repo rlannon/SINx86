@@ -50,6 +50,12 @@ public:
 	explicit DuplicateSymbolException(unsigned int line);
 };
 
+class UndefinedException : public CompilerException
+{
+public:
+	explicit UndefinedException(unsigned int line);
+};
+
 class InvalidSymbolException : public CompilerException
 {
 public:

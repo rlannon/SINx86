@@ -32,7 +32,13 @@ SymbolNotFoundException::SymbolNotFoundException(unsigned int line) :
 DuplicateSymbolException::DuplicateSymbolException(unsigned int line) :
 	CompilerException("Symbol already defined in this scope", compiler_errors::DUPLICATE_SYMBOL_ERROR, line)
 {
-	// function body not necessary
+	// function body not necessary (super called)
+}
+
+UndefinedException::UndefinedException(unsigned int line) :
+	CompilerException("Undefined reference to object", compiler_errors::UNDEFINED_ERROR, line)
+{
+	// function body not necessary (super called)
 }
 
 InvalidSymbolException::InvalidSymbolException(unsigned int line) :
