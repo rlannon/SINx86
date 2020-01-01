@@ -418,6 +418,11 @@ DataType Parser::get_type()
 
 		// if we have a struct, make a note of the name
 		if (new_var_type == STRUCT) {
+			// if we didn't have a valid type name, but it was a keyword, then throw an exception -- the keyword used was not a valid type identifier
+			if (current_lex.type == "kwd") {
+				throw ParserException(("Invalid type specifier '" + current_lex.value + "'"), 0, current_lex.line_number);
+			}
+
 			struct_name = current_lex.value;
 		}
 	}

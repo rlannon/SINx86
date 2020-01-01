@@ -43,6 +43,8 @@ const bool is_literal(std::string candidate_type) {
 const Type get_type_from_string(std::string candidate) {
 	// if it can, this function gets the proper type of an input string
 	// an array of the valid types as strings
+
+	// todo: refactor to use hash table?
 	std::string string_types[] = { "int", "float", "string", "bool", "void", "ptr", "raw" };
 	Type _types[] = { INT, FLOAT, STRING, BOOL, VOID, PTR, RAW };
 

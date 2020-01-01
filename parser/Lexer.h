@@ -26,7 +26,7 @@ Note that the Lexer class does /not/ parse source files; it simply puts those fi
 
 // Our lexeme data
 struct lexeme {
-	std::string type;
+	std::string type;	// todo: refactor to use enum
 	std::string value;
 	unsigned int line_number;
 	

@@ -23,6 +23,18 @@ CompilerException::CompilerException(const std::string& message, unsigned int co
 	this->message = "**** Compiler Error " + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
 
+IllegalOperationException::IllegalOperationException(unsigned int line):
+	CompilerException("This operation is not allowed here", compiler_errors::ILLEGAL_OPERATION_ERROR, line)
+{
+
+}
+
+StructDefinitionException::StructDefinitionException(unsigned int line):
+	CompilerException("Illegal; struct definitions may only include allocations", compiler_errors::ILLEGAL_OPERATION_ERROR, line)
+{
+	
+}
+
 SymbolNotFoundException::SymbolNotFoundException(unsigned int line) :
 	CompilerException("Could not find referenced symbol", compiler_errors::SYMBOL_NOT_FOUND_ERROR, line)
 {

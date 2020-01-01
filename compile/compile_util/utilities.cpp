@@ -177,10 +177,43 @@ struct_info define_struct(StructDefinition definition) {
     define_struct
     Creates a struct_info object based on a syntax tree for a struct definition
 
+    Since this doens't actually affect our symbol table, we don't need compiler members
+    Note that the caller should ensure that the definition statement occurs within the globa scope -- it is not the responsibility of this function
+
     @param  definition  The definition statement for the struct
     @return A 'struct_info' object which may be added to the compiler's struct table
+    @throws Throws a StructDefinitionException if there are statements other than
 
     */
 
-    return struct_info();
+    // get the struct's name
+    std::string struct_name;
+    LValue *name_lval = dynamic_cast<LValue*>(definition.get_name().get());
+    struct_name = name_lval->getValue();    // todo: refactor name to be a string in 'Definition'
+
+    // iterate through our definition statements and create symbols for all struct members
+    std::vector<symbol> members;
+    size_t current_offset = 0;
+    for (std::shared_ptr<Statement> s: definition.get_procedure()->statements_list) {
+        // Only allocations are allowed within a struct body
+        if (s->get_statement_type() == ALLOCATION) {
+            // cast to Allocation and create a symbol
+            Allocation *alloc = dynamic_cast<Allocation*>(s.get());
+            symbol sym(alloc->get_var_name(), struct_name, 1, alloc->get_type_information(), current_offset);
+            
+            // todo: allow default values (alloc-init syntax) in structs?
+
+            // add that symbol to our vector
+            members.push_back(sym);
+
+            // update the data offset
+            // todo: how to handle struct or array members? allocate space for a pointer?
+            current_offset += alloc->get_type_information().get_width();
+        } else {
+            throw StructDefinitionException(definition.get_line_number());
+        }
+    }
+
+    // construct and return a struct_info object
+    return struct_info(struct_name, members, definition.get_line_number());
 }

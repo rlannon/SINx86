@@ -405,11 +405,11 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
 	std::shared_ptr<Statement> stmt;
 	std::string new_var_name = "";
 
-	// check our next token; it must be a keyword
+	// check our next token; it must be a keyword or a struct name (ident)
 	lexeme next_token = this->next();
-	if (next_token.type == "kwd") {
-		// get the type data using Parser::get_type()
-		// this will tell us if the memory is to be dynamically allocated
+	if (next_token.type == "kwd" || next_token.type == "ident") {
+		// get the type data using Parser::get_type() -- this will tell us if the memory is to be dynamically allocated
+		// It will also throw an exception if the type specifier was invalid
 		DataType symbol_type_data = this->get_type();
 
 		// next, get the name
@@ -450,9 +450,8 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
 		else {
 			throw ParserException("The variable's type must be followed by a valid identifier", 0, next_token.line_number);
 		}
-	}
-	else {
-		throw ParserException("Expected a variable type; token type must be a keyword", 111, current_lex.line_number);
+	} else {
+		throw ParserException("Expected a valid data type", 111, current_lex.line_number);
 	}
 
 	return stmt;

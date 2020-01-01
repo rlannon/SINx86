@@ -1,5 +1,14 @@
+# VSCode settings should be ignored
 .vscode
+
+# For the time being, ignore our samples folder
+samples/*
+
+# Ignore object files and executables
 *.o
+sinx86
+
+# Visual Studio files
 *.sln
 Debug/*
 *.exe

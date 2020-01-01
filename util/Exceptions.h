@@ -38,6 +38,18 @@ public:
 	virtual const char* what() const noexcept;
 };
 
+class IllegalOperationException : public CompilerException
+{
+public:
+	explicit IllegalOperationException(unsigned int line);
+};
+
+class StructDefinitionException : public CompilerException
+{
+public:
+	explicit StructDefinitionException(unsigned int line);
+};
+
 class SymbolNotFoundException : public CompilerException
 {
 public:
