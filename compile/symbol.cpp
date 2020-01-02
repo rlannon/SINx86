@@ -33,6 +33,14 @@ unsigned int symbol::get_stack_offset() const {
 	return this->stack_offset;
 }
 
+bool symbol::was_freed() const {
+    return this->freed;
+}
+
+void symbol::free() {
+    this->freed = true;
+}
+
 symbol::symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset) : 
     name(name),
     scope_name(scope_name),
@@ -41,10 +49,12 @@ symbol::symbol(std::string name, std::string scope_name, unsigned int scope_leve
     stack_offset(stack_offset)
 {
     this->symbol_type = VARIABLE;
+    this->freed = false;    // symbols should start as allocated
 }
 
 symbol::symbol() {
     this->symbol_type = VARIABLE;
+    this->freed = false;
 }
 
 symbol::~symbol() {

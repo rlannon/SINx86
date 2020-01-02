@@ -8,7 +8,9 @@ Handle allocations for the compiler class.
 */
 
 #include <sstream>
-#include "compile.h"
+#include "compiler.h"
+
+// todo: struct allocations -- when a struct is allocated, it should allocate all of its data members -- like a primitive form of a constructor; when free is called on a struct, it will free _all_ data, but dynamic data will not be freed when the struct goes out of scope
 
 std::stringstream compiler::allocate(Allocation alloc_stmt) {
     // Dispatches the allocation to the appropriate function

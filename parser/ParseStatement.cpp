@@ -107,8 +107,14 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		}
 		// parse a "free" statement
 		else if (current_lex.value == "free") {
-			// TODO: parse a "free" statement
-			// the next character must be a paren
+			/*
+
+			The syntax for a free statement is:
+				free <identifier>;
+			
+			Since free is not a function, but a keyword, unlike C; it is more like the C++ 'delete'
+
+			*/
 
 			if (this->peek().type == "ident") {
 				current_lex = this->next();

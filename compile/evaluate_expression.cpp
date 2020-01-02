@@ -7,7 +7,7 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 */
 
-#include "compile.h"
+#include "compiler.h"
 
 // todo: create an expression evaluation class and give it access to compiler members?
 

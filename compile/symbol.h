@@ -31,6 +31,8 @@ protected:
     unsigned int scope_level;   // the _level_ of the scope -- allows for block scopes
 
     DataType type;  // the symbol's type
+
+    bool freed; // whether the memory has been allocated or freed
 public:
     // our getters
     SymbolType get_symbol_type() const;
@@ -41,6 +43,10 @@ public:
 
     DataType get_data_type() const;
     unsigned int get_stack_offset() const;
+
+    // note these won't have any effect on functions (as functions are not allocated in SIN)
+    bool was_freed() const;
+    void free();
 
     // constructors
     explicit symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset);

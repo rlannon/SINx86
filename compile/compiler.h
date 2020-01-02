@@ -14,6 +14,7 @@ Copyright 2019 Riley Lannon
 #include <string>
 #include <sstream>
 #include <unordered_map>
+#include <set>
 
 #include "symbol.h"
 #include "struct_info.h"
@@ -22,6 +23,10 @@ Copyright 2019 Riley Lannon
 #include "../util/stack.h"  // the stack data structure
 
 class compiler {
+    // The class containing our compiler
+
+    std::set<std::string> compiled_headers; // which headers have already been handled
+
     std::string current_scope_name; // the name of the current scope
     unsigned int current_scope_level;   // the current scope level
     bool is_in_scope(symbol &sym);  // check if the symbol is in scope
@@ -36,6 +41,12 @@ class compiler {
 
     unsigned int max_offset;    // the maximum offset within the current stack frame -- use for new variables, calls, etc
 
+    // compile an entire statement block
+    std::stringstream compile_ast(StatementBlock ast);
+    
+    // a function to compile a single statement
+    std::stringstream compile_statement(std::shared_ptr<Statement> s);
+
     // allocations
     std::stringstream allocate(Allocation alloc_stmt);
     symbol allocate_automatic(Allocation alloc_stmt);
@@ -47,6 +58,9 @@ class compiler {
     std::stringstream handle_bool_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
     std::stringstream handle_string_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
     // todo: handle assignments for char, float, etc.
+
+    // definitions
+    std::stringstream define_function(FunctionDefinition definition);
 
     // utilities that require compiler's data members
     std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);

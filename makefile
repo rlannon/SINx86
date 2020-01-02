@@ -10,7 +10,7 @@ bin=bin/
 # object file dependencies
 compiler_objs=allocation.o assign.o evaluate_expression.o function_symbol.o struct_info.o symbol.o
 compiler_util_objs=register_usage.o utilities.o
-parser_objs=lexer.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
+parser_objs=lexeme.o lexer.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
 util_objs=datatype.o exceptions.o binaryio.o
 build_objs=parser.o $(parser_objs) $(util_objs)
 
@@ -83,8 +83,11 @@ statement.o: expression.o datatype.o
 expression.o: datatype.o
 	$(cc) $(flags) -o expression.o -c parser/Expression.cpp
 
-lexer.o: parser/Lexer.h
+lexer.o: parser/Lexer.h parser/Lexer.cpp lexeme.o
 	$(cc) $(flags) -o lexer.o -c parser/Lexer.cpp
+
+lexeme.o: parser/lexeme.h parser/lexeme.cpp
+	$(cc) $(flags) -o lexeme.o -c parser/lexeme.cpp
 
 # Utilities
 

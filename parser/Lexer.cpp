@@ -1,24 +1,18 @@
-﻿#include "Lexer.h"
+﻿/*
 
+SIN Toolchain
+lexer.cpp
+Copyright 2020 Riley Lannon
 
-// implement "lexeme" data type
-// allow direct comparisons of two lexemes using the == operator
-bool lexeme::operator==(const lexeme& b) {
-	// note: we don't care about the line number; we only want to know if they have the same type/value pair
-	return ((this->type == b.type) && (this->value == b.value));
-}
+The implementation of the lexer
 
-lexeme::lexeme() {
-	this->line_number = 0;	// initialize to 0 by default
-}
+*/
 
-lexeme::lexeme(std::string type, std::string value, unsigned int line_number) : type(type), value(value), line_number(line_number) {
-}
-
+#include "Lexer.h"
 
 // keywords is an alphabetized list of the keywords in SIN
 // it must be alphabetized in order to use the 'find' algorithm from the standard library
-const std::vector<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "catch", "const", "decl", "def", "dynamic", "else", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sizeof", "static", "string", "struct", "try", "unsigned", "void", "while", "xor"};
+const std::vector<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "const", "decl", "def", "dynamic", "else", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sizeof", "static", "string", "struct", "unsigned", "void", "while", "xor" };
 
 // Our regular expressions
 const std::string Lexer::punc_exp = R"([\.',:;\[\]\{\}\(\)])";	// expression for punctuation
@@ -66,7 +60,6 @@ char Lexer::next() {
 }
 
 
-
 /*
 
 Our equivalency functions.
@@ -76,7 +69,7 @@ These are used to test whether a character is of a certain type.
 
 bool Lexer::match_character(char ch, std::string expression) {
 	try {
-        // todo: is there a more efficient way to test one character?
+        // todo: is there a more efficient way to test one character against a regex?
 		return std::regex_match(std::string(1, ch), std::regex(expression));
 	}
 	catch (const std::regex_error &e) {
