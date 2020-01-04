@@ -41,3 +41,25 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     return definition_ss;
 }
+
+std::stringstream compiler::call_function(Call call) {
+    /*
+
+    call_function
+    Generates the code to call a function
+
+    Performs all of the necessary functions for the caller in the SIN calling convention
+
+    @param  call    The call statement to compile
+    @return A stringstream containing the generated code
+
+    */
+
+    std::stringstream call_ss;
+
+    // todo: codify SIN calling convention
+
+    // todo: generate call code
+
+    return call_ss;
+}

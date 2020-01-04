@@ -59,8 +59,9 @@ class compiler {
     std::stringstream handle_string_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
     // todo: handle assignments for char, float, etc.
 
-    // definitions
+    // functions
     std::stringstream define_function(FunctionDefinition definition);
+    std::stringstream call_function(Call call);
 
     // utilities that require compiler's data members
     std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);
