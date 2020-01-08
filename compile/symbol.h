@@ -58,7 +58,7 @@ class function_symbol: public symbol {
     /*
 
     The class for function symbols
-    todo: write more info on the 
+    todo: add symbol call convention
 
     */
 

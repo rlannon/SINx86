@@ -49,6 +49,7 @@ std::stringstream compiler::call_function(Call call) {
     Generates the code to call a function
 
     Performs all of the necessary functions for the caller in the SIN calling convention
+    This includes setting up the call stack, calling the function, and performing any necessary compiler object updates
 
     @param  call    The call statement to compile
     @return A stringstream containing the generated code
@@ -57,9 +58,19 @@ std::stringstream compiler::call_function(Call call) {
 
     std::stringstream call_ss;
 
-    // todo: codify SIN calling convention
+    // first, look up the function
+    std::shared_ptr<symbol> sym = this->lookup(call.get_func_name(), call.get_line_number());
+    if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
+        // cast to the correct type
+        function_symbol func_sym = *dynamic_cast<function_symbol*>(sym.get());
 
-    // todo: generate call code
+        // first, generate the function header code
+        call_ss << generate_call_header(func_sym, call.get_line_number()).str();
+
+        // todo: what else must happen here?
+    } else {
+        throw InvalidSymbolException(call.get_line_number());
+    }
 
     return call_ss;
 }

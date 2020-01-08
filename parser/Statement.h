@@ -249,7 +249,8 @@ class Call : public Statement
 public:
 	std::string get_func_name();
 	size_t get_args_size();
-	std::shared_ptr<Expression> get_arg(size_t num);
+	std::shared_ptr<Expression> get_arg(size_t index);	// get one argument
+	std::vector<std::shared_ptr<Expression>> get_args();	// get all arguments
 
 	Call(std::shared_ptr<LValue> func, std::vector<std::shared_ptr<Expression>> args);
 	Call();

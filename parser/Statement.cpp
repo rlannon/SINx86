@@ -338,8 +338,14 @@ size_t Call::get_args_size() {
 	return this->args.size();
 }
 
-std::shared_ptr<Expression> Call::get_arg(size_t num) {
-	return this->args[num];
+std::shared_ptr<Expression> Call::get_arg(size_t index) {
+	// return one argument
+	return this->args[index];
+}
+
+std::vector<std::shared_ptr<Expression>> Call::get_args() {
+	// return all function arguments
+	return this->args;
 }
 
 Call::Call(std::shared_ptr<LValue> func, std::vector<std::shared_ptr<Expression>> args) : func(func), args(args) {

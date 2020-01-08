@@ -217,3 +217,38 @@ struct_info define_struct(StructDefinition definition) {
     // construct and return a struct_info object
     return struct_info(struct_name, members, definition.get_line_number());
 }
+
+std::stringstream generate_call_header(function_symbol s, unsigned int line) {
+    /*
+
+    generate_call_header
+    Generates pre-call code for a function
+
+    This function is responsible for generating all code to set up the stack for a function symbol when it is called. This will be done in accordance with the convention used by the symbol.
+
+    @param  s   The function symbol for which we are generating call code
+    @return A stringstream containing the generated pre-call code
+
+    */
+
+    // todo: enable other calling conventions
+    return generate_sincall(s, line);
+}
+
+std::stringstream generate_sincall(function_symbol s, unsigned int line) {
+    /*
+
+    generate_sincall
+    Generates call code for a function using the SIN calling convention
+
+    @param  s   The function symbol for which we are generating call code
+    @return A stringstream containing the generated code
+
+    */
+
+    std::stringstream sincall_ss;
+
+    // todo: generate SIN call convention code
+
+    return sincall_ss;
+}
