@@ -58,16 +58,19 @@ class function_symbol: public symbol {
     /*
 
     The class for function symbols
-    todo: add symbol call convention
 
     */
 
     // Function arguments -- formal parameters should be stored as symbols (they are considered local variables, so they will be pushed first)
     std::vector<symbol> formal_parameters;
-public:
-    function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters);
 
-    // defaults
+    // calling convention -- defaults to SIN
+    calling_convention call_con;
+public:
+    calling_convention get_calling_convention();
+
+    // constructors
+    function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con = SINCALL);
     function_symbol();
     ~function_symbol();
 };

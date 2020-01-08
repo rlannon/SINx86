@@ -122,3 +122,12 @@ enum reg {
     R14,
     R15
 };
+
+
+enum calling_convention {
+	// Calling conventions for functions
+	SINCALL,
+	CDECL,
+	WIN_64,
+	X64
+};

@@ -26,8 +26,3 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 bool can_pass_in_register(DataType to_check);
 
 struct_info define_struct(StructDefinition definition);
-
-// todo: make these into friend classes so they can access the symbol table? pass symbol table as parameter?
-// todo: pass in arguments list
-std::stringstream generate_call_header(function_symbol s, unsigned int line);
-std::stringstream generate_sincall(function_symbol s, unsigned int line);

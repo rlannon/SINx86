@@ -50,6 +50,9 @@ std::stringstream compiler::call_function(Call call) {
 
     Performs all of the necessary functions for the caller in the SIN calling convention
     This includes setting up the call stack, calling the function, and performing any necessary compiler object updates
+    Note that this function delegates to the appropriate code generation function based on what the calling convention is
+    
+    For more information on compiler calling conventions, see doc/Calling Convention.md
 
     @param  call    The call statement to compile
     @return A stringstream containing the generated code
@@ -64,13 +67,51 @@ std::stringstream compiler::call_function(Call call) {
         // cast to the correct type
         function_symbol func_sym = *dynamic_cast<function_symbol*>(sym.get());
 
-        // first, generate the function header code
-        call_ss << generate_call_header(func_sym, call.get_line_number()).str();
+        // behaves according to the calling convention
+        if (func_sym.get_calling_convention() == SINCALL) {
+            // SIN calling convention
+            call_ss << this->sincall(func_sym, call.get_args(), call.get_line_number()).str(); // todo: return this function's result directly?
+        } else {
+            // todo: other calling conventions
+        }
 
-        // todo: what else must happen here?
+        // now, the function's return value (or pointer to the return value) is in RAX
     } else {
         throw InvalidSymbolException(call.get_line_number());
     }
 
+    // todo: any miscellaneous clean-up?
     return call_ss;
+}
+
+std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line) {
+    /*
+
+    sincall
+    Generates stack set-up code for the SIN calling convention
+
+    For more information on this calling convention, see doc/Calling Convention.md
+
+    @param  s   The symbol for the function
+    @param  args    The function's arguments
+    @param  line    The line number where the call occurs
+    @return A stringstream containing the generated code
+
+    */
+
+    std::stringstream sincall_ss;
+
+    // iterate over our arguments, ensure the types match and that we have an appropriate number
+    for (std::shared_ptr<Expression> sp: args) {
+        // todo: type checking
+        // todo: expression evaluation
+        // todo: track which registers have been used, determine whether we can pass in registers or whether we must pass on the stack
+    }
+
+    // todo: preserve registers in use
+    // todo: pass/push arguments
+    // todo: call function
+    // todo: restore used registers
+
+    return sincall_ss;
 }

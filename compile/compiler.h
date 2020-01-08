@@ -25,6 +25,8 @@ Copyright 2019 Riley Lannon
 class compiler {
     // The class containing our compiler
 
+    // todo: break code generation into multiple friend classes
+
     std::set<std::string> compiled_headers; // which headers have already been handled
 
     std::string current_scope_name; // the name of the current scope
@@ -62,6 +64,7 @@ class compiler {
     // functions
     std::stringstream define_function(FunctionDefinition definition);
     std::stringstream call_function(Call call);
+    std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
 
     // utilities that require compiler's data members
     std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);
