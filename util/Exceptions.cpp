@@ -93,6 +93,17 @@ TypeException::TypeException(unsigned int line) :
     // Exception should be used when types are incompatible
 }
 
+QualityConflictException::QualityConflictException(std::string conflicting_quality, unsigned int line) :
+	CompilerException(
+		(
+			"Symbol quality '" + conflicting_quality + "' may not be used here (there is a conflicting quality present)"),
+			compiler_errors::QUALITY_CONFLICT_ERROR, 
+			line
+		)
+{
+	// Body not necessary (super called)
+}
+
 VoidException::VoidException(unsigned int line) :
     CompilerException("Void type cannot be used in expression of this type", compiler_errors::VOID_TYPE_ERROR, line)
 {

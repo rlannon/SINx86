@@ -403,7 +403,12 @@ SymbolQualities Parser::get_prefix_qualities(std::string grouping_symbol) {
 	lexeme current = this->current_token();
 	while (current.type == "kwd" && !is_type(current.value)) {
 		// get the current quality and add it to our qualities object
-		qualities.add_quality(get_quality(current));
+		try {
+			qualities.add_quality(get_quality(current));
+		} catch (CompilerException &e) {
+			// catch the exception thrown by 'add quality' and throw a new one with a line number
+			throw QualityConflictException(current.value, current.line_number);
+		}
 
 		// advance the token position
 		current = this->next();

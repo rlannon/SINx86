@@ -83,12 +83,12 @@ void SymbolQualities::add_quality(SymbolQuality to_add)
         const_q = true;
 
 		// we cannot have final and const together
-		if (final_q) throw CompilerException("");	// todo: proper exception type
+		if (final_q) throw CompilerException("Quality conflict");	// todo: proper exception type
     } else if (to_add == FINAL) {
 		final_q = true;
 
 		// we cannot have final and const together
-		if (const_q) throw CompilerException("");	// todo: proper exception type
+		if (const_q) throw CompilerException("Quality conflict");	// todo: proper exception type
 	} else if (to_add == STATIC) {
         static_q = true;
     } else if (to_add == DYNAMIC) {
@@ -109,7 +109,7 @@ void SymbolQualities::add_quality(SymbolQuality to_add)
 	}
 	else {
 		// invalid quality; throw an exception
-		throw CompilerException("Invalid quality");	// todo: proper exception type
+		throw CompilerException("Quality conflict");	// todo: proper exception type
 	}
 }
 

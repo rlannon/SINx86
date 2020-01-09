@@ -37,6 +37,7 @@ namespace compiler_errors {
     const unsigned int UNICODE_ERROR = 205;
     const unsigned int TYPE_ERROR = 210;
     const unsigned int VOID_TYPE_ERROR = 211;
+    const unsigned int QUALITY_CONFLICT_ERROR = 230;
 
     // Internal errors
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;

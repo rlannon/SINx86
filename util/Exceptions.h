@@ -98,6 +98,12 @@ public:
     explicit TypeException(unsigned int line);
 };
 
+class QualityConflictException : public CompilerException
+{
+public:
+	explicit QualityConflictException(std::string conflicting_quality, unsigned int line);
+};
+
 class VoidException : public CompilerException
 {
 public:
