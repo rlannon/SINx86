@@ -101,13 +101,25 @@ public:
 class QualityConflictException : public CompilerException
 {
 public:
-	explicit QualityConflictException(std::string conflicting_quality, unsigned int line);
+	explicit QualityConflictException(std::string &conflicting_quality, unsigned int line);
+};
+
+class IllegalQualityException : public CompilerException
+{
+public:
+	explicit IllegalQualityException(std::string &offending_quality, unsigned int &line);
 };
 
 class VoidException : public CompilerException
 {
 public:
     explicit VoidException(unsigned int line);
+};
+
+class OperatorTypeError : public CompilerException
+{
+public:
+	explicit OperatorTypeError(std::string op, std::string type, unsigned int line);
 };
 
 class ConstAssignmentException : public CompilerException
@@ -127,43 +139,45 @@ protected:
 	unsigned int code_;
 	unsigned int line_;
 public:
-	explicit ParserException(const std::string& message, const unsigned int& code, const unsigned int& line = 0);
+	explicit ParserException(const std::string& message, const unsigned int& code, const unsigned int& line);
 	virtual const char* what() const noexcept;
+};
+
+class InvalidTokenException : public ParserException
+{
+public:
+	explicit InvalidTokenException(std::string offending_token, unsigned int line);
+};
+
+class IncompleteTypeError : public ParserException
+{
+public:
+	explicit IncompleteTypeError(const unsigned int &line);
 };
 
 class MissingSemicolonError : public ParserException
 {
 public:
-	explicit MissingSemicolonError(const unsigned int& line = 0);
+	explicit MissingSemicolonError(const unsigned int &line);
+};
+
+class MissingIdentifierError : public ParserException
+{
+public:
+	explicit MissingIdentifierError(const unsigned int &line);
+};
+
+class UnexpectedKeywordError : public ParserException
+{
+public:
+	explicit UnexpectedKeywordError(std::string &offending_keyword, const unsigned int &line);
+};
+
+class CallError : public ParserException
+{
+public:
+	explicit CallError(const unsigned int &line);
 };
 
 // like in the compiler, we sometimes want to print warnings without stopping parsing
 void parser_warning(std::string message, unsigned int line_number = 0);
-
-
-class VMException : public std::exception {
-	std::string message;	// the message associated with the error
-	uint16_t address;	// the address of the program counter when the error occurred
-	uint16_t status;	// the STATUS register at the time of the error
-public:
-	explicit VMException(const std::string& message, const uint16_t& address = 0x0000, const uint16_t& status = 0x00);
-	virtual const char* what() const noexcept;
-};
-
-
-class SymbolTableException : public std::exception {
-	std::string message;
-	unsigned int line;
-public:
-	explicit SymbolTableException(const std::string& message, const unsigned int& line = 0);
-	virtual const char* what() const noexcept;
-};
-
-
-class AssemblerException : public std::exception {
-	std::string message;
-	unsigned int line;
-public:
-	explicit AssemblerException(const std::string& message, const unsigned int& line = 0);
-	virtual const char* what() const noexcept;
-};

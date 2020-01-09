@@ -42,7 +42,8 @@ public:
 	bool is_long();
 	bool is_short();
 
-	void add_qualities(std::vector<SymbolQuality> to_add);
+	// void add_qualities(std::vector<SymbolQuality> to_add);
+	void add_qualities(SymbolQualities to_add);
     void add_quality(SymbolQuality to_add);
 
 	SymbolQualities(std::vector<SymbolQuality> qualities);
@@ -80,7 +81,7 @@ public:
 
 	void set_primary(Type new_primary);
 	void set_subtype(Type new_subtype);
-	void add_qualities(std::vector<SymbolQuality> to_add);
+	void add_qualities(SymbolQualities to_add);
     void add_quality(SymbolQuality to_add);
 	void set_struct_name(std::string name);
 
@@ -88,8 +89,8 @@ public:
 
 	size_t get_width() const;
 
-	DataType(Type primary, Type subtype = NONE, std::vector<SymbolQuality> qualities = {}, size_t array_length = 0);
     DataType(Type primary, Type subtype, SymbolQualities qualities, size_t array_length = 0, std::string struct_name = "");
+	DataType(Type primary);
 	DataType();
 	~DataType();
 };

@@ -20,7 +20,7 @@ const char* CompilerException::what() const noexcept {
 }
 
 CompilerException::CompilerException(const std::string& message, unsigned int code, unsigned int line) : message(message), code(code), line(line) {
-	this->message = "**** Compiler Error " + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
+	this->message = "**** Error encountered in compilation; E" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
 
 IllegalOperationException::IllegalOperationException(unsigned int line):
@@ -93,7 +93,7 @@ TypeException::TypeException(unsigned int line) :
     // Exception should be used when types are incompatible
 }
 
-QualityConflictException::QualityConflictException(std::string conflicting_quality, unsigned int line) :
+QualityConflictException::QualityConflictException(std::string &conflicting_quality, unsigned int line) :
 	CompilerException(
 		(
 			"Symbol quality '" + conflicting_quality + "' may not be used here (there is a conflicting quality present)"),
@@ -104,10 +104,28 @@ QualityConflictException::QualityConflictException(std::string conflicting_quali
 	// Body not necessary (super called)
 }
 
+IllegalQualityException::IllegalQualityException(std::string &offending_quality, unsigned int &line) :
+CompilerException(
+	("Illegal symbol quality '" + offending_quality + "'"),
+	compiler_errors::ILLEGAL_QUALITY_ERROR,
+	line
+) {
+	// super called
+}
+
 VoidException::VoidException(unsigned int line) :
     CompilerException("Void type cannot be used in expression of this type", compiler_errors::VOID_TYPE_ERROR, line)
 {
     // Exception should be used when 'void' type was found, but cannot be used here
+}
+
+OperatorTypeError::OperatorTypeError(std::string op, std::string type, unsigned int line) :
+CompilerException(
+	("Operator '" + op + "' may not be used on expressions of type '" + type + "'"),
+	compiler_errors::OPERATOR_TYPE_ERROR,
+	line
+) {
+	// super called
 }
 
 ConstAssignmentException::ConstAssignmentException(unsigned int line) :
@@ -136,58 +154,59 @@ const char* ParserException::what() const noexcept {
 }
 
 ParserException::ParserException(const std::string& message, const unsigned int& code, const unsigned int& line) : message_(message), code_(code), line_(line) {
-	message_ = "**** Parser Error " + std::to_string(code_) + ": " + message_ + " (line " + std::to_string(line_) + ")";
+	message_ = "**** Error occurred when parsing file; E" + std::to_string(code_) + ": " + message_ + " (line " + std::to_string(line_) + ")";
 }
 
-// Parser Exception -- missing semicolon error
+InvalidTokenException::InvalidTokenException(
+	std::string offending_token,
+	unsigned int line
+) : ParserException(
+	("Invalid token '" + offending_token + "' found while parsing"),
+	compiler_errors::INVALID_TOKEN,
+	line
+) {
+	// super called
+}
 
-MissingSemicolonError::MissingSemicolonError(const unsigned int& line) : ParserException("Syntax error; expected ';'", 0, line) {
+IncompleteTypeError::IncompleteTypeError(const unsigned int &line):
+	ParserException(
+		"Incomplete type information",
+		compiler_errors::INCOMPLETE_TYPE_ERROR,
+		line
+	)
+{
+	// super called
+}
+
+MissingSemicolonError::MissingSemicolonError(const unsigned int& line) : ParserException("Syntax error; expected ';'", compiler_errors::MISSING_SEMICOLON_ERROR, line) {
 
 }
 
-
-
-// SINVM Exceptions
-
-const char* VMException::what() const noexcept {
-	return message.c_str();
+MissingIdentifierError::MissingIdentifierError(const unsigned int &line) :
+ParserException(
+	"Expected identifier",
+	compiler_errors::MISSING_IDENTIFIER_ERROR,
+	line
+) {
+	// super called
 }
 
-VMException::VMException(const std::string& message, const uint16_t& address, const uint16_t& status) : message(message), address(address), status(status) {
-	// we must construct the message here, in the constructor
-	std::stringstream err_ss;
-	std::bitset<8> bin_representation(status);
-	err_ss << "**** SINVM Error: " << this->message << std::endl << "Error was encountered at memory location 0x" << std::hex << this->address << std::endl << "STATUS register was " << bin_representation << std::dec << std::endl;
-	this->message = err_ss.str();
+UnexpectedKeywordError::UnexpectedKeywordError(std::string &offending_keyword, const unsigned int &line) :
+	ParserException(
+		("Unexpected keyword '" + offending_keyword + "'"),
+		compiler_errors::UNEXPECTED_KEYWORD_ERROR,
+		line
+	)
+{
+	// Used when a keyword is found, but one is not expected
 }
 
-
-// SymbolTable Exceptions
-
-const char* SymbolTableException::what() const noexcept {
-	return message.c_str();
-}
-
-SymbolTableException::SymbolTableException(const std::string& message, const unsigned int& line) {
-	// construct the message
-	std::string err_message = "**** SymbolTable Error: " + message;
-	// if we have line number data, append it to the error message
-	if (line > 0) {
-		err_message += " (line " + std::to_string(line);
-	}
-	this->line = line;
-	this->message = err_message;
-}
-
-
-// Assembler Exceptions
-
-const char* AssemblerException::what() const noexcept {
-	return message.c_str();
-}
-
-AssemblerException::AssemblerException(const std::string& message, const unsigned int& line) {
-	std::string err_message = "**** Assembler Error: " + message + " (line " + std::to_string(line) + ")";
-	this->line = line;
-	this->message = err_message;
+CallError::CallError(const unsigned int &line):
+	ParserException(
+		"Expected parens enclosing arguments in function call",
+		compiler_errors::MISSING_GROUPING_SYMBOL_ERROR,
+		line
+	)
+{
+	// super called
 }

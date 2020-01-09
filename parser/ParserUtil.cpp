@@ -157,7 +157,7 @@ std::string Parser::get_closing_grouping_symbol(std::string beginning_symbol)
 		return ">";
 	}
 	else {
-		throw ParserException("Invalid grouping symbol in expression!", 0);
+		throw ParserException("Invalid grouping symbol in expression!", compiler_errors::INVALID_TOKEN, 0);
 		return "";
 	}
 }
@@ -405,9 +405,9 @@ SymbolQualities Parser::get_prefix_qualities(std::string grouping_symbol) {
 		// get the current quality and add it to our qualities object
 		try {
 			qualities.add_quality(get_quality(current));
-		} catch (CompilerException &e) {
+		} catch (std::string &offending_quality) {
 			// catch the exception thrown by 'add quality' and throw a new one with a line number
-			throw QualityConflictException(current.value, current.line_number);
+			throw QualityConflictException(offending_quality, current.line_number);
 		}
 
 		// advance the token position
@@ -417,7 +417,7 @@ SymbolQualities Parser::get_prefix_qualities(std::string grouping_symbol) {
 	return qualities;
 }
 
-std::vector<SymbolQuality> Parser::get_postfix_qualities(std::string grouping_symbol)
+SymbolQualities Parser::get_postfix_qualities(std::string grouping_symbol)
 {
 	/*
 
@@ -438,7 +438,7 @@ std::vector<SymbolQuality> Parser::get_postfix_qualities(std::string grouping_sy
 		closing_symbol = "";
 	}
 
-	std::vector<SymbolQuality> qualities = {};	// create our qualities vector; initialize to an empty vector
+	SymbolQualities qualities;	// create our qualities vector; initialize to an empty vector
 
 	// a keyword should follow the '&'
 	if (this->peek().type == "kwd") {
@@ -448,9 +448,11 @@ std::vector<SymbolQuality> Parser::get_postfix_qualities(std::string grouping_sy
 			lexeme quality_token = this->next();	// get the token for the quality
 			SymbolQuality quality = this->get_quality(quality_token);	// use our 'get_quality' function to get the SymbolQuality based on the token
 
-			// if the quality is NO_QUALITY, there was an error; don't add it to the vector
-			if (quality != NO_QUALITY) {
-				qualities.push_back(quality);
+			// try adding our qualities, throw an error if there is a conflict
+			try {
+				qualities.add_quality(quality);
+			} catch (CompilerException &e) {
+				throw QualityConflictException(quality_token.value, quality_token.line_number);
 			}
 
 			// the quality must be followed by either another quality, a semicolon, or a closing grouping symbol

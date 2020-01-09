@@ -67,13 +67,32 @@ bool SymbolQualities::is_unsigned()
 	return unsigned_q;
 }
 
-void SymbolQualities::add_qualities(std::vector<SymbolQuality> to_add)
+/* void SymbolQualities::add_qualities(std::vector<SymbolQuality> to_add)
 {
 	// simply populate the vector; since we are adding, we don't really care about the original values
 	for (std::vector<SymbolQuality>::iterator it = to_add.begin(); it != to_add.end(); it++)
 	{
-		this->add_quality(*it);
+		try {
+			this->add_quality(*it);
+		} catch (CompilerException &e) {
+			throw *it;
+		}
 	}
+} */
+
+void SymbolQualities::add_qualities(SymbolQualities to_add) {
+	// combines two SymbolQualities objects
+
+	// todo: refactor how qualities are stored in SymbolQualities so that we can simplify this
+
+	if (to_add.is_const()) this->add_quality(CONSTANT);
+	if (to_add.is_final()) this->add_quality(FINAL);
+	if (to_add.is_static()) this->add_quality(STATIC);
+	if (to_add.is_dynamic()) this->add_quality(DYNAMIC);
+	if (to_add.is_long()) this->add_quality(LONG);
+	if (to_add.is_short()) this->add_quality(SHORT);
+	if (to_add.is_signed()) this->add_quality(SIGNED);
+	if (to_add.is_unsigned()) this->add_quality(UNSIGNED);
 }
 
 void SymbolQualities::add_quality(SymbolQuality to_add)
@@ -83,12 +102,12 @@ void SymbolQualities::add_quality(SymbolQuality to_add)
         const_q = true;
 
 		// we cannot have final and const together
-		if (final_q) throw CompilerException("Quality conflict");	// todo: proper exception type
+		if (final_q) throw std::string("const");	// todo: proper exception type
     } else if (to_add == FINAL) {
 		final_q = true;
 
 		// we cannot have final and const together
-		if (const_q) throw CompilerException("Quality conflict");	// todo: proper exception type
+		if (const_q) throw std::string("final");	// todo: proper exception type
 	} else if (to_add == STATIC) {
         static_q = true;
     } else if (to_add == DYNAMIC) {
@@ -377,7 +396,7 @@ void DataType::set_subtype(Type new_subtype) {
 	this->subtype = new_subtype;
 }
 
-void DataType::add_qualities(std::vector<SymbolQuality> to_add) {
+void DataType::add_qualities(SymbolQualities to_add) {
 	// simply use the "SymbolQualities::add_qualities" function
 	this->qualities.add_qualities(to_add);
 
@@ -402,27 +421,6 @@ size_t DataType::get_width() const {
 	return this->width;
 }
 
-DataType::DataType(Type primary, Type subtype, std::vector<SymbolQuality> qualities, size_t array_length) :
-	primary(primary),
-	subtype(subtype),
-	array_length(array_length)
-{
-	// add our symbol qualities
-	this->qualities = SymbolQualities(qualities);
-	
-	// if the type is int, set signed to true if it is not unsigned
-	if (primary == INT && !this->qualities.is_unsigned()) {
-		this->add_qualities({ SIGNED });
-	}
-	else if (primary == FLOAT)
-	{
-		this->add_qualities({ SIGNED });
-	}
-
-	// set the data width
-	this->set_width();
-}
-
 DataType::DataType(Type primary, Type subtype, SymbolQualities qualities, size_t array_length, std::string struct_name) :
     primary(primary),
     subtype(subtype),
@@ -432,15 +430,28 @@ DataType::DataType(Type primary, Type subtype, SymbolQualities qualities, size_t
 {
     // if the type is int, set signed to true if it is not unsigned
 	if (primary == INT && !this->qualities.is_unsigned()) {
-		this->add_qualities({ SIGNED });
+		this->qualities.add_quality(SIGNED);
 	}
 	else if (primary == FLOAT)
 	{
-		this->add_qualities({ SIGNED });
+		this->qualities.add_quality(SIGNED);
 	}
 
 	// set the data width
 	this->set_width();
+}
+
+DataType::DataType(Type primary) :
+	DataType(
+		primary,
+		NONE,
+		SymbolQualities(),
+		0,
+		""
+	)
+{
+	// The purpose of this constructor is to allow a Type to be converted into a DataType object
+	// no body needed (super called)
 }
 
 DataType::DataType()

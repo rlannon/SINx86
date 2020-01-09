@@ -37,8 +37,18 @@ namespace compiler_errors {
     const unsigned int UNICODE_ERROR = 205;
     const unsigned int TYPE_ERROR = 210;
     const unsigned int VOID_TYPE_ERROR = 211;
+    const unsigned int OPERATOR_TYPE_ERROR = 212;   // the specified operator could not be used on the given expression
     const unsigned int QUALITY_CONFLICT_ERROR = 230;
+    const unsigned int ILLEGAL_QUALITY_ERROR = 231;
 
     // Internal errors
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;
+
+    // Parse errors
+    const unsigned int INVALID_TOKEN = 400;
+    const unsigned int MISSING_SEMICOLON_ERROR = 404;
+    const unsigned int MISSING_GROUPING_SYMBOL_ERROR = 405;
+    const unsigned int MISSING_IDENTIFIER_ERROR = 406;
+    const unsigned int UNEXPECTED_KEYWORD_ERROR = 410;
+    const unsigned int INCOMPLETE_TYPE_ERROR = 430; // type information given was incomplete and could not be parsed
 };

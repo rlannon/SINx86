@@ -89,7 +89,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			left = std::make_shared<ListExpression>(list_members);
 		}
 		else {
-			throw ParserException("Invalid character in expression", 0, this->current_token().line_number);
+			throw InvalidTokenException(this->peek().value, this->peek().line_number);
 		}
 	}
 	// if expressions are separated by commas, continue parsing the next one
@@ -147,7 +147,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			}
 		}
 		else {
-			throw ParserException("Invalid keyword in expression", 0, current_lex.line_number);
+			throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
 		}
 	}
 	// if we have an op_char to begin an expression, parse it (could be a pointer or a function call)
@@ -162,10 +162,8 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 
 				// make sure we have parens -- if not, throw an exception
 				if (this->peek().value != "(") {
-					throw ParserException("Syntax error; expected parens enclosing arguments in function call.", 0, current_lex.line_number);
-				}
-				else {
-
+					throw CallError(current_lex.line_number);
+				} else {
 					this->next();
 					this->next();
 					while (this->current_token().value != get_closing_grouping_symbol(grouping_symbol)) {
@@ -179,7 +177,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			}
 			// the "@" character must be followed by an identifier
 			else {
-				throw ParserException("Expected identifier in function call", 330, current_lex.line_number);
+				throw MissingIdentifierError(current_lex.line_number);
 			}
 		}
 		// check to see if we have the address-of operator
@@ -226,8 +224,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				operand = std::make_shared<Literal>(FLOAT, next.value);
 			}
 			else {
-				// TODO: fix parser exception code for unary +
-				throw ParserException("Cannot use unary operators with this type", 000, current_lex.line_number);
+				throw OperatorTypeError(current_lex.value, next.value, next.line_number);
 			}
 
 			// now, "operand" should have our operand (and if the type was invalid, it will have thrown an error)
@@ -252,7 +249,9 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		if (quality.value == "constexpr") {
 			is_const = true;
 		} else {
-			throw ParserException("Invalid quality in expression (only 'constexpr' is allowed)", 0, quality.line_number);
+			this->back();
+			this->back();
+			// throw IllegalQualityException(quality.value, quality.line_number);
 		}
 
 		// do not advance token; we use 'peek' in maybe_binary
@@ -274,6 +273,8 @@ std::shared_ptr<Expression> Parser::create_dereference_object() {
 	// in order to check, we have to make sure that the previous character is neither a literal nor an identifier
 	// the current lexeme is the asterisk, so get the previous lexeme
 	lexeme previous_lex = this->previous();	// note that previous() does not update the current position
+
+	// todo: this check for a binary expression does not belong in this function
 
 	// if it is an int, float, string, or bool literal; or an identifier, then continue
 	if (previous_lex.type == "int" || previous_lex.type == "float" || previous_lex.type == "string" || previous_lex.type == "bool" || previous_lex.type == "ident") {
@@ -304,7 +305,7 @@ std::shared_ptr<Expression> Parser::create_dereference_object() {
 	}
 	// if it is not a literal or an ident and the next character is also not an ident or asterisk, we have an error
 	else {
-		throw ParserException("Expected an identifier in pointer dereference operation", 332, current_token().line_number);
+		throw MissingIdentifierError(this->peek().line_number);
 		return nullptr;
 	}
 }
@@ -328,8 +329,25 @@ LValue Parser::getDereferencedLValue(Dereferenced to_eval) {
 }
 
 std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol) {
+	/*
 
-	// Determines whether to wrap the expression in a binary or return as is
+	maybe_binary
+	Determines whether an expression is part of a binary expression
+
+	Determines whether the expression 'left', with a precedence of 'my_prec', is a part of a larger binary expression. If so, creates that binary expression according to operator precedence levels.
+	For example, if we pass in the expression:
+		3 + 4 * 5 - 6;
+	The expression 3 will be passed into this function with a my_prec value of 0. Since + follows, we know it must be a binary expression. However, the right operand may be the left operand of a binary operation at a higher precedence level, so we must call this function recursively to create the right operand. * has a higher precedence than +, so our right-hand operator will be a binary. - has a lower precedence than *, so it is ignored when crafting the right-hand side.
+	Once the expression 3 + (4 * 5) is crafted, we call maybe_binary again at the *old* precedence level on the new binary expression to see if it is a part of a larger binary expression. It is, because it is followed by - 6. So, we create the expression (3 + (4 * 5)) - 6.
+	This algorithm ensures we are using the correct order of operations.
+	
+	@param	left	The expression that may be the left operand of a binary expression
+	@param	my_prec	The current precedence level
+	@param	grouping_symbol	We may be inside a grouped evaluation; if so, this tracks the grouping symbol used
+
+	@return	An expression; may be a binary expression, may not be
+
+	*/
 
 	lexeme next = this->peek();
 
@@ -378,6 +396,6 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	}
 	// There shouldn't be anything besides a semicolon, closing paren, or an op_char immediately following "left"
 	else {
-		throw ParserException("Invalid character in expression", 312, current_token().line_number);
+		throw InvalidTokenException(next.value, next.line_number);
 	}
 }

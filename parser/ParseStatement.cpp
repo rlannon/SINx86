@@ -302,8 +302,12 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 			if (this->peek().value == "&") {
 				// append the posftixed qualities to symbol_type_data.qualities
 				this->next();
-				std::vector<SymbolQuality> postfixed_qualities = this->get_postfix_qualities();
-				symbol_type_data.add_qualities(postfixed_qualities);
+				SymbolQualities postfixed_qualities = this->get_postfix_qualities();
+				try {
+					symbol_type_data.add_qualities(postfixed_qualities);
+				} catch(std::string &offending_quality) {
+					throw QualityConflictException(offending_quality, this->current_token().line_number);
+				}
 			}
 			
 			// finally, we must have a semicolon, a comma, or a closing paren
@@ -438,8 +442,14 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
 			if (this->peek().value == "&") {
 				// append the posftixed qualities to symbol_type_data.qualities
 				this->next();
-				std::vector<SymbolQuality> postfixed_qualities = this->get_postfix_qualities();
-				symbol_type_data.add_qualities(postfixed_qualities);
+				SymbolQualities postfixed_qualities = this->get_postfix_qualities();
+
+				// we may encounter an error when trying to add our postfixed qualities; catch it and craft a new exception that includes the line number
+				try {
+					symbol_type_data.add_qualities(postfixed_qualities);
+				} catch (std::string &offending_quality) {
+					throw QualityConflictException(offending_quality, this->current_token().line_number);
+				}
 			}
 
 			// if it's a semicolon, comma, or closing paren, craft the statement and return
