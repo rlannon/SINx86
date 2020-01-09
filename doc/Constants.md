@@ -33,14 +33,14 @@ Because the constant will be stored in the ```.data``` section, and therefore be
 Just because ```const``` must use a compile-time constant in its initialization does not mean that constant must be a literal (although this is the simplest and most obvious compile-time constant expression); if a more complex expression is desired, the keyword ```constexpr``` may be placed before the expression (or suffixed like other qualifiers by using the ampersand, i.e., ```&constexpr```) to indicate to the compiler that it should (attempt to) evaluate the expression at compile time. For example:
 
     alloc const int a: 5;
-    alloc const int b: constexpr a + 2; // valid use of constexpr
+    alloc const int b: constexpr (a + 2); // valid use of constexpr
     alloc const int c: a + 2;   // illegal; constexpr not used
 
 When the ```constexpr``` keyword is used, however, *all* data within must be known at compile time. As such, the following is illegal:
 
     alloc int a: 10;
     alloc const int b: 20;
-    alloc const int c: constexpr a + b; // illegal; a is not const-qualified
+    alloc const int c: constexpr (a + b); // illegal; a is not const-qualified
 
 To save on compilation time, expressions are assumed to be known only at runtime (and therefore their evaluation is ignored by the compiler) unless the ```constexpr``` keyword is used, in which case the compiler will attempt to evaluate the expression and use the result in the generated code instead of generating code for the expression's evaluation. As such, a statement like:
 
@@ -57,3 +57,16 @@ instead of something like:
     mov a, eax
 
 This allows the programmer to avoid magic numbers in code and save on compilation time at the same time by preventing the compiler from needlessly attempting to evaluate expressions.
+
+#### A note on parsing
+
+Note that the ```constexpr``` keyword indicates the expression to the *immediate* left or right is constant; this means something like:
+
+    constexpr a + b
+
+will be parsed such that the binary expression ```a + b``` is *not* constant, but the right operand ```a``` is. This allows partial evaluation of expressions at compile time. If you wish for an entire expression to be constant, use parens:
+
+    constexpr (a + b)
+    (a + b) &constexpr
+
+would be the proper ways of indicating the binary expression is a ```constexpr```.
