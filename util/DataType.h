@@ -31,6 +31,8 @@ class SymbolQualities
 	bool long_q;
 	bool short_q;
 public:
+	static const std::unordered_map<std::string, SymbolQuality> quality_strings;
+
 	bool is_const();	// accessors
 	bool is_final();
 	bool is_static();

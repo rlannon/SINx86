@@ -16,6 +16,17 @@ SymbolQualities implementation
 
 */
 
+const std::unordered_map<std::string, SymbolQuality> SymbolQualities::quality_strings = {
+	{ "const", CONSTANT },
+	{ "final", FINAL },
+	{ "static", STATIC },
+	{ "dynamic", DYNAMIC },
+	{ "long", LONG },
+	{ "short", SHORT },
+	{ "signed", SIGNED },
+	{ "unsigned", UNSIGNED }
+};
+
 bool SymbolQualities::is_long()
 {
     return long_q;
@@ -70,8 +81,14 @@ void SymbolQualities::add_quality(SymbolQuality to_add)
     // Add a single quality to our qualities list
     if (to_add == CONSTANT) {
         const_q = true;
+
+		// we cannot have final and const together
+		if (final_q) throw CompilerException("");	// todo: proper exception type
     } else if (to_add == FINAL) {
 		final_q = true;
+
+		// we cannot have final and const together
+		if (const_q) throw CompilerException("");	// todo: proper exception type
 	} else if (to_add == STATIC) {
         static_q = true;
     } else if (to_add == DYNAMIC) {
@@ -89,6 +106,10 @@ void SymbolQualities::add_quality(SymbolQuality to_add)
 	else if (to_add == SHORT) {
 		long_q = false;
 		short_q = true;
+	}
+	else {
+		// invalid quality; throw an exception
+		throw CompilerException("Invalid quality");	// todo: proper exception type
 	}
 }
 

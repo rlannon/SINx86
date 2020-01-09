@@ -9,6 +9,8 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 #include "compiler.h"
 
+// todo: add evaluation of expressions labeled 'constexpr'
+
 // todo: create an expression evaluation class and give it access to compiler members?
 
 std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line) {

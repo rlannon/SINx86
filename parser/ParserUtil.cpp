@@ -114,15 +114,20 @@ bool Parser::is_type(std::string lex_value)
 {
 	// Determines whether a given string is a type name
 
-	std::string type_strings[] = { "int", "bool", "string", "float", "raw", "ptr", "array", "struct" };
+	// todo: is there a better way to do this? using a map might not be worth it because there are so few elements
+
+	size_t num_types = 9;
+	std::string type_strings[] = { "int", "bool", "string", "float", "raw", "ptr", "array", "struct", "void" };
 
 	// iterate through our list of type names
 	size_t i = 0;
 	bool found = false;
 
-	while (i < type_strings->size() && !found) {
+	while (i < num_types && !found) {
 		if (lex_value == type_strings[i]) {
 			found = true;
+		} else {
+			i++;
 		}
 	}
 
@@ -153,7 +158,7 @@ std::string Parser::get_closing_grouping_symbol(std::string beginning_symbol)
 	}
 	else {
 		throw ParserException("Invalid grouping symbol in expression!", 0);
-		return 0;
+		return "";
 	}
 }
 
@@ -255,81 +260,20 @@ DataType Parser::get_type()
 
     Parses type information and stores it in a DataType object
 
-    */
+	Parser token should start with current_lex as the first token in the type data
 
-	// the parse function that calls this one will have advanced the token iterator to the first token in the type data
-	lexeme current_lex = this->current_token();
+    */
 
 	// todo: refactor this to use an unordered map as well? to map string and SymbolQuality together
 	// todo: refactor this so qualifiers can go in any order, not specifically "const, dynamic/static, signed/unsigned, long/short"
 
 	// check our qualities, if any
-	SymbolQualities qualities;
+	SymbolQualities qualities = this->get_prefix_qualities("");
 
-	// todo: write a more sophisticated (better) parser for symbol qualities
+	// todo: should we set the 'dynamic' quality if we have a string?
 
-	// check whether it is const/final
-	if (current_lex.value == "const") {
-		// change the variable quality
-		qualities.add_quality(CONSTANT);
-
-		// get the actual variable type
-		current_lex = this->next();
-	} else if (current_lex.value == "final") {
-		// variables may not be both const and final
-		qualities.add_quality(FINAL);
-		current_lex = this->next();
-	}
-	
-	// check to see if we have an allocation specifier; these will override const in terms of the variable's memory location
-	if (current_lex.value == "dynamic") {	// todo: allow const dynamic variables
-		qualities.add_quality(DYNAMIC);
-		current_lex = this->next();
-	}
-	else if (current_lex.value == "static") {	// todo: allow static const variables
-		qualities.add_quality(STATIC);
-		current_lex = this->next();
-	}
-
-	// check to see if we have a sign quality; this always comes immediately before the type
-	if (current_lex.value == "unsigned") {
-		// make sure the next value is 'int' by checking the 
-		if (this->peek().value == "int") {
-			qualities.add_quality(UNSIGNED);
-			current_lex = this->next();
-		}
-		else {
-			throw ParserException("Cannot use sign qualifier for variable of this type", 0, current_lex.line_number);
-		}
-	}
-	else if (current_lex.value == "signed") {
-		// make sure the next value is 'int'
-		if (this->peek().value == "int") {
-			qualities.add_quality(SIGNED);
-			current_lex = this->next();
-		}
-		else {
-			throw ParserException("Cannot use sign qualifier for variable of this type", 0, current_lex.line_number);
-		}
-	}
-	
-	// check to see if we have a width specifier
-	if (current_lex.value == "long") {
-		// todo: validate type?
-		qualities.add_quality(LONG);
-		current_lex = this->next();
-	}
-	else if (current_lex.value == "short") {
-		// todo: validate type?
-		qualities.add_quality(SHORT);
-		current_lex = this->next();
-	}
-
-	// set the quality to DYNAMIC if we have a string
-	// todo: is setting a string quality to dynamic necessary? strings have special handling by default, and 'dynamic' shouldn't really do anything
-	//if (current_lex.value == "string") {
-	//	qualities.add_quality(DYNAMIC);
-	//}
+	// get the current lexeme
+	lexeme current_lex = this->current_token();
 
 	Type new_var_type;
 	Type new_var_subtype = NONE;
@@ -440,6 +384,34 @@ DataType Parser::get_type()
 	return symbol_type_data;
 }
 
+SymbolQualities Parser::get_prefix_qualities(std::string grouping_symbol) {
+	/*
+
+	get_prefix_qualities
+	Gets the symbol qualities placed before the symbol
+
+	The current lexeme should be the start of the qualities
+
+	@param	grouping_symbol	We may have
+	@return	A SymbolQualities object
+
+	*/
+
+	SymbolQualities qualities;
+
+	// loop until we don't have a quality token, at which point we should return the qualities object
+	lexeme current = this->current_token();
+	while (current.type == "kwd" && !is_type(current.value)) {
+		// get the current quality and add it to our qualities object
+		qualities.add_quality(get_quality(current));
+
+		// advance the token position
+		current = this->next();
+	}
+
+	return qualities;
+}
+
 std::vector<SymbolQuality> Parser::get_postfix_qualities(std::string grouping_symbol)
 {
 	/*
@@ -461,7 +433,7 @@ std::vector<SymbolQuality> Parser::get_postfix_qualities(std::string grouping_sy
 		closing_symbol = "";
 	}
 
-	std::vector<SymbolQuality> qualities = {};	// create our qualities vector, initialize to an empty vector
+	std::vector<SymbolQuality> qualities = {};	// create our qualities vector; initialize to an empty vector
 
 	// a keyword should follow the '&'
 	if (this->peek().type == "kwd") {
@@ -497,31 +469,18 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 {
 	// Given a lexeme containing a quality, returns the appropriate member from SymbolQuality
 
-	// todo: change this lookup to use std::unordered_map<SymbolQuality, std::string>
-
-	const SymbolQuality qualities[8] = { CONSTANT, FINAL, STATIC, DYNAMIC, SIGNED, UNSIGNED, LONG, SHORT };
-	const std::string quality_string[8] = { "const", "final", "static", "dynamic", "signed", "unsigned", "long", "short" };
 	SymbolQuality to_return = NO_QUALITY;
 
 	// ensure the token is a kwd
 	if (quality_token.type == "kwd") {
-		// iterate through the quality_string array and compare quality_token.value with it to find the index of the appropriate quality
-		bool found = false;
-		size_t index = 0;
-		while (index < num_qualities && !found) {
-			if (quality_token.value == quality_string[index]) {
-				found = true;
-			}
-			else {
-				index++;
-			}
-		}
-
-		if (found) {
-			to_return = qualities[index];
+		// Use the unordered_map to find the quality
+		std::unordered_map<std::string, SymbolQuality>::const_iterator it = SymbolQualities::quality_strings.find(quality_token.value);
+		
+		if (it == SymbolQualities::quality_strings.end()) {
+			throw ParserException("Invalid qualifier", 0, quality_token.line_number);
 		}
 		else {
-			throw ParserException("Invalid qualifier", 0, quality_token.line_number);
+			to_return = it->second;
 		}
 	}
 	else {
