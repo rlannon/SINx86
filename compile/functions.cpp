@@ -101,17 +101,42 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
     std::stringstream sincall_ss;
 
-    // iterate over our arguments, ensure the types match and that we have an appropriate number
-    for (std::shared_ptr<Expression> sp: args) {
-        // todo: type checking
-        // todo: expression evaluation
-        // todo: track which registers have been used, determine whether we can pass in registers or whether we must pass on the stack
-    }
+    // get the formal parameters so we don't need to call a function every time
+    std::vector<symbol> &formal_parameters = s.get_formal_parameters();
 
-    // todo: preserve registers in use
-    // todo: pass/push arguments
-    // todo: call function
-    // todo: restore used registers
+    // ensure the number of arguments provided is less than or equal to the number expected
+    if (args.size() <= s.get_formal_parameters().size()) {
+        // todo: write register preservation function
+
+        // iterate over our arguments, ensure the types match and that we have an appropriate number
+        std::vector<symbol>::iterator it = formal_parameters.begin();
+        for (std::shared_ptr<Expression> arg: args) {
+            // first, ensure the types match
+            if (get_expression_data_type(arg, this->symbol_table, line).is_compatible(it->get_data_type())) {
+                // evaluate the expression and pass it in the appropriate manner
+                sincall_ss << this->evaluate_expression(arg, line).str();
+
+                // now we need to determine *where* that data lies (in RAX or on the stack with a pointer in RAX) and how to pass it (i.e. via register or on the stack)
+                
+            } else {
+                // if the types don't match, we have a signature mismatch
+                throw FunctionSignatureException(line);
+            }
+
+            // increment our parameter iterator
+            it++;
+            
+            // todo: expression evaluation
+            // todo: track which registers have been used, determine whether we can pass in registers or whether we must pass on the stack
+            // todo: pass argument
+        }
+
+        // todo: call function
+        // todo: restore used registers
+    } else {
+        // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature
+        throw FunctionSignatureException(line);
+    }
 
     return sincall_ss;
 }

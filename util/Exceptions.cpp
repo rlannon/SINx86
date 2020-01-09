@@ -53,6 +53,12 @@ UndefinedException::UndefinedException(unsigned int line) :
 	// function body not necessary (super called)
 }
 
+FunctionSignatureException::FunctionSignatureException(unsigned int line) :
+	CompilerException("Function call does not match function signature", compiler_errors::SIGNATURE_ERROR, line)
+{
+	// body not necessary (super called)
+}
+
 InvalidSymbolException::InvalidSymbolException(unsigned int line) :
     CompilerException("Found a symbol, but it was of the improper type (e.g., VARIABLE instead of FUNCTION)", compiler_errors::INVALID_SYMBOL_TYPE_ERROR, line)
 {

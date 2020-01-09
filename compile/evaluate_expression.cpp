@@ -18,7 +18,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
     Generates code to evaluate a given expression
 
     Generates code to evaluate an expression, keeping the result in the A register (could be AL, AX, EAX, or RAX) if possible.
-    If the size of the object does not permit it to passed in a register, then it will be returned on the stack.
+    If the size of the object (i.e., non-dynamic arrays and structs) does not permit it to passed in a register, then it will be returned on the stack, and a pointer to the member will be passed
 
     Note this function assumes any registers that needed to be saved were, and will be restored by the compiler after the expression evaluation
 
@@ -379,7 +379,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
         // static arrays can use the name of the variable since they're reserved as named variables prior to runtime
     } else {
         // todo: automatic arrays
-        // automatic arrays will live on the stack since the array's width is known at compile time
+        // automatic arrays will live on the stack because their width _must_ be known at compile time
     }
 
     // return our generated code

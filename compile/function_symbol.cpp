@@ -14,6 +14,11 @@ calling_convention function_symbol::get_calling_convention() {
     return this->call_con;
 }
 
+std::vector<symbol> &function_symbol::get_formal_parameters() {
+    // Returns a reference to the function's expected parameters
+    return this->formal_parameters;
+}
+
 // for the time being, at least, all functions must be in the global scope at level 0
 function_symbol::function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con) :
     symbol(function_name, "global", 0, return_type, 0), formal_parameters(formal_parameters),
