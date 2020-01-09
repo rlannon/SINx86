@@ -23,6 +23,7 @@ DataType contains the type, subtype, and qualities of a given expression alongsi
 class SymbolQualities
 {
 	bool const_q;	// our qualities -- since these are almost all reserved in C++, suffix with _q, for "quality"
+	bool final_q;
 	bool static_q;
 	bool dynamic_q;
 	bool signed_q;
@@ -31,6 +32,7 @@ class SymbolQualities
 	bool short_q;
 public:
 	bool is_const();	// accessors
+	bool is_final();
 	bool is_static();
 	bool is_dynamic();
 	bool is_signed();

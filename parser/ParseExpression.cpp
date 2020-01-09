@@ -19,6 +19,13 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 
 	// Create a pointer to our first value
 	std::shared_ptr<Expression> left;
+	bool is_const = false;
+
+	// first, check to see if we have the 'constexpr' keyword
+	if (current_lex.value == "constexpr") {
+		is_const = true;
+		current_lex = this->next();	// update the current lexeme
+	}
 
 	// Check if our expression begins with a grouping symbol; if so, only return what is inside the symbols
 	// note that curly braces are NOT included here; they are parsed separately as they are not considered grouping symbols in the same way as parentheses and brackets are
@@ -40,12 +47,29 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		}
 
 		// Otherwise, carry on parsing
+
+		// check to see if we have a postfixed '&constexpr'
+		if (this->peek().value == "&") {
+			this->next();
+
+			// if we have "constexpr" next, then parse it; else, move back
+			if (this->peek().value == "constexpr") {
+				this->next();
+				is_const = true;
+			} else {
+				this->back();
+			}
+		}
+
+		// now, if we had prefixed _or_ postfixed 'constexpr', set the const value
+		if (is_const) left->set_const();
+
 		// if our next character is a semicolon or closing paren, then we should just return the expression we just parsed
 		if (this->peek().value == ";" || this->peek().value == get_closing_grouping_symbol(grouping_symbol) || this->peek().value == "{") {
 			return left;
 		}
 		// if our next character is an op_char, returning the expression would skip it, so we need to parse a binary using the expression in parens as our left expression
-		else if (this->peek().value == "op_char") {
+		else if (this->peek().type == "op_char") {
 			return this->maybe_binary(left, prec, grouping_symbol);
 		}
 	}
@@ -219,6 +243,23 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			}
 		}
 	}
+
+	// peek ahead at the next symbol; we may have a postfixed constexpr quality
+	if (this->peek().value == "&") {
+		// eat the ampersand
+		this->next();
+		lexeme quality = this->next();
+		if (quality.value == "constexpr") {
+			is_const = true;
+		} else {
+			throw ParserException("Invalid quality in expression (only 'constexpr' is allowed)", 0, quality.line_number);
+		}
+
+		// do not advance token; we use 'peek' in maybe_binary
+	}
+
+	// if is_const is set, then set 'left' to be a constexpr
+	if (is_const) left->set_const();
 
 	// Use the maybe_binary function to determine whether we need to return a binary expression or a simple expression
 

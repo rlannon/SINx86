@@ -31,6 +31,11 @@ bool SymbolQualities::is_const()
 	return const_q;
 }
 
+bool SymbolQualities::is_final()
+{
+	return final_q;
+}
+
 bool SymbolQualities::is_dynamic()
 {
 	return dynamic_q;
@@ -65,7 +70,9 @@ void SymbolQualities::add_quality(SymbolQuality to_add)
     // Add a single quality to our qualities list
     if (to_add == CONSTANT) {
         const_q = true;
-    } else if (to_add == STATIC) {
+    } else if (to_add == FINAL) {
+		final_q = true;
+	} else if (to_add == STATIC) {
         static_q = true;
     } else if (to_add == DYNAMIC) {
         dynamic_q = true;
@@ -89,6 +96,7 @@ SymbolQualities::SymbolQualities(std::vector<SymbolQuality> qualities)
 {
 	// start with our default values
 	const_q = false;
+	final_q = false;
 	static_q = false;
 	dynamic_q = false;
 	signed_q = false;
@@ -100,6 +108,10 @@ SymbolQualities::SymbolQualities(std::vector<SymbolQuality> qualities)
 		if (*it == CONSTANT)
 		{
 			const_q = true;
+		}
+		else if (*it == FINAL)
+		{
+			final_q = true;
 		}
 		else if (*it == STATIC)
 		{
@@ -157,6 +169,7 @@ SymbolQualities::SymbolQualities()
 {
 	// everything defaults to false if nothing is given
 	const_q = false;
+	final_q = false;
 	static_q = false;
 	dynamic_q = false;
 	signed_q = false;

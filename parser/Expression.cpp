@@ -85,19 +85,29 @@ const std::string get_string_from_type(Type candidate) {
 }
 
 
+bool Expression::is_const()
+{
+	return this->_const;
+}
 
 exp_type Expression::get_expression_type()
 {
 	return this->expression_type;
 }
 
-
-Expression::Expression(exp_type expression_type) : expression_type(expression_type) {
-	// uses initializer list
+void Expression::set_const()
+{
+	// marks an expression as a constexpr
+	this->_const = true;
 }
 
-Expression::Expression() {
-	Expression::expression_type = EXPRESSION_GENERAL;	// give it a default value so we don't try to use an uninitialized variable
+
+Expression::Expression(exp_type expression_type) : expression_type(expression_type) {
+	this->_const = false;	// all expressions default to being non-const
+}
+
+Expression::Expression(): Expression(EXPRESSION_GENERAL) {
+	// call specialized constructor with default value
 }
 
 Expression::~Expression() {

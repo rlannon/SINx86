@@ -477,14 +477,15 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 		lexeme ptr_op = this->next();
 		// check to see if it is an address-of or dereference operator
 		if (ptr_op.value == "$") {
-			lvalue = this->parse_expression();
+			// address-of operators are not allowed as lvalues
+			throw ParserException("Expression must be a modifiable-lvalue (address-of is not)", 0, ptr_op.line_number);
 		}
 		else if (ptr_op.value == "*") {
 			lvalue = this->create_dereference_object();
 		}
 		// if it isn't $ or *, it's an invalid op_char before an LValue
 		else {
-			throw ParserException("Operator character not allowed in an LValue", 211, current_lex.line_number);
+			throw ParserException("Operator character not allowed in an lvalue", 211, current_lex.line_number);
 		}
 	}
 	else {
@@ -506,7 +507,7 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 		}
 		// if it isn't a valid LValue, then we can't continue
 		else {
-			throw ParserException("Expected an LValue", 111, current_lex.line_number);
+			throw ParserException("Expression must be a modifiable-lvalue", 111, current_lex.line_number);
 		}
 	}
 

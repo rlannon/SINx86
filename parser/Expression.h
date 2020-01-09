@@ -35,8 +35,11 @@ const std::string get_string_from_type(Type candidate);
 class Expression
 {
 protected:
+	bool _const;	// if we have the 'constexpr' keyword, this will be set
 	exp_type expression_type;	// replace "string type" with "exp_type expression_type"
 public:
+	bool is_const();
+	void set_const();
 	exp_type get_expression_type();	// tells us whether it's a literal, lvalue, binary...
 	//Expression(std::string type);
 	Expression(exp_type expression_type);

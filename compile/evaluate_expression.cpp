@@ -370,16 +370,16 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     // now that we have the index in RBX, fetch the value
     if (indexed_sym.get_data_type().get_qualities().is_const()) {
         // todo: const arrays
-        // const arrays can use the name of the variable
+        // const arrays can use the name of the variable; their width must be known at compile time
     } else if (indexed_sym.get_data_type().get_qualities().is_dynamic()) {
         // todo: dynamic arrays
-        // dynamic arrays will use a pointer
+        // dynamic arrays will use a pointer -- their width may be variable
     } else if (indexed_sym.get_data_type().get_qualities().is_static()) {
         // todo: static arrays
-        // static arrays can use the name of the variable since they're reserved as named variables prior to runtime
+        // static arrays can use the name of the variable since they're reserved as named variables prior to runtime; their width must be known at compile time
     } else {
         // todo: automatic arrays
-        // automatic arrays will live on the stack because their width _must_ be known at compile time
+        // automatic arrays can live on the stack because their width _must_ be known at compile time
     }
 
     // return our generated code

@@ -265,11 +265,19 @@ DataType Parser::get_type()
 
 	// check our qualities, if any
 	SymbolQualities qualities;
+
+	// todo: write a more sophisticated (better) parser for symbol qualities
+
+	// check whether it is const/final
 	if (current_lex.value == "const") {
 		// change the variable quality
 		qualities.add_quality(CONSTANT);
 
 		// get the actual variable type
+		current_lex = this->next();
+	} else if (current_lex.value == "final") {
+		// variables may not be both const and final
+		qualities.add_quality(FINAL);
 		current_lex = this->next();
 	}
 	
@@ -491,8 +499,8 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 
 	// todo: change this lookup to use std::unordered_map<SymbolQuality, std::string>
 
-	const SymbolQuality qualities[7] = { CONSTANT, STATIC, DYNAMIC, SIGNED, UNSIGNED, LONG, SHORT };
-	const std::string quality_string[7] = { "const", "static", "dynamic", "signed", "unsigned", "long", "short" };
+	const SymbolQuality qualities[8] = { CONSTANT, FINAL, STATIC, DYNAMIC, SIGNED, UNSIGNED, LONG, SHORT };
+	const std::string quality_string[8] = { "const", "final", "static", "dynamic", "signed", "unsigned", "long", "short" };
 	SymbolQuality to_return = NO_QUALITY;
 
 	// ensure the token is a kwd

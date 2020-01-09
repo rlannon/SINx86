@@ -72,7 +72,7 @@ class FunctionSignatureException : public CompilerException
 {
 public:
 	explicit FunctionSignatureException(unsigned int line);
-}
+};
 
 class InvalidSymbolException : public CompilerException
 {
