@@ -62,7 +62,8 @@ class Parser
 	static SymbolQuality get_quality(lexeme quality_token);
 
 	// we have to fetch a type (and its qualities) more than once; use a tuple for this
-	DataType get_type();
+	DataType get_type(std::string grouping_symbol = "");
+	DataType parse_subtype(std::string grouping_symbol = "");
 	symbol_qualities get_prefix_qualities(std::string grouping_symbol = "");
 	symbol_qualities get_postfix_qualities(std::string grouping_symbol="");		// symbol qualities can be placed after an allocation using the & operator
 

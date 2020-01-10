@@ -254,7 +254,7 @@ const bool Parser::has_return(StatementBlock to_test)
 	}
 }
 
-DataType Parser::get_type()
+DataType Parser::get_type(std::string grouping_symbol)
 {
     /*
 
@@ -268,7 +268,7 @@ DataType Parser::get_type()
 	// todo: refactor this so qualifiers can go in any order, not specifically "const, dynamic/static, signed/unsigned, long/short"
 
 	// check our qualities, if any
-	symbol_qualities qualities = this->get_prefix_qualities("");
+	symbol_qualities qualities = this->get_prefix_qualities(grouping_symbol);
 
 	// todo: should we set the 'dynamic' quality if we have a string?
 
@@ -276,7 +276,7 @@ DataType Parser::get_type()
 	lexeme current_lex = this->current_token();
 
 	Type new_var_type;
-	Type new_var_subtype = NONE;
+	DataType new_var_subtype;
 	size_t array_length = 0;
 	std::string struct_name = "";
 
@@ -287,21 +287,8 @@ DataType Parser::get_type()
 		// 'ptr' must be followed by '<'
 		if (this->peek().value == "<") {
 			this->next();
-			// a keyword must be in the angle brackets following 'ptr'
-			if (this->peek().type == "kwd") {
-				lexeme subtype = this->next();
-				new_var_subtype = get_type_from_string(subtype.value);
-
-				// the next character must be ">"
-				if (this->peek().value == ">") {
-					// skip the angle bracket
-					this->next();
-				}
-				// if it isn't, throw an exception
-				else if (this->peek().value != ">") {
-					throw ParserException("Pointer type must be enclosed in angle brackets", 212, current_lex.line_number);
-				}
-			}
+			
+			new_var_subtype = this->parse_subtype("<");
 		}
 		// if it's not, we have a syntax error
 		else {
@@ -322,26 +309,9 @@ DataType Parser::get_type()
 				// a comma should follow the size
 				if (this->peek().value == ",") {
 					this->next();
-					std::shared_ptr<LValue> new_var_struct_name;	// in case we have a struct
-
-					// next, we should see a keyword or an identifier (we can have an array of structs, which the lexer would see as an ident)
-					if (this->peek().type == "kwd") {
-						// new_var_subtype will be the type indicated
-						new_var_subtype = get_type_from_string(this->next().value);
-					}
-					else if (this->peek().type == "ident") {
-						// the subtype will be struct, and we should set the struct type as the identifier
-						new_var_subtype = STRUCT;
-						new_var_struct_name = std::make_shared<LValue>(this->next().value);
-					}
-					else {
-						throw ParserException("Invalid subtype in array allocation", 0, this->peek().line_number);
-					}
-
-					// now, we should see a closing angle bracket and the name of the array
-					if (this->peek().value == ">") {
-						this->next();	// eat the angle bracket
-					}
+					
+					// parse a full type
+					new_var_subtype = this->parse_subtype("<");
 				}
 				else {
 					throw ParserException("The size of an array must be followed by the type", 0, current_lex.line_number);
@@ -356,7 +326,7 @@ DataType Parser::get_type()
 		}
 	}
 	// otherwise, if it is not a pointer or an array,
-	else {
+	else if (current_lex.type == "kwd" || current_lex.type == "ident") {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {
 			// if our symbol doesn't have signed or unsigned, set, it must be sigbed by default
@@ -377,11 +347,55 @@ DataType Parser::get_type()
 
 			struct_name = current_lex.value;
 		}
+	} else {
+		throw ParserException(
+			("'" + current_lex.value + "' is not a valid type name"),
+			compiler_errors::MISSING_IDENTIFIER_ERROR,
+			current_lex.line_number
+		);
 	}
 
 	// create the symbol type data
 	DataType symbol_type_data(new_var_type, new_var_subtype, qualities, array_length, struct_name);
 	return symbol_type_data;
+}
+
+DataType Parser::parse_subtype(std::string grouping_symbol) {
+	/*
+
+	parse_subtype
+	Parses a subtype, postfix qualities and all
+
+	For this function, the current token of the parser must be _on_ the grouping symbol
+	This function will also end with the current token of the parser _on_ the closing symbol
+
+	@param	grouping_symbol	The grouping symbol for the subtype -- should always be "<" in practice
+	@return	The parsed DataType object
+
+	*/
+
+	this->next();	// eat the opening grouping symbol
+
+	// first, parse the type (which will handle prefixed qualities)
+	DataType new_var_subtype;
+	new_var_subtype = this->get_type(grouping_symbol);
+	
+	// since subtypes have no 'default values', parse postfixed qualities, if there are any
+	if (this->peek().value == "&") {
+		this->next();	// eat the ampersand
+
+		symbol_qualities postfixed_qualities = this->get_postfix_qualities(grouping_symbol);
+		new_var_subtype.add_qualities(postfixed_qualities);
+	}
+
+	// ensure an angle bracket follows our postfixed qualities and eat it
+	if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
+		this->next();
+	} else {
+		throw ParserException("Unclosed grouping symbol found", 0, this->current_token().line_number);
+	}
+
+	return new_var_subtype;
 }
 
 symbol_qualities Parser::get_prefix_qualities(std::string grouping_symbol) {

@@ -73,6 +73,21 @@ We can use the overloaded operators to do any of the following:
 
 */
 
+DataType& DataType::operator=(const DataType &right)
+{
+	// Move assignment operator
+	if (this != &right) {
+		this->primary = right.primary;
+		this->subtype = right.subtype;
+		this->qualities = right.qualities;
+		this->array_length = right.array_length;
+		this->struct_name = right.struct_name;
+		this->width = right.width;
+	}
+
+	return *this;
+}
+
 bool DataType::operator==(const DataType right)
 {
 	return (this->primary == right.primary) && (this->subtype == right.subtype);
@@ -124,7 +139,7 @@ bool DataType::is_compatible(DataType to_compare) const
 	{
 		// cast the subtypes to DataType (with a subtype of NONE) and call is_compatible on them
 		if (this->subtype && to_compare.subtype) {
-			return static_cast<DataType>(*this->subtype).is_compatible(static_cast<DataType>(to_compare.get_subtype()));
+			return this->subtype->is_compatible(static_cast<DataType>(to_compare.get_subtype()));
 		} else {
 			throw CompilerException("Expected subtype", 0, 0);	// todo: ptr and array should _always_ have subtypes
 		}
@@ -167,13 +182,7 @@ void DataType::set_primary(Type new_primary) {
 }
 
 void DataType::set_subtype(DataType new_subtype) {
-	// Add the subtype; if one exists, delete it first
-	
-	if (this->subtype) {
-		delete this->subtype;
-	}
-
-	this->subtype = new DataType(new_subtype);
+	this->subtype = std::make_shared<DataType>(new_subtype);
 }
 
 void DataType::add_qualities(symbol_qualities to_add) {
@@ -210,15 +219,14 @@ size_t DataType::get_width() const {
 
 DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, size_t array_length, std::string struct_name) :
     primary(primary),
+	subtype(nullptr),
     qualities(qualities),
 	array_length(array_length),
 	struct_name(struct_name)
 {
 	// if the subtype has a type of NONE, then the subtype should be a nullptr; otherwise, construct an object
-	if (subtype.get_primary() == NONE) {
-		this->subtype = nullptr;
-	} else {
-		this->subtype = new DataType(subtype);
+	if (subtype.get_primary() != NONE) {
+		this->subtype = std::make_shared<DataType>(subtype);
 	}
 
     // if the type is int, set signed to true if it is not unsigned
@@ -247,6 +255,15 @@ DataType::DataType(Type primary) :
 	// no body needed (super called)
 }
 
+DataType::DataType(const DataType &ref) {
+	this->primary = ref.primary;
+	this->subtype = ref.subtype;
+	this->qualities = ref.qualities;
+	this->array_length = ref.array_length;
+	this->struct_name = ref.struct_name;
+	this->width = ref.width;
+}
+
 DataType::DataType()
 {
 	this->primary = NONE;
@@ -258,8 +275,5 @@ DataType::DataType()
 
 DataType::~DataType()
 {
-	// ensure to delete the subtype if one exists
-	if (this->subtype) {
-		delete this->subtype;
-	}
+	this->subtype = nullptr;
 }

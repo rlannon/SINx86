@@ -15,6 +15,7 @@ DataType contains the type, subtype, and qualities of a given expression alongsi
 #include <vector>
 #include <cinttypes>
 #include <cstdlib>
+#include <memory>
 
 #include "data_widths.h"
 #include "EnumeratedTypes.h"
@@ -24,7 +25,7 @@ DataType contains the type, subtype, and qualities of a given expression alongsi
 class DataType
 {
 	Type primary;	// always has a primary type
-	DataType *subtype;	// may or may not have a subtype
+	std::shared_ptr<DataType> subtype;	// may or may not have a subtype; nullptr if no subtype is present
 
 	symbol_qualities qualities;	// the qualities of the symbol (const, signed, etc.)
 	size_t array_length;	// if it's an array, track the length
@@ -36,6 +37,8 @@ class DataType
 
 	void create_subtype(DataType to_create);
 public:
+	DataType& operator=(const DataType &right);
+
 	bool operator==(const DataType right);
 	bool operator!=(const DataType right);
 
@@ -65,6 +68,7 @@ public:
 
     DataType(Type primary, DataType subtype, symbol_qualities qualities, size_t array_length = 0, std::string struct_name = "");
 	DataType(Type primary);
+	DataType(const DataType &ref);
 	DataType();
 	~DataType();
 };
