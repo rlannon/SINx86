@@ -85,12 +85,12 @@ bool DataType::operator!=(const DataType right)
 
 bool DataType::operator==(const Type right[2])
 {
-	return (this->primary == right[0]) && (this->subtype == right[1]);
+	return (this->primary == right[0]) && (*this->subtype == right[1]);
 }
 
 bool DataType::operator!=(const Type right[2])
 {
-	return (this->primary != right[0]) || (this->subtype != right[1]);
+	return (this->primary != right[0]) || (*this->subtype != right[1]);
 }
 
 bool DataType::operator==(const Type right)
@@ -107,11 +107,13 @@ bool DataType::is_compatible(DataType to_compare) const
 {
 	/*
 	
-	Compares 'self' with 'to_compare'. Types are compatible if one of the following is true:
+	Compares 'this' with 'to_compare' as if 'this' was the left-hand operand and 'to_compare' was the right-hand.
+	Types are compatible if one of the following is true:
 		- if pointer or array type:
-			- subtypes are equal
+			- subtypes are compatible
 			- one of the subtypes is RAW
 		- left OR right is RAW
+		- primaries are equal
 
 	*/
 
@@ -121,29 +123,16 @@ bool DataType::is_compatible(DataType to_compare) const
 	else if ((this->primary == PTR && to_compare.get_primary() == PTR) || (this->primary == ARRAY && to_compare.get_primary() == ARRAY))
 	{
 		// cast the subtypes to DataType (with a subtype of NONE) and call is_compatible on them
-		return static_cast<DataType>(this->subtype).is_compatible(static_cast<DataType>(to_compare.get_subtype()));
+		if (this->subtype && to_compare.subtype) {
+			return static_cast<DataType>(*this->subtype).is_compatible(static_cast<DataType>(to_compare.get_subtype()));
+		} else {
+			throw CompilerException("Expected subtype", 0, 0);	// todo: ptr and array should _always_ have subtypes
+		}
 	}
 	else {
-		Type right;
-		Type left;
-
-		if (this->primary == ARRAY)
-		{
-			right = this->subtype;
-		}
-		else {
-			right = this->primary;
-		}
-
-		if (to_compare.get_primary() == ARRAY)
-		{
-			left = to_compare.get_subtype();
-		}
-		else {
-			left = to_compare.get_primary();
-		}
-
-		return right == left;
+		// primary types must be equal
+		// todo: generate warnings for width and sign differences
+		return this->primary == to_compare.primary;
 	}
 }
 
@@ -154,7 +143,11 @@ Type DataType::get_primary() const
 
 Type DataType::get_subtype() const
 {
-	return this->subtype;
+	if (this->subtype) {
+		return this->subtype->get_subtype();
+	} else {
+		return NONE;
+	}
 }
 
 symbol_qualities DataType::get_qualities() const {
@@ -173,8 +166,14 @@ void DataType::set_primary(Type new_primary) {
 	this->primary = new_primary;
 }
 
-void DataType::set_subtype(Type new_subtype) {
-	this->subtype = new_subtype;
+void DataType::set_subtype(DataType new_subtype) {
+	// Add the subtype; if one exists, delete it first
+	
+	if (this->subtype) {
+		delete this->subtype;
+	}
+
+	this->subtype = new DataType(new_subtype);
 }
 
 void DataType::add_qualities(symbol_qualities to_add) {
@@ -186,8 +185,15 @@ void DataType::add_qualities(symbol_qualities to_add) {
 }
 
 void DataType::add_quality(SymbolQuality to_add) {
-    // set the qualities of this variable to
+    // add a quality 'to_add' to the data type
     this->qualities.add_quality(to_add);
+
+	// generate a compiler warning if the primary type doesn't support the quality (has no effect)
+	if (this->primary == PTR || this->primary == ARRAY || this->primary == RAW) {
+		if (to_add == LONG || to_add == SHORT || to_add == SIGNED || to_add == UNSIGNED) {
+			compiler_warning("Width and sign qualifiers have no effect for this type; as such, this quality will be ignored");
+		}
+	}
 
     // update the width
     this->set_width();
@@ -202,13 +208,19 @@ size_t DataType::get_width() const {
 	return this->width;
 }
 
-DataType::DataType(Type primary, Type subtype, symbol_qualities qualities, size_t array_length, std::string struct_name) :
+DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, size_t array_length, std::string struct_name) :
     primary(primary),
-    subtype(subtype),
     qualities(qualities),
 	array_length(array_length),
 	struct_name(struct_name)
 {
+	// if the subtype has a type of NONE, then the subtype should be a nullptr; otherwise, construct an object
+	if (subtype.get_primary() == NONE) {
+		this->subtype = nullptr;
+	} else {
+		this->subtype = new DataType(subtype);
+	}
+
     // if the type is int, set signed to true if it is not unsigned
 	if (primary == INT && !this->qualities.is_unsigned()) {
 		this->qualities.add_quality(SIGNED);
@@ -225,7 +237,7 @@ DataType::DataType(Type primary, Type subtype, symbol_qualities qualities, size_
 DataType::DataType(Type primary) :
 	DataType(
 		primary,
-		NONE,
+		DataType(),
 		symbol_qualities(),
 		0,
 		""
@@ -238,7 +250,7 @@ DataType::DataType(Type primary) :
 DataType::DataType()
 {
 	this->primary = NONE;
-	this->subtype = NONE;
+	this->subtype = nullptr;
 	this->qualities = symbol_qualities();	// no qualities to start
 	this->array_length = 0;
 	this->struct_name = "";
@@ -246,5 +258,8 @@ DataType::DataType()
 
 DataType::~DataType()
 {
-
+	// ensure to delete the subtype if one exists
+	if (this->subtype) {
+		delete this->subtype;
+	}
 }

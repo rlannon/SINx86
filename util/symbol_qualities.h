@@ -14,7 +14,7 @@ The definition of the classes pertaining to symbol qualities
 #include <vector>
 #include <string>
 
-#include "util/EnumeratedTypes.h"
+#include "EnumeratedTypes.h"
 #include "Exceptions.h"
 
 class symbol_qualities

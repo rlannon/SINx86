@@ -60,7 +60,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbol_table, line);
 
             // the subtype will be the current primary type, and the primary type will be array
-            sub_data_type.set_subtype(sub_data_type.get_primary());
+            sub_data_type.set_subtype(sub_data_type);
             sub_data_type.set_primary(ARRAY);
 
             // copy it into type_information

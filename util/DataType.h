@@ -24,8 +24,8 @@ DataType contains the type, subtype, and qualities of a given expression alongsi
 class DataType
 {
 	Type primary;	// always has a primary type
-	Type subtype;	// may or may not have a subtype
-	
+	DataType *subtype;	// may or may not have a subtype
+
 	symbol_qualities qualities;	// the qualities of the symbol (const, signed, etc.)
 	size_t array_length;	// if it's an array, track the length
 	size_t width;	// the width (in bytes) of the type
@@ -33,6 +33,8 @@ class DataType
 	std::string struct_name;	// if the data type is 'struct', we need to know its name so we can look it up in the struct table
 
 	void set_width();	// sets the symbol's type based on the primary type
+
+	void create_subtype(DataType to_create);
 public:
 	bool operator==(const DataType right);
 	bool operator!=(const DataType right);
@@ -50,16 +52,18 @@ public:
 	std::string get_struct_name() const;
 
 	void set_primary(Type new_primary);
-	void set_subtype(Type new_subtype);
+	void set_subtype(DataType new_subtype);
+
 	void add_qualities(symbol_qualities to_add);
     void add_quality(SymbolQuality to_add);
+
 	void set_struct_name(std::string name);
 
 	bool is_compatible(DataType to_compare) const;
 
 	size_t get_width() const;
 
-    DataType(Type primary, Type subtype, symbol_qualities qualities, size_t array_length = 0, std::string struct_name = "");
+    DataType(Type primary, DataType subtype, symbol_qualities qualities, size_t array_length = 0, std::string struct_name = "");
 	DataType(Type primary);
 	DataType();
 	~DataType();
