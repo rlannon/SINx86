@@ -52,7 +52,6 @@ enum SymbolType {
 };
 
 // todo: change to unordered_map?
-const size_t num_qualities = 9;
 enum SymbolQuality {
 	// So that the symbol's quality does not need to be stored as a string
 	NO_QUALITY,
@@ -104,7 +103,6 @@ enum Type {
 	ARRAY,
 	STRUCT
 };
-
 
 enum reg {
     // The registers available to us

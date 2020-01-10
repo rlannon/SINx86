@@ -264,9 +264,6 @@ DataType Parser::get_type(std::string grouping_symbol)
 
     */
 
-	// todo: refactor this to use an unordered map as well? to map string and SymbolQuality together
-	// todo: refactor this so qualifiers can go in any order, not specifically "const, dynamic/static, signed/unsigned, long/short"
-
 	// check our qualities, if any
 	symbol_qualities qualities = this->get_prefix_qualities(grouping_symbol);
 
@@ -292,7 +289,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 		}
 		// if it's not, we have a syntax error
 		else {
-			throw ParserException("Proper syntax is 'alloc ptr<type>'", 212, current_lex.line_number);
+			throw ParserException("Proper syntax is 'alloc ptr< T >'", 212, current_lex.line_number);
 		}
 	}
 	// otherwise, if it's an array,
@@ -336,7 +333,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 		}
 
 		// store the type name in our Type object
-		new_var_type = get_type_from_string(current_lex.value); // note: Type get_type_from_string() is found in "Expression" (.h and .cpp)
+		new_var_type = type_deduction::get_type_from_string(current_lex.value);
 
 		// if we have a struct, make a note of the name
 		if (new_var_type == STRUCT) {

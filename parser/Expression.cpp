@@ -40,50 +40,6 @@ const bool is_literal(std::string candidate_type) {
 	}
 }
 
-const Type get_type_from_string(std::string candidate) {
-	// if it can, this function gets the proper type of an input string
-	// an array of the valid types as strings
-
-	// todo: refactor to use hash table?
-	std::string string_types[] = { "int", "float", "string", "bool", "void", "ptr", "raw" };
-	Type _types[] = { INT, FLOAT, STRING, BOOL, VOID, PTR, RAW };
-
-	// for test our candidate against each item in the array of string_types; if we have a match, return the Type at the same position
-	for (int i = 0; i < num_types; i++) {
-		if (candidate == string_types[i]) {
-			// if we have a match, return it
-			return _types[i];
-		}
-		else {
-			continue;
-		}
-	}
-
-	// if we arrive here, we have not found a primitive type, and we should assume it's a struct
-    // if no such struct exists, then the compiler will notice
-	return STRUCT;
-}
-
-const std::string get_string_from_type(Type candidate) {
-	// reverse of the above function
-	std::string string_types[] = { "int", "float", "string", "bool", "void", "ptr", "raw" };
-	Type _types[] = { INT, FLOAT, STRING, BOOL, VOID, PTR, RAW };
-
-	// for test our candidate against each item in the array of string_types; if we have a match, return the string at the same position
-	for (int i = 0; i < num_types; i++) {
-		if (candidate == _types[i]) {
-			// if we have a match, return it
-			return string_types[i];
-		}
-		else {
-			continue;
-		}
-	}
-
-	// todo: throw exception?
-	return "struct";
-}
-
 
 bool Expression::is_const()
 {

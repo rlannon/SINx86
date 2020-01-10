@@ -99,7 +99,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	}
 	// if it is not an expression within a grouping symbol, it is parsed below
 	else if (is_literal(current_lex.type)) {
-		left = std::make_shared<Literal>(get_type_from_string(current_lex.type), current_lex.value);
+		left = std::make_shared<Literal>(type_deduction::get_type_from_string(current_lex.type), current_lex.value);
 	}
 	else if (current_lex.type == "ident") {
 		// check to see if we have the identifier alone, or whether we have an index

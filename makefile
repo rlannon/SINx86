@@ -10,7 +10,7 @@ bin=bin/
 # object file dependencies
 compiler_objs=allocation.o assign.o evaluate_expression.o function_symbol.o struct_info.o symbol.o
 compiler_util_objs=register_usage.o utilities.o
-parser_objs=lexeme.o lexer.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
+parser_objs=lexeme.o lexer.o type_deduction.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
 util_objs=datatype.o symbol_qualities.o exceptions.o binaryio.o
 build_objs=parser.o $(parser_objs) $(util_objs)
 
@@ -65,13 +65,13 @@ utilities.o: compile/compile_util/*
 parser.o: $(parser_objs) $(util_objs) $(parser_dependencies)
 	$(cc) $(flags) -o parser.o -c parser/Parser.cpp
 
-parseexpression.o: expression.o datatype.o exceptions.o
+parseexpression.o: type_deduction.o expression.o datatype.o exceptions.o
 	$(cc) $(flags) -o parseexpression.o -c parser/ParseExpression.cpp
 
-parserutil.o: statement.o expression.o datatype.o exceptions.o
+parserutil.o: type_deduction.o statement.o expression.o datatype.o exceptions.o
 	$(cc) $(flags) -o parserutil.o -c parser/ParserUtil.cpp
 
-parsestatement.o: statement.o expression.o datatype.o exceptions.o parse_definition.o
+parsestatement.o: type_deduction.o statement.o expression.o datatype.o exceptions.o parse_definition.o
 	$(cc) $(flags) -o parsestatement.o -c parser/ParseStatement.cpp
 
 parse_definition.o: statement.o expression.o parser/parse_definition.cpp
@@ -82,6 +82,9 @@ statement.o: expression.o datatype.o
 
 expression.o: datatype.o
 	$(cc) $(flags) -o expression.o -c parser/Expression.cpp
+
+type_deduction.o: util/EnumeratedTypes.h parser/type_deduction.h parser/type_deduction.cpp
+	$(cc) $(flags) -o type_deduction.o -c parser/type_deduction.cpp
 
 lexer.o: parser/Lexer.h parser/Lexer.cpp lexeme.o
 	$(cc) $(flags) -o lexer.o -c parser/Lexer.cpp

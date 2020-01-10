@@ -21,14 +21,7 @@ Contains the Expression class and all of its child classes; these are used by th
 
 const exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
 
-const int num_types = 11;
-
 const bool is_literal(std::string candidate_type);
-
-const Type get_type_from_string(std::string candidate);
-
-const std::string get_string_from_type(Type candidate);
-
 
 
 // Base class for all expressions
