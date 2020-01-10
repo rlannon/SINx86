@@ -118,29 +118,10 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			if (this->peek().value == "<") {
 				grouping_symbol = "<";
 				this->next();
-				// valid words in sizeof are types, so long as the type is not a struct or an array
-				if (this->peek().type == "ident" || (is_type(this->peek().value) && this->peek().value != "struct" && this->peek().value != "array")) {
-					this->next();   // "get_type" requires the _current_ lexeme to be the first lexeme of the type data
-                    DataType to_check = this->get_type();
-
-                    // check to see if we have any postfixed qualities
-                    if (this->peek().value == "&") {
-                        this->next();   // eat the ampersand
-                        to_check.add_qualities(this->get_postfix_qualities(grouping_symbol));
-                    }
-
-                    // finally, we must have a closing grouping symbol
-					if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
-						this->next();	// eat the closing symbol
-						left = std::make_shared<SizeOf>(to_check);
-					}
-					else {
-						throw ParserException("Syntax error; expected '>'", 0, current_lex.line_number);
-					}
-				}
-				else {
-					throw ParserException("Invalid 'sizeof' argument", 0, current_lex.line_number);
-				}
+				
+				// use our type parsing function to parse the sizeof< T > type
+				DataType to_check = this->parse_subtype("<");
+				left = std::make_shared<SizeOf>(to_check);
 			}
 			else {
 				throw ParserException("Syntax error; expected '<'", 0, current_lex.line_number);
