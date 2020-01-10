@@ -152,7 +152,7 @@ Literal::Literal(Type data_type, std::string value, Type subtype) : value(value)
     }
 
     // set our symbol qualities
-    SymbolQualities qualities(const_q, false, false, signed_q, !signed_q, long_q, short_q);  // literals are always considered const
+    symbol_qualities qualities(const_q, false, false, signed_q, !signed_q, long_q, short_q);  // literals are always considered const
 
     // todo: set long/short qualities for ints and floats
 	Literal::type = DataType(data_type, subtype, qualities);

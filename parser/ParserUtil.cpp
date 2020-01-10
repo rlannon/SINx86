@@ -268,7 +268,7 @@ DataType Parser::get_type()
 	// todo: refactor this so qualifiers can go in any order, not specifically "const, dynamic/static, signed/unsigned, long/short"
 
 	// check our qualities, if any
-	SymbolQualities qualities = this->get_prefix_qualities("");
+	symbol_qualities qualities = this->get_prefix_qualities("");
 
 	// todo: should we set the 'dynamic' quality if we have a string?
 
@@ -384,7 +384,7 @@ DataType Parser::get_type()
 	return symbol_type_data;
 }
 
-SymbolQualities Parser::get_prefix_qualities(std::string grouping_symbol) {
+symbol_qualities Parser::get_prefix_qualities(std::string grouping_symbol) {
 	/*
 
 	get_prefix_qualities
@@ -397,7 +397,7 @@ SymbolQualities Parser::get_prefix_qualities(std::string grouping_symbol) {
 
 	*/
 
-	SymbolQualities qualities;
+	symbol_qualities qualities;
 
 	// loop until we don't have a quality token, at which point we should return the qualities object
 	lexeme current = this->current_token();
@@ -417,7 +417,7 @@ SymbolQualities Parser::get_prefix_qualities(std::string grouping_symbol) {
 	return qualities;
 }
 
-SymbolQualities Parser::get_postfix_qualities(std::string grouping_symbol)
+symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 {
 	/*
 
@@ -438,7 +438,7 @@ SymbolQualities Parser::get_postfix_qualities(std::string grouping_symbol)
 		closing_symbol = "";
 	}
 
-	SymbolQualities qualities;	// create our qualities vector; initialize to an empty vector
+	symbol_qualities qualities;	// create our qualities vector; initialize to an empty vector
 
 	// a keyword should follow the '&'
 	if (this->peek().type == "kwd") {
@@ -481,9 +481,9 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 	// ensure the token is a kwd
 	if (quality_token.type == "kwd") {
 		// Use the unordered_map to find the quality
-		std::unordered_map<std::string, SymbolQuality>::const_iterator it = SymbolQualities::quality_strings.find(quality_token.value);
+		std::unordered_map<std::string, SymbolQuality>::const_iterator it = symbol_qualities::quality_strings.find(quality_token.value);
 		
-		if (it == SymbolQualities::quality_strings.end()) {
+		if (it == symbol_qualities::quality_strings.end()) {
 			throw ParserException("Invalid qualifier", 0, quality_token.line_number);
 		}
 		else {

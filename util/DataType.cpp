@@ -10,225 +10,6 @@ Implementation of the DataType class
 
 #include "DataType.h"
 
-/*
-
-SymbolQualities implementation
-
-*/
-
-const std::unordered_map<std::string, SymbolQuality> SymbolQualities::quality_strings = {
-	{ "const", CONSTANT },
-	{ "final", FINAL },
-	{ "static", STATIC },
-	{ "dynamic", DYNAMIC },
-	{ "long", LONG },
-	{ "short", SHORT },
-	{ "signed", SIGNED },
-	{ "unsigned", UNSIGNED }
-};
-
-bool SymbolQualities::is_long()
-{
-    return long_q;
-}
-
-bool SymbolQualities::is_short()
-{
-    return short_q;
-}
-
-bool SymbolQualities::is_const()
-{
-	return const_q;
-}
-
-bool SymbolQualities::is_final()
-{
-	return final_q;
-}
-
-bool SymbolQualities::is_dynamic()
-{
-	return dynamic_q;
-}
-
-bool SymbolQualities::is_static()
-{
-	return static_q;
-}
-
-bool SymbolQualities::is_signed()
-{
-	return signed_q;
-}
-
-bool SymbolQualities::is_unsigned()
-{
-	return unsigned_q;
-}
-
-/* void SymbolQualities::add_qualities(std::vector<SymbolQuality> to_add)
-{
-	// simply populate the vector; since we are adding, we don't really care about the original values
-	for (std::vector<SymbolQuality>::iterator it = to_add.begin(); it != to_add.end(); it++)
-	{
-		try {
-			this->add_quality(*it);
-		} catch (CompilerException &e) {
-			throw *it;
-		}
-	}
-} */
-
-void SymbolQualities::add_qualities(SymbolQualities to_add) {
-	// combines two SymbolQualities objects
-
-	// todo: refactor how qualities are stored in SymbolQualities so that we can simplify this
-
-	if (to_add.is_const()) this->add_quality(CONSTANT);
-	if (to_add.is_final()) this->add_quality(FINAL);
-	if (to_add.is_static()) this->add_quality(STATIC);
-	if (to_add.is_dynamic()) this->add_quality(DYNAMIC);
-	if (to_add.is_long()) this->add_quality(LONG);
-	if (to_add.is_short()) this->add_quality(SHORT);
-	if (to_add.is_signed()) this->add_quality(SIGNED);
-	if (to_add.is_unsigned()) this->add_quality(UNSIGNED);
-}
-
-void SymbolQualities::add_quality(SymbolQuality to_add)
-{
-    // Add a single quality to our qualities list
-    if (to_add == CONSTANT) {
-        const_q = true;
-
-		// we cannot have final and const together
-		if (final_q) throw std::string("const");	// todo: proper exception type
-    } else if (to_add == FINAL) {
-		final_q = true;
-
-		// we cannot have final and const together
-		if (const_q) throw std::string("final");	// todo: proper exception type
-	} else if (to_add == STATIC) {
-        static_q = true;
-    } else if (to_add == DYNAMIC) {
-        dynamic_q = true;
-    } else if (to_add == SIGNED) {
-        signed_q = true;
-    } else if (to_add == UNSIGNED) {
-        unsigned_q = true;
-        signed_q = false;
-	}
-	else if (to_add == LONG) {
-		long_q = true;
-		short_q = false;
-	}
-	else if (to_add == SHORT) {
-		long_q = false;
-		short_q = true;
-	}
-	else {
-		// invalid quality; throw an exception
-		throw CompilerException("Quality conflict");	// todo: proper exception type
-	}
-}
-
-SymbolQualities::SymbolQualities(std::vector<SymbolQuality> qualities)
-{
-	// start with our default values
-	const_q = false;
-	final_q = false;
-	static_q = false;
-	dynamic_q = false;
-	signed_q = false;
-	unsigned_q = false;
-
-	// then, populate according to the vector
-	for (std::vector<SymbolQuality>::iterator it = qualities.begin(); it != qualities.end(); it++)
-	{
-		if (*it == CONSTANT)
-		{
-			const_q = true;
-		}
-		else if (*it == FINAL)
-		{
-			final_q = true;
-		}
-		else if (*it == STATIC)
-		{
-			static_q = true;
-		}
-		else if (*it == DYNAMIC)
-		{
-			dynamic_q = true;
-		}
-		else if (*it == SIGNED)
-		{
-			signed_q = true;
-		}
-		else if (*it == UNSIGNED)
-		{
-			unsigned_q = true;
-		}
-		else {
-			continue;
-		}
-	}
-}
-
-SymbolQualities::SymbolQualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long, bool is_short) :
-	const_q(is_const),
-	static_q(is_static),
-	dynamic_q(is_dynamic),
-	signed_q(is_signed),
-	unsigned_q(is_unsigned),
-	long_q(is_long),
-	short_q(is_short)
-{
-	// unsigned always wins out over signed
-	if (SymbolQualities::unsigned_q) {
-		SymbolQualities::signed_q = false;
-	}
-
-	// const will always win out over static and dynamic
-	if (SymbolQualities::const_q) {
-		SymbolQualities::static_q, SymbolQualities::dynamic_q = false;
-	}
-
-	// if both long and short are set, generate a warning
-	if (SymbolQualities::long_q && SymbolQualities::short_q) {
-		// todo: warning
-		std::cerr << "Warning: 'long' and 'short' both used as qualifiers; this amounts to a regular integer" << std::endl;
-
-		// delete both qualities
-		SymbolQualities::long_q = false;
-		SymbolQualities::short_q = false;
-	}
-}
-
-SymbolQualities::SymbolQualities()
-{
-	// everything defaults to false if nothing is given
-	const_q = false;
-	final_q = false;
-	static_q = false;
-	dynamic_q = false;
-	signed_q = false;
-	unsigned_q = false;
-	long_q = false;
-	short_q = false;
-}
-
-SymbolQualities::~SymbolQualities()
-{
-
-}
-
-/*
-
-DataType methods
-
-*/
-
 void DataType::set_width() {
 	// Sets the width of the type based on its primary type and symbol qualities
 	
@@ -376,7 +157,7 @@ Type DataType::get_subtype() const
 	return this->subtype;
 }
 
-SymbolQualities DataType::get_qualities() const {
+symbol_qualities DataType::get_qualities() const {
 	return this->qualities;
 }
 
@@ -396,7 +177,7 @@ void DataType::set_subtype(Type new_subtype) {
 	this->subtype = new_subtype;
 }
 
-void DataType::add_qualities(SymbolQualities to_add) {
+void DataType::add_qualities(symbol_qualities to_add) {
 	// simply use the "SymbolQualities::add_qualities" function
 	this->qualities.add_qualities(to_add);
 
@@ -421,7 +202,7 @@ size_t DataType::get_width() const {
 	return this->width;
 }
 
-DataType::DataType(Type primary, Type subtype, SymbolQualities qualities, size_t array_length, std::string struct_name) :
+DataType::DataType(Type primary, Type subtype, symbol_qualities qualities, size_t array_length, std::string struct_name) :
     primary(primary),
     subtype(subtype),
     qualities(qualities),
@@ -445,7 +226,7 @@ DataType::DataType(Type primary) :
 	DataType(
 		primary,
 		NONE,
-		SymbolQualities(),
+		symbol_qualities(),
 		0,
 		""
 	)
@@ -458,7 +239,7 @@ DataType::DataType()
 {
 	this->primary = NONE;
 	this->subtype = NONE;
-	this->qualities = SymbolQualities();	// no qualities to start
+	this->qualities = symbol_qualities();	// no qualities to start
 	this->array_length = 0;
 	this->struct_name = "";
 }

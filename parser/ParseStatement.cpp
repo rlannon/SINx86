@@ -302,7 +302,7 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 			if (this->peek().value == "&") {
 				// append the posftixed qualities to symbol_type_data.qualities
 				this->next();
-				SymbolQualities postfixed_qualities = this->get_postfix_qualities();
+				symbol_qualities postfixed_qualities = this->get_postfix_qualities();
 				try {
 					symbol_type_data.add_qualities(postfixed_qualities);
 				} catch(std::string &offending_quality) {
@@ -442,7 +442,7 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
 			if (this->peek().value == "&") {
 				// append the posftixed qualities to symbol_type_data.qualities
 				this->next();
-				SymbolQualities postfixed_qualities = this->get_postfix_qualities();
+				symbol_qualities postfixed_qualities = this->get_postfix_qualities();
 
 				// we may encounter an error when trying to add our postfixed qualities; catch it and craft a new exception that includes the line number
 				try {

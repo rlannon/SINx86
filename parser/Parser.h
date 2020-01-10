@@ -63,8 +63,8 @@ class Parser
 
 	// we have to fetch a type (and its qualities) more than once; use a tuple for this
 	DataType get_type();
-	SymbolQualities get_prefix_qualities(std::string grouping_symbol = "");
-	SymbolQualities get_postfix_qualities(std::string grouping_symbol="");		// symbol qualities can be placed after an allocation using the & operator
+	symbol_qualities get_prefix_qualities(std::string grouping_symbol = "");
+	symbol_qualities get_postfix_qualities(std::string grouping_symbol="");		// symbol qualities can be placed after an allocation using the & operator
 
 	// Parsing statements -- each statement type will use its own function to return a statement of that type
 	std::shared_ptr<Statement> parse_statement(bool is_function_parameter = false);		// entry function to parse a statement
