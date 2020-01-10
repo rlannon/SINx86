@@ -54,3 +54,5 @@ How this plays out in SIN is that a pointed-to type can always *promote*, but ne
 In the above example, we can see that when we assign the address of non-const, non-final data to a pointer to a constant, that non-const, non-final data gets 'promoted' such that when accessed via the pointer, it is treated as having more restrictive access. Note that when accessed normally (not through a pointer), it is treated as normal; it only gets *temporarily* promoted when accessed via the pointer.
 
 That also means that we are explicitly forbidden from "demoting" data from `const` or `final` to anything less restrictive.
+
+**NB:** If you have a `const ptr` to `int`, that int effectively needs to be either `const` or `static`; a `const ptr` must know its pointed-to value at compile time, which means the *location* of the pointed-to data must *also* be known at compile time (i.e. it must be a named constant). This means `const ptr` must, in effect, always be either `const ptr<static int>` or `const ptr<const int>`.
