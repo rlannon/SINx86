@@ -101,8 +101,7 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 				// if so, return it; otherwise, throw an error
 				if (returned) {
 					// Return the pointer to our function
-					std::shared_ptr<LValue> _func = std::make_shared<LValue>(func_name.value, "func");
-					stmt = std::make_shared<FunctionDefinition>(_func, func_type_data, args, std::make_shared<StatementBlock>(procedure));
+					stmt = std::make_shared<FunctionDefinition>(func_name.value, func_type_data, args, std::make_shared<StatementBlock>(procedure));
 					stmt->set_line_number(current_lex.line_number);
 
 					return stmt;
@@ -165,8 +164,7 @@ std::shared_ptr<Statement> Parser::parse_struct_definition(lexeme current_lex) {
     }
 
     // construct the struct definition and return it
-    std::shared_ptr<LValue> name = std::make_shared<LValue>(struct_name.value);
-    stmt = std::make_shared<StructDefinition>(name, std::make_shared<StatementBlock>(procedure));
+    stmt = std::make_shared<StructDefinition>(struct_name.value, std::make_shared<StatementBlock>(procedure));
     stmt->set_line_number(current_lex.line_number);
     return stmt;
 }
