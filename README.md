@@ -1,4 +1,6 @@
-# SIN-Language
+# SINx86
+
+This repository contains an updated toolchain for SIN whose target is x86-64. This is an updated/refactored/improved version of the repository `SIN-Language`, a compiler project that targeted a 16-bit VM.
 
 SIN is a custom procedural programming language based on C, C++, and Python, designed as an exercise in computer language design. It is named after the Spanish word meaning "without" because if anyone were to ask you about the language, you would reply that it is without any real utility or purpose. This repository contains a compiler for SIN with an x86 target; while I may add other architectures as I go on, x86 is the sole focus of the project for the time being.
 
