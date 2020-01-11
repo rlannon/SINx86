@@ -88,35 +88,36 @@ bool register_usage::is_xmm_register(reg to_test) {
 
 bool register_usage::is_in_use(reg to_test) {
     // Returns whether the specified register is in use
-    std::unordered_map<reg, bool&>::iterator it = this->regs.find(to_test);
+    std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.find(to_test);
 
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register choice");
     } else {
-        return it->second;
+        return it->second.first;
     }
 }
 
 void register_usage::set(reg to_set) {
     // Sets a given register to 'in use'
-    std::unordered_map<reg, bool&>::iterator it = this->regs.find(to_set);
+    std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.find(to_set);
     
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register selection");
     } else {
-        it->second = true;  // it is a reference, so it will update the original
+        it->second.first = true;  // it is a reference, so it will update the original
+        it->second.second = true;   // mark the register as having been used
     }
 }
 
 void register_usage::clear(reg to_clear) {
     // Marks a register as available
-    std::unordered_map<reg, bool&>::iterator it = this->regs.find(to_clear);
+    std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.find(to_clear);
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register selection");
     } else {
-        it->second = false; // since it's a reference, it will update the original
+        it->second.first = false; // since it's a reference, it will update the original
     }
 }
 
@@ -135,8 +136,8 @@ reg register_usage::get_available_register(Type data_type) {
 
     // iterate through the registers until we find one that isn't in use and is of the type we want
     // call is_type via implicit dereferencing
-    std::unordered_map<reg, bool&>::iterator it = this->regs.begin();
-    while (it != this->regs.end() && it->second && is_type(it->first)) {
+    std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.begin();
+    while (it != this->regs.end() && it->second.first && is_type(it->first)) {
         it++;
     }
 
@@ -202,34 +203,34 @@ std::string register_usage::get_register_name(const reg to_get) {
 register_usage::register_usage(): 
     regs(
             {
-                {RAX, this->rax},
-                {RBX, this->rbx},
-                {RCX, this->rcx},
-                {RDX, this->rdx},
-                {RSI, this->rsi},
-                {RDI, this->rdi},
-                {R8, this->r8},
-                {R9, this->r9},
-                {R10, this->r10},
-                {R11, this->r11},
-                {R12, this->r12},
-                {R13, this->r13},
-                {R14, this->r14},
-                {R15, this->r15},
-                {XMM0, this->xmm[0]},
-                {XMM1, this->xmm[1]},
-                {XMM2, this->xmm[2]},
-                {XMM3, this->xmm[3]},
-                {XMM4, this->xmm[4]},
-                {XMM5, this->xmm[5]},
-                {XMM6, this->xmm[6]},
-                {XMM7, this->xmm[7]}
+                {RAX, std::pair<bool&, bool&>(this->rax, this->used[0])},
+                {RBX, std::pair<bool&, bool&>(this->rbx, this->used[1])},
+                {RCX, std::pair<bool&, bool&>(this->rcx, this->used[2])},
+                {RDX, std::pair<bool&, bool&>(this->rdx, this->used[3])},
+                {RSI, std::pair<bool&, bool&>(this->rsi, this->used[4])},
+                {RDI, std::pair<bool&, bool&>(this->rdi, this->used[5])},
+                {R8, std::pair<bool&, bool&>(this->r8, this->used[6])},
+                {R9, std::pair<bool&, bool&>(this->r9, this->used[7])},
+                {R10, std::pair<bool&, bool&>(this->r10, this->used[8])},
+                {R11, std::pair<bool&, bool&>(this->r11, this->used[9])},
+                {R12, std::pair<bool&, bool&>(this->r12, this->used[10])},
+                {R13, std::pair<bool&, bool&>(this->r13, this->used[11])},
+                {R14, std::pair<bool&, bool&>(this->r14, this->used[12])},
+                {R15, std::pair<bool&, bool&>(this->r15, this->used[13])},
+                {XMM0, std::pair<bool&, bool&>(this->xmm[0], this->used[14])},
+                {XMM1, std::pair<bool&, bool&>(this->xmm[1], this->used[15])},
+                {XMM2, std::pair<bool&, bool&>(this->xmm[2], this->used[16])},
+                {XMM3, std::pair<bool&, bool&>(this->xmm[3], this->used[17])},
+                {XMM4, std::pair<bool&, bool&>(this->xmm[4], this->used[18])},
+                {XMM5, std::pair<bool&, bool&>(this->xmm[5], this->used[19])},
+                {XMM6, std::pair<bool&, bool&>(this->xmm[6], this->used[19])},
+                {XMM7, std::pair<bool&, bool&>(this->xmm[7], this->used[20])}
             }
     )
 {
     // zero out our booleans
-    for(std::unordered_map<reg, bool&>::iterator it = this->regs.begin(); it != this->regs.end(); it++) {
-        it->second = false;
+    for(std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.begin(); it != this->regs.end(); it++) {
+        it->second.first = false;
     }
 }
 

@@ -157,7 +157,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s) {
     return compile_ss;
 }
 
-std::stringstream compiler::compile_ast(StatementBlock ast) {
+std::stringstream compiler::compile_ast(StatementBlock &ast) {
     /*
 
     compile_ast

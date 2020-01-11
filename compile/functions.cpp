@@ -36,6 +36,8 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     unsigned int previous_scope_level = this->current_scope_level;
     size_t previous_max_offset = this->max_offset;
 
+    // todo: should be package this together in an object and use a stack to keep track of it? that might make things a little cleaner
+
     // update the scope info -- name = function name, level = 1, offset = 0
     this->current_scope_name = definition.get_name();
     this->current_scope_level = 1;
@@ -45,23 +47,37 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     function_symbol func_sym = create_function_symbol(definition);
 
     // now, we have to iterate over the function symbol's parameters and add them to our symbol table
-    // todo: optimize by enabling symbol table pushes in template function?
+    // todo: optimize by enabling symbol table additions in template function?
     for (symbol &sym: func_sym.get_formal_parameters()) {
         // add the symbol to the table and update our stack offset
         this->add_symbol(func_sym, definition.get_line_number());
 
-        // the new with should be the stack offset + the width of the data
-        this->max_offset = func_sym.get_stack_offset() + func_sym.get_data_type().get_width();
+        // todo: use a set to track which registers were used to pass arguments; this will make looking them up later (to determine registers to preserve) faster
     }
+
+    // update the stack offset -- since symbols are pushed in order, just get the last one
+    const symbol &last_sym = func_sym.get_formal_parameters().back(); 
+    this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_stack_offset();
 
     // get the register_usage object from func_sym and push that
     this->reg_stack.push_back(func_sym.get_arg_regs());
 
-    // todo: compile function using compiler::compile_ast, passing to it as a parameter the definition's procedure
+    // now, compile the procedure using compiler::compile_ast
+    procedure_ss = this->compile_ast(*definition.get_procedure().get());
 
-    // todo: determine registers used by the function and generate code to preserve and restore them
+    // our register saving and clean-up will be affected by the calling convention
+    if (definition.get_calling_convention() == SINCALL) {
+        // now that we have compiled the procedure, determine which registers were used by the function (it is the callee's responsibility to save its registers)
+
+        // todo: preserve registers which have been used _except_ those used to pass arguments; they have already been saved
+    } else {
+        throw CompilerException("Currently, calling convention specification is not supported", compiler_errors::INVALID_TOKEN, definition.get_line_number());
+    }
 
     // todo: put all of the generated code together in definition_ss
+
+    // pop off our reg stack to return to our previous register usage status
+    this->reg_stack.pop_back();
 
     // restore our scope information
     this->current_scope_name = previous_scope_name;

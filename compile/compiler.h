@@ -46,7 +46,7 @@ class compiler {
     size_t max_offset;    // the maximum offset within the current stack frame -- use for new variables, calls, etc
 
     // compile an entire statement block
-    std::stringstream compile_ast(StatementBlock ast);
+    std::stringstream compile_ast(StatementBlock &ast);
     
     // a function to compile a single statement
     std::stringstream compile_statement(std::shared_ptr<Statement> s);

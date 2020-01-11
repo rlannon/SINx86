@@ -11,6 +11,7 @@ A class to track the current general-purpose registers in use
 #pragma once
 
 #include <unordered_map>
+#include <utility>
 #include <string>
 
 #include "../../util/EnumeratedTypes.h"
@@ -25,7 +26,7 @@ class register_usage {
     */
 
     // using an unordered_map will allow much easier access to these booleans
-    std::unordered_map<reg, bool&> regs;
+    std::unordered_map<reg, std::pair<bool&, bool&>> regs;  // first = currently in use; second = has been used
     static std::unordered_map<reg, std::string> reg_strings;
     static std::unordered_map<reg, std::string> reg_32_strings;
     static std::unordered_map<reg, std::string> reg_16_strings;
@@ -55,6 +56,9 @@ class register_usage {
 
     // we have 8 128-bit xmm registers available, called xmm_
     bool xmm[8] = { false };
+    
+    // track if a register has been used at all
+    bool used[24] = { false };
 
     // register test functions
     static bool is_int_register(reg to_test);
