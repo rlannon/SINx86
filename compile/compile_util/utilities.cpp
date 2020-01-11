@@ -163,12 +163,19 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 bool can_pass_in_register(DataType to_check) {
     // Checks whether the given DataType can be passed in a register or if it must be passed on the stack
 
+    bool can_pass = false;
+
     Type primary = to_check.get_primary();
-    return (
-        primary != ARRAY &&
-        primary != STRUCT &&
-        primary != STRING
-    );
+    if (primary == ARRAY || primary == STRUCT || primary == STRING) {
+        // if the type is dyamic, then we can -- we are really passing in a pointer into the function
+        // todo: can we have static parameters?
+        can_pass = to_check.get_qualities().is_dynamic();
+    } else {
+        // if we have numeric, bool, or char types, then we can pass on a register
+        can_pass = true;
+    }
+
+    return can_pass;
 }
 
 struct_info define_struct(StructDefinition definition) {
@@ -187,9 +194,7 @@ struct_info define_struct(StructDefinition definition) {
     */
 
     // get the struct's name
-    std::string struct_name;
-    LValue *name_lval = dynamic_cast<LValue*>(definition.get_name().get());
-    struct_name = name_lval->getValue();    // todo: refactor name to be a string in 'Definition'
+    std::string struct_name = definition.get_name();
 
     // iterate through our definition statements and create symbols for all struct members
     std::vector<symbol> members;
@@ -199,7 +204,7 @@ struct_info define_struct(StructDefinition definition) {
         if (s->get_statement_type() == ALLOCATION) {
             // cast to Allocation and create a symbol
             Allocation *alloc = dynamic_cast<Allocation*>(s.get());
-            symbol sym(alloc->get_var_name(), struct_name, 1, alloc->get_type_information(), current_offset);
+            symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
             
             // todo: allow default values (alloc-init syntax) in structs?
 
@@ -216,4 +221,85 @@ struct_info define_struct(StructDefinition definition) {
 
     // construct and return a struct_info object
     return struct_info(struct_name, members, definition.get_line_number());
+}
+
+// Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
+template function_symbol create_function_symbol(FunctionDefinition);
+template function_symbol create_function_symbol(Declaration);
+
+template <class T>
+function_symbol create_function_symbol(T def) {
+    /*
+
+    create_function_symbol
+    Creates a symbol for a function based on either a definition or a declaration
+
+    This function is responsible for turning the Statement objects containing parameters into symbol objects, but it _does not_ add them to the symbol table (as it is not a member of compiler)
+
+    @param  def The definition or declaration from which to create our symbol
+    @return A symbol containing the function signature
+
+    */
+
+    std::string scope_name = def.get_name();
+    unsigned int scope_level = 1;
+    size_t stack_offset = 0;
+
+    // construct our formal parameters
+    std::vector<symbol> formal_parameters;
+
+    // now, determine which registers can hold which parameters
+    for (std::shared_ptr<Statement> parameter: def.get_formal_parameters()) {
+        // create the symbol based on our statement
+        symbol param_sym;
+
+        // cast to the appropriate symbol type
+        if (param->get_statement_type() == DECLARATION) {
+            Declaration *param_decl = dynamic_cast<Declaration*>(param.get());
+            param_sym = generate_symbol(*param_decl, scope_name, scope_level, stack_offset);
+        } else if (param->get_statement_type() == ALLOCATION) {
+            Allocation *param_alloc = dynamic_cast<Allocation*>(param.get());
+            param_sym = generate_symbol(*param_alloc, scope_name, scope_level, stack_offset);
+        } else {
+            // todo: remove? these errors should be caught by the parser
+            throw CompilerException("Invalid statement type in function signature", compiler_errors::ILLEGAL_OPERATION_ERROR, definition.get_line_number());
+        }
+
+        formal_parameters.push_back(param_sym);
+    }
+
+    // construct the object
+    function_symbol to_return(def.get_name(), def.get_type_information(), formal_parameters, def.get_calling_convention());
+
+    // finally, return the function symbol
+    return to_return;
+}
+
+template symbol generate_symbol(Declaration&, std::string, unsigned int, size_t&);
+template symbol generate_symbol(Allocation&, std::string, unsigned int, size_t&);
+
+template <class T>
+symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope_level, size_t &stack_offset) {
+    /*
+
+    generate_symbol
+    Creates a symbol for a variable based on its allocation/declaration
+
+    This template function is responsible for creating symbols based on Allocation or Declaration objects. Note that this does not handle the actual allocation of the variable, it just constructs the symbol based on the name, scope, etc. As such, whether the variable was initialized does not matter.
+    This will also update the stack offset passed into it to account for the width of the symbol.
+
+    @param  allocation  A Declaration or Allocation statement
+    @param  scope_name  The name of the scope where the symbol is located
+    @param  scope_level The scope level of the symbol
+    @param  stack_offset    The stack offset (in bytes) of the symbol from the stack frame base
+
+    @return The constructed symbol object
+
+    */
+
+    // construct the symbol
+    symbol to_return(allocation.get_name(), scope_name, scope_level, allocation.get_type_information(), stack_offset);
+    stack_offset += allocation.get_type_information().get_width();  // update the stack offset
+
+    return to_return;
 }

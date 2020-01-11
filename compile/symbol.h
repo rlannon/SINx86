@@ -12,8 +12,10 @@ The class for compiler symbols
 #include <vector>
 #include <utility>
 #include <string>
+#include <unordered_map>
 
 #include "../util/DataType.h"   // For all information about types
+#include "compile_util/register_usage.h"
 
 class symbol {
     /*
@@ -23,6 +25,7 @@ class symbol {
     */
     
     unsigned int stack_offset;  // the offset, in bytes, from the stack frame base
+    reg current_reg;    // current register holding the symbol
 protected:
     SymbolType symbol_type;
 
@@ -36,6 +39,9 @@ protected:
 public:
     // our getters
     SymbolType get_symbol_type() const;
+
+    reg get_register() const;
+    void set_register(reg to_set);
 
     std::string get_name() const;
     std::string get_scope_name() const;
@@ -52,26 +58,4 @@ public:
     explicit symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset);
     symbol();
     virtual ~symbol(); // the destructor must be virtual for the sake of the child class
-};
-
-class function_symbol: public symbol {
-    /*
-
-    The class for function symbols
-
-    */
-
-    // Function arguments -- formal parameters should be stored as symbols (they are considered local variables, so they will be pushed first)
-    std::vector<symbol> formal_parameters;
-
-    // calling convention -- defaults to SIN
-    calling_convention call_con;
-public:
-    std::vector<symbol> &get_formal_parameters();
-    calling_convention get_calling_convention();
-
-    // constructors
-    function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con = SINCALL);
-    function_symbol();
-    ~function_symbol();
 };

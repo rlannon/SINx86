@@ -105,13 +105,20 @@ enum Type {
 };
 
 enum reg {
-    // The registers available to us
+	// The registers available to us
+
+	// It's possible we won't have any registers available
+	NO_REGISTER = 0,
+
+    // Integer registers
     RAX,
     RBX,
     RCX,
     RDX,
     RSI,
     RDI,
+
+	// x64 extension
     R8,
     R9,
     R10,
@@ -119,7 +126,17 @@ enum reg {
     R12,
     R13,
     R14,
-    R15
+    R15,
+
+	// 128-bit SSE registers
+	XMM0,
+	XMM1,
+	XMM2,
+	XMM3,
+	XMM4,
+	XMM5,
+	XMM6,
+	XMM7
 };
 
 

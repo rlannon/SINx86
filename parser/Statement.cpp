@@ -73,8 +73,8 @@ Include::Include() {
 /*******************		DECLARATION CLASS		********************/
 
 
-std::string Declaration::get_var_name() {
-	return this->var_name;
+std::string Declaration::get_name() {
+	return this->name;
 }
 
 DataType Declaration::get_type_information() {
@@ -100,20 +100,26 @@ std::vector<std::shared_ptr<Statement>> Declaration::get_formal_parameters() {
 	return this->formal_parameters;
 }
 
+calling_convention Declaration::get_calling_convention() {
+	return this->call_con;
+}
+
 // Constructors
 Declaration::Declaration(DataType type, std::string var_name, std::shared_ptr<Expression> initial_value, bool is_function, bool is_struct, std::vector<std::shared_ptr<Statement>> formal_parameters) :
 	type(type),
-	var_name(var_name),
+	name(var_name),
 	initial_value(initial_value),
 	function_definition(is_function),
 	struct_definition(is_struct),
 	formal_parameters(formal_parameters)
 {
 	this->statement_type = DECLARATION;
+	this->call_con = SINCALL;
 }
 
-Declaration::Declaration() {
-	this->statement_type = DECLARATION;
+Declaration::Declaration():
+Declaration(DataType(), "", nullptr, false, false, {}) {
+	
 }
 
 /*******************	ALLOCATION CLASS	********************/
@@ -140,7 +146,7 @@ std::string Allocation::get_var_type_as_string(Type to_convert) {
 	return "[unknown type]";
 }
 
-std::string Allocation::get_var_name() {
+std::string Allocation::get_name() {
 	return this->value;
 }
 
@@ -271,7 +277,7 @@ WhileLoop::WhileLoop() {
 
 /*******************	DEFINITION CLASS		********************/
 
-std::shared_ptr<Expression> Definition::get_name() {
+std::string Definition::get_name() {
 	return this->name;
 }
 
@@ -279,7 +285,7 @@ std::shared_ptr<StatementBlock> Definition::get_procedure() {
 	return this->procedure;
 }
 
-Definition::Definition(std::shared_ptr<Expression> name, std::shared_ptr<StatementBlock> procedure):
+Definition::Definition(std::string name, std::shared_ptr<StatementBlock> procedure):
 	name(name),
 	procedure(procedure)
 {
@@ -297,19 +303,23 @@ Definition::~Definition() {
 
 /*******************	FUNCTION DEFINITION CLASS		********************/
 
-DataType FunctionDefinition::get_return_type()
+DataType FunctionDefinition::get_type_information()
 {
 	return this->return_type;
 }
 
-std::vector<std::shared_ptr<Statement>> FunctionDefinition::get_args() {
-	return this->args;
+std::vector<std::shared_ptr<Statement>> FunctionDefinition::get_formal_parameters() {
+	return this->formal_parameters;
 }
 
-FunctionDefinition::FunctionDefinition(std::shared_ptr<Expression> name_ptr, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr):
-	Definition(name_ptr, procedure_ptr),
+calling_convention FunctionDefinition::get_calling_convention() {
+	return this->call_con;
+}
+
+FunctionDefinition::FunctionDefinition(std::string name, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr):
+	Definition(name, procedure_ptr),
 	return_type(return_type),
-	args(args_ptr)
+	formal_parameters(args_ptr)
 {
 	FunctionDefinition::statement_type = FUNCTION_DEFINITION;
 }
@@ -321,8 +331,8 @@ FunctionDefinition::FunctionDefinition() {
 
 /*******************	STRUCT DEFINITION CLASS		********************/
 
-StructDefinition::StructDefinition(std::shared_ptr<Expression> name_ptr, std::shared_ptr<StatementBlock> procedure_ptr):
-	Definition(name_ptr, procedure_ptr)
+StructDefinition::StructDefinition(std::string name, std::shared_ptr<StatementBlock> procedure_ptr):
+	Definition(name, procedure_ptr)
 {
 	this->statement_type = STRUCT_DEFINITION;
 }

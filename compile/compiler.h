@@ -37,11 +37,12 @@ class compiler {
 
     std::unordered_map<std::string, std::shared_ptr<symbol>> symbol_table;    // the symbol table will be implemented through an unordered map
     std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
+    void add_symbol(symbol &to_add, unsigned int line);  // add a symbol, handle exceptions accordingly
 
     std::unordered_map<std::string, struct_info> struct_table;
     struct_info get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
 
-    unsigned int max_offset;    // the maximum offset within the current stack frame -- use for new variables, calls, etc
+    size_t max_offset;    // the maximum offset within the current stack frame -- use for new variables, calls, etc
 
     // compile an entire statement block
     std::stringstream compile_ast(StatementBlock ast);
@@ -51,7 +52,6 @@ class compiler {
 
     // allocations
     std::stringstream allocate(Allocation alloc_stmt);
-    symbol allocate_automatic(Allocation alloc_stmt);
 
     // assignments
     std::stringstream assign(Assignment assign_stmt);

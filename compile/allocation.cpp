@@ -27,7 +27,12 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
     } else {
         // must be automatic memory
         // allocate memory on the stack
-        symbol allocated = allocate_automatic(alloc_stmt);
+
+        // construct the symbol with our utility function and add it to the symbol table
+        symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+        this->add_symbol(allocated, alloc_stmt.get_line_number());
+
+        // initialize it, if necessary
         if (alloc_stmt.was_initialized()) {
             // get the initial value
             std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
@@ -41,20 +46,4 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
     // return our allocation code
     return allocation_ss;
-}
-
-symbol compiler::allocate_automatic(Allocation alloc_stmt) {
-    // Allocates automatic memory according to the allocation statement 
-    // Returns a copy of the symbol that was allocated
-
-    // We need to create a symbol appropriately
-    symbol to_allocate(alloc_stmt.get_var_name(), this->current_scope_name, this->current_scope_level, alloc_stmt.get_type_information(), this->max_offset);
-    std::pair<std::string, std::shared_ptr<symbol>> to_insert(to_allocate.get_name(), std::make_shared<symbol>(to_allocate));
-    this->symbol_table.insert(to_insert);
-
-    // update the max offset
-    this->max_offset += alloc_stmt.get_type_information().get_width();
-
-    // an automatic allocation generates no code, so return the allocated symbol
-    return to_allocate;
 }

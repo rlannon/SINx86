@@ -37,6 +37,31 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
     }
 }
 
+void compiler::add_symbol(symbol &to_add, unsigned int line) {
+    /*
+
+    add_symbol
+    Adds a symbol to the table
+
+    Adds a symbol to the symbol table, throwing an exception if it's a duplicate.
+
+    @param  to_add  The symbol we want to add
+    @param  line    The line number where the allocation occurs
+
+    @throws DuplicateSymbolException
+
+    */
+
+    std::pair<std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator, bool> returned = this->symbol_table.insert(
+        std::make_pair<std::string, std::shared_ptr<symbol>>(to_add.get_name(), std::make_shared<symbol>(to_add))
+    );
+
+    // throw an exception if the symbol could not be inserted
+    if (!returned.second) {
+        throw DuplicateSymbolException(line);
+    }
+}
+
 struct_info compiler::get_struct_info(std::string struct_name, unsigned int line) {
     /*
     

@@ -40,6 +40,8 @@ class register_usage {
     bool rsi;
     bool rdi;
 
+    // don't track usage of rsp and rbp
+
     // additional registers for x86_64
     // Data widths are 64 = r8; 32 = r8d; 16 = r8w; 8 = r8b
     bool r8;
@@ -50,6 +52,13 @@ class register_usage {
     bool r13;
     bool r14;
     bool r15;
+
+    // we have 8 128-bit xmm registers available, called xmm_
+    bool xmm[8] = { false };
+
+    // register test functions
+    static bool is_int_register(reg to_test);
+    static bool is_xmm_register(reg to_test);
 public:
     bool is_in_use(reg to_test);
 
@@ -58,7 +67,10 @@ public:
     void clear(reg to_clear);
 
     // for getting the first available register
-    reg get_available_register();
+    reg get_available_register(Type data_type);
+
+    // to determine whether we can pass an argument in that register
+    static bool is_valid_argument_register(const reg to_check, const calling_convention call_con);
     
     // get the name of a register
     std::string get_register_name(const reg to_get);    // full 64-bit register

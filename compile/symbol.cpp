@@ -13,6 +13,14 @@ SymbolType symbol::get_symbol_type() const {
     return this->symbol_type;
 }
 
+reg symbol::get_register() const {
+    return this->current_reg;
+}
+
+void symbol::set_register(reg to_set) {
+    this->current_reg = to_set;
+}
+
 std::string symbol::get_name() const {
 	return this->name;
 }
@@ -48,6 +56,7 @@ symbol::symbol(std::string name, std::string scope_name, unsigned int scope_leve
     type(type_information),
     stack_offset(stack_offset)
 {
+    this->current_reg = NO_REGISTER;
     this->symbol_type = VARIABLE;
     this->freed = false;    // symbols should start as allocated
 }

@@ -31,13 +31,42 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     std::stringstream definition_ss;    // contains the code for the entire callee
     std::stringstream procedure_ss; // contains the code for the actual procedure
 
-    // todo: push a new register_usage object to our stack
+    // save current scope info
+    std::string previous_scope_name = this->current_scope_name;
+    unsigned int previous_scope_level = this->current_scope_level;
+    size_t previous_max_offset = this->max_offset;
+
+    // update the scope info -- name = function name, level = 1, offset = 0
+    this->current_scope_name = definition.get_name();
+    this->current_scope_level = 1;
+    this->max_offset = 0;
+
+    // construct the symbol for the function -- everything is offloaded to the utility
+    function_symbol func_sym = create_function_symbol(definition);
+
+    // now, we have to iterate over the function symbol's parameters and add them to our symbol table
+    // todo: optimize by enabling symbol table pushes in template function?
+    for (symbol &sym: func_sym.get_formal_parameters()) {
+        // add the symbol to the table and update our stack offset
+        this->add_symbol(func_sym, definition.get_line_number());
+
+        // the new with should be the stack offset + the width of the data
+        this->max_offset = func_sym.get_stack_offset() + func_sym.get_data_type().get_width();
+    }
+
+    // get the register_usage object from func_sym and push that
+    this->reg_stack.push_back(func_sym.get_arg_regs());
 
     // todo: compile function using compiler::compile_ast, passing to it as a parameter the definition's procedure
 
     // todo: determine registers used by the function and generate code to preserve and restore them
 
     // todo: put all of the generated code together in definition_ss
+
+    // restore our scope information
+    this->current_scope_name = previous_scope_name;
+    this->current_scope_level = previous_scope_level;
+    this->max_offset = previous_max_offset;
 
     return definition_ss;
 }
@@ -99,6 +128,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
     */
 
+    register_usage arg_regs;    // registers used for arguments
+    std::stringstream register_preservation_ss; // for preserving registers used for argument passing
     std::stringstream sincall_ss;
 
     // get the formal parameters so we don't need to call a function every time
@@ -112,23 +143,20 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         std::vector<symbol>::iterator it = formal_parameters.begin();
         for (std::shared_ptr<Expression> arg: args) {
             // first, ensure the types match
-            if (get_expression_data_type(arg, this->symbol_table, line).is_compatible(it->get_data_type())) {
+            DataType arg_type = get_expression_data_type(arg, this->symbol_table, line);
+            if (arg_type.is_compatible(it->get_data_type())) {
                 // evaluate the expression and pass it in the appropriate manner
                 sincall_ss << this->evaluate_expression(arg, line).str();
 
-                // now we need to determine *where* that data lies (in RAX or on the stack with a pointer in RAX) and how to pass it (i.e. via register or on the stack)
-                
+                // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
+
             } else {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
             }
 
-            // increment our parameter iterator
+            // increment our parameter iterator; since args.size is <= formal_parameters.size, we don't have to worry about it running past the end of the vector
             it++;
-            
-            // todo: expression evaluation
-            // todo: track which registers have been used, determine whether we can pass in registers or whether we must pass on the stack
-            // todo: pass argument
         }
 
         // todo: call function

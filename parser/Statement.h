@@ -80,19 +80,23 @@ class Declaration : public Statement
 	bool function_definition;	// whether it's the declaration of a function
 	bool struct_definition;	// whether it's the declaration of a struct
 
-	std::string var_name;
+	std::string name;
 
 	std::shared_ptr<Expression> initial_value;
+
 	std::vector<std::shared_ptr<Statement>> formal_parameters;
+	calling_convention call_con;
 public:
-	std::string get_var_name();
+	std::string get_name();
 
 	DataType get_type_information();
 	bool is_function();
 	bool is_struct();
 
 	std::shared_ptr<Expression> get_initial_value();
+
 	std::vector<std::shared_ptr<Statement>> get_formal_parameters();
+	calling_convention get_calling_convention();
 
 	Declaration(DataType type, std::string var_name, std::shared_ptr<Expression> initial_value = std::make_shared<Expression>(EXPRESSION_GENERAL), bool is_function = false, bool is_struct = false, std::vector<std::shared_ptr<Statement>> formal_parameters = {});
 	Declaration();
@@ -135,7 +139,7 @@ class Allocation : public Statement
 public:
 	DataType get_type_information();
 	static std::string get_var_type_as_string(Type to_convert);
-	std::string get_var_name();
+	std::string get_name();
 
 	bool was_initialized();
 	std::shared_ptr<Expression> get_initial_value();
@@ -208,13 +212,13 @@ class Definition: public Statement
 {
 	// The parent class for definitions
 protected:
-	std::shared_ptr<Expression> name;	// todo: why are function names Expressions but names in allocations are strings?
+	std::string name;
 	std::shared_ptr<StatementBlock> procedure;
 public:
-	std::shared_ptr<Expression> get_name();
+	std::string get_name();
 	std::shared_ptr<StatementBlock> get_procedure();
 
-	Definition(std::shared_ptr<Expression> name, std::shared_ptr<StatementBlock> procedure);
+	Definition(std::string name, std::shared_ptr<StatementBlock> procedure);
 	Definition();
 	~Definition();
 };
@@ -222,15 +226,16 @@ public:
 class FunctionDefinition : public Definition
 {
 	// arguments and return types are only used for function definitions, so they should be inaccessible to child classes
-	std::vector<std::shared_ptr<Statement>> args;
+	std::vector<std::shared_ptr<Statement>> formal_parameters;
 	DataType return_type;
 
-	// TODO: add function qualities? currently, definitions just put "none" for the symbol's quality
+	calling_convention call_con;
 public:
-	DataType get_return_type();
-	std::vector<std::shared_ptr<Statement>> get_args();
+	DataType get_type_information();
+	std::vector<std::shared_ptr<Statement>> get_formal_parameters();
+	calling_convention get_calling_convention();
 
-	FunctionDefinition(std::shared_ptr<Expression> name_ptr, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr);
+	FunctionDefinition(std::string name, DataType return_type, std::vector<std::shared_ptr<Statement>> param_ptr, std::shared_ptr<StatementBlock> procedure_ptr);
 	FunctionDefinition();
 };
 
@@ -238,7 +243,7 @@ class StructDefinition : public Definition
 {
 	// A class for our struct definitions
 public:
-	StructDefinition(std::shared_ptr<Expression> name_ptr, std::shared_ptr<StatementBlock> producedure_ptr);
+	StructDefinition(std::string name, std::shared_ptr<StatementBlock> producedure_ptr);
 	StructDefinition();
 };
 
