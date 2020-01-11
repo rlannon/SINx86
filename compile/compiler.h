@@ -17,6 +17,7 @@ Copyright 2019 Riley Lannon
 #include <set>
 
 #include "symbol.h"
+#include "function_symbol.h"
 #include "struct_info.h"
 #include "../parser/Parser.h"
 #include "compile_util/utilities.h"

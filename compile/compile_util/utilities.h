@@ -18,6 +18,7 @@ Our various compiler utilities
 #include "../../util/DataType.h"
 #include "../../parser/Statement.h" // includes 'Expression.h'
 #include "../symbol.h"
+#include "../function_symbol.h"
 #include "../../util/Exceptions.h"
 #include "register_usage.h"
 #include "../../util/stack.h"

@@ -44,7 +44,7 @@ assign.o: compile/assign.cpp compile/compile.h
 evaluate_expression.o: compile/evaluate_expression.cpp compile/compile.h
 	$(cc) $(flags) -o evaluate_expression.o -c compile/evaluate_expression.cpp
 
-function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h
+function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h compile/function_symbol.h
 	$(cc) $(flags) -o function_symbol.o -c compile/function_symbol.cpp
 
 struct_info.o: compile/struct_info.h compile/struct_info.h symbol.o exceptions.o
