@@ -10,6 +10,29 @@ The implementation of the register_usage class
 
 #include "register_usage.h"
 
+const std::vector<reg> register_usage::all_regs {
+    RAX,
+    RBX,
+    RSI,
+    RDI,
+    R8,
+    R9,
+    R10,
+    R11,
+    R12,
+    R13,
+    R14,
+    R15,
+    XMM0,
+    XMM1,
+    XMM2,
+    XMM3,
+    XMM4,
+    XMM5,
+    XMM6,
+    XMM7
+};
+
 std::unordered_map<reg, std::string> register_usage::reg_strings {
     { RAX, "rax" },
     { RBX, "rbx" },
@@ -95,6 +118,17 @@ bool register_usage::is_in_use(reg to_test) {
         throw CompilerException("Invalid register choice");
     } else {
         return it->second.first;
+    }
+}
+
+bool register_usage::was_used(reg to_test) {
+    // Returns whether the specified register has been used at all
+    std::unordered_map<reg, std::pair<bool&,bool&>>::iterator it = this->regs.find(to_test);
+
+    if (it == this->regs.end()) {
+        throw CompilerException("Invalid register choice");
+    } else {
+        return it->second.second;
     }
 }
 

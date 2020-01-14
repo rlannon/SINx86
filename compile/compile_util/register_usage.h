@@ -11,6 +11,7 @@ A class to track the current general-purpose registers in use
 #pragma once
 
 #include <unordered_map>
+#include <vector>
 #include <utility>
 #include <string>
 
@@ -30,6 +31,8 @@ class register_usage {
     static std::unordered_map<reg, std::string> reg_strings;
     static std::unordered_map<reg, std::string> reg_32_strings;
     static std::unordered_map<reg, std::string> reg_16_strings;
+
+    // todo: do we really need named boolean variables? or can we just use the unordered_map?
 
     // The four general-purpose named registers
     bool rax;
@@ -64,7 +67,10 @@ class register_usage {
     static bool is_int_register(reg to_test);
     static bool is_xmm_register(reg to_test);
 public:
-    bool is_in_use(reg to_test);
+    static const std::vector<reg> all_regs;
+
+    bool is_in_use(reg to_test);    // whether the register is _currently_ in use
+    bool was_used(reg to_test); // whether the register was used at all
 
     // todo: change to one function, 'set_available' ?
     void set(reg to_set);
@@ -77,7 +83,7 @@ public:
     static bool is_valid_argument_register(const reg to_check, const calling_convention call_con);
     
     // get the name of a register
-    std::string get_register_name(const reg to_get);    // full 64-bit register
+    static std::string get_register_name(const reg to_get);    // full 64-bit register
     // std::string get_r32_name(reg to_get); // 32-bit name
     // std::string get_r16_name(reg to_get); // 16-bit name
 

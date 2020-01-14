@@ -48,11 +48,14 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // now, we have to iterate over the function symbol's parameters and add them to our symbol table
     // todo: optimize by enabling symbol table additions in template function?
+    std::set<reg> arg_regs;
     for (symbol &sym: func_sym.get_formal_parameters()) {
         // add the symbol to the table and update our stack offset
         this->add_symbol(func_sym, definition.get_line_number());
-
-        // todo: use a set to track which registers were used to pass arguments; this will make looking them up later (to determine registers to preserve) faster
+        reg r = sym.get_register();
+        if (r != NO_REGISTER) {
+            arg_regs.insert(sym.get_register());
+        }
     }
 
     // update the stack offset -- since symbols are pushed in order, just get the last one
@@ -69,15 +72,33 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     if (definition.get_calling_convention() == SINCALL) {
         // now that we have compiled the procedure, determine which registers were used by the function (it is the callee's responsibility to save its registers)
 
-        // todo: preserve registers which have been used _except_ those used to pass arguments; they have already been saved
+        // get the registers used by the procedure and the signature
+        register_usage proc_regs = this->reg_stack.pop_back();
+        for (reg r: register_usage::all_regs) {
+            // if the register was used by an argument, don't push; else, if it was used, we must preserve it
+            if (proc_regs.was_used(r) && !arg_regs.count(r) && r != RAX) {
+                // save preserved registers
+                definition_ss << "\t" << "pushq " << register_usage::get_register_name(r) << std::endl;
+            }
+        }
+        
+        // now, iterate backwards through the vector containing all registers to pop the used registers in reverse order
+        procedure_ss << "; now, restore used registers" << std::endl;
+        for (std::vector<reg>::reverse_iterator it = register_usage::all_regs.rbegin(); it != register_usage::all_regs.rend(); it++) {
+            // if the register is in our set containing the argument registers, ignore it
+            if (proc_regs.was_used(*it) && !arg_regs.count(*it) && *it != RAX) {
+                // put the pop in procedure_ss because it should come after our procedure
+                procedure_ss << "\t" << "popq " << register_usage::get_register_name(*it) << std::endl;
+            }
+        }
     } else {
-        throw CompilerException("Currently, calling convention specification is not supported", compiler_errors::INVALID_TOKEN, definition.get_line_number());
+        throw CompilerException("Currently, calling convention specification is not supported", compiler_errors::ILLEGAL_QUALITY_ERROR, definition.get_line_number());
     }
 
-    // todo: put all of the generated code together in definition_ss
+    // now, put everything together in definition_ss by adding procedure_ss onto the end
+    definition_ss << procedure_ss.str() << std::endl;
 
-    // pop off our reg stack to return to our previous register usage status
-    this->reg_stack.pop_back();
+    // our register stack was already popped; don't do it again
 
     // restore our scope information
     this->current_scope_name = previous_scope_name;
