@@ -100,6 +100,8 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // our register stack was already popped; don't do it again
 
+    // todo: clean up our symbol table (delete local variables from it)? or is iterating through and deleting these variables not worth it?
+
     // restore our scope information
     this->current_scope_name = previous_scope_name;
     this->current_scope_level = previous_scope_level;
