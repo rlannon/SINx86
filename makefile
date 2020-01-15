@@ -12,7 +12,7 @@ compiler_objs=allocation.o assign.o evaluate_expression.o functions.o function_s
 compiler_util_objs=register_usage.o utilities.o
 parser_objs=lexeme.o lexer.o type_deduction.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
 util_objs=datatype.o symbol_qualities.o exceptions.o binaryio.o
-build_objs=parser.o $(parser_objs) $(util_objs)
+build_objs=compiler.o parser.o $(compiler_objs) $(compiler_util_objs) $(parser_objs) $(util_objs)
 
 # source file dependencies
 compiler_dependencies=compile/*
@@ -32,7 +32,7 @@ $(target): $(build_objs)
 	@echo "Build successful!"
 
 # Build the compiler
-compiler.o: $(compiler_objs) $(parser_objs) $(util_objs) $(parser_dependencies) $(compiler_dependencies)
+compiler.o: $(compiler_objs) $(compiler_util_objs) $(parser_objs) $(util_objs) $(parser_dependencies) $(compiler_dependencies)
 	$(cc) $(flags) -o compiler.o -c compile/compiler.cpp
 
 allocation.o: compile/allocation.cpp compile/compiler.h
@@ -47,7 +47,7 @@ evaluate_expression.o: compile/evaluate_expression.cpp compile/compiler.h
 functions.o: compile/compiler.h compile/functions.cpp function_symbol.o
 	$(cc) $(flags) -o functions.o -c compile/functions.cpp
 
-function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h compile/function_symbol.h symbol.o
+function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h compile/function_symbol.h symbol.o register_usage.o
 	$(cc) $(flags) -o function_symbol.o -c compile/function_symbol.cpp
 
 struct_info.o: compile/struct_info.h compile/struct_info.h symbol.o exceptions.o

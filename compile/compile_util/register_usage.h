@@ -80,7 +80,7 @@ public:
     reg get_available_register(Type data_type);
 
     // to determine whether we can pass an argument in that register
-    static bool is_valid_argument_register(const reg to_check, const calling_convention call_con);
+    static bool is_valid_argument_register(reg to_check, calling_convention call_con);
     
     // get the name of a register
     static std::string get_register_name(const reg to_get);    // full 64-bit register

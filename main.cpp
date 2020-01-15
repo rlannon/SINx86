@@ -18,7 +18,7 @@ For a documentation of the language, see either the doc folder in this project o
 
 // Our headers
 #include "parser/Parser.h"
-// #include "compile/compile.h"
+#include "compile/compiler.h"
 
 
 void file_error(std::string filename) {
@@ -38,7 +38,7 @@ int main (int argc, char *argv[]) {
         infile.open("samples/sample.sin", std::ios::in);
         Lexer l(infile);
         Parser *p = new Parser(l);
-        // compiler *c = new compiler();
+        compiler *c = new compiler();
         
         // parse our file
         // todo: this will be done in the compiler later

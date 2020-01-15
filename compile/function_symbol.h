@@ -10,6 +10,7 @@ Contains the declaration of the function_symbol class
 #pragma once
 
 #include "symbol.h"
+#include "compile_util/register_usage.h"
 
 class function_symbol: public symbol {
     /*

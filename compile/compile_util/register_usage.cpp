@@ -183,7 +183,7 @@ reg register_usage::get_available_register(Type data_type) {
     }
 }
 
-static bool is_valid_argument_register(const reg to_check, const calling_convention call_con) {
+bool register_usage::is_valid_argument_register(const reg to_check, const calling_convention call_con) {
     /*
 
     is_valid_argument_register
