@@ -103,7 +103,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
 
     // Generate the code to evaluate the expression; it should go into the a register (rax, eax, ax, or al depending on the data width)
     assign_ss << this->evaluate_expression(value, line).str();
-    std::string src = (sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? "rax" : (sym.get_data_type().get_width == sin_widths::SHORT_WIDTH ? "ax" : "eax")); // get our source register based on the symbol's width
+    std::string src = (sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? "rax" : (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")); // get our source register based on the symbol's width
 
     // how the variable is allocated will determine how we make the assignment
     if (sym.get_data_type().get_qualities().is_const()) {

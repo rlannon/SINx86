@@ -8,7 +8,7 @@ target=sinx86
 bin=bin/
 
 # object file dependencies
-compiler_objs=allocation.o assign.o evaluate_expression.o function_symbol.o struct_info.o symbol.o
+compiler_objs=allocation.o assign.o evaluate_expression.o functions.o function_symbol.o struct_info.o symbol.o
 compiler_util_objs=register_usage.o utilities.o
 parser_objs=lexeme.o lexer.o type_deduction.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
 util_objs=datatype.o symbol_qualities.o exceptions.o binaryio.o
@@ -33,18 +33,21 @@ $(target): $(build_objs)
 
 # Build the compiler
 compiler.o: $(compiler_objs) $(parser_objs) $(util_objs) $(parser_dependencies) $(compiler_dependencies)
-	$(cc) $(flags) -o compiler.o -c compile/compile.cpp
+	$(cc) $(flags) -o compiler.o -c compile/compiler.cpp
 
-allocation.o: compile/allocation.cpp compile/compile.h
+allocation.o: compile/allocation.cpp compile/compiler.h
 	$(cc) $(flags) -o allocation.o -c compile/allocation.cpp
 
-assign.o: compile/assign.cpp compile/compile.h
+assign.o: compile/assign.cpp compile/compiler.h
 	$(cc) $(flags) -o assign.o -c compile/assign.cpp
 
-evaluate_expression.o: compile/evaluate_expression.cpp compile/compile.h
+evaluate_expression.o: compile/evaluate_expression.cpp compile/compiler.h
 	$(cc) $(flags) -o evaluate_expression.o -c compile/evaluate_expression.cpp
 
-function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h compile/function_symbol.h
+functions.o: compile/compiler.h compile/functions.cpp function_symbol.o
+	$(cc) $(flags) -o functions.o -c compile/functions.cpp
+
+function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h compile/function_symbol.h symbol.o
 	$(cc) $(flags) -o function_symbol.o -c compile/function_symbol.cpp
 
 struct_info.o: compile/struct_info.h compile/struct_info.h symbol.o exceptions.o

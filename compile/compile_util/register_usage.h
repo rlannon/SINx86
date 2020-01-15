@@ -69,8 +69,8 @@ class register_usage {
 public:
     static const std::vector<reg> all_regs;
 
-    bool is_in_use(reg to_test);    // whether the register is _currently_ in use
-    bool was_used(reg to_test); // whether the register was used at all
+    bool is_in_use(reg to_test) const;    // whether the register is _currently_ in use
+    bool was_used(reg to_test) const; // whether the register was used at all
 
     // todo: change to one function, 'set_available' ?
     void set(reg to_set);

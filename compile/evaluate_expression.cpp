@@ -249,15 +249,15 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                 throw VoidException(line);
             } else if (can_pass_in_register(sym.get_data_type())) {
                 // the data width determines which register size to use
-                std::string reg;
+                std::string reg_string;
                 if (sym.get_data_type().get_width() == 1 || sym.get_data_type().get_width() == 8) {
-                    reg = "al";
+                    reg_string = "al";
                 } else if (sym.get_data_type().get_width() == 16) {
-                    reg = "ax";
+                    reg_string = "ax";
                 } else if (sym.get_data_type().get_width() == 32) {
-                    reg = "eax";
+                    reg_string = "eax";
                 } else if (sym.get_data_type().get_width() == 64) {
-                    reg = "rax";
+                    reg_string = "rax";
                 } else {
                     // todo: is this necessary?
                     throw CompilerException("Invalid data width for symbol", compiler_errors::DATA_WIDTH_ERROR, line);
@@ -265,31 +265,33 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
                 if (sym.get_data_type().get_qualities().is_const()) {
                     // const variables can be looked up by their name -- they are in the .data section
-                    eval_ss << "\t" << "mov " << reg << ", [" << sym.get_name() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", [" << sym.get_name() << "]" << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_static()) {
                     // static memory can be looked up by name -- variables are in the .bss section
-                    eval_ss << "\t" << "mov " << reg << ", [" << sym.get_name() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", [" << sym.get_name() << "]" << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory
                     // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
 
                     // get an unused register; if all are occupied, use rsi (but push it first)
+                    reg r;
                     std::string reg_used = "";
                     bool reg_pushed = false;
 
-                    // if there is no register available, an exception is thrown
-                    try {
-                        reg_used = this->reg_stack.peek().get_register_name(this->reg_stack.peek().get_available_register());
-                    } catch (CompilerException e) {
+                    // if there is no register available, use RSI
+                    r = this->reg_stack.peek().get_available_register(sym.get_data_type().get_primary());
+                    if (r == NO_REGISTER) {
                         // since no register is available, push rsi
                         eval_ss << "\t" << "push rsi" << std::endl;
                         reg_used = "rsi";
                         reg_pushed = true;
+                    } else {
+                        reg_used = register_usage::get_register_name(r);
                     }
 
                     // get the dereferenced pointer in A
                     eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
-                    eval_ss << "\t" << "mov " << reg << ", [" << reg_used << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
 
                     // if we had to push a register, restore it
                     if (reg_pushed) {
@@ -299,7 +301,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     // automatic memory
                     // get the stack offset; instruction should be something like
                     //      mov rax, [rbp - 4]
-                    eval_ss << "\t" << "mov " << reg << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
                 }
 
                 return eval_ss;

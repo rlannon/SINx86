@@ -115,7 +115,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
         
         // now, iterate backwards through the vector containing all registers to pop the used registers in reverse order
         procedure_ss << "; now, restore used registers" << std::endl;
-        for (std::vector<reg>::reverse_iterator it = register_usage::all_regs.rbegin(); it != register_usage::all_regs.rend(); it++) {
+        for (std::vector<reg>::const_reverse_iterator it = register_usage::all_regs.rbegin(); it != register_usage::all_regs.rend(); it++) {
             // if the register is in our set containing the argument registers, ignore it
             if (proc_regs.was_used(*it) && !arg_regs.count(*it) && *it != RAX) {
                 // put the pop in procedure_ss because it should come after our procedure

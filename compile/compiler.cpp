@@ -58,14 +58,15 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 
     */
 
-    std::pair<std::unordered_map<std::string, std::shared_ptr<T>>::iterator, bool> returned = this->symbol_table.insert(
-        std::make_pair<std::string, std::shared_ptr<T>>(
-            to_add.get_name(), std::make_shared<T>(to_add)
+    bool ok = this->symbol_table.insert(
+        std::make_pair(
+            to_add.get_name(),
+            std::make_shared<T>(to_add)
         )
-    );
+    ).second;
 
     // throw an exception if the symbol could not be inserted
-    if (!returned.second) {
+    if (!ok) {
         throw DuplicateSymbolException(line);
     }
 }

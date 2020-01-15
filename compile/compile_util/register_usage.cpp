@@ -109,9 +109,9 @@ bool register_usage::is_xmm_register(reg to_test) {
     );
 }
 
-bool register_usage::is_in_use(reg to_test) {
+bool register_usage::is_in_use(reg to_test) const {
     // Returns whether the specified register is in use
-    std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.find(to_test);
+    std::unordered_map<reg, std::pair<bool&, bool&>>::const_iterator it = this->regs.find(to_test);
 
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
@@ -121,9 +121,9 @@ bool register_usage::is_in_use(reg to_test) {
     }
 }
 
-bool register_usage::was_used(reg to_test) {
+bool register_usage::was_used(reg to_test) const {
     // Returns whether the specified register has been used at all
-    std::unordered_map<reg, std::pair<bool&,bool&>>::iterator it = this->regs.find(to_test);
+    std::unordered_map<reg, std::pair<bool&,bool&>>::const_iterator it = this->regs.find(to_test);
 
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register choice");

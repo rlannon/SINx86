@@ -249,7 +249,7 @@ function_symbol create_function_symbol(T def) {
     std::vector<symbol> formal_parameters;
 
     // now, determine which registers can hold which parameters
-    for (std::shared_ptr<Statement> parameter: def.get_formal_parameters()) {
+    for (std::shared_ptr<Statement> param: def.get_formal_parameters()) {
         // create the symbol based on our statement
         symbol param_sym;
 
@@ -262,7 +262,7 @@ function_symbol create_function_symbol(T def) {
             param_sym = generate_symbol(*param_alloc, scope_name, scope_level, stack_offset);
         } else {
             // todo: remove? these errors should be caught by the parser
-            throw CompilerException("Invalid statement type in function signature", compiler_errors::ILLEGAL_OPERATION_ERROR, definition.get_line_number());
+            throw CompilerException("Invalid statement type in function signature", compiler_errors::ILLEGAL_OPERATION_ERROR, def.get_line_number());
         }
 
         formal_parameters.push_back(param_sym);
