@@ -82,9 +82,18 @@ UnexpectedFunctionException::UnexpectedFunctionException(unsigned int line):
 }
 
 OutOfScopeException::OutOfScopeException(unsigned int line) :
-    CompilerException("Symbol is out of scope", compiler_errors::OUT_OF_SCOPE_ERROR)
+    CompilerException("Symbol is out of scope", compiler_errors::OUT_OF_SCOPE_ERROR, line)
 {
     // No body necessary
+}
+
+DeclarationException::DeclarationException(unsigned int line) :
+CompilerException(
+	"Declarations must be made in the global scope",
+	compiler_errors::DECLARATION_ERROR,
+	line
+) {
+
 }
 
 TypeException::TypeException(unsigned int line) :

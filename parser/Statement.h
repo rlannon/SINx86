@@ -87,16 +87,16 @@ class Declaration : public Statement
 	std::vector<std::shared_ptr<Statement>> formal_parameters;
 	calling_convention call_con;
 public:
-	std::string get_name();
+	std::string get_name() const;
 
-	DataType get_type_information();
-	bool is_function();
-	bool is_struct();
+	DataType get_type_information() const;
+	bool is_function() const;
+	bool is_struct() const;
 
 	std::shared_ptr<Expression> get_initial_value();
 
 	std::vector<std::shared_ptr<Statement>> get_formal_parameters();
-	calling_convention get_calling_convention();
+	calling_convention get_calling_convention() const;
 
 	Declaration(DataType type, std::string var_name, std::shared_ptr<Expression> initial_value = std::make_shared<Expression>(EXPRESSION_GENERAL), bool is_function = false, bool is_struct = false, std::vector<std::shared_ptr<Statement>> formal_parameters = {});
 	Declaration();

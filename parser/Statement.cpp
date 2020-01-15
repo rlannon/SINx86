@@ -73,20 +73,20 @@ Include::Include() {
 /*******************		DECLARATION CLASS		********************/
 
 
-std::string Declaration::get_name() {
+std::string Declaration::get_name() const {
 	return this->name;
 }
 
-DataType Declaration::get_type_information() {
+DataType Declaration::get_type_information() const {
 	return this->type;
 }
 
-bool Declaration::is_function()
+bool Declaration::is_function() const
 {
 	return this->function_definition;
 }
 
-bool Declaration::is_struct()
+bool Declaration::is_struct() const
 {
 	return this->struct_definition;
 }
@@ -100,7 +100,7 @@ std::vector<std::shared_ptr<Statement>> Declaration::get_formal_parameters() {
 	return this->formal_parameters;
 }
 
-calling_convention Declaration::get_calling_convention() {
+calling_convention Declaration::get_calling_convention() const {
 	return this->call_con;
 }
 

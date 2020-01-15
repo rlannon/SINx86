@@ -38,7 +38,9 @@ class compiler {
 
     std::unordered_map<std::string, std::shared_ptr<symbol>> symbol_table;    // the symbol table will be implemented through an unordered map
     std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
-    void add_symbol(symbol &to_add, unsigned int line);  // add a symbol, handle exceptions accordingly
+    // void add_symbol(symbol &to_add, unsigned int line);  // add a symbol, handle exceptions accordingly
+    // void add_symbol(function_symbol &to_add, unsigned int line);
+    template<typename T> void add_symbol(T &to_add, unsigned int line);
 
     std::unordered_map<std::string, struct_info> struct_table;
     struct_info get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
@@ -61,6 +63,9 @@ class compiler {
     std::stringstream handle_bool_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
     std::stringstream handle_string_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
     // todo: handle assignments for char, float, etc.
+
+    // declarations
+    void handle_declaration(Declaration decl_stmt);
 
     // functions
     std::stringstream define_function(FunctionDefinition definition);

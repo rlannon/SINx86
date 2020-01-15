@@ -92,6 +92,12 @@ public:
     explicit OutOfScopeException(unsigned int line);
 };
 
+class DeclarationException : public CompilerException
+{
+public:
+	explicit DeclarationException(unsigned int line);
+};
+
 class TypeException : public CompilerException
 {
 public:

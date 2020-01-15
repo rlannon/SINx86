@@ -10,6 +10,32 @@ This file contains all of the functionality to define and call functions
 
 #include "compiler.h"
 
+void compiler::handle_declaration(Declaration decl_stmt) {
+    /*
+
+    declare_function
+    Adds a function's signature to the symbol table
+
+    This function generates no code; it simply adds a symbol/signature to the symbol table so that it may be utilized properly by the program.
+    Note that the caller is responsible for ensuring the symbol is in the global scope at level 0
+
+    @param  decl_stmt   The declaration from which we are generating a symbol
+    @throws Nothing directly; called functions may throw exceptions
+
+    */
+
+    if (decl_stmt.is_function()) {
+        function_symbol sym = create_function_symbol(decl_stmt);
+        this->add_symbol(sym, decl_stmt.get_line_number());
+    } else if (decl_stmt.is_struct()) {
+        // todo: add struct to struct table with the caveat that it's an incomplete type
+    } else {
+        // add a symbol
+        symbol sym = generate_symbol(decl_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+        this->add_symbol(sym, decl_stmt.get_line_number());
+    }
+}
+
 std::stringstream compiler::define_function(FunctionDefinition definition) {
     /*
 
@@ -46,6 +72,9 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // construct the symbol for the function -- everything is offloaded to the utility
     function_symbol func_sym = create_function_symbol(definition);
 
+    // add the symbol to the table
+    this->add_symbol(func_sym, definition.get_line_number());
+
     // now, we have to iterate over the function symbol's parameters and add them to our symbol table
     // todo: optimize by enabling symbol table additions in template function?
     std::set<reg> arg_regs;
@@ -64,6 +93,8 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // get the register_usage object from func_sym and push that
     this->reg_stack.push_back(func_sym.get_arg_regs());
+
+    // todo: if the function is 'main', add .global _start before it (to define the program's entry point)
 
     // now, compile the procedure using compiler::compile_ast
     procedure_ss = this->compile_ast(*definition.get_procedure().get());

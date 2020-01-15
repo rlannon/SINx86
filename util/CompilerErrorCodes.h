@@ -30,6 +30,7 @@ namespace compiler_errors {
     const unsigned int UNDEFINED_ERROR = 101;
     const unsigned int SIGNATURE_ERROR = 120;
     const unsigned int OUT_OF_SCOPE_ERROR = 150;
+    const unsigned int DECLARATION_ERROR = 160;
 
     // Type errors
     const unsigned int INVALID_SYMBOL_TYPE_ERROR = 200;

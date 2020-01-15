@@ -37,13 +37,19 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
     }
 }
 
-void compiler::add_symbol(symbol &to_add, unsigned int line) {
+// we need to specify which classes can be used for our <typename T> since it's implemented in a separate file
+template void compiler::add_symbol(symbol&, unsigned int);
+template void compiler::add_symbol(function_symbol&, unsigned int);
+
+template<typename T>
+void compiler::add_symbol(T &to_add, unsigned int line) {
     /*
 
     add_symbol
     Adds a symbol to the table
 
     Adds a symbol to the symbol table, throwing an exception if it's a duplicate.
+    Since this is a template function, it can handle either symbols or function symbols. And, since the symbol table uses shared pointers, truncation won't be an issue.
 
     @param  to_add  The symbol we want to add
     @param  line    The line number where the allocation occurs
@@ -52,8 +58,10 @@ void compiler::add_symbol(symbol &to_add, unsigned int line) {
 
     */
 
-    std::pair<std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator, bool> returned = this->symbol_table.insert(
-        std::make_pair<std::string, std::shared_ptr<symbol>>(to_add.get_name(), std::make_shared<symbol>(to_add))
+    std::pair<std::unordered_map<std::string, std::shared_ptr<T>>::iterator, bool> returned = this->symbol_table.insert(
+        std::make_pair<std::string, std::shared_ptr<T>>(
+            to_add.get_name(), std::make_shared<T>(to_add)
+        )
     );
 
     // throw an exception if the symbol could not be inserted
@@ -104,16 +112,30 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s) {
             // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"; this is accomplished through the use of std::set
             break;
         case DECLARATION:
-            // todo: declare a variable (add to symbol table without any code generation)
+        {
+            // handle a declaration
+            Declaration *decl_stmt = dynamic_cast<Declaration*>(s.get());
+
+            // we need to ensure that the current scope is global -- declarations can only happen in the global scope, as they must be static
+            if (this->current_scope_name == "global" && this->current_scope_level == 0) {
+                this->handle_declaration(*decl_stmt);
+            } else {
+                throw DeclarationException(decl_stmt->get_line_number());
+            }
             break;
+        }
         case ALLOCATION:
+        {
             Allocation *alloc_stmt = dynamic_cast<Allocation*>(s.get());
-            compile_ss << this->allocate(*alloc_stmt).str();
+            compile_ss << this->allocate(*alloc_stmt).str() << std::endl;
             break;
+        }
         case ASSIGNMENT:
+        {
             Assignment *assign_stmt = dynamic_cast<Assignment*>(s.get());
-            compile_ss << this->assign(*assign_stmt).str();
+            compile_ss << this->assign(*assign_stmt).str() << std::endl;
             break;
+        }
         case RETURN_STATEMENT:
             // todo: return
             break;
@@ -124,9 +146,11 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s) {
             // todo: while
             break;
         case FUNCTION_DEFINITION:
-            // todo: define a function
-
+        {
+            FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
+            compile_ss << this->define_function(*def_stmt).str() << std::endl;
             break;
+        }
         case STRUCT_DEFINITION:
             // todo: add struct to the struct table so we can utilize them
             break;
