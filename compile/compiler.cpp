@@ -238,10 +238,21 @@ void compiler::generate_asm(std::string filename, Parser &p) {
         
         // now, save text, data, and bss segments to our outfile
         std::ofstream outfile;
-        outfile.open(filename, std::ios::in);
+        outfile.open(filename, std::ios::out);
 
-        // todo: write contents to file
+        // first, write the text section
+        outfile << "section .text" << std::endl;
+        outfile << this->text_segment.str() << std::endl;
 
+        // next, the .data section
+        outfile << "section .data" << std::endl;
+        outfile << this->data_segment.str() << std::endl;
+
+        // finally, the .bss section
+        outfile << "section .bss" << std::endl;
+        outfile << this->bss_segment.str() << std::endl;
+
+        // close the outfile
         outfile.close();
     } catch (std::exception &e) {
         // todo: exception handling should be improved

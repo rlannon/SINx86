@@ -87,14 +87,25 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
         }
     }
 
-    // update the stack offset -- since symbols are pushed in order, just get the last one
-    const symbol &last_sym = func_sym.get_formal_parameters().back(); 
-    this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_stack_offset();
+    // update the stack offset -- since symbols are pushed in order, just get the last one; if we had no parameters, the offset should be 0
+    if (func_sym.get_formal_parameters().size() != 0) {
+        const symbol &last_sym = func_sym.get_formal_parameters().back(); 
+        this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_stack_offset();
+    } else {
+        this->max_offset = 0;
+    }
 
     // get the register_usage object from func_sym and push that
     this->reg_stack.push_back(func_sym.get_arg_regs());
 
-    // todo: if the function is 'main', add .global _start before it (to define the program's entry point)
+    // if the function is 'main', then we must define the program's entry point as this function
+    if (func_sym.get_name() == "main") {
+        definition_ss << "global _start" << std::endl;
+        definition_ss << "_start:" << std::endl;
+    }
+
+    // add a label for the function
+    definition_ss << func_sym.get_name() << ":" << std::endl;
 
     // now, compile the procedure using compiler::compile_ast
     procedure_ss = this->compile_ast(*definition.get_procedure().get());

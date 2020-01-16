@@ -42,12 +42,13 @@ int main (int argc, char *argv[]) {
         
         // parse our file
         // todo: this will be done in the compiler later
-        StatementBlock ast = p->create_ast();
+        // StatementBlock ast = p->create_ast();
+        c->generate_asm("samples/sample.sin", *p);
 
         // clean-up
         infile.close();
         delete p;
-        // delete c;
+        delete c;
 
         return 0;
     } catch (std::exception &e) {
