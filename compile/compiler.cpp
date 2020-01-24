@@ -139,7 +139,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         }
         case RETURN_STATEMENT:
         {
-            // return statements may only occur within functions; if we have a nullptr, then we aren't inside a function
+            // return statements may only occur within functions; if we have a nullptr, then we aren't inside a function and must throw an exception
             if (signature) {
                 ReturnStatement *return_stmt = dynamic_cast<ReturnStatement*>(s.get());
                 compile_ss << this->handle_return(*return_stmt, *(signature.get())).str() << std::endl;

@@ -143,6 +143,8 @@ std::stringstream compiler::call_function(Call call) {
     Performs all of the necessary functions for the caller in the SIN calling convention
     This includes setting up the call stack, calling the function, and performing any necessary compiler object updates
     Note that this function delegates to the appropriate code generation function based on what the calling convention is
+
+    Note that the return value will always be moved into either RAX or XMM0, depending on its type, whatever the calling convention is
     
     For more information on compiler calling conventions, see doc/Calling Convention.md
 
@@ -168,7 +170,8 @@ std::stringstream compiler::call_function(Call call) {
             throw CompilerException("Other calling conventions not supported at this time", 0, call.get_line_number());
         }
 
-        // now, the function's return value (or pointer to the return value) is in RAX
+        // now, the function's return value (or pointer to the return value) is in RAX or XMM0, depending on the type -- the compiler always expects return values here regardless of calling convention
+        // further, all clean-up has been handled, so we can continue code generation
     } else {
         throw InvalidSymbolException(call.get_line_number());
     }
@@ -228,6 +231,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         // next, call the function
         sincall_ss << "\t" << "call " << s.get_name() << std::endl;
 
+        // the return value is now in RAX or XMM0, depending on the data type
+
         // now, restore the old stack frame
         sincall_ss << "\t" << "mov rsp, rbp" << std::endl;
         sincall_ss << "\t" << "popq rbp" << std::endl;
@@ -262,8 +267,12 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     // first, ensure that the return statement's data type is compatible with the signature
     if (get_expression_data_type(ret.get_return_exp(), this->symbol_table, ret.get_line_number()).is_compatible(signature.get_data_type())) {
         // types are compatible; how the value gets returned (and how the callee gets cleaned up) depends on the function's calling convention
-
-        // todo: handle return statements according to calling convention
+        if (signature.get_calling_convention() == SINCALL) {
+            ret_ss << this->sincall_return(ret).str() << std::endl;
+        } else {
+            // todo: other calling conventions; for now, throw an exception
+            throw CompilerException("Calling conventions other than sincall are currently not supported", 0, ret.get_line_number());
+        }
     } else {
         throw ReturnMismatchException(ret.get_line_number());
     }
@@ -277,13 +286,28 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret) {
     sincall_return
     Handles a return statement for a function using the sincall calling convention
 
-    This function is _not_ responsible for restoring used registers; it simply evaluates the expression and returns it according to the calling convention. This means that if an object is returned on the stack, the *callee* (this function) is responsible for allocating memory for it
+    This function is _not_ responsible for restoring used registers; it simply evaluates the expression and returns it according to the calling convention. This means that if an object is returned on the stack, the *callee* (this function) is responsible for allocating memory for it.
 
     */
 
     std::stringstream sincall_ss;
 
-    // todo: handle return
+    // how the value is returned depends on the data type
+    DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbol_table, ret.get_line_number());
+
+    // all we need to do for integral and floating point types is evaluate the expression; the result will be in either RAX or XMM0, respectively; other types require a little bit more work
+    if (return_type == ARRAY) {
+        // todo: array evaluation
+    } else if (return_type == STRUCT) {
+        // todo: struct evaluation
+    } else if (return_type == STRING) {
+        // todo: string evaluation
+    } else if (return_type == FLOAT) {
+        // evaluate the expression
+        sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
+    } else {
+        sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
+    }
 
     return sincall_ss;
 }

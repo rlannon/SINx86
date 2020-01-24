@@ -22,26 +22,26 @@ Typically, this will end up looking something like:
         call callee ; call the function
 
         ; returned value is in EAX because the function returns a 32-bit integer
-        mov result, eax ; store the result somewhere
 
         mov rsp, rbp    ; restore the old stack frame
         popq rsp
 
-        ; done
+        ; move the returned value into some variable from the higher scope
+        mov [rbp - 16], eax
 
 Now, we will look more in-depth at the rules for calling functions and returning values, as how values are passed and return depends on their data type.
 
 ### Function Arguments
 
 #### Primitive Types
-Primitive types (```float```, ```int```, ```char```, ```bool```, ```ptr```) will pass the first 6 parameters in registers if possible, as follows, and pass any subsequent data on the stack.
+Primitive types (`float`, `int`, `char`, `bool`, `ptr`) will pass the first 6 parameters in registers if possible, as follows, and pass any subsequent data on the stack.
 
 |   Type    |   Registers   |   Notes   |
 | --------- | ------------- | --------- |
-| ```float``` | XMM0 - XMM5 | How much of the register is used depends on whether it is single- or double-precision |
-| ```int``` | RSI, RDI, RCX, RDX, R8, R9 | May use a different register width depending on type qualifiers |
-| ```bool``` | SIL, DIL, CL, DL, R8B, R9B | Booleans will use a whole byte; they are not packed in this convention |
-| ```ptr``` | RSI, RDI, RCX, RDX, R8, R9 | String values are passed as pointers and use the same registers |
+| `float` | XMM0 - XMM5 | How much of the register is used depends on whether it is single- or double-precision |
+| `int` | RSI, RDI, RCX, RDX, R8, R9 | May use a different register width depending on type qualifiers |
+| `bool` | SIL, DIL, CL, DL, R8B, R9B | Booleans will use a whole byte; they are not packed in this convention |
+| `ptr` | RSI, RDI, RCX, RDX, R8, R9 | String values are passed as pointers and use the same registers |
 
 Unlike the Windows x64 ABI, the SIN convention will pass more than six parameters in registers if it can. However, once an argument is passed on the stack, *all subsequent arguments will also be passed on the stack.* As a result, the maximum number of arguments that can be passed in registers is 12.
 
@@ -53,14 +53,14 @@ will pass values as follows:
 
 | Variable | Register |
 | -------- | -------- |
-| ```a``` | ESI |
-| ```b``` | RDI |
-| ```c``` | XMM0 |
-| ```d``` | XMM1 |
-| ```e``` | RCX |
-| ```f``` | DL |
-| ```g``` | R8W |
-| ```h``` | XMM2 |
+| `a` | ESI |
+| `b` | RDI |
+| `c` | XMM0 |
+| `d` | XMM1 |
+| `e` | RCX |
+| `f` | DL |
+| `g` | R8W |
+| `h` | XMM2 |
 
 Note that the compiler will allocate 'shadow space' for the register parameters on the stack and will make note of their offsets from the stack frame base, moving the stack pointer appropriately. This reflects the idea that all function parameters occupy space within the function as local variables, and are the first to be allocated in a function.
 
@@ -82,17 +82,17 @@ Such a declaration may look like:
 
     decl int myInt(decl int a, decl int b) &cdecl;
 
-The SIN compiler will then know to generate code for calls to this function in accordance with the specified ```_cdecl``` calling convention.
+The SIN compiler will then know to generate code for calls to this function in accordance with the specified `_cdecl` calling convention.
 
-In general these qualifiers default to the GCC ABIs used by Unix-like systems, but the ```&windows``` qualifier may be used to specify the user wishes to use the Microsoft convention instead. If you are worried the conventions may not be correct for your system, it is always a good idea to double-check your distribution to ensure these SIN features are compatible with your system.
+In general these qualifiers default to the GCC ABIs used by Unix-like systems, but the `&windows` qualifier may be used to specify the user wishes to use the Microsoft convention instead. If you are worried the conventions may not be correct for your system, it is always a good idea to double-check your distribution to ensure these SIN features are compatible with your system.
 
 ### Calling Conventions
 
 #### ```cdecl```
-If a function declaration/definition uses the ```cdecl``` qualifier, it alerts the compiler that the function will use the C ```_cdecl``` calling convention.
+If a function declaration/definition uses the `cdecl` qualifier, it alerts the compiler that the function will use the C `_cdecl` calling convention.
 
 #### ```cx64```
-If a function uses the ```cx64``` qualifier, the function should follow the System V AMD x64 ABI (used by Unix-like systems).
+If a function uses the `cx64` qualifier, the function should follow the System V AMD x64 ABI (used by Unix-like systems).
 
 ### C Types in SIN
 While calling conventions may be sorted out with out *too* much hassle, the difference between types and their sizes between the two languages proves to be a bit of a challenge. SIN will always assume the types for the C function's arguments and return values are the same widths as SIN functions.
