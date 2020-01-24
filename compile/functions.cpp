@@ -98,12 +98,6 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // get the register_usage object from func_sym and push that
     this->reg_stack.push_back(func_sym.get_arg_regs());
 
-    // if the function is 'main', then we must define the program's entry point as this function
-    if (func_sym.get_name() == "main") {
-        definition_ss << "global _start" << std::endl;
-        definition_ss << "_start:" << std::endl;
-    }
-
     // add a label for the function
     definition_ss << func_sym.get_name() << ":" << std::endl;
 
@@ -277,6 +271,8 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
         throw ReturnMismatchException(ret.get_line_number());
     }
 
+    // now that the calling convention's return responsibilities have been dealt with, we can return
+    ret_ss << "\t" << "ret" << std::endl;
     return ret_ss;
 }
 
@@ -286,28 +282,15 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret) {
     sincall_return
     Handles a return statement for a function using the sincall calling convention
 
-    This function is _not_ responsible for restoring used registers; it simply evaluates the expression and returns it according to the calling convention. This means that if an object is returned on the stack, the *callee* (this function) is responsible for allocating memory for it.
+    This function is _not_ responsible for restoring used registers; it simply evaluates the expression and returns it according to the calling convention.
 
     */
 
     std::stringstream sincall_ss;
 
-    // how the value is returned depends on the data type
-    DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbol_table, ret.get_line_number());
-
-    // all we need to do for integral and floating point types is evaluate the expression; the result will be in either RAX or XMM0, respectively; other types require a little bit more work
-    if (return_type == ARRAY) {
-        // todo: array evaluation
-    } else if (return_type == STRUCT) {
-        // todo: struct evaluation
-    } else if (return_type == STRING) {
-        // todo: string evaluation
-    } else if (return_type == FLOAT) {
-        // evaluate the expression
-        sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
-    } else {
-        sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
-    }
+    // all we need to do is evaluate the expression; the result will be in RAX or XMM0 automatically
+    // structs, arrays, and strings will pass _pointers_ to these members in RAX; subsequent assignments will use memory copying, as usual
+    sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
 
     return sincall_ss;
 }

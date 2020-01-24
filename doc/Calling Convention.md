@@ -70,7 +70,7 @@ Aggregate types (arrays) and user-defined types (structs) must always be passed 
 ### Return Values
 Values are returned on RAX (or another variant of the register depending on the data width) where possible. Floating-point types are returned in XMM0. Any unused bits in the register are undefined.
 
-User-defined types (structs), arrays, and strings (if necessary) are returned on the stack, and a pointer to the data within them will be contained within RAX. It is the **callee's** responsibility to allocate memory for the return object. This differs from the x64 C++ calling convention.
+User-defined types (structs), arrays, and strings (if necessary) return a *pointer* to the data in `RAX`. This follows the convention for so-called 'hidden pointer types' where pointers are passed and assignments use copies and pointer dereferencing under the hood.
 
 ### Register Preservation
 The only register preserved by this convention is `rbp`. All other registers must be preserved before the call if they need to be saved.

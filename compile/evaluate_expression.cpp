@@ -306,15 +306,31 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
                 return eval_ss;
             } else {
-                // values too large for registers will use _pointers_, although the syntax hides this fact
+                // values too large for registers will use _pointers_, although the SIN syntax hides this fact
+                // therefore, all data will go in rax
                 if (sym.get_data_type().get_qualities().is_const()) {
-                    // todo: const memory
+                    // const pointers
+                    eval_ss << "\t" << "mov rax, " << sym.get_name() << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_static()) {
-                    // todo: static memory
+                    // static pointers
+                    eval_ss << "\t" << "mov rax, " << sym.get_name() << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_dynamic()) {
-                    // todo: dynamic memory
+                    // dynamic memory -- the address of the dynamic memory is on the stack, so we need the offset
+                    // get address in A
+                    eval_ss << "\t" << "mov rax, [rbp - " << sym.get_stack_offset() << "]" << std::endl;
                 } else {
-                    // todo: automatic memory
+                    /*
+
+                    for automatic memory holding types too big for registers, we want to load the address of where that data lives in the stack
+                    so, instead of having something like:
+                        mov rax, [rbp - 4]
+                    which we would use for something like int or float, we want
+                        mov rax, rbp - 4
+                    which gives us the address of the data
+
+                    */
+
+                    eval_ss << "\t" << "mov rax, rbp - " << sym.get_stack_offset() << std::endl;
                 }
             }
         } else {

@@ -164,9 +164,11 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             // todo: add struct to the struct table so we can utilize them
             break;
         case CALL:
-            // todo: call a function
-            // todo: solidify SIN calling convention
+        {
+            Call *call_stmt = dynamic_cast<Call*>(s.get());
+            compile_ss << this->call_function(*call_stmt).str() << std::endl;
             break;
+        }
         case INLINE_ASM:
             // todo: write ASM to file
             break;
@@ -235,6 +237,37 @@ void compiler::generate_asm(std::string filename, Parser &p) {
 
         // The code we are generating will go in the text segment -- writes to the data and bss sections will be done as needed in other functions
         this->text_segment << this->compile_ast(ast).str();
+
+        // now, we want to see if we have a function 'main' in the symbol table
+        try {
+            // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
+            std::shared_ptr<symbol> main_function = this->lookup("main", 0);
+
+            // insert our wrapper for the program
+            this->text_segment << "global _start" << std::endl;
+            this->text_segment << "_start:" << std::endl;
+
+            // set up the stack frame
+            this->text_segment << "\t" << "push rbp" << std::endl;
+            this->text_segment << "\t" << "mov rbp, rsp" << std::endl;
+
+            // todo: set up program arguments for main?
+
+            // call main
+            this->text_segment << "\t" << "call main" << std::endl;
+
+            // restore old stack frame
+            this->text_segment << "\t" << "mov rsp, rbp" << std::endl;
+            this->text_segment << "\t" << "pop rbp" << std::endl;
+
+            // exit the program using the linux syscall
+            this->text_segment << "\t" << "mov rbx, rax" << std::endl;
+            this->text_segment << "\t" << "mov rax, 0x01" << std::endl;
+            this->text_segment << "\t" << "int 0x80" << std::endl;
+        } catch (SymbolNotFoundException &e) {
+            // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
+            compiler_warning("Note: no entry point found in file", 0);
+        }
 
         // remove the extension from the file name
         size_t last_index = filename.find_last_of(".");

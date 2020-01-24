@@ -303,3 +303,51 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
 
     return to_return;
 }
+
+std::stringstream push_used_registers(register_usage regs) {
+    /*
+
+    push_used_registers
+    Given a register_usage object, push all registers that are *currently* in use
+
+    */
+
+    std::stringstream push_ss;
+
+    for (
+        std::vector<reg>::const_iterator it = register_usage::all_regs.begin();
+        it != register_usage::all_regs.end();
+        it++
+    ) {
+        push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
+    }
+
+    return push_ss;
+}
+
+std::stringstream pop_used_registers(register_usage regs) {
+    /*
+
+    pop_used_registers
+    Pops all registers marked as 'in use' in a register_usage object
+
+    Uses a reverse_iterator to iterate through all_regs in order to find registers
+
+    */
+
+    std::stringstream pop_ss;
+
+    for (
+        std::vector<reg>::const_reverse_iterator it = register_usage::all_regs.rbegin();
+        it != register_usage::all_regs.rend();
+        it++
+    ) {
+        pop_ss << "\t" << "pop " << register_usage::get_register_name(*it) << std::endl;
+    }
+
+    return pop_ss;
+}
+
+std::stringstream copy_array(DataType array_type) {
+
+}
