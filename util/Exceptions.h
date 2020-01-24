@@ -44,6 +44,12 @@ public:
 	explicit IllegalOperationException(unsigned int line);
 };
 
+class IllegalReturnException : public CompilerException
+{
+public:
+	explicit IllegalReturnException(unsigned int line);
+};
+
 class StructDefinitionException : public CompilerException
 {
 public:
@@ -102,6 +108,12 @@ class TypeException : public CompilerException
 {
 public:
     explicit TypeException(unsigned int line);
+};
+
+class ReturnMismatchException : public CompilerException
+{
+public:
+	explicit ReturnMismatchException(unsigned int line);
 };
 
 class QualityConflictException : public CompilerException

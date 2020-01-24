@@ -95,7 +95,7 @@ struct_info compiler::get_struct_info(std::string struct_name, unsigned int line
     }
 }
 
-std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s) {
+std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature) {
     /*
 
         Compiles a single statement to x86, dispatching appropriately
@@ -138,8 +138,16 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s) {
             break;
         }
         case RETURN_STATEMENT:
-            // todo: return
+        {
+            // return statements may only occur within functions; if we have a nullptr, then we aren't inside a function
+            if (signature) {
+                ReturnStatement *return_stmt = dynamic_cast<ReturnStatement*>(s.get());
+                compile_ss << this->handle_return(*return_stmt, *(signature.get())).str() << std::endl;
+            } else {
+                throw IllegalReturnException(s->get_line_number());
+            }
             break;
+        }
         case IF_THEN_ELSE:
             // todo: ITE
             break;
@@ -182,7 +190,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s) {
     return compile_ss;
 }
 
-std::stringstream compiler::compile_ast(StatementBlock &ast) {
+std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature) {
     /*
 
     compile_ast
@@ -199,7 +207,7 @@ std::stringstream compiler::compile_ast(StatementBlock &ast) {
 
     // iterate over it and compile each statement in turn, adding it to the stringstream
     for (std::shared_ptr<Statement> s: ast.statements_list) {
-        compile_ss << this->compile_statement(s).str();
+        compile_ss << this->compile_statement(s, signature).str();
     }
 
     return compile_ss;

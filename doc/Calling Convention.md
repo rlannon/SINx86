@@ -1,15 +1,14 @@
 # SIN Documentation
 ## SIN Calling Convention
 
-The SIN calling convention is modeled after the x64 calling conventions for Windows and Linux, specifically ```_cdecl```. However, the calling conventions differ slightly. Note that in SIN, the calling convention is declared in the function definition, _not_ in the call itself, as the convention affects how function bodies are generated.
+The SIN calling convention is modeled after the x64 calling conventions for Windows and Linux, specifically `_cdecl`. However, the calling conventions differ slightly. Note that in SIN, the calling convention is declared in the function definition, _not_ in the call itself, as the convention affects how function bodies are generated.
 
-The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike ```_cdecl```, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers ```RSI, RDI, RCX, RDX, R8, R9```, while floating-point types will be pushed in registers ```XMM0 - XMM5```. Typically, this will look something like:
+The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike `_cdecl`, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers `RSI, RDI, RCX, RDX, R8, R9`, while floating-point types will be pushed in registers `XMM0 - XMM5`. `RAX` and `RBX` are never preserved by the caller nor the callee; they are considered volatile.
+
+Typically, this will end up looking something like:
 
     caller:
         ; function signature 'decl int callee(decl int a, decl int b, decl int c, decl int d, decl int e)'
-
-        pushq rax
-        pushq rbx   ; RAX and RBX always saved
 
         pushq rbp   ; preserve old call frame
         mov rbp, rsp    ; the new base is the current stack pointer
@@ -27,6 +26,7 @@ The SIN convention is a **caller clean-up** convention which requires the caller
 
         mov rsp, rbp    ; restore the old stack frame
         popq rsp
+
         ; done
 
 Now, we will look more in-depth at the rules for calling functions and returning values, as how values are passed and return depends on their data type.
@@ -71,6 +71,9 @@ Aggregate types (arrays) and user-defined types (structs) must always be passed 
 Values are returned on RAX (or another variant of the register depending on the data width) where possible. Floating-point types are returned in XMM0. Any unused bits in the register are undefined.
 
 User-defined types (structs), arrays, and strings (if necessary) are returned on the stack, and a pointer to the data within them will be contained within RAX. It is the **callee's** responsibility to allocate memory for the return object. This differs from the x64 C++ calling convention.
+
+### Register Preservation
+The only register preserved by this convention is `rbp`. All other registers must be preserved before the call if they need to be saved.
 
 ## Interfacing with C
 The SIN calling convention also allows compilers to interface with C functions, and as such, there must be a way to ensure the SIN compiler handles arguments and return values properly. As such, a few keywords exist to alert the compiler to how a function should be called in the function declaration. Note these keywords may also be used with SIN functions, but must be done in the definition (and declaration, if present).

@@ -29,6 +29,15 @@ IllegalOperationException::IllegalOperationException(unsigned int line):
 
 }
 
+IllegalReturnException::IllegalReturnException(unsigned int line):
+CompilerException(
+	"Return statement not allowed here; they may only occur inside functions",
+	compiler_errors::ILLEGAL_RETURN_ERROR,
+	line
+) {
+	// super called
+}
+
 StructDefinitionException::StructDefinitionException(unsigned int line):
 	CompilerException("Illegal; struct definitions may only include allocations", compiler_errors::ILLEGAL_OPERATION_ERROR, line)
 {
@@ -100,6 +109,15 @@ TypeException::TypeException(unsigned int line) :
     CompilerException("Types are not compatible", compiler_errors::TYPE_ERROR, line)
 {
     // Exception should be used when types are incompatible
+}
+
+ReturnMismatchException::ReturnMismatchException(unsigned int line):
+CompilerException(
+	"Return value does not match function signature",
+	compiler_errors::RETURN_MISMATCH_ERROR,
+	line
+) {
+	// super called
 }
 
 QualityConflictException::QualityConflictException(std::string &conflicting_quality, unsigned int line) :

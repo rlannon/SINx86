@@ -107,32 +107,14 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // add a label for the function
     definition_ss << func_sym.get_name() << ":" << std::endl;
 
-    // now, compile the procedure using compiler::compile_ast
-    procedure_ss = this->compile_ast(*definition.get_procedure().get());
+    // now, compile the procedure using compiler::compile_ast, passing in this function's signature
+    procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
 
     // our register saving and clean-up will be affected by the calling convention
     if (definition.get_calling_convention() == SINCALL) {
-        // now that we have compiled the procedure, determine which registers were used by the function (it is the callee's responsibility to save its registers)
+        // todo: any clean up that the callee has to do
 
-        // get the registers used by the procedure and the signature
-        register_usage proc_regs = this->reg_stack.pop_back();
-        for (reg r: register_usage::all_regs) {
-            // if the register was used by an argument, don't push; else, if it was used, we must preserve it
-            if (proc_regs.was_used(r) && !arg_regs.count(r) && r != RAX) {
-                // save preserved registers
-                definition_ss << "\t" << "pushq " << register_usage::get_register_name(r) << std::endl;
-            }
-        }
-        
-        // now, iterate backwards through the vector containing all registers to pop the used registers in reverse order
-        procedure_ss << "; now, restore used registers" << std::endl;
-        for (std::vector<reg>::const_reverse_iterator it = register_usage::all_regs.rbegin(); it != register_usage::all_regs.rend(); it++) {
-            // if the register is in our set containing the argument registers, ignore it
-            if (proc_regs.was_used(*it) && !arg_regs.count(*it) && *it != RAX) {
-                // put the pop in procedure_ss because it should come after our procedure
-                procedure_ss << "\t" << "popq " << register_usage::get_register_name(*it) << std::endl;
-            }
-        }
+        // originally, this convention was going to preserve and restore registers used by the function, but this screws with our stack offsets, so unless we push and restore all registers before each call, we will not preserve registers
     } else {
         throw CompilerException("Currently, calling convention specification is not supported", compiler_errors::ILLEGAL_QUALITY_ERROR, definition.get_line_number());
     }
@@ -183,6 +165,7 @@ std::stringstream compiler::call_function(Call call) {
             call_ss << this->sincall(func_sym, call.get_args(), call.get_line_number()).str(); // todo: return this function's result directly?
         } else {
             // todo: other calling conventions
+            throw CompilerException("Other calling conventions not supported at this time", 0, call.get_line_number());
         }
 
         // now, the function's return value (or pointer to the return value) is in RAX
@@ -201,6 +184,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     Generates stack set-up code for the SIN calling convention
 
     For more information on this calling convention, see doc/Calling Convention.md
+    We don't need to touch max_offset here when making the pushes and pops to and from the stack because the stack pointer will be returned to normal when the function returns
 
     @param  s   The symbol for the function
     @param  args    The function's arguments
@@ -209,7 +193,6 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
     */
 
-    register_usage arg_regs;    // registers used for arguments
     std::stringstream register_preservation_ss; // for preserving registers used for argument passing
     std::stringstream sincall_ss;
 
@@ -218,7 +201,9 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
     // ensure the number of arguments provided is less than or equal to the number expected
     if (args.size() <= s.get_formal_parameters().size()) {
-        // todo: write register preservation function
+        // now, preserve our stack frame
+        sincall_ss << "\t" << "pushq rbp" << std::endl;
+        sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
 
         // iterate over our arguments, ensure the types match and that we have an appropriate number
         std::vector<symbol>::iterator it = formal_parameters.begin();
@@ -230,7 +215,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 sincall_ss << this->evaluate_expression(arg, line).str();
 
                 // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
-
+                // todo: pass value
             } else {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
@@ -240,12 +225,65 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             it++;
         }
 
-        // todo: call function
-        // todo: restore used registers
+        // next, call the function
+        sincall_ss << "\t" << "call " << s.get_name() << std::endl;
+
+        // now, restore the old stack frame
+        sincall_ss << "\t" << "mov rsp, rbp" << std::endl;
+        sincall_ss << "\t" << "popq rbp" << std::endl;
     } else {
         // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature
         throw FunctionSignatureException(line);
     }
+
+    // finally, return our call code
+    return sincall_ss;
+}
+
+std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol signature) {
+    /*
+
+    handle_return
+    Generates code for a return statement
+
+    This function generates a return statement, ensuring the return type matches the signature's expected return value. Further, if the function name is 'main', then we will generate a call to sys_exit, passing the return value in RBX
+
+    @param  ret The return statement for which we are generating code
+    @param  signature   The function signature in which the statement occurs
+
+    @return The generated code
+
+    @throws This function throws an exception if the return values do not match the function signature
+
+    */
+
+    std::stringstream ret_ss;
+
+    // first, ensure that the return statement's data type is compatible with the signature
+    if (get_expression_data_type(ret.get_return_exp(), this->symbol_table, ret.get_line_number()).is_compatible(signature.get_data_type())) {
+        // types are compatible; how the value gets returned (and how the callee gets cleaned up) depends on the function's calling convention
+
+        // todo: handle return statements according to calling convention
+    } else {
+        throw ReturnMismatchException(ret.get_line_number());
+    }
+
+    return ret_ss;
+}
+
+std::stringstream compiler::sincall_return(ReturnStatement &ret) {
+    /*
+
+    sincall_return
+    Handles a return statement for a function using the sincall calling convention
+
+    This function is _not_ responsible for restoring used registers; it simply evaluates the expression and returns it according to the calling convention. This means that if an object is returned on the stack, the *callee* (this function) is responsible for allocating memory for it
+
+    */
+
+    std::stringstream sincall_ss;
+
+    // todo: handle return
 
     return sincall_ss;
 }

@@ -48,10 +48,10 @@ class compiler {
     size_t max_offset;    // the maximum offset within the current stack frame -- use for new variables, calls, etc
 
     // compile an entire statement block
-    std::stringstream compile_ast(StatementBlock &ast);
+    std::stringstream compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature = nullptr);
     
     // a function to compile a single statement
-    std::stringstream compile_statement(std::shared_ptr<Statement> s);
+    std::stringstream compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature);
 
     // allocations
     std::stringstream allocate(Allocation alloc_stmt);
@@ -71,6 +71,8 @@ class compiler {
     std::stringstream define_function(FunctionDefinition definition);
     std::stringstream call_function(Call call);
     std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
+    std::stringstream handle_return(ReturnStatement ret, function_symbol signature);
+    std::stringstream sincall_return(ReturnStatement &ret);
 
     // utilities that require compiler's data members
     std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);

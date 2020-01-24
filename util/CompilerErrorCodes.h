@@ -24,6 +24,7 @@ namespace compiler_errors {
     const unsigned int DATA_WIDTH_ERROR = 3;
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
     const unsigned int ILLEGAL_OPERATION_ERROR = 50;    // The statement is not allowed where it was found
+    const unsigned int ILLEGAL_RETURN_ERROR = 51;   // Return statements must only occur within functions
     
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
@@ -39,6 +40,7 @@ namespace compiler_errors {
     const unsigned int TYPE_ERROR = 210;
     const unsigned int VOID_TYPE_ERROR = 211;
     const unsigned int OPERATOR_TYPE_ERROR = 212;   // the specified operator could not be used on the given expression
+    const unsigned int RETURN_MISMATCH_ERROR = 215; // a function's return type does not match its signature
     const unsigned int QUALITY_CONFLICT_ERROR = 230;
     const unsigned int ILLEGAL_QUALITY_ERROR = 231;
 
