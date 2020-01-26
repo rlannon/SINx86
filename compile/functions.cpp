@@ -67,7 +67,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // update the scope info -- name = function name, level = 1, offset = 0
     this->current_scope_name = definition.get_name();
     this->current_scope_level = 1;
-    this->max_offset = 0;
+    this->max_offset = 8;
 
     // construct the symbol for the function -- everything is offloaded to the utility
     function_symbol func_sym = create_function_symbol(definition);
@@ -87,12 +87,12 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
         }
     }
 
-    // update the stack offset -- since symbols are pushed in order, just get the last one; if we had no parameters, the offset should be 0
+    // update the stack offset -- since symbols are pushed in order, just get the last one; if we had no parameters, the offset should be 8
     if (func_sym.get_formal_parameters().size() != 0) {
         const symbol &last_sym = func_sym.get_formal_parameters().back(); 
         this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_stack_offset();
     } else {
-        this->max_offset = 0;
+        this->max_offset = 8;
     }
 
     // get the register_usage object from func_sym and push that
@@ -187,6 +187,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     @param  args    The function's arguments
     @param  line    The line number where the call occurs
     @return A stringstream containing the generated code
+    @throws Throws an exception if the function signature does not match the arguments supplied
 
     */
 
@@ -259,10 +260,11 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     std::stringstream ret_ss;
 
     // first, ensure that the return statement's data type is compatible with the signature
-    if (get_expression_data_type(ret.get_return_exp(), this->symbol_table, ret.get_line_number()).is_compatible(signature.get_data_type())) {
+    DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbol_table, ret.get_line_number());
+    if (return_type.is_compatible(signature.get_data_type())) {
         // types are compatible; how the value gets returned (and how the callee gets cleaned up) depends on the function's calling convention
         if (signature.get_calling_convention() == SINCALL) {
-            ret_ss << this->sincall_return(ret).str() << std::endl;
+            ret_ss << this->sincall_return(ret, return_type).str() << std::endl;
         } else {
             // todo: other calling conventions; for now, throw an exception
             throw CompilerException("Calling conventions other than sincall are currently not supported", 0, ret.get_line_number());
@@ -276,7 +278,7 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     return ret_ss;
 }
 
-std::stringstream compiler::sincall_return(ReturnStatement &ret) {
+std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return_type) {
     /*
 
     sincall_return
@@ -290,7 +292,22 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret) {
 
     // all we need to do is evaluate the expression; the result will be in RAX or XMM0 automatically
     // structs, arrays, and strings will pass _pointers_ to these members in RAX; subsequent assignments will use memory copying, as usual
+
     sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
+
+    // if we have a struct or an array, and it is in automatic memory, we need to set the 'direction' flag
+    if (
+        (
+            !return_type.get_qualities().is_const() &&
+            !return_type.get_qualities().is_static() &&
+            !return_type.get_qualities().is_const()
+        ) && (
+            return_type.get_primary() == Type::STRUCT ||
+            return_type.get_primary() == Type::ARRAY
+        )
+    ) {
+        sincall_ss << "\t" << "std" << std::endl;   // set direction flag to indicate we need to copy from high to low address
+    }
 
     return sincall_ss;
 }

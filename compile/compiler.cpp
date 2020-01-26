@@ -323,10 +323,10 @@ bool compiler::is_in_scope(symbol &sym) {
 }
 
 compiler::compiler() {
-    // initialize our number trackers to 0
+    // initialize our number trackers
     this->strc_num = 0;
     this->scope_block_num = 0;
-    this->max_offset = 0;
+    this->max_offset = 8;   // should be 8 (a qword) because of the way the x86 stack works
     
     // initialize the scope
     this->current_scope_name = "global";

@@ -72,7 +72,7 @@ class compiler {
     std::stringstream call_function(Call call);
     std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
     std::stringstream handle_return(ReturnStatement ret, function_symbol signature);
-    std::stringstream sincall_return(ReturnStatement &ret);
+    std::stringstream sincall_return(ReturnStatement &ret, DataType return_type);
 
     // utilities that require compiler's data members
     std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);

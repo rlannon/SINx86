@@ -130,11 +130,11 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
         
-        if (type.get_width() == 16) {
+        if (type.get_width() == 2) {
             eval_ss << "\t" << "mov ax, " << to_evaluate.get_value() << std::endl;
-        } else if (type.get_width() == 32) {
+        } else if (type.get_width() == 4) {
             eval_ss << "\t" << "mov eax, " << to_evaluate.get_value() << std::endl;
-        } else if (type.get_width() == 64) {
+        } else if (type.get_width() == 8) {
             eval_ss << "\t" << "mov rax, " << to_evaluate.get_value() << std::endl;
         } else {
             throw CompilerException("Invalid type width", 0, line);

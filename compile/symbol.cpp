@@ -41,8 +41,16 @@ unsigned int symbol::get_stack_offset() const {
 	return this->stack_offset;
 }
 
+bool symbol::was_initialized() const {
+    return this->initialized;
+}
+
 bool symbol::was_freed() const {
     return this->freed;
+}
+
+void symbol::set_initialized() {
+    this->initialized = true;
 }
 
 void symbol::free() {

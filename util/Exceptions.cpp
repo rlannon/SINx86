@@ -161,6 +161,15 @@ ConstAssignmentException::ConstAssignmentException(unsigned int line) :
 	// we don't need a function body because we called the super constructor
 }
 
+FinalAssignmentException::FinalAssignmentException(unsigned int line) :
+CompilerException(
+	"Cannot make assignment to initialized final-qualified variable",
+	compiler_errors::FINAL_ASSIGNMENT_ERROR,
+	line
+) {
+	// super called
+}
+
 // Compiler Warning
 
 void compiler_warning(std::string message, unsigned int line_number) {

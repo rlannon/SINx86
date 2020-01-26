@@ -21,6 +21,7 @@ Codes fall into the following categories:
 namespace compiler_errors {
     // Illegal operations
     const unsigned int CONST_ASSIGNMENT_ERROR = 1;
+    const unsigned int FINAL_ASSIGNMENT_ERROR = 2;
     const unsigned int DATA_WIDTH_ERROR = 3;
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
     const unsigned int ILLEGAL_OPERATION_ERROR = 50;    // The statement is not allowed where it was found

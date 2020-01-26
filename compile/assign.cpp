@@ -82,6 +82,9 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
             default:
                 throw TypeException(line);
         };
+
+        // mark the symbol as initialized
+        sym.set_initialized();
     } else {
         throw TypeException(line);
     }
@@ -108,6 +111,8 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
     // how the variable is allocated will determine how we make the assignment
     if (sym.get_data_type().get_qualities().is_const()) {
         throw ConstAssignmentException(line);   // todo: eliminate this check?
+    } else if (sym.get_data_type().get_qualities().is_final() && sym.was_initialized()) {
+        throw FinalAssignmentException(line);
     } else if (sym.get_data_type().get_qualities().is_static()) {
         /*
         static variables can be referenced by name

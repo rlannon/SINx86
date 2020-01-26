@@ -35,6 +35,7 @@ protected:
 
     DataType type;  // the symbol's type
 
+    bool initialized;   // whether the data was initialized
     bool freed; // whether the memory has been allocated or freed
 public:
     // our getters
@@ -51,7 +52,10 @@ public:
     unsigned int get_stack_offset() const;
 
     // note these won't have any effect on functions (as functions are not allocated in SIN)
+    bool was_initialized() const;
     bool was_freed() const;
+
+    void set_initialized();
     void free();
 
     // constructors

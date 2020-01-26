@@ -18,6 +18,12 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
     DataType alloc_data = alloc_stmt.get_type_information();
     std::stringstream allocation_ss;
 
+    // variables in the global scope do not need to be marked as 'static' by the programmer, though they are located in static memory so we must set the static quality if we are in the global scope
+    if (this->current_scope_name == "global") {
+        alloc_data.get_qualities().add_quality(SymbolQuality::STATIC);
+    }
+
+    // now we may make the assignment
     if (alloc_data.get_qualities().is_dynamic()) {
         // todo: allocate dynamically
     } else if (alloc_data.get_qualities().is_const()) {

@@ -70,7 +70,10 @@ Aggregate types (arrays) and user-defined types (structs) must always be passed 
 ### Return Values
 Values are returned on RAX (or another variant of the register depending on the data width) where possible. Floating-point types are returned in XMM0. Any unused bits in the register are undefined.
 
-User-defined types (structs), arrays, and strings (if necessary) return a *pointer* to the data in `RAX`. This follows the convention for so-called 'hidden pointer types' where pointers are passed and assignments use copies and pointer dereferencing under the hood. These objects will be copied onto the stack when they are returned, and will reserve as much space as is required for the object. This will set the direction flag to indicate that the first byte of the data is at the *highest* memory address, and the last byte at the lowest (because the x86 stack grows downwards).
+#### Non-Primitive Return Values
+User-defined types (structs), arrays, and strings (if necessary) return a *pointer* to the data in `RAX`. This follows the convention for so-called 'hidden pointer types' where pointers are passed and assignments use copies and pointer dereferencing under the hood.
+
+Note that, since structs and arrays are written in "reverse order" onto the stack (first byte at low address, last byte at high address), we can easily copy between memory areas without needing to worry about reversing the way we write data. 
 
 ### Register Preservation
 The only register preserved by this convention is `rbp`. All other registers must be preserved before the call if they need to be saved.
