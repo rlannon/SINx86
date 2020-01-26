@@ -73,7 +73,11 @@ Values are returned on RAX (or another variant of the register depending on the 
 #### Non-Primitive Return Values
 User-defined types (structs), arrays, and strings (if necessary) return a *pointer* to the data in `RAX`. This follows the convention for so-called 'hidden pointer types' where pointers are passed and assignments use copies and pointer dereferencing under the hood.
 
-Note that, since structs and arrays are written in "reverse order" onto the stack (first byte at low address, last byte at high address), we can easily copy between memory areas without needing to worry about reversing the way we write data. 
+Note that, since structs and arrays are written in "reverse order" onto the stack (first byte at low address, last byte at high address), we can easily copy between memory areas without needing to worry about reversing the way we write data. The formula for figuring out where a given struct member is in the stack is:
+
+    (struct_stack_offset + struct_width) - (struct_member_offset + struct_member_width)
+
+Writing structs to the stack in reverse order will make it easy to copy between the stack and other areas of memory (as struct member order does not need to be accounted for).
 
 ### Register Preservation
 The only register preserved by this convention is `rbp`. All other registers must be preserved before the call if they need to be saved.

@@ -64,7 +64,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // todo: should be package this together in an object and use a stack to keep track of it? that might make things a little cleaner
 
-    // update the scope info -- name = function name, level = 1, offset = 0
+    // update the scope info -- name = function name, level = 1, offset = 8
     this->current_scope_name = definition.get_name();
     this->current_scope_level = 1;
     this->max_offset = 8;
@@ -87,7 +87,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
         }
     }
 
-    // update the stack offset -- since symbols are pushed in order, just get the last one; if we had no parameters, the offset should be 8
+    // update the stack offset -- since symbols are pushed in order, just get the last one; if we had no parameters, the offset should be 8 (a qword -- because of how the x86 stack works)
     if (func_sym.get_formal_parameters().size() != 0) {
         const symbol &last_sym = func_sym.get_formal_parameters().back(); 
         this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_stack_offset();
