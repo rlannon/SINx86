@@ -12,7 +12,7 @@ The `string` type cannot be passed in a register, but a *pointer* to a string ty
     mov rdx, [rbp - 8]  ; move the address of 'second_string' into rdx
     call string_assignment  ; call the string assignment function
 
-Under the hood, all such types are considered to be `ptr<T>`.
+Under the hood, all such types are considered to be `ptr<T>` when used in expressions, and the dereferencing and data copies occur **automatically**.
 
 Another example of the difference would be here:
 
@@ -33,3 +33,69 @@ The assignment statements will generate the following code:
     mov rsi, [rbp - 4]
     mov rax, [rsi]
     mov [rbp - 8], rax
+
+### Type Overview
+The following is an overview of these 'hidden pointer types.' Note that `array` and `string` may not be used as `sizeof< T >` arguments, but any user-defined `struct` type may, as a struct's width *must* be known at compile time.
+
+#### `array< (N,) T >`
+Arrays always contain a fully-parsed subtype; this tells the compiler what type of data is stored within the array, allowing it to be safely used in any expression as well as allowing the compiler to calculate the array's width. Arrays may also contain, before the type, an unsigned integer indicating the number of elements in the array; the only situations where `N` is *not* required are:
+
+* the array is a subtype of `ptr`; if a length is given, it will be ignored by the compiler (the programmer shall be notified this is the behavior by the compiler)
+* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, preventing the overhead associated with reallocations
+
+All arrays contain a 4-byte header containing an `unsigned int` indicating the number of elements contained by the array; this allows for runtime bounds and length checks without any additional variables to be tracked by the programmer.
+
+**NB:** Arrays may not contain other arrays, but they may contain pointers to them; these pointer and array types must all be fully-parsed subtypes.
+
+#### `string`
+While strings are similar to `array<char>`, they are *not* identical in their behavior; `string` is a fully-fledged type while `array<char>` is a simple aggregate with markedly different behavior. The key difference is that automatic string types are still variable-length, while the same cannot be said of arrays. Arrays, unless marked as `dynamic`, are always of a fixed width known at compile time. Strings, on the other hand, are not, and always use dynamic (or `const`) memory. Although they may look identical in memory (4-byte length followed by characters), their behavior is different. 
+
+Strings may be marked as `dynamic`, and although this does not change where the string is located in program memory, it *does* affect the lifetime of the object; typically, when an automatic string goes out of scope, the compiler automatically `free`s it, invalidating any pointers to that string. However, when a string is marked as `dynamic`, the compiler will *not* free it, allowing it, or a pointer to it, to be passed to another scope.
+
+**NB:** While a dynamic string may be returned from a function and assign to a non-dynamic string, it will *not* be automatically freed because it is dynamic; the compiler will generate a warning when a function returning `dynamic string` assigns to a non-dynamic-qualified string.
+
+*A note about why* `string` *is a unique type:* The decision to add `string` to the language was done because of its ubiquity; since SIN's goal is to make the life of a programmer easier by reducing the use of confusing syntax and reducing manual memory management and pointer usage where possible, it makes more sense to have the `string` type rather than requiring programmers to create a `dynamic arracy<char>` every time they wish to utilize a string. Ultimately, while it makes implementation a little more thorny, it follows the SIN philosophy and so it was deemed to belong in the language standard.
+
+#### `struct`
+All user-defined struct types require their width to be known at compile time. This allows `array< T >` and `string` members in the same way any other scope would. When a struct includes these types, however, a few things must be kept in mind:
+
+* if a struct has `dynamic` members, they will not be freed when the struct goes out of scope;
+* all members will be freed if `free` is invoked on the struct **without exception**;
+* if the user wishes to free specific members, invoking `free` on a specific struct member is allowed, as `free` will ignore any memory that has already been freed;
+* if a struct has hidden pointer members, they *will* be `free`d when the struct goes out of scope *unless that object is used as a function's return value*, in which case the data will be copied and `free` will *not* be invoked on *any* of the members;
+* returning a pointer to a struct member is invalid *unless* said member is `dynamic` and `free` is not called on the struct object
+
+For example, the following code is valid:
+
+    def struct my_struct { 
+        alloc string name;
+        alloc string type;
+        alloc int x;
+        alloc int y;
+    }
+
+    def my_struct my_func() {
+        alloc my_struct s;
+        let s.name = "my_struct";
+        let s.type = "user-defined struct";
+        let s.x = 30;
+        let s.y = 40;
+
+        alloc my_struct s2;
+        let s2.name = "my_struct 2";
+        let s2.type = "another user-defined struct";
+        let s2.x = 50;
+        let s2.y = 100;
+
+        return s;
+    }
+
+    def int main() {
+        alloc my_struct ex: @my_func();
+        @print(s.name + " is a " + s.type + "!");
+        return 0;
+    }
+
+Since `my_func` returns the struct `my_func::s`, it will not be freed by the compiler; instead, a pointer to it will be returned and the assignment to `main::ex` will copy all of the data contained within `my_func::s` to `main::ex`. This will result in the destruction of all local variables but the preservation of dynamic memory.
+
+Notice that if we had returned, for example, a `string` instead of a `my_struct` object, then we would have simply copied the string onto the stack and freed the structs in their entirety upon leaving the scope.
