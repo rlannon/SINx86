@@ -155,6 +155,24 @@ CompilerException(
 	// super called
 }
 
+IllegalUnaryOperatorError::IllegalUnaryOperatorError(unsigned int line) :
+CompilerException(
+	"Invalid unary operator",
+	compiler_errors::INVALID_UNARY_OPERATOR_ERROR,
+	line
+) {
+	// super called
+}
+
+UnaryTypeNotSupportedError::UnaryTypeNotSupportedError(unsigned int line) :
+CompilerException(
+	"This unary operator may not be used on expressions of this type",
+	compiler_errors::UNARY_TYPE_NOT_SUPPORTED,
+	line
+) {
+	// super called
+}
+
 ConstAssignmentException::ConstAssignmentException(unsigned int line) :
 	CompilerException("Cannot make assignment to const-qualified variable", compiler_errors::CONST_ASSIGNMENT_ERROR, line)
 {

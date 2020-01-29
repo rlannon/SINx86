@@ -140,6 +140,18 @@ public:
 	explicit OperatorTypeError(std::string op, std::string type, unsigned int line);
 };
 
+class IllegalUnaryOperatorError : public CompilerException
+{
+public:
+	explicit IllegalUnaryOperatorError(unsigned int line);
+};
+
+class UnaryTypeNotSupportedError : public CompilerException
+{
+public:
+	explicit UnaryTypeNotSupportedError(unsigned int line);
+};
+
 class ConstAssignmentException : public CompilerException
 {
 public:
