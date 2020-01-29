@@ -12,6 +12,9 @@ doc/Standard Library.md
 *.o
 sinx86
 
+# Also ignore our constexpr evaluation files for the time being
+compile/compile_util/evaluate_constexpr.h
+
 # Visual Studio files
 *.sln
 Debug/*
