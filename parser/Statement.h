@@ -235,7 +235,7 @@ public:
 	std::vector<std::shared_ptr<Statement>> get_formal_parameters();
 	calling_convention get_calling_convention();
 
-	FunctionDefinition(std::string name, DataType return_type, std::vector<std::shared_ptr<Statement>> param_ptr, std::shared_ptr<StatementBlock> procedure_ptr);
+	FunctionDefinition(std::string name, DataType return_type, std::vector<std::shared_ptr<Statement>> param_ptr, std::shared_ptr<StatementBlock> procedure_ptr, calling_convention call_con = SINCALL);
 	FunctionDefinition();
 };
 

@@ -304,11 +304,14 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
     return to_return;
 }
 
-std::stringstream push_used_registers(register_usage regs) {
+std::stringstream push_used_registers(register_usage regs, bool ignore_ab) {
     /*
 
     push_used_registers
     Given a register_usage object, push all registers that are *currently* in use
+
+    @param  regs    The object containing which registers are in use
+    @param  ignore_ab   Whether we should ignore RAX and RBX when we push the registers; defaults to false
 
     */
 
@@ -319,19 +322,24 @@ std::stringstream push_used_registers(register_usage regs) {
         it != register_usage::all_regs.end();
         it++
     ) {
-        push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
+        if ((*it != RAX && *it != RBX) || !ignore_ab) {
+            push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
+        }
     }
 
     return push_ss;
 }
 
-std::stringstream pop_used_registers(register_usage regs) {
+std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
     /*
 
     pop_used_registers
     Pops all registers marked as 'in use' in a register_usage object
 
     Uses a reverse_iterator to iterate through all_regs in order to find registers
+
+    @param  regs    The registers that are in use that must be restored
+    @param  ignore_ab   Whether we ignored RAX and RBX in the push; defaults to false
 
     */
 
@@ -342,7 +350,9 @@ std::stringstream pop_used_registers(register_usage regs) {
         it != register_usage::all_regs.rend();
         it++
     ) {
-        pop_ss << "\t" << "pop " << register_usage::get_register_name(*it) << std::endl;
+        if ((*it != RAX && *it != RBX) || !ignore_ab) {
+            pop_ss << "\t" << "pop " << register_usage::get_register_name(*it) << std::endl;
+        }
     }
 
     return pop_ss;

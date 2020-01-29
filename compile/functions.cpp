@@ -101,6 +101,9 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // add a label for the function
     definition_ss << func_sym.get_name() << ":" << std::endl;
 
+    // since we will be using the 'call' instruction, we must increase our stack offset by one qword so that we don't overwrite the return address
+    this->max_offset += 8; 
+
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
     procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
 
@@ -128,7 +131,11 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     return definition_ss;
 }
 
-std::stringstream compiler::call_function(Call call) {
+template std::stringstream compiler::call_function(Call, unsigned int, bool);
+template std::stringstream compiler::call_function(ValueReturningFunctionCall, unsigned int, bool);
+
+template<typename T>
+std::stringstream compiler::call_function(T call, unsigned int line, bool allow_void) {
     /*
 
     call_function
@@ -142,32 +149,41 @@ std::stringstream compiler::call_function(Call call) {
     
     For more information on compiler calling conventions, see doc/Calling Convention.md
 
-    @param  call    The call statement to compile
+    @param  call    May either be a Call statement or a ValueReturningFunctionCall; it contains the parsed function information
+    @param  line    The line number on which the call occurs
     @return A stringstream containing the generated code
+    @throws This function will throw an exception if an error is generated during the call
 
     */
 
     std::stringstream call_ss;
 
     // first, look up the function
-    std::shared_ptr<symbol> sym = this->lookup(call.get_func_name(), call.get_line_number());
+    std::shared_ptr<symbol> sym = this->lookup(call.get_func_name(), line);
+
+    // ensure we have a function
     if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
         // cast to the correct type
         function_symbol func_sym = *dynamic_cast<function_symbol*>(sym.get());
 
+        // if we aren't allowing a void return type, then throw an exception if the primary type is void
+        if (!allow_void && func_sym.get_data_type().get_primary() == VOID) {
+            throw VoidException(line);
+        }
+
         // behaves according to the calling convention
         if (func_sym.get_calling_convention() == SINCALL) {
             // SIN calling convention
-            call_ss << this->sincall(func_sym, call.get_args(), call.get_line_number()).str(); // todo: return this function's result directly?
+            call_ss << this->sincall(func_sym, call.get_args(), line).str(); // todo: return this function's result directly?
         } else {
             // todo: other calling conventions
-            throw CompilerException("Other calling conventions not supported at this time", 0, call.get_line_number());
+            throw CompilerException("Other calling conventions not supported at this time", 0, line);
         }
 
         // now, the function's return value (or pointer to the return value) is in RAX or XMM0, depending on the type -- the compiler always expects return values here regardless of calling convention
         // further, all clean-up has been handled, so we can continue code generation
     } else {
-        throw InvalidSymbolException(call.get_line_number());
+        throw InvalidSymbolException(line);
     }
 
     // todo: any miscellaneous clean-up?
@@ -199,8 +215,10 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
     // ensure the number of arguments provided is less than or equal to the number expected
     if (args.size() <= s.get_formal_parameters().size()) {
+        // preserve the processor status
+        sincall_ss << "\t" << "pushfq" << std::endl;
         // now, preserve our stack frame
-        sincall_ss << "\t" << "pushq rbp" << std::endl;
+        sincall_ss << "\t" << "push rbp" << std::endl;
         sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
 
         // iterate over our arguments, ensure the types match and that we have an appropriate number
@@ -230,7 +248,9 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
         // now, restore the old stack frame
         sincall_ss << "\t" << "mov rsp, rbp" << std::endl;
-        sincall_ss << "\t" << "popq rbp" << std::endl;
+        sincall_ss << "\t" << "pop rbp" << std::endl;
+        // and restore the processor status
+        sincall_ss << "\t" << "popfq" << std::endl;
     } else {
         // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature
         throw FunctionSignatureException(line);
@@ -273,8 +293,9 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
         throw ReturnMismatchException(ret.get_line_number());
     }
 
-    // now that the calling convention's return responsibilities have been dealt with, we can return
+    // now that the calling convention's return responsibilities have been dealt with, we can return; move the offset back by one qword, as ret pops the return address from the stack
     ret_ss << "\t" << "ret" << std::endl;
+    this->max_offset -= 8;
     return ret_ss;
 }
 
@@ -295,19 +316,7 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
 
     sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
 
-    // if we have a struct or an array, and it is in automatic memory, we need to set the 'direction' flag
-    if (
-        (
-            !return_type.get_qualities().is_const() &&
-            !return_type.get_qualities().is_static() &&
-            !return_type.get_qualities().is_const()
-        ) && (
-            return_type.get_primary() == Type::STRUCT ||
-            return_type.get_primary() == Type::ARRAY
-        )
-    ) {
-        sincall_ss << "\t" << "std" << std::endl;   // set direction flag to indicate we need to copy from high to low address
-    }
+    // todo: solidify and implement struct/array/string conventions
 
     return sincall_ss;
 }

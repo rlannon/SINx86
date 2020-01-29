@@ -316,10 +316,11 @@ calling_convention FunctionDefinition::get_calling_convention() {
 	return this->call_con;
 }
 
-FunctionDefinition::FunctionDefinition(std::string name, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr):
+FunctionDefinition::FunctionDefinition(std::string name, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr, calling_convention call_con):
 	Definition(name, procedure_ptr),
 	return_type(return_type),
-	formal_parameters(args_ptr)
+	formal_parameters(args_ptr),
+	call_con(call_con)
 {
 	FunctionDefinition::statement_type = FUNCTION_DEFINITION;
 }

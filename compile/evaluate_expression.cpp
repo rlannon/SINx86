@@ -82,6 +82,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case VALUE_RETURNING_CALL:
         {
+            ValueReturningFunctionCall call_exp = *dynamic_cast<ValueReturningFunctionCall*>(to_evaluate.get());
+            evaluation_ss << this->call_function(call_exp, line, false).str();  // don't allow void functions here
             break;
         }
         case SIZE_OF:

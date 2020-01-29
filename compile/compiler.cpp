@@ -166,7 +166,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         case CALL:
         {
             Call *call_stmt = dynamic_cast<Call*>(s.get());
-            compile_ss << this->call_function(*call_stmt).str() << std::endl;
+            compile_ss << this->call_function(*call_stmt, call_stmt->get_line_number()).str() << std::endl;
             break;
         }
         case INLINE_ASM:

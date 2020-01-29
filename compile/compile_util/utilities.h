@@ -37,7 +37,7 @@ function_symbol create_function_symbol(T def);
 template<class T>
 symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope_level, size_t &stack_offset);
 
-std::stringstream push_used_registers(register_usage regs);
-std::stringstream pop_used_registers(register_usage regs);
+std::stringstream push_used_registers(register_usage regs, bool ignore_ab = false);
+std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false);
 
 std::stringstream copy_array(DataType array_type);

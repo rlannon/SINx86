@@ -10,7 +10,8 @@ Typically, this will end up looking something like:
     caller:
         ; function signature 'decl int callee(decl int a, decl int b, decl int c, decl int d, decl int e)'
 
-        pushq rbp   ; preserve old call frame
+        push rflags ; preserve the status
+        push rbp   ; preserve old call frame
         mov rbp, rsp    ; the new base is the current stack pointer
 
         ; pass arguments (call is '@callee(10, 20, 30, 40, 50)' )
@@ -24,7 +25,8 @@ Typically, this will end up looking something like:
         ; returned value is in EAX because the function returns a 32-bit integer
 
         mov rsp, rbp    ; restore the old stack frame
-        popq rsp
+        pop rsp
+        pop rflags  ; restore the flags
 
         ; move the returned value into some variable from the higher scope
         mov [rbp - 16], eax
@@ -80,7 +82,7 @@ Note that, since structs and arrays are written in "reverse order" onto the stac
 Writing structs to the stack in reverse order will make it easy to copy between the stack and other areas of memory (as struct member order does not need to be accounted for).
 
 ### Register Preservation
-The only register preserved by this convention is `rbp`. All other registers must be preserved before the call if they need to be saved.
+The only registers that are always preserved by this convention are `rbp` and `rflags`. All other registers must be preserved before the call if they need to be saved.
 
 ## Interfacing with C
 The SIN calling convention also allows compilers to interface with C functions, and as such, there must be a way to ensure the SIN compiler handles arguments and return values properly. As such, a few keywords exist to alert the compiler to how a function should be called in the function declaration. Note these keywords may also be used with SIN functions, but must be done in the definition (and declaration, if present).
