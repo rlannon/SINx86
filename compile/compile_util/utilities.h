@@ -27,6 +27,8 @@ Our various compiler utilities
 
 DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, std::shared_ptr<symbol>> &symbol_table, unsigned int line);
 
+bool returns(StatementBlock &to_check);
+
 bool can_pass_in_register(DataType to_check);
 
 struct_info define_struct(StructDefinition definition);

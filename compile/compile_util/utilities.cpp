@@ -160,6 +160,43 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
     return type_information;
 }
 
+bool returns(StatementBlock &to_check) {
+	// Checks whether a given function definition will return a value
+	
+	if (to_check.has_return) {
+		return true;
+	}
+	else {
+		bool r = true;
+
+		// iterate through statements to see if we have an if/else block; if so, check *those* for return values
+		for (std::shared_ptr<Statement> s : to_check.statements_list) {
+
+			// todo: refactor interior of the loop
+
+			if (s->get_statement_type() == stmt_type::IF_THEN_ELSE) {
+				IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
+				StatementBlock &if_branch = *ite->get_if_branch().get();
+
+				if (ite->get_else_branch()) {
+					StatementBlock &else_branch = *ite->get_else_branch().get();
+
+					r = returns(if_branch) && returns(else_branch);
+				}
+				else {
+					r = false;
+				}
+			}
+
+			if (!r) {
+				return false;
+			}
+
+			// todo: convert to a while loop
+		}
+	}
+}
+
 bool can_pass_in_register(DataType to_check) {
     // Checks whether the given DataType can be passed in a register or if it must be passed on the stack
 

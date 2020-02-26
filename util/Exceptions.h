@@ -50,6 +50,12 @@ public:
 	explicit IllegalReturnException(unsigned int line);
 };
 
+class NoReturnException : public CompilerException
+{
+public:
+	explicit NoReturnException(unsigned int line);
+};
+
 class StructDefinitionException : public CompilerException
 {
 public:

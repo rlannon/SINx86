@@ -38,6 +38,16 @@ CompilerException(
 	// super called
 }
 
+NoReturnException::NoReturnException(unsigned int line) :
+	CompilerException(
+		"Return statement not found in function (perhaps not all control paths return a value?)",
+		compiler_errors::NO_RETURN_ERROR,
+		line
+	)
+{
+	// super called
+}
+
 StructDefinitionException::StructDefinitionException(unsigned int line):
 	CompilerException("Illegal; struct definitions may only include allocations", compiler_errors::ILLEGAL_OPERATION_ERROR, line)
 {

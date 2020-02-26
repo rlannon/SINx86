@@ -87,8 +87,9 @@ class compiler {
     size_t strc_num;
     size_t scope_block_num;
 
-    // We have sections for the text, data, and bss segments here
+    // We should have stringstreams for the text, rodata, data, and bss segments
     std::stringstream text_segment;
+	std::stringstream rodata_segment;
     std::stringstream data_segment;
     std::stringstream bss_segment;
 public:

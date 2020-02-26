@@ -157,7 +157,13 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         case FUNCTION_DEFINITION:
         {
             FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
-            compile_ss << this->define_function(*def_stmt).str() << std::endl;
+
+			// ensure the function has a return value
+			if (returns(*def_stmt->get_procedure().get())) {
+				compile_ss << this->define_function(*def_stmt).str() << std::endl;
+			} else {
+				throw NoReturnException(s->get_line_number());
+			}
             break;
         }
         case STRUCT_DEFINITION:
@@ -284,6 +290,10 @@ void compiler::generate_asm(std::string filename, Parser &p) {
         // first, write the text section
         outfile << "section .text" << std::endl;
         outfile << this->text_segment.str() << std::endl;
+
+		// next, the .rodata
+		outfile << "section .rodata" << std::endl;
+		outfile << this->rodata_segment.str() << std::endl;
 
         // next, the .data section
         outfile << "section .data" << std::endl;

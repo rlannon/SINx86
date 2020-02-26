@@ -3,11 +3,17 @@
 
 def void main() {
     // the main function
-    alloc int a;
-    alloc int x: 23 &unsigned dynamic const;
+	if (true) {
+		alloc int a;
+		alloc int x: 23 &unsigned;
     
-    let a = sizeof<int>;
-    let a = a + x;
+		let a = sizeof<int>;
+		let a = a + x;
 
-    return void;
+		return void;
+	} else {
+		if (true) {
+			return void;
+		}
+	}
 }

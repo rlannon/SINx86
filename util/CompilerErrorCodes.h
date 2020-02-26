@@ -27,6 +27,7 @@ namespace compiler_errors {
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
     const unsigned int ILLEGAL_OPERATION_ERROR = 50;    // The statement is not allowed where it was found
     const unsigned int ILLEGAL_RETURN_ERROR = 51;   // Return statements must only occur within functions
+	const unsigned int NO_RETURN_ERROR = 52;	// used for when not all control paths in a function return a value
 
     const unsigned int INVALID_UNARY_OPERATOR_ERROR = 55;   // if the operator given for a unary is not a valid unary operator
     const unsigned int UNARY_TYPE_NOT_SUPPORTED = 56;   // if the unary operator is not supported with a given type
