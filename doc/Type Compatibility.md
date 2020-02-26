@@ -3,7 +3,7 @@
 
 In SIN, there are fairly strict rules surrounding type compatibility. To understand how type compatibility operates in SIN, one must understand how SIN types are structured.
 
-All SIN types are composed of a *primary type,* a *width,* a *sign,* *storage and access specifiers,* and possibly a *subtype* which is itself a complete type. All of these factors play into whether two types are compatible. Further, whether types are compatible depends on the order they appear (type ```A``` and type ```B``` may be compatible like ```let A = B```, but not ```let B = A```); this is typically due to the storage and access specifiers.
+All SIN types are composed of a *primary type,* a *width,* a *sign,* *storage and access specifiers,* and possibly a *subtype* which is itself a complete type. All of these factors play into whether two types are compatible. Further, whether types are compatible depends on the order they appear (type `A` and type `B` may be compatible like `let A = B`, but not `let B = A`); this is typically due to the storage and access specifiers.
 
 ## Rules
 
@@ -14,18 +14,59 @@ Here is a general breakdown of the rules regarding type compatibility. They will
 In order for two types to be comptible, their primary types must be compatible. This means that one of three things must be true:
 
 * The primary types are the same *and* secondary types are compatible
-* One of the primary types is ```raw< N >```
+* One of the primary types is `raw< N >`
 
-Note that this does not take into account whether you are using an operator like ```$``` or ```[]```; these operators change the expression type, and so are evaluated on the basis of the operator's return type *and* the symbol's type, not the symbol's type alone.
+Note that this does not take into account whether you are using an operator like `$` or `[]`; these operators change the expression type, and so are evaluated on the basis of the operator's return type *and* the symbol's type, not the symbol's type alone.
 
 ### Width Comparison
 
-Types of differing widths can be compatible, but a warning will be generated indicating a loss of data is possible when converting from a larger to a smaller type (e.g., trying to store a ```long int``` in an ```int```).
+Types of differing widths can be compatible, but a warning will be generated indicating a loss of data is possible when converting from a larger to a smaller type (e.g., trying to store a `long int` in an `int`).
+
+### Variability and Type Promotion
+
+Because of the differences between `const` and `final` data, as well as the rules surrounding their usage, a hierarchy emerges in terms of what has the most "weight." This hierarchy, in descending order, is:
+
+1. `const`
+2. `final`
+3. Neither `const` nor `final`
+
+The rule with type promotion is that a type may be *promoted*, but it may *never* be *demoted*; and a data member may always be initialized with a data member *higher* than it in the hierarchy. This means that when compatibility is being checked, a `const` must never be treated as a `final` or variable type, though a variable or `final` type may be treated as `const`. For example, this is legal:
+
+    alloc int a: 30 &const;
+    alloc int b: a &final;  // legal; final data may be initialized with a constant
+    alloc int c: b &const;  // illegal; const may only be initialized with other const data, and 'b' is not
+
+As we can see in the above example, data members may only be initialized with data that is equal to or above it in the hierarchy.
+
+The promotion rule typically applies to use of such data in conjunction with pointers. When pointed to, the pointed-to data must be compatible within the hierarchy. The pointed-to data is *always* the data that we try to promote to the variability of the *ptr* type. In other words, when we access data via a pointer, the variability specified by that pointer *will never change*, and as such, the pointer will treat all data that it points to as being that type. This means if we have a pointer that expects a constant, any data that it points to will be treated as a constant whenever that pointer is used. This rule prevents us from modifying `final` and `const` data through pointers. An example of this in action:
+
+    // allocate some data
+    alloc int my_const: 30 &const;
+    alloc int my_final: 40 &final;
+    alloc int my_plain: 50;
+
+    // allocate some pointers
+    alloc ptr<const int> my_const_pointer;
+    alloc ptr<final int> my_final_pointer;
+    alloc ptr<int> plain_old_pointer;
+
+    // make pointer assignments
+    let my_const_pointer = $my_plain;   // OK; promotes 'my_plain' to 'const'
+    let my_final_pointer = $my_final;   // OK; final = final
+    let my_const_pointer = my_final;    // OK; promotes 'my_final' to 'const'
+
+    let my_final_pointer = my_const_pointer;    // Illegal; cannot demote 'my_const_pointer' from 'const' to 'final'
+    let plan_old_pointer = my_final_pointer;    // Illegal; cannot demote 'my_final_pointer' from 'final' to non-final, non-const
+
+In the above example, we can see that when we assign the address of non-const, non-final data to a pointer to a constant, that non-const, non-final data gets 'promoted' such that when accessed via the pointer, it is treated as having more restrictive access. Note that when accessed normally (not through a pointer), it is treated as normal; it only gets *temporarily* promoted when accessed via the pointer. However, when we attempt to point to a `const int` via a `ptr<final int>`, it fails a constant may not be demoted to `final` status.
+
+That also means that we are explicitly forbidden from "demoting" data from `const` or `final` to anything less restrictive.
+
+**NB:** If you have a `const ptr` to `int`, that integer effectively needs to be `static`; a `const ptr` must know its pointed-to value at compile time, which means the *location* of the pointed-to data must be known by link time (i.e. it must be a named constant).
 
 ### Sign Comparison
 
-Signed and unsigned types are considered compatible, but like differing-width types, a compiler warning will be generated indicating that there is a possible data loss when the two types interact.
+Signed and unsigned types are considered compatible, but like differing-width types, a compiler warning will be generated indicating that there is a possible data loss when the two types interact. Note that an expression will be considered signed if any of these conditions are met:
 
-### Storage and Access Specifiers
-
-In general, these will not cause too many problems with type compatibility *except* in the case of assignment. Note that a hierarchy exists among `final`, `const`, and neither, and so this must be followed (lest a compiler error pops up). See the pointer documentation for more.
+* subtraction is present in the expression
+* any of the data members are signed

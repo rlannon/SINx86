@@ -1,4 +1,5 @@
 # SIN Documentation
+
 ## SIN Calling Convention
 
 The SIN calling convention is modeled after the x64 calling conventions for Windows and Linux, specifically `_cdecl`. However, the calling conventions differ slightly. Note that in SIN, the calling convention is declared in the function definition, _not_ in the call itself, as the convention affects how function bodies are generated.
@@ -97,10 +98,10 @@ In general these qualifiers default to the GCC ABIs used by Unix-like systems, b
 
 ### Calling Conventions
 
-#### ```cdecl```
+#### `cdecl`
 If a function declaration/definition uses the `cdecl` qualifier, it alerts the compiler that the function will use the C `_cdecl` calling convention.
 
-#### ```cx64```
+#### `cx64`
 If a function uses the `cx64` qualifier, the function should follow the System V AMD x64 ABI (used by Unix-like systems).
 
 ### C Types in SIN

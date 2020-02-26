@@ -1,4 +1,5 @@
 # SIN Documentation
+
 ## Hidden Pointer Types
 
 SIN has three types--`string`, `array<T>`, and `struct`, that are so-called "hidden pointer types" because although they don't use pointers *syntactically*, under the hood, these types are implemented through the use of pointers to the data. Similarly, all data marked with the `dynamic` qualifier will use pointers to data in the heap even though pointers are not used in the syntax (but they *can* be, under certain circumstances). Here is an example:
