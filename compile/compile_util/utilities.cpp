@@ -162,12 +162,14 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 
 bool returns(StatementBlock &to_check) {
 	// Checks whether a given function definition will return a value
-	
+	// todo: refactor this entire function to work more efficiently
+
+
 	if (to_check.has_return) {
 		return true;
 	}
 	else {
-		bool r = true;
+		bool r = false;
 
 		// iterate through statements to see if we have an if/else block; if so, check *those* for return values
 		for (std::shared_ptr<Statement> s : to_check.statements_list) {
