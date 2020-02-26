@@ -188,6 +188,15 @@ CompilerException(
 	// super called
 }
 
+ConstAllocationException::ConstAllocationException(unsigned int line) :
+	CompilerException(
+		"Constants must be initialized in their allocation",
+		compiler_errors::CONST_ALLOCATION_ERROR,
+		line
+	) {
+	// super called
+}
+
 // Compiler Warning
 
 void compiler_warning(std::string message, unsigned int line_number) {

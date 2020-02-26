@@ -1,6 +1,9 @@
 # VSCode settings should be ignored
 .vscode
 
+# ignore our samples (for now)
+samples/*
+
 # ignore some documents
 doc/SIN Runtime.md
 doc/Standard Library.md

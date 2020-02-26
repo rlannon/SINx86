@@ -17,7 +17,7 @@ In SIN, the words `const` and `final` are used for this distinction:
 
 Note that only variables may be constant; functions must never be treated as constants because they may have side effects when called that will be as a result of their evaluation at compile time.
 
-Further, due to the fundamental differences between the keywords, data may not be both `const` and `final` at the same time.
+Due to the fundamental differences between the keywords, data may not be both `const` and `final` at the same time. Further, data may not be declared as both `dynamic` and `const`, as the two imply fundamentally different things (`final`, however, may be used with `dynamic`).
 
 ### The `final` keyword
 

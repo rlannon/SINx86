@@ -164,6 +164,12 @@ public:
 	explicit FinalAssignmentException(unsigned int line);
 };
 
+class ConstAllocationException : public CompilerException
+{
+public:
+	explicit ConstAllocationException(unsigned int line);
+};
+
 // sometimes, we want to print an error message, but we don't need to stop compilation
 void compiler_warning(std::string message, unsigned int line = 0);
 

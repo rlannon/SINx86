@@ -4,7 +4,7 @@
 def void main() {
     // the main function
     alloc int a;
-    alloc int x: 23 &unsigned;
+    alloc int x: 23 &unsigned dynamic const;
     
     let a = sizeof<int>;
     let a = a + x;

@@ -110,7 +110,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
 
     // how the variable is allocated will determine how we make the assignment
     if (sym.get_data_type().get_qualities().is_const()) {
-        throw ConstAssignmentException(line);   // todo: eliminate this check?
+        throw ConstAssignmentException(line);   // todo: eliminate this check? or should this function be used for alloc-init?
     } else if (sym.get_data_type().get_qualities().is_final() && sym.was_initialized()) {
         throw FinalAssignmentException(line);
     } else if (sym.get_data_type().get_qualities().is_static()) {

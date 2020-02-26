@@ -23,13 +23,26 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
         alloc_data.get_qualities().add_quality(SymbolQuality::STATIC);
     }
 
+	// if a constant is to be allocated but no initial value was given, generate an error
+	if (alloc_data.get_qualities().is_const() && !alloc_stmt.was_initialized()) {
+		throw ConstAllocationException(alloc_stmt.get_line_number());
+	}
+
     // now we may make the assignment
     if (alloc_data.get_qualities().is_dynamic()) {
         // todo: allocate dynamically
-    } else if (alloc_data.get_qualities().is_const()) {
-        // todo: allocate const memory
+
+		// if we have a const here, throw an exception -- constants may not be dynamic
+		if (alloc_data.get_qualities().is_const()) {
+			throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());  // todo: actual error? it may only be used once
+		}
     } else if (alloc_data.get_qualities().is_static()) {
         // todo: allocate static memory
+
+		// static const variables can go in the .rodata segment, so check to see if it is also const
+		if (alloc_data.get_qualities().is_const()) {
+			// todo: static const memory
+		}
     } else {
         // must be automatic memory
         // allocate memory on the stack
