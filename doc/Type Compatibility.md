@@ -58,7 +58,7 @@ The promotion rule typically applies to use of such data in conjunction with poi
     let my_final_pointer = my_const_pointer;    // Illegal; cannot demote 'my_const_pointer' from 'const' to 'final'
     let plan_old_pointer = my_final_pointer;    // Illegal; cannot demote 'my_final_pointer' from 'final' to non-final, non-const
 
-In the above example, we can see that when we assign the address of non-const, non-final data to a pointer to a constant, that non-const, non-final data gets 'promoted' such that when accessed via the pointer, it is treated as having more restrictive access. Note that when accessed normally (not through a pointer), it is treated as normal; it only gets *temporarily* promoted when accessed via the pointer. However, when we attempt to point to a `const int` via a `ptr<final int>`, it fails a constant may not be demoted to `final` status.
+In the above example, we can see that when we assign the address of non-const, non-final data to a pointer to a constant, that non-const, non-final data gets 'promoted' such that when accessed via the pointer, it is treated as having more restrictive access. Note that when accessed normally (not through a pointer), it is treated as normal; it only gets *temporarily* promoted when accessed via the pointer. However, when we attempt to point to a `const int` via a `ptr<final int>`, it fails because a constant may not be demoted to `final` status.
 
 That also means that we are explicitly forbidden from "demoting" data from `const` or `final` to anything less restrictive.
 
