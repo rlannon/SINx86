@@ -359,5 +359,7 @@ std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
 }
 
 std::stringstream copy_array(DataType array_type) {
+	std::stringstream copy_ss;
 
+	return copy_ss;
 }
