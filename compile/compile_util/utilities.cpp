@@ -161,40 +161,30 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 }
 
 bool returns(StatementBlock &to_check) {
-	// Checks whether a given function definition will return a value
-	// todo: refactor this entire function to work more efficiently
-
+	// Checks whether a given procedure will return a value
 
 	if (to_check.has_return) {
 		return true;
-	}
-	else {
-		bool r = false;
-
+	} else {
 		// iterate through statements to see if we have an if/else block; if so, check *those* for return values
 		for (std::shared_ptr<Statement> s : to_check.statements_list) {
-
-			// todo: refactor interior of the loop
-
 			if (s->get_statement_type() == stmt_type::IF_THEN_ELSE) {
 				IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
 				StatementBlock &if_branch = *ite->get_if_branch().get();
 
+				// if we have an 'else' branch, we need to check both
 				if (ite->get_else_branch()) {
 					StatementBlock &else_branch = *ite->get_else_branch().get();
 
-					r = returns(if_branch) && returns(else_branch);
+					if (!returns(if_branch) || !returns(else_branch)) {
+						return false;
+					}
 				}
 				else {
-					r = false;
+					// otherwise, return false; if there is no else branch and there is no return statement in this block, then if the condition is false, we will not have a return value
+					return false;
 				}
 			}
-
-			if (!r) {
-				return false;
-			}
-
-			// todo: convert to a while loop
 		}
 	}
 }

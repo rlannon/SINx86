@@ -158,7 +158,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         {
             FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
 
-			// ensure the function has a return value
+			// ensure the function has a return value in all control paths
 			if (returns(*def_stmt->get_procedure().get())) {
 				compile_ss << this->define_function(*def_stmt).str() << std::endl;
 			} else {

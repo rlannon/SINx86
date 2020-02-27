@@ -2,10 +2,7 @@
 
 SIN Toolchain
 main.cpp
-Copyright 2019 Riley Lannon
-
-This is the main file for the SIN Compiler application. SIN is a small programming language that I will be using
-as a way to get practice in compiler writing.
+Copyright 2020 Riley Lannon
 
 For a documentation of the language, see either the doc folder in this project or the Github wiki pages.
 
