@@ -14,8 +14,8 @@ def void main() {
 	alloc int a: 10;
 	alloc int b: 20 &const;
 
-	alloc ptr<const int> p1: $a;
-	alloc ptr<int> p2: $b;
+	alloc ptr<const int> p1: $a;	// legal; promotes int to const int
+	alloc ptr<int> p2: $b;	// illegal; demotes const int to int
 
 	return void;
 }

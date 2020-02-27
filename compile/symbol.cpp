@@ -67,11 +67,11 @@ symbol::symbol(std::string name, std::string scope_name, unsigned int scope_leve
     this->current_reg = NO_REGISTER;
     this->symbol_type = VARIABLE;
     this->freed = false;    // symbols should start as allocated
+	this->initialized = false;
 }
 
-symbol::symbol() {
-    this->symbol_type = VARIABLE;
-    this->freed = false;
+symbol::symbol(): symbol("", "", 0, DataType(), 0) {
+
 }
 
 symbol::~symbol() {

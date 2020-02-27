@@ -2,10 +2,10 @@
 
 SIN Toolchain
 DataType.h
-Copyright 2019 Riley Lannon
+Copyright 2020 Riley Lannon
 
-Contains the definitions of the 'SymbolQualities' and 'DataType' classes.
-SymbolQualities contains the object used by the DataType class to store qualities so std::vector is not needed
+Contains the definitions of the DataType class
+
 DataType contains the type, subtype, and qualities of a given expression alongside methods to evaluate and compare it.
 
 */

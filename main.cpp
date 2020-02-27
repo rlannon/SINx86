@@ -37,9 +37,7 @@ int main (int argc, char *argv[]) {
         Parser *p = new Parser(l);
         compiler *c = new compiler();
         
-        // parse our file
-        // todo: this will be done in the compiler later
-        // StatementBlock ast = p->create_ast();
+        // compile our code
         c->generate_asm("samples/sample.sin", *p);
 
         // clean-up

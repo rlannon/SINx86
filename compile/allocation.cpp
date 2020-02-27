@@ -34,7 +34,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 		// if we have a const here, throw an exception -- constants may not be dynamic
 		if (alloc_data.get_qualities().is_const()) {
-			throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());  // todo: actual error? it may only be used once
+			throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
 		}
     } else if (alloc_data.get_qualities().is_static()) {
         // todo: allocate static memory

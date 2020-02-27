@@ -121,8 +121,8 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
     std::string src = (sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? "rax" : (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")); // get our source register based on the symbol's width
 
     // how the variable is allocated will determine how we make the assignment
-    if (sym.get_data_type().get_qualities().is_const()) {
-        // throw ConstAssignmentException(line);   // todo: eliminate this check? or should this function be used for alloc-init?
+    if (sym.get_data_type().get_qualities().is_const() && sym.was_initialized()) {
+        throw ConstAssignmentException(line);
     } else if (sym.get_data_type().get_qualities().is_final() && sym.was_initialized()) {
         throw FinalAssignmentException(line);
     } else if (sym.get_data_type().get_qualities().is_static()) {
