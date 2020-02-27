@@ -1,5 +1,19 @@
 section .text
 main:
+	mov ax, 10
+	mov [rbp - 16], eax
+
+	mov ax, 20
+
+	mov [rbp - 24], rax
+
+	mov [rbp - 32], rax
+
+	mov rax, 0
+
+
+	ret
+
 
 
 global _start

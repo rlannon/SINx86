@@ -29,6 +29,8 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 
 bool returns(StatementBlock &to_check);
 
+bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
+
 bool can_pass_in_register(DataType to_check);
 
 struct_info define_struct(StructDefinition definition);

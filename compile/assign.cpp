@@ -71,8 +71,20 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
             case BOOL:
                 return handle_bool_assignment(sym, value, line);
             case PTR:
-                // pointers are really just integers, so we can
-                return handle_int_assignment(sym, value, line);
+			{
+				// check that the type qualities are valid - pointers have special rules due to the language's type variability policy
+				std::shared_ptr<DataType> left_type = sym.get_data_type().get_full_subtype();
+				std::shared_ptr<DataType> right_type = get_expression_data_type(value, this->symbol_table, line).get_full_subtype();
+
+				if (is_valid_type_promotion(left_type->get_qualities(), right_type->get_qualities())) {
+					// pointers are really just integers, so we can
+					return handle_int_assignment(sym, value, line);
+				}
+				else {
+					// if the pointer subtypes weren't a valid match, throw an exception
+					throw TypeDemotionException(line);
+				}
+			}
             case STRING:
                 break;
             case ARRAY:
@@ -110,7 +122,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
 
     // how the variable is allocated will determine how we make the assignment
     if (sym.get_data_type().get_qualities().is_const()) {
-        throw ConstAssignmentException(line);   // todo: eliminate this check? or should this function be used for alloc-init?
+        // throw ConstAssignmentException(line);   // todo: eliminate this check? or should this function be used for alloc-init?
     } else if (sym.get_data_type().get_qualities().is_final() && sym.was_initialized()) {
         throw FinalAssignmentException(line);
     } else if (sym.get_data_type().get_qualities().is_static()) {

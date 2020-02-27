@@ -48,6 +48,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
         - the current compiler scope is updated
         - control is transfered to generate code for the definition's procedure
         - the register stack is analyzed to determine which registers are used by the function; code is then generated to preserve these registers (and restore them)
+	Note that while functions are required to return a value, this check is done elsewhere (see compiler.cpp)
 
     @param  definition  The definition statement for which code is being generated
     @return A stringstream containing the generated code

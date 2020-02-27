@@ -27,3 +27,5 @@ The syntax for the difference leaves much to be desired; and so in SIN, this is 
     alloc const ptr<const int> d;
 
 The above example takes it one step further -- like the C example, `a` and `b` are pointers to `const int`s, while `c` is a `const` pointer to an `int`. The data `d`, however, is a `const` pointer to a `const int`. That is to say, for `a` and `b`, the reference may be changed, but the pointed-to data may not; `c` allows the data to be changed, but not the reference; and `d` allows neither.
+
+**NB:** If you have a `const ptr` to `int`, that integer effectively needs to be `static`; a `const ptr` must know its pointed-to value at compile time, which means the *location* of the pointed-to data must be known by link time (i.e. it must be a named constant).

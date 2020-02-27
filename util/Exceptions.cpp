@@ -150,6 +150,24 @@ CompilerException(
 	// super called
 }
 
+VariabilityPolicyViolation::VariabilityPolicyViolation(unsigned int line) :
+	CompilerException(
+		"Type variability policy violation",
+		compiler_errors::VARIABILITY_ERROR,
+		line
+	) {
+	// super called
+}
+
+TypeDemotionException::TypeDemotionException(unsigned int line) :
+	CompilerException(
+		"Cannot demote right-hand type to less restrictive variability quality",
+		compiler_errors::VARIABILITY_ERROR,
+		line
+) {
+	// super called
+}
+
 VoidException::VoidException(unsigned int line) :
     CompilerException("Void type cannot be used in expression of this type", compiler_errors::VOID_TYPE_ERROR, line)
 {

@@ -49,6 +49,7 @@ namespace compiler_errors {
     const unsigned int RETURN_MISMATCH_ERROR = 215; // a function's return type does not match its signature
     const unsigned int QUALITY_CONFLICT_ERROR = 230;
     const unsigned int ILLEGAL_QUALITY_ERROR = 231;
+	const unsigned int VARIABILITY_ERROR = 232;
 
     // Internal errors
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;

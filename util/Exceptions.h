@@ -20,10 +20,10 @@ A class to contain all of our custom exceptions.
 
 /*
 
-	Exceptions.h
-	Copyright 2019 Riley Lannon
+Exceptions.h
+Copyright 2020 Riley Lannon
 
-	The purpose of the Exceptions files is to implement the various custom exceptions we use in the program.
+The purpose of the Exceptions files is to implement the various custom exceptions we use in the program.
 
 */
 
@@ -132,6 +132,18 @@ class IllegalQualityException : public CompilerException
 {
 public:
 	explicit IllegalQualityException(std::string &offending_quality, unsigned int &line);
+};
+
+class VariabilityPolicyViolation : public CompilerException
+{
+public:
+	explicit VariabilityPolicyViolation(unsigned int line);
+};
+
+class TypeDemotionException : public CompilerException
+{
+public:
+	explicit TypeDemotionException(unsigned int line);
 };
 
 class VoidException : public CompilerException

@@ -68,11 +68,31 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             break;
         }
         case ADDRESS_OF:
-            // get the pointer
-            // pointers are always unsigned long ints
-            type_information.set_primary(INT);
-            type_information.add_qualities(std::vector<SymbolQuality> { UNSIGNED, LONG });
-            break;
+		{
+			// get the pointer
+			AddressOf *addr_of = dynamic_cast<AddressOf*>(to_eval.get());
+
+			// the address-of operator is considered a pointer literal, so the primary type is 'ptr'
+			type_information.set_primary(PTR);
+			type_information.add_qualities(std::vector<SymbolQuality> { UNSIGNED, LONG });
+
+			// set the subtype appropriately -- it must be an LValue
+			if (addr_of->get_target().get_expression_type() == exp_type::LVALUE) {
+				type_information.set_subtype(
+					get_expression_data_type(
+						std::make_shared<LValue>(addr_of->get_target()),
+						symbol_table,
+						line
+					)
+				);
+			}
+			else {
+				// throw an exception if it's not an lvalue
+				throw CompilerException("The address-of operator ($) must be used with a variable name", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+			}
+
+			break;
+		}
         case DEREFERENCED:
         {
             // get the type of the dereferenced pointer
@@ -186,6 +206,29 @@ bool returns(StatementBlock &to_check) {
 				}
 			}
 		}
+	}
+}
+
+bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
+	/*
+	
+	is_valid_type_promotion
+	Ensures that type promotion rules are not broken
+
+	Essentially, the right-hand variability quality must be equal to or *lower* than the left-hand one in the hierarchy
+
+	See doc/Type Compatibility.md for information on type promotion
+	
+	*/
+
+	if (left.is_const()) {
+		return true;	// a const left-hand side will always promote the right-hand expression
+	}
+	else if (left.is_final()) {
+		return !right.is_const();	// a const right-hand argument cannot be demoted
+	}
+	else {
+		return !(right.is_const() || right.is_final());	// the right-hand argument cannot be demoted
 	}
 }
 

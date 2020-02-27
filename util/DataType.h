@@ -34,8 +34,6 @@ class DataType
 	std::string struct_name;	// if the data type is 'struct', we need to know its name so we can look it up in the struct table
 
 	void set_width();	// sets the symbol's type based on the primary type
-
-	void create_subtype(DataType to_create);
 public:
 	DataType& operator=(const DataType &right);
 
@@ -53,6 +51,8 @@ public:
 	symbol_qualities get_qualities() const;
 	size_t get_array_length() const;
 	std::string get_struct_name() const;
+
+	std::shared_ptr<DataType> get_full_subtype() const;
 
 	void set_primary(Type new_primary);
 	void set_subtype(DataType new_subtype);

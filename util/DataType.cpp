@@ -159,7 +159,7 @@ Type DataType::get_primary() const
 Type DataType::get_subtype() const
 {
 	if (this->subtype) {
-		return this->subtype->get_subtype();
+		return this->subtype->get_primary();
 	} else {
 		return NONE;
 	}
@@ -175,6 +175,10 @@ size_t DataType::get_array_length() const {
 
 std::string DataType::get_struct_name() const {
 	return this->struct_name;
+}
+
+std::shared_ptr<DataType> DataType::get_full_subtype() const {
+	return this->subtype;
 }
 
 void DataType::set_primary(Type new_primary) {

@@ -19,7 +19,7 @@ The definition of the classes pertaining to symbol qualities
 
 class symbol_qualities
 {
-	bool const_q;	// our qualities -- since these are almost all reserved in C++, suffix with _q, for "quality"
+	bool const_q;	// our qualities -- since almost all of these are reserved in C++, suffix with _q, for "quality"
 	bool final_q;
 	bool static_q;
 	bool dynamic_q;

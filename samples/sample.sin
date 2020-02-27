@@ -4,16 +4,18 @@
 def void main() {
     // the main function
 	if (true) {
-		alloc int a;
-		alloc int x: 23 &unsigned;
+		alloc int x;
+		alloc int y: 23 &unsigned;
     
-		let a = sizeof<int>;
-		let a = a + x;
-
-		return void;
-	} else {
-		if (true) {
-			return void;
-		}
+		let x = sizeof<int>;
+		let x = x + y;
 	}
+
+	alloc int a: 10;
+	alloc int b: 20 &const;
+
+	alloc ptr<const int> p1: $a;
+	alloc ptr<int> p2: $b;
+
+	return void;
 }
