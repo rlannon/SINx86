@@ -139,7 +139,9 @@ bool DataType::is_compatible(DataType to_compare) const
 	{
 		// cast the subtypes to DataType (with a subtype of NONE) and call is_compatible on them
 		if (this->subtype && to_compare.subtype) {
-			return this->subtype->is_compatible(static_cast<DataType>(to_compare.get_subtype()));
+			return this->subtype->is_compatible(
+				*dynamic_cast<DataType*>(to_compare.get_full_subtype().get())
+			);
 		} else {
 			throw CompilerException("Expected subtype", 0, 0);	// todo: ptr and array should _always_ have subtypes
 		}
@@ -178,6 +180,7 @@ std::string DataType::get_struct_name() const {
 }
 
 std::shared_ptr<DataType> DataType::get_full_subtype() const {
+	// static_cast to a subtype does not work; we need a function to return the entire shared pointer
 	return this->subtype;
 }
 
