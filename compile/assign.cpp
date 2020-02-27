@@ -30,7 +30,11 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
     if (sym.get_data_type().get_qualities().is_const()) {
         // ensure we aren't assigning to a const-qualified variable
         throw ConstAssignmentException(assign_stmt.get_line_number());
-    } else if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
+	}
+	else if (sym.get_data_type().get_qualities().is_final && sym.was_initialized()) {
+		// ensure we don't write to final data if it has been initialized
+		throw FinalAssignmentException(assign_stmt.get_line_number());
+	} else if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
         // if the symbol is a function symbol, then we have an error
         throw InvalidSymbolException(assign_stmt.get_line_number());
     } else {
@@ -121,11 +125,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
     std::string src = (sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? "rax" : (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")); // get our source register based on the symbol's width
 
     // how the variable is allocated will determine how we make the assignment
-    if (sym.get_data_type().get_qualities().is_const() && sym.was_initialized()) {
-        throw ConstAssignmentException(line);
-    } else if (sym.get_data_type().get_qualities().is_final() && sym.was_initialized()) {
-        throw FinalAssignmentException(line);
-    } else if (sym.get_data_type().get_qualities().is_static()) {
+    if (sym.get_data_type().get_qualities().is_static()) {
         /*
         static variables can be referenced by name
         assignment should look like:
@@ -191,10 +191,7 @@ std::stringstream compiler::handle_bool_assignment(symbol &sym, std::shared_ptr<
         assign_ss << this->evaluate_expression(value, line).str();
 
         // now, we have to assign based on how the boolean was allocated
-        if (sym.get_data_type().get_qualities().is_const()) {
-            // todo: eliminate this check?
-            throw ConstAssignmentException(line);
-        } else if (sym.get_data_type().get_qualities().is_static()) {
+        if (sym.get_data_type().get_qualities().is_static()) {
             // assign to named variable
             assign_ss << "\t" << "mov " << sym.get_name() << ", al" << std::endl;
         } else if (sym.get_data_type().get_qualities().is_dynamic()) {
