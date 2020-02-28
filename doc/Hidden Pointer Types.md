@@ -24,7 +24,7 @@ Another example of the difference would be here:
     let third_int = auto_int;
     let third_int = dyna_int;
 
-The assignment statements will generate the following code:
+The assignment statements will generate the following code (or something like it):
 
     ; assignment of automatic to automatic
     mov rax, [rbp]
@@ -36,34 +36,40 @@ The assignment statements will generate the following code:
     mov [rbp - 8], rax
 
 ### Type Overview
+
 The following is an overview of these 'hidden pointer types.' Note that `array` and `string` may not be used as `sizeof< T >` arguments, but any user-defined `struct` type may, as a struct's width *must* be known at compile time.
 
-#### `array< (N,) T >`
-Arrays always contain a fully-parsed subtype; this tells the compiler what type of data is stored within the array, allowing it to be safely used in any expression as well as allowing the compiler to calculate the array's width. Arrays may also contain, before the type, an unsigned integer indicating the number of elements in the array; the only situations where `N` is *not* required are:
+**NB:** In subtypes, `T` is used to mean "type" (referring to any fully-parsed type) and `N` is used to indicate an integer.
 
-* the array is a subtype of `ptr`; if a length is given, it will be ignored by the compiler (the programmer shall be notified this is the behavior by the compiler)
-* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, preventing the overhead associated with reallocations
+#### `array< (N,) T >`
+
+Arrays, like pointers, always contain a fully-parsed subtype; this tells the compiler what type of data is stored within the array, allowing it to be safely used in any expression as well as allowing the compiler to accurately calculate the array's width. Arrays may also contain, before the type, an unsigned integer indicating the number of elements in the array; this is *almost always* required, the only situations it is *not* being when:
+
+* the array is a subtype of `ptr`; if a length is given, it will be ignored by the compiler (the programmer shall be notified this is the behavior by the compiler in a compiler note)
+* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations
 
 All arrays contain a 4-byte header containing an `unsigned int` indicating the number of elements contained by the array; this allows for runtime bounds and length checks without any additional variables to be tracked by the programmer.
 
 **NB:** Arrays may not contain other arrays, but they may contain pointers to them; these pointer and array types must all be fully-parsed subtypes.
 
 #### `string`
-While strings are similar to `array<char>`, they are *not* identical in their behavior; `string` is a fully-fledged type while `array<char>` is a simple aggregate with markedly different behavior. The key difference is that automatic string types are still variable-length, while the same cannot be said of arrays. Arrays, unless marked as `dynamic`, are always of a fixed width known at compile time. Strings, on the other hand, are not, and always use dynamic (or `const`) memory. Although they may look identical in memory (4-byte length followed by characters), their behavior is different. 
 
-Strings may be marked as `dynamic`, and although this does not change where the string is located in program memory, it *does* affect the lifetime of the object; typically, when an automatic string goes out of scope, the compiler automatically `free`s it, invalidating any pointers to that string. However, when a string is marked as `dynamic`, the compiler will *not* free it, allowing it, or a pointer to it, to be passed to another scope.
+While strings are similar to `array<char>`, they are *not* identical in their behavior; `string` is a fully-fledged type while `array<char>` is a simple aggregate with markedly different behavior. The key difference is that automatic string types are still variable-length, while the same cannot be said of arrays. Arrays, unless marked as `dynamic`, are always of a fixed width which is known at compile time. Strings, on the other hand, are not, and always use dynamic (or `const`) memory. Although they may look identical in memory (4-byte length followed by characters), their behavior is different.
+
+Strings may be marked as `dynamic`, and although this does not change where the string is located in program memory, it *does* affect the lifetime of the object; typically, when an automatic string goes out of scope, the compiler automatically `free`s it, invalidating any pointers to that string. However, when a string is marked as `dynamic`, the compiler will *not* free it automatically, allowing it, or a pointer to it, to be passed to another scope.
 
 **NB:** While a dynamic string may be returned from a function and assign to a non-dynamic string, it will *not* be automatically freed because it is dynamic; the compiler will generate a warning when a function returning `dynamic string` assigns to a non-dynamic-qualified string.
 
-*A note about why* `string` *is a unique type:* The decision to add `string` to the language was done because of its ubiquity; since SIN's goal is to make the life of a programmer easier by reducing the use of confusing syntax and reducing manual memory management and pointer usage where possible, it makes more sense to have the `string` type rather than requiring programmers to create a `dynamic arracy<char>` every time they wish to utilize a string. Ultimately, while it makes implementation a little more thorny, it follows the SIN philosophy and so it was deemed to belong in the language standard.
+*A note about why* `string` *is a unique type:* The decision to add `string` to the language was done because of its ubiquity; since SIN's goal is to make the life of a programmer easier by reducing the use of confusing syntax and reducing manual memory management and pointer usage where possible, it makes more sense to have the `string` type rather than requiring programmers to create a `dynamic array<char>` and deal with the nightmares one might face in C (rather than, say, C++ or Python) every time they wish to utilize strings. While this may make the implementation of strings in the compiler a little more thorny, it reduces unnecessary difficulty when programming and so was deemed to belong in the language. Plus, it allows use of the concatenation operator (`+`) where `dynamic array<char>` would not.
 
 #### `struct`
+
 All user-defined struct types require their width to be known at compile time. This allows `array< T >` and `string` members in the same way any other scope would. When a struct includes these types, however, a few things must be kept in mind:
 
 * if a struct has `dynamic` members, they will not be freed when the struct goes out of scope;
-* all members will be freed if `free` is invoked on the struct **without exception**;
-* if the user wishes to free specific members, invoking `free` on a specific struct member is allowed, as `free` will ignore any memory that has already been freed;
-* if a struct has hidden pointer members, they *will* be `free`d when the struct goes out of scope *unless that object is used as a function's return value*, in which case the data will be copied and `free` will *not* be invoked on *any* of the members;
+* all members will be freed if `free` is invoked on the struct **without exception;**
+* if the user wishes to free specific members, invoking `free` on a specific struct member is allowed; `free` is considered 'safe' and will ignore any memory that has already been freed, though a compiler note may be generated;
+* if a struct has hidden pointer members, they *will* be `free`d when the struct goes out of scope *even if such a member is used as a return value*; see the `sincall` documentation for information on how these members are returned;
 * returning a pointer to a struct member is invalid *unless* said member is `dynamic` and `free` is not called on the struct object
 
 For example, the following code is valid:

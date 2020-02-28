@@ -37,6 +37,7 @@ Now, we will look more in-depth at the rules for calling functions and returning
 ### Function Arguments
 
 #### Primitive Types
+
 Primitive types (`float`, `int`, `char`, `bool`, `ptr`) will pass the first 6 parameters in registers if possible, as follows, and pass any subsequent data on the stack.
 
 |   Type    |   Registers   |   Notes   |
@@ -68,12 +69,15 @@ will pass values as follows:
 Note that the compiler will allocate 'shadow space' for the register parameters on the stack and will make note of their offsets from the stack frame base, moving the stack pointer appropriately. This reflects the idea that all function parameters occupy space within the function as local variables, and are the first to be allocated in a function.
 
 #### Aggregate and User-Defined Types
+
 Aggregate types (arrays) and user-defined types (structs) must always be passed either as pointers in registers or on the stack. If the width is known at compile-time, they may be passed on the stack; otherwise, the caller will allocate memory for the object, copy the data into the newly-allocated area, and pass a pointer into the function. Note that syntactically, this is value does not appear to be passed as a pointer.
 
 ### Return Values
+
 Values are returned on RAX (or another variant of the register depending on the data width) where possible. Floating-point types are returned in XMM0. Any unused bits in the register are undefined.
 
 #### Non-Primitive Return Values
+
 User-defined types (structs), arrays, and strings (if necessary) return a *pointer* to the data in `RAX`. This follows the convention for so-called 'hidden pointer types' where pointers are passed and assignments use copies and pointer dereferencing under the hood.
 
 Note that, since structs and arrays are written in "reverse order" onto the stack (first byte at low address, last byte at high address), we can easily copy between memory areas without needing to worry about reversing the way we write data. The formula for figuring out where a given struct member is in the stack is:
@@ -83,9 +87,11 @@ Note that, since structs and arrays are written in "reverse order" onto the stac
 Writing structs to the stack in reverse order will make it easy to copy between the stack and other areas of memory (as struct member order does not need to be accounted for).
 
 ### Register Preservation
+
 The only registers that are always preserved by this convention are `rbp` and `rflags`. All other registers must be preserved before the call if they need to be saved.
 
 ## Interfacing with C
+
 The SIN calling convention also allows compilers to interface with C functions, and as such, there must be a way to ensure the SIN compiler handles arguments and return values properly. As such, a few keywords exist to alert the compiler to how a function should be called in the function declaration. Note these keywords may also be used with SIN functions, but must be done in the definition (and declaration, if present).
 
 Such a declaration may look like:
@@ -99,12 +105,15 @@ In general these qualifiers default to the GCC ABIs used by Unix-like systems, b
 ### Calling Conventions
 
 #### `cdecl`
+
 If a function declaration/definition uses the `cdecl` qualifier, it alerts the compiler that the function will use the C `_cdecl` calling convention.
 
 #### `cx64`
+
 If a function uses the `cx64` qualifier, the function should follow the System V AMD x64 ABI (used by Unix-like systems).
 
 ### C Types in SIN
+
 While calling conventions may be sorted out with out *too* much hassle, the difference between types and their sizes between the two languages proves to be a bit of a challenge. SIN will always assume the types for the C function's arguments and return values are the same widths as SIN functions.
 
-Note that currently, SIN may not interface with C structs.
+Note that currently, SIN may not interface with C structs directly.

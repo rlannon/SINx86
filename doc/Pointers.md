@@ -2,11 +2,22 @@
 
 ## Pointers
 
-Like C and C++, SIN allows programmers to use *pointers* to access data. This is particularly useful, for example, when one wishes to pass large objects as a function parameter to save space on the stack. Note that unlike C, however, SIN makes use of the `dynamic` keyword to indicate heap allocation rather than a function like `malloc`. The result is a pointer in the object code, but syntactically, the data is not treated any differently than stack-allocated variables. However, any variable allocated dynamically must be freed lest a memory leak occurs.
+Like C and C++, SIN allows programmers to use *pointers* to access data. This is particularly useful, for example, when one wishes to allocate large objects so as to allocate stack space. Note that unlike C, however, SIN makes use of the `dynamic` keyword to indicate heap allocation rather than a function like `malloc`, and so use of `dynamic` is usually preferable to `ptr` in such cases. The result is a pointer in the object code, but syntactically, the data is not treated any differently than stack-allocated variables (`static dynamic` and `(static) const dynamic` data are, by definition, impossible). However, any variable allocated dynamically must be `free`d lest a memory leak occurs.
 
-Pointers in SIN are very explicit about separating the qualities of the pointer from the qualities of the data to which the pointer is pointing. Note, though, that the only qualities that may be applied to a pointer are `const`, `final`, `static`, and `dynamic`; anything else, i.e. width and sign specifiers, will be ignored (as a pointer is always a 64-bit unsigned integral type in SIN).
+Pointers in SIN are very explicit about separating the qualities of the pointer from the qualities of the data to which the pointer is pointing. This allows us to retain type and variability safety (a pointer to a `const int` will not be able to modify the pointed-to data, nor will a pointer to an `int` ever point to a `const int` -- it violates the variability policy). Note, though, that the only qualities that may be applied to a pointer are `const`, `final`, `static`, and `dynamic`; anything else, i.e. width and sign specifiers, will be ignored (as a pointer is always a 64-bit unsigned integral type in SIN) and generate a compiler note.
 
-### `const` pointer to `int` vs pointer to `const int`
+The syntax for pointers is `ptr< T >` where `T` is a fully-parsed subtype. All pointers must be assigned with other pointers or with the address-of operator (`$`). Pointers are dereferenced with the dereference operator (`*`), which will yield data of type `T`. This allows pointers to be nested indefinitely while still retaining full type safety. For example:
+
+    alloc int a: 10;
+    alloc ptr<int> p: $a;
+    
+    alloc int b: *a;    // initialize integer with dereferenced pointer
+    alloc ptr<int> p2: p;   // initialize pointer with another pointer
+
+    alloc ptr<ptr<int>> p3: $p; // initialize a pointer to a pointer
+    let p2 = *p3;   // dereferencing gives us data of the type ptr<int>
+
+### `const` pointer vs pointer to `const`
 
 Pointers in SIN are much more explicit than C about the type of data to which they point as well as how the pointer itself is to be stored and accessed. Take the following examples from C:
 
