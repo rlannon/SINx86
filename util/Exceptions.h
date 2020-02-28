@@ -188,9 +188,13 @@ public:
 	explicit ConstAllocationException(unsigned int line);
 };
 
+// todo: allow warning and note codes?
+
 // sometimes, we want to print an error message, but we don't need to stop compilation
 void compiler_warning(std::string message, unsigned int line = 0);
 
+// sometimes, we want to print a note rather than an error
+void compiler_note(std::string message, unsigned int line = 0);
 
 class ParserException : public std::exception
 {

@@ -225,17 +225,21 @@ ConstAllocationException::ConstAllocationException(unsigned int line) :
 	// super called
 }
 
-// Compiler Warning
+
+// Warnings and notes
 
 void compiler_warning(std::string message, unsigned int line_number) {
 	std::cout << "**** Compiler Warning: " << message << " (line " << line_number << ")" << std::endl;
+}
+
+void compiler_note(std::string message, unsigned int line_number) {
+	std::cout << "**** Note: " << message << " (line " << line_number << ")" << std::endl;
 }
 
 void parser_warning(std::string message, unsigned int line_number)
 {
 	std::cout << "**** Parser Warning: " << message << " (line " << line_number << ")" << std::endl;
 }
-
 
 
 // Parser Exceptions
