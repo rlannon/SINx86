@@ -56,9 +56,7 @@ All arrays contain a 4-byte header containing an `unsigned int` indicating the n
 
 While strings are similar to `array<char>`, they are *not* identical in their behavior; `string` is a fully-fledged type while `array<char>` is a simple aggregate with markedly different behavior. The key difference is that automatic string types are still variable-length, while the same cannot be said of arrays. Arrays, unless marked as `dynamic`, are always of a fixed width which is known at compile time. Strings, on the other hand, are not, and always use dynamic (or `const`) memory. Although they may look identical in memory (4-byte length followed by characters), their behavior is different.
 
-Strings may be marked as `dynamic`, and although this does not change where the string is located in program memory, it *does* affect the lifetime of the object; typically, when an automatic string goes out of scope, the compiler automatically `free`s it, invalidating any pointers to that string. However, when a string is marked as `dynamic`, the compiler will *not* free it automatically, allowing it, or a pointer to it, to be passed to another scope.
-
-**NB:** While a dynamic string may be returned from a function and assign to a non-dynamic string, it will *not* be automatically freed because it is dynamic; the compiler will generate a warning when a function returning `dynamic string` assigns to a non-dynamic-qualified string.
+Strings may be marked as `dynamic`, and although this does not change where the string is located in program memory, it *does* affect the lifetime of the object; typically, when an automatic string goes out of scope, the compiler automatically `free`s it, invalidating any pointers to that string. However, when a string is marked as `dynamic`, the compiler will *not* free it automatically, allowing a pointer to it to be passed out of scope.
 
 *A note about why* `string` *is a unique type:* The decision to add `string` to the language was done because of its ubiquity; since SIN's goal is to make the life of a programmer easier by reducing the use of confusing syntax and reducing manual memory management and pointer usage where possible, it makes more sense to have the `string` type rather than requiring programmers to create a `dynamic array<char>` and deal with the nightmares one might face in C (rather than, say, C++ or Python) every time they wish to utilize strings. While this may make the implementation of strings in the compiler a little more thorny, it reduces unnecessary difficulty when programming and so was deemed to belong in the language. Plus, it allows use of the concatenation operator (`+`) where `dynamic array<char>` would not.
 
@@ -66,10 +64,10 @@ Strings may be marked as `dynamic`, and although this does not change where the 
 
 All user-defined struct types require their width to be known at compile time. This allows `array< T >` and `string` members in the same way any other scope would. When a struct includes these types, however, a few things must be kept in mind:
 
-* if a struct has `dynamic` members, they will not be freed when the struct goes out of scope;
+* if a struct has members which are marked as `dynamic`, they will not be automatically freed when the struct goes out of scope (they must be freed manually);
 * all members will be freed if `free` is invoked on the struct **without exception;**
-* if the user wishes to free specific members, invoking `free` on a specific struct member is allowed; `free` is considered 'safe' and will ignore any memory that has already been freed, though a compiler note may be generated;
-* if a struct has hidden pointer members, they *will* be `free`d when the struct goes out of scope *even if such a member is used as a return value*; see the `sincall` documentation for information on how these members are returned;
+* if the user wishes to free specific members, invoking `free` on a specific struct member is allowed, and `free` may be called on the entire struct later as `free` will ignore any memory that has already been freed;
+* if a struct has hidden pointer members, they will be automatically `free`d when the struct goes out of scope
 * returning a pointer to a struct member is invalid *unless* said member is `dynamic` and `free` is not called on the struct object
 
 For example, the following code is valid:
