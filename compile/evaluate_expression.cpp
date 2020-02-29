@@ -193,14 +193,14 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         std::string name = "strc_" + std::to_string(this->strc_num);
         // create the .data declaration -- and enclose the string in backticks in case we have escaped characters
         std::stringstream data;
-        data << name << " .dd " << to_evaluate.get_value().length() << "`" << to_evaluate.get_value() << "`" << std::endl;
+        data << name << " .dd " << to_evaluate.get_value().length() << " `" << to_evaluate.get_value() << "`" << std::endl;
         this->strc_num += 1;
 
         // now, make sure our strings goes into the DATA section
         this->data_segment << data.str();
 
         // now, load the a register with the address of the string
-        eval_ss << "mov rax, " << name << std::endl;
+        eval_ss << "\t" << "mov rax, " << name << std::endl;
     } else if (type.get_primary() == ARRAY) {
         /*
 

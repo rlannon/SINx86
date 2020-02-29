@@ -31,7 +31,7 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
         // ensure we aren't assigning to a const-qualified variable
         throw ConstAssignmentException(assign_stmt.get_line_number());
 	}
-	else if (sym.get_data_type().get_qualities().is_final && sym.was_initialized()) {
+	else if (sym.get_data_type().get_qualities().is_final() && sym.was_initialized()) {
 		// ensure we don't write to final data if it has been initialized
 		throw FinalAssignmentException(assign_stmt.get_line_number());
 	} else if (sym.get_symbol_type() == FUNCTION_SYMBOL) {

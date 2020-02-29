@@ -149,9 +149,34 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             break;
         }
         case IF_THEN_ELSE:
-            // todo: ITE
-            break;
-        case WHILE_LOOP:
+		{
+			// first, we need to cast and get the current block number (in case we have nested blocks)
+			IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
+			size_t current_scope_num = this->scope_block_num;
+			
+			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
+			// if there is no else statement, it falls through to 'done'
+			compile_ss << this->evaluate_expression(ite->get_condition(), ite->get_line_number()).str() << std::endl;
+			compile_ss << "\t" << "jz sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
+			
+			// compile the branch
+			compile_ss << this->compile_ast(*ite->get_if_branch().get()).str();
+
+			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
+			compile_ss << "\t" << "jmp sinl_ite_done_" << current_scope_num << std::endl;
+			compile_ss << "sinl_ite_else_" << current_scope_num << ":" << std::endl;
+
+			// compile the branch, if one exists
+			if (ite->get_else_branch().get()) {
+				compile_ss << this->compile_ast(*ite->get_else_branch().get()).str();
+			}
+
+			// clean-up
+			compile_ss << "sinl_ite_done_" << current_scope_num << ":" << std::endl;
+			this->scope_block_num += 1;
+			break;
+		}
+		case WHILE_LOOP:
             // todo: while
             break;
         case FUNCTION_DEFINITION:
@@ -182,8 +207,9 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             /*
 
             'free' may be used with either automatic or dynamic memory -- it may not be used with const or static
-
             however, it has very little effect on automatic memory; it just marks the memory as freed, preventing any future writes to it
+
+			'free' is also safe in that it will not trigger a fault if you call 'free' on the same data twice (though if the compiler sees this may happen, then it will generate a warning)
 
             */
 
