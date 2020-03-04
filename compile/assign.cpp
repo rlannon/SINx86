@@ -15,7 +15,8 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
     assign
     Generates code for an assignment statement
 
-    This function dispatches the work for making assignments to the appropriate handlers
+    This function dispatches the work for making assignments to the appropriate handlers.
+	It will also ensure that we are not assigning to const data or to already-initialized final data.
 
     @param  assign_stmt The Assignment object that contains the information we need to make the assignment
     @return A stringstream containing the generated code
@@ -50,6 +51,7 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
     Generates code to assign 'value' to 'sym'
 
     We need this as a separate function because it will be called by the allocation code generator if the user uses alloc-assign syntax
+	As a result, this function will *not* check for initialized const/final data members; that check is done by compiler::assign
 
     @param  sym The symbol to which we are assigning data
     @param  value   A shared pointer to the expression for the assignment

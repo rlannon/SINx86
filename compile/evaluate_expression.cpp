@@ -74,6 +74,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case BINARY:
         {
+			// todo: check for string types, as concatenation must be handled with a special case
+			// todo: ensure users cannot try to perform binary operations on whole arrays
             break;
         }
         case UNARY:
@@ -481,7 +483,8 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
     switch (to_evaluate.get_operator()) {
         case exp_operator::PLUS:
         {
-            // does nothing but is allowed
+            // does nothing but is allowed; generates a warning stating as such
+			compiler_warning("While the unary plus operator is technically allowed, it does nothing", line);
             break;
         }
         case exp_operator::MINUS:
@@ -495,9 +498,24 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
                 floating-point types also reverse the sign bit, accomplished through the use of the fchs instruction
                 unlike with integers, this will not result in data loss
 
+				the instruction should generate the following code:
+					movss/movsd xmm1, [sinl_sp_mask/sinl_dp_mask]
+					xorps/xorpd xmm0, xmm1
+
                 */
 
-                // todo: floating-point sign change
+				// the floating-point expression to negate will already be in the XMM0 register; act based on width
+				if (unary_type.get_width() == sin_widths::FLOAT_WIDTH) {
+					eval_ss << "movss xmm1, [sinl_sp_mask]" << std::endl;
+					eval_ss << "xorps xmm0, xmm1" << std::endl;
+				}
+				else if (unary_type.get_width() == sin_widths::DOUBLE_WIDTH) {
+					eval_ss << "movsd xmm1, [sinl_dp_mask]" << std::endl;
+					eval_ss << "xorpd xmm0, xmm1" << std::endl;
+				}
+				else {
+					// todo: width exception? or should 'half' type just be converted to single-precision automatically and generate a warning?
+				}
             } else if (unary_type.get_primary() == INT) {
                 /*
 
@@ -546,4 +564,113 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
     }
 
     return eval_ss;
+}
+
+std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int line) {
+	/*
+	
+	evaluate_binary
+	Generates code for the evaluation of a binary expression
+
+	The binary evaluation algorithm works as follows:
+		1. Look at the left operand
+			A. Call evaluate_expression on it; this may end up recursively evaluating binary trees
+			B. Push necessary register values to the stack to preserve them
+		2. Now look at the right operand
+			A. Call evaluate_expression on it; again, this may end up recursively evaluating binary trees
+			B. Move the result out of RBX or XMM1
+			C. Pull the previously pushed values into RAX or XMM0
+		3. Generate code for the current expression
+			If the value is being returned from a recursive call, the result will be pushed to the stack or moved in registers when necessary
+
+	Note that every time the stack is used, this->stack_offset and max_offset must be adjusted so that the values can be retrieved, pushed, pulled, and stored reliably. If stack_offset and max_offset are not adjusted, errors can and _will_ occur when working with the stack
+	
+	For example: looking at the expresion 3 * 4 + 5:
+		1. Look at the left operand: binary expression 3 * 4
+			A. Call evaluate_expression: sends us here
+				1. Look at the left hand expression: 3
+				2. Look at the right hand expression: 4
+				3. Generate code: mul eax, ebx
+			B. Push result (rax) to stack
+		2. Look at the right operand: literal 5
+			A. Evaluate: 5
+			B. Move to ebx
+			C. Pull value back into eax
+		3. Generate code: add eax, ebx
+
+	*/
+
+	std::stringstream eval_ss;
+
+	// get the left and right branches
+	DataType left_type = get_expression_data_type(to_evaluate.get_left(), this->symbol_table, line);
+	DataType right_type = get_expression_data_type(to_evaluate.get_right(), this->symbol_table, line);
+
+	// ensure the types are compatible before proceeding with evaluation
+	if (left_type.is_compatible(right_type)) {
+
+		// evaluate the left-hand side
+		eval_ss << this->evaluate_expression(to_evaluate.get_left(), line).str();
+		if (left_type.get_primary() == FLOAT) {
+			// todo: preserve xmm0
+		}
+		else {
+			eval_ss << "\t" << "push rax" << std::endl;	// x64 only lets us push 64-bit registers
+			// don't need to adjust the compiler's offset adjustment as this will be pulled from the stack before the next statement
+		}
+
+		// evaluate the right-hand side
+		if (right_type.get_primary() == FLOAT) {
+			// todo: move xmm0 to xmm1
+			// todo: restore xmm0 and the stack pointer
+		}
+		else {
+			eval_ss << "\t" << "mov rbx, rax" << std::endl;
+			eval_ss << "\t" << "pop rax" << std::endl;
+		}
+
+		// finally, act according to the operator and type
+		switch (to_evaluate.get_operator()) {
+			case PLUS:
+			{
+				switch (left_type.get_primary()) {
+				case INT:
+					eval_ss << "\t" << "add rax, rbx" << std::endl;
+					break;
+				case FLOAT:
+					// floats and doubles use different SSE instructions
+					if (left_type.get_width() == sin_widths::FLOAT_WIDTH) {
+						eval_ss << "\t" << "addss xmm0, xmm1" << std::endl;
+					}
+					else {
+						eval_ss << "\t" << "addsd xmm0, xmm1" << std::endl;
+					}
+					break;
+				case STRING:
+					// todo: string concatenation (passes pointer to string)
+					break;
+				default:
+					// todo: throw exception if we have an invalid type
+					break;
+				}
+
+				break;
+			}
+			case MINUS:
+			{
+				// todo: implement minus binary operator
+				break;
+			}
+
+			// todo: more operators
+
+			default:
+				break;
+		}
+	}
+	else {
+		throw TypeException(line);
+	}
+
+	return eval_ss;
 }

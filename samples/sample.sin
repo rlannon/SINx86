@@ -1,6 +1,8 @@
 // sample.sin
 // A test file for our compiler
 
+decl void print(decl string to_print);
+
 def void main() {
     // the main function
 	if (true) {
@@ -11,11 +13,11 @@ def void main() {
 		let x = x + y;
 	}
 
-	alloc int a: 10;
-	alloc int b: 20 &const;
-
-	alloc ptr<const int> p1: $a;	// legal; promotes int to const int
-	alloc ptr<int> p2: $b;	// illegal; demotes const int to int
+	if (false) {
+		@print("error!");
+	} else {
+		@print("success!");
+	}
 
 	return void;
 }

@@ -323,6 +323,7 @@ void compiler::generate_asm(std::string filename, Parser &p) {
 
         // next, the .data section
         outfile << "section .data" << std::endl;
+		outfile << "\t" << "sp_mask dd 0x80000000" << std::endl;	// todo: do we really need this?
         outfile << this->data_segment.str() << std::endl;
 
         // finally, the .bss section
