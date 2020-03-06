@@ -250,20 +250,24 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 
 // Create a Dereferenced object when we dereference a pointer
 std::shared_ptr<Expression> Parser::create_dereference_object() {
-	// if we have an asterisk, it could be a pointer dereference OR a part of a binary expression
-	// in order to check, we have to make sure that the previous character is neither a literal nor an identifier
-	// the current lexeme is the asterisk, so get the previous lexeme
+	/*
+	
+	create_dereference_object
+	Parses out a 'Dereferenced' expression
+
+	Although the asterisk can be either the multiplication operator or the dereference operator, it is impossible for the parser to get them confused because they appear in completely different contexts. For example:
+		let x = *p;
+	The asterisk cannot be interpreted as multiplication because there is nothing preceding it
+		let x = 2 * p;
+	The asterisk here cannot be interpreted as the dereference operator because it is part of a binary expression
+		let x = 2 * **p;
+	Here, we have a binary expression which will parse out a doubly-dereferenced pointer as the right-hand argument of multiplication
+	
+	*/
+
 	lexeme previous_lex = this->previous();	// note that previous() does not update the current position
 
-	// todo: this check for a binary expression does not belong in this function
-
-	// if it is an int, float, string, or bool literal; or an identifier, then continue
-	if (previous_lex.type == "int" || previous_lex.type == "float" || previous_lex.type == "string" || previous_lex.type == "bool" || previous_lex.type == "ident") {
-		// do nothing
-		// TODO: this control path does not return a value -- what to do in this event?
-	}
-	// otherwise, check to make see if the next character is an identifier
-	else if (this->peek().type == "ident") {
+	if (this->peek().type == "ident") {
 		// get the identifier and advance the position counter
 		lexeme next_lexeme = this->next();
 
@@ -277,11 +281,17 @@ std::shared_ptr<Expression> Parser::create_dereference_object() {
 	else if (this->peek().value == "*") {
 		// advance the position pointer
 		this->next();
+
 		// dereference the pointer to get the address so we can dereference the other pointer
 		std::shared_ptr<Expression> deref = this->create_dereference_object();
 		if (deref->get_expression_type() == DEREFERENCED) {
 			// get the Dereferenced obj
 			return std::make_shared<Dereferenced>(deref);
+		}
+		else {
+			// todo: what to do in this case?
+			throw ParserException("Could not parse multiply-dereferenced pointer", 0, previous_lex.line_number);
+			return nullptr;
 		}
 	}
 	// if it is not a literal or an ident and the next character is also not an ident or asterisk, we have an error
