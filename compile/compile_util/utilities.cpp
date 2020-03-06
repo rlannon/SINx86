@@ -366,6 +366,7 @@ function_symbol create_function_symbol(T def) {
     return to_return;
 }
 
+// Again, since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 template symbol generate_symbol(Declaration&, std::string, unsigned int, size_t&);
 template symbol generate_symbol(Allocation&, std::string, unsigned int, size_t&);
 
@@ -451,6 +452,8 @@ std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
 
 std::stringstream copy_array(DataType array_type) {
 	std::stringstream copy_ss;
+
+	// todo: write SRE function for array copies and call it here
 
 	return copy_ss;
 }

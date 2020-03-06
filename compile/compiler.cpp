@@ -110,7 +110,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     stmt_type s_type = s->get_statement_type();
     switch (s_type) {
         case INCLUDE:
-            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"; this is accomplished through the use of std::set
+            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"; this is to be accomplished through the use of std::set
             break;
         case DECLARATION:
         {
@@ -139,7 +139,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         }
         case RETURN_STATEMENT:
         {
-            // return statements may only occur within functions; if we have a nullptr, then we aren't inside a function and must throw an exception
+            // return statements may only occur within functions; if 'signature' wasn't passed to this function, then we aren't compiling code inside a function and must throw an exception
             if (signature) {
                 ReturnStatement *return_stmt = dynamic_cast<ReturnStatement*>(s.get());
                 compile_ss << this->handle_return(*return_stmt, *(signature.get())).str() << std::endl;
@@ -319,11 +319,12 @@ void compiler::generate_asm(std::string filename, Parser &p) {
 
 		// next, the .rodata
 		outfile << "section .rodata" << std::endl;
+		outfile << "\t" << "sp_mask dd 0x80000000" << std::endl;	// we have bitmasks for single- and double-precision floats; they should be read-only
+		outfile << "\t" << "dp_mask dq 0x8000000000000000" << std::endl;	// todo: do we really need this? or is there an easier way to flip the sign?
 		outfile << this->rodata_segment.str() << std::endl;
 
         // next, the .data section
         outfile << "section .data" << std::endl;
-		outfile << "\t" << "sp_mask dd 0x80000000" << std::endl;	// todo: do we really need this?
         outfile << this->data_segment.str() << std::endl;
 
         // finally, the .bss section
