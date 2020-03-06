@@ -342,6 +342,8 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
             throw OutOfScopeException(line);
         }
     }
+
+	return eval_ss;
 }
 
 std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int line) {
@@ -605,6 +607,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 	// get the left and right branches
 	DataType left_type = get_expression_data_type(to_evaluate.get_left(), this->symbol_table, line);
 	DataType right_type = get_expression_data_type(to_evaluate.get_right(), this->symbol_table, line);
+	size_t data_width = left_type.get_width();
 
 	// ensure the types are compatible before proceeding with evaluation
 	if (left_type.is_compatible(right_type)) {
@@ -621,8 +624,21 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 
 		// evaluate the right-hand side
 		if (right_type.get_primary() == FLOAT) {
-			// todo: move xmm0 to xmm1
+			// this depends on the data width; note that floating-point values must always convert to double if a double is used
+			eval_ss << "\t" << ((right_type.get_width() == sin_widths::DOUBLE_WIDTH) ? "movsd" : "movss") << " xmm1, xmm0" << std::endl;
+
 			// todo: restore xmm0 and the stack pointer
+
+			// if the left type is single-precision, but right type is double, we need to convert it to double (if assigning to float, may result in loss of data); this is not considered an 'implicit conversion' by the compiler because both are floating-point types, and requisite width conversions are allowed
+			if (left_type.get_width() != right_type.get_width()) {
+				if (left_type.get_width() == sin_widths::FLOAT_WIDTH) {
+					eval_ss << "\t" << "cvtss2sd xmm0, xmm0" << std::endl;	// todo: is this a valid instruction?
+					data_width = sin_widths::DOUBLE_WIDTH;	// ensure the expression is marked as double-precision for eventual operation code generation
+				}
+				else {
+					eval_ss << "\t" << "cvtss2sd xmm1, xmm1" << std::endl;	// convert scalar single to scalar double, taking the value from xmm1 and storing it back in xmm1
+				}
+			}
 		}
 		else {
 			eval_ss << "\t" << "mov rbx, rax" << std::endl;
@@ -637,13 +653,16 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				case INT:
 					eval_ss << "\t" << "add rax, rbx" << std::endl;
 					break;
+				case PTR:
+					// pointer arithmetic is allowed in SIN
+					break;
 				case FLOAT:
 					// floats and doubles use different SSE instructions
-					if (left_type.get_width() == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "addss xmm0, xmm1" << std::endl;
+					if (data_width == sin_widths::FLOAT_WIDTH) {
+						eval_ss << "\t" << "addss xmm0, xmm1" << std::endl;	// add scalar single
 					}
 					else {
-						eval_ss << "\t" << "addsd xmm0, xmm1" << std::endl;
+						eval_ss << "\t" << "addsd xmm0, xmm1" << std::endl;	// add scalar double
 					}
 					break;
 				case STRING:
@@ -651,6 +670,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					break;
 				default:
 					// todo: throw exception if we have an invalid type
+					// todo: should array concatenation be allowed with the + operator?
 					break;
 				}
 
@@ -658,13 +678,35 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			}
 			case MINUS:
 			{
-				// todo: implement minus binary operator
+				switch (left_type.get_primary()) {
+				case INT:
+					break;
+				case PTR:
+					break;
+				case FLOAT:
+					break;
+				default:
+					// the minus operator is undefined for all other types
+					break;
+				}
+
+				break;
+			}
+			case MULT:
+			{
+				// mult only allowed for int and float
+				break;
+			}
+			case DIV:
+			{
+				// div only allowed for int and float
 				break;
 			}
 
 			// todo: more operators
 
 			default:
+				// the default condition should really never be met
 				break;
 		}
 	}

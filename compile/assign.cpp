@@ -59,6 +59,8 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
 
     */
 
+	std::stringstream handle_ss;
+
     // First, we need to determine some information about the symbol
     // Look at its type and dispatch accordingly
     DataType symbol_type = sym.get_data_type();
@@ -69,13 +71,15 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
         // dispatch appropriately based on the data type
         switch(symbol_type.get_primary()) {
             case INT:
-                return handle_int_assignment(sym, value, line);
+                handle_ss = handle_int_assignment(sym, value, line);
+				break;
             case CHAR:
                 break;
             case FLOAT:
                 break;
             case BOOL:
-                return handle_bool_assignment(sym, value, line);
+				handle_ss = handle_bool_assignment(sym, value, line);
+				break;
             case PTR:
 			{
 				// check that the type qualities are valid - pointers have special rules due to the language's type variability policy
@@ -84,12 +88,14 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
 
 				if (is_valid_type_promotion(left_type->get_qualities(), right_type->get_qualities())) {
 					// pointers are really just integers, so we can
-					return handle_int_assignment(sym, value, line);
+					handle_ss = handle_int_assignment(sym, value, line);
 				}
 				else {
 					// if the pointer subtypes weren't a valid match, throw an exception
 					throw TypeDemotionException(line);
 				}
+				
+				break;
 			}
             case STRING:
                 break;
@@ -106,6 +112,8 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
     } else {
         throw TypeException(line);
     }
+
+	return handle_ss;
 }
 
 std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line) {

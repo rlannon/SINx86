@@ -19,6 +19,8 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
     @return A DataType object containing the type information
 
     */
+
+	// todo: ensure that with floating-point expressions, if a double-precision float is used, the result has a width of DOUBLE_WIDTH
    
     DataType type_information;
 
@@ -181,13 +183,24 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 }
 
 bool returns(StatementBlock &to_check) {
-	// Checks whether a given procedure will return a value
+	/*
+	
+	returns
+	Checks whether a given AST returns a value
+	
+	*/
 
 	if (to_check.has_return) {
 		return true;
 	} else {
+		// sentinel variable
+		bool to_return = true;
+
 		// iterate through statements to see if we have an if/else block; if so, check *those* for return values
-		for (std::shared_ptr<Statement> s : to_check.statements_list) {
+		std::vector<std::shared_ptr<Statement>>::iterator it = to_check.statements_list.begin();
+		while (it != to_check.statements_list.end() && to_return) {
+			std::shared_ptr<Statement> s = *it;
+
 			if (s->get_statement_type() == stmt_type::IF_THEN_ELSE) {
 				IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
 				StatementBlock &if_branch = *ite->get_if_branch().get();
@@ -197,15 +210,21 @@ bool returns(StatementBlock &to_check) {
 					StatementBlock &else_branch = *ite->get_else_branch().get();
 
 					if (!returns(if_branch) || !returns(else_branch)) {
-						return false;
+						to_return = false;
 					}
 				}
 				else {
 					// otherwise, return false; if there is no else branch and there is no return statement in this block, then if the condition is false, we will not have a return value
-					return false;
+					to_return = false;
 				}
 			}
+
+			// increment the iterator
+			it++;
 		}
+
+		// return our value
+		return to_return;
 	}
 }
 
