@@ -20,10 +20,11 @@ The class for compiler symbols
 class symbol {
     /*
 
-    The base class for our symbols    
+    The base class for our symbols
 
     */
     
+	// these are not necessary for child classes and so should remain private to 'symbol'
     unsigned int stack_offset;  // the offset, in bytes, from the stack frame base
     reg current_reg;    // current register holding the symbol
 protected:

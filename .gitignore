@@ -4,10 +4,6 @@
 # ignore our samples (for now)
 samples/*
 
-# ignore compile-time constant evaluation for the time being
-compile/compile_util/constant_eval.h
-compile/compile_util/constant_eval.cpp
-
 # Ignore object files and executables
 *.o
 sinx86
