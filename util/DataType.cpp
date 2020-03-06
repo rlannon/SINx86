@@ -205,7 +205,7 @@ void DataType::add_quality(SymbolQuality to_add) {
     this->qualities.add_quality(to_add);
 
 	// generate a compiler warning if the primary type doesn't support the quality (has no effect)
-	if (this->primary == PTR || this->primary == ARRAY || this->primary == RAW) {
+	if (this->primary == PTR || this->primary == BOOL || this->primary == ARRAY || this->primary == STRING || this->primary == RAW) {
 		if (to_add == LONG || to_add == SHORT || to_add == SIGNED || to_add == UNSIGNED) {
 			compiler_warning("Width and sign qualifiers have no effect for this type; as such, this quality will be ignored");
 		}
@@ -222,6 +222,40 @@ void DataType::set_struct_name(std::string name) {
 
 size_t DataType::get_width() const {
 	return this->width;
+}
+
+bool DataType::is_valid_type(DataType &t) {
+	/*
+	
+	is_valid_type
+	Checks to ensure the DataType object follows all of SIN's type rules
+	
+	*/
+
+	bool is_valid = true;
+
+	if (t.primary == FLOAT) {
+		// half-precision or short floats are not supported
+		if (t.qualities.is_short()) {
+			is_valid = false;
+		}
+	}
+	else if (t.primary == STRING) {
+		// strings are not numerics and so may not be used with signed or unsigned qualifiers
+		if (t.qualities.is_signed() || t.qualities.is_unsigned()) {
+			is_valid = false;
+		}
+	}
+	else if (t.primary == STRUCT) {
+		// structs don't support numeric or width qualifiers
+		if (t.qualities.is_long() || t.qualities.is_short() || t.qualities.is_signed() || t.qualities.is_unsigned()) {
+			is_valid = false;
+		}
+	}
+
+	// todo: more type checks where needed
+
+	return is_valid;
 }
 
 DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, size_t array_length, std::string struct_name) :

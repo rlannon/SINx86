@@ -18,50 +18,58 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
     DataType alloc_data = alloc_stmt.get_type_information();
     std::stringstream allocation_ss;
 
-    // variables in the global scope do not need to be marked as 'static' by the programmer, though they are located in static memory so we must set the static quality if we are in the global scope
-    if (this->current_scope_name == "global") {
-        alloc_data.get_qualities().add_quality(SymbolQuality::STATIC);
-    }
+	if (DataType::is_valid_type(alloc_data)) {
 
-	// if a constant is to be allocated but no initial value was given, generate an error
-	if (alloc_data.get_qualities().is_const() && !alloc_stmt.was_initialized()) {
-		throw ConstAllocationException(alloc_stmt.get_line_number());
+		// variables in the global scope do not need to be marked as 'static' by the programmer, though they are located in static memory so we must set the static quality if we are in the global scope
+		if (this->current_scope_name == "global") {
+			alloc_data.get_qualities().add_quality(SymbolQuality::STATIC);
+		}
+
+		// if a constant is to be allocated but no initial value was given, generate an error
+		if (alloc_data.get_qualities().is_const() && !alloc_stmt.was_initialized()) {
+			throw ConstAllocationException(alloc_stmt.get_line_number());
+		}
+
+		// now we may make the assignment
+		if (alloc_data.get_qualities().is_dynamic()) {
+			// todo: allocate dynamically
+
+			// if we have a const here, throw an exception -- constants may not be dynamic
+			if (alloc_data.get_qualities().is_const()) {
+				throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
+			}
+		}
+		else if (alloc_data.get_qualities().is_static()) {
+			// todo: allocate static memory
+
+			// static const variables can go in the .rodata segment, so check to see if it is also const
+			if (alloc_data.get_qualities().is_const()) {
+				// todo: static const memory
+			}
+		}
+		else {
+			// must be automatic memory
+			// allocate memory on the stack
+
+			// construct the symbol with our utility function and add it to the symbol table
+			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
+
+			// initialize it, if necessary
+			if (alloc_stmt.was_initialized()) {
+				// get the initial value
+				std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
+
+				// make an assignment of 'initial_value' to 'allocated'
+				allocation_ss << this->handle_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
+			}
+
+			// do not return yet in case we have any other code we wish to add later
+		}
 	}
-
-    // now we may make the assignment
-    if (alloc_data.get_qualities().is_dynamic()) {
-        // todo: allocate dynamically
-
-		// if we have a const here, throw an exception -- constants may not be dynamic
-		if (alloc_data.get_qualities().is_const()) {
-			throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
-		}
-    } else if (alloc_data.get_qualities().is_static()) {
-        // todo: allocate static memory
-
-		// static const variables can go in the .rodata segment, so check to see if it is also const
-		if (alloc_data.get_qualities().is_const()) {
-			// todo: static const memory
-		}
-    } else {
-        // must be automatic memory
-        // allocate memory on the stack
-
-        // construct the symbol with our utility function and add it to the symbol table
-        symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
-        this->add_symbol(allocated, alloc_stmt.get_line_number());
-
-        // initialize it, if necessary
-        if (alloc_stmt.was_initialized()) {
-            // get the initial value
-            std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
-
-            // make an assignment of 'initial_value' to 'allocated'
-            allocation_ss << this->handle_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
-        }
-
-        // do not return yet in case we have any other code we wish to add later
-    }
+	else {
+		// todo: throw type error because our type is not valid
+	}
 
     // return our allocation code
     return allocation_ss;

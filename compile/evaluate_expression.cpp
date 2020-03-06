@@ -74,8 +74,9 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case BINARY:
         {
-			// todo: check for string types, as concatenation must be handled with a special case
-			// todo: ensure users cannot try to perform binary operations on whole arrays
+			// cast to Binary class and dispatch
+			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
+			evaluation_ss << this->evaluate_binary(bin_exp, line).str();
             break;
         }
         case UNARY:
@@ -651,13 +652,11 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			{
 				switch (left_type.get_primary()) {
 				case INT:
+				case PTR:	// pointer arithmetic with + and - is allowed in SIN with
 					eval_ss << "\t" << "add rax, rbx" << std::endl;
 					break;
-				case PTR:
-					// pointer arithmetic is allowed in SIN
-					break;
 				case FLOAT:
-					// floats and doubles use different SSE instructions
+					// single- and double-precision floats use different SSE instructions
 					if (data_width == sin_widths::FLOAT_WIDTH) {
 						eval_ss << "\t" << "addss xmm0, xmm1" << std::endl;	// add scalar single
 					}
@@ -680,10 +679,17 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			{
 				switch (left_type.get_primary()) {
 				case INT:
-					break;
 				case PTR:
+					eval_ss << "\t" << "sub rax, rbx" << std::endl;
 					break;
 				case FLOAT:
+					// single- and double-precision floats use different SSE instructions
+					if (data_width == sin_widths::FLOAT_WIDTH) {
+						eval_ss << "\t" << "subss xmm0, xmm1" << std::endl;
+					}
+					else {
+						eval_ss << "\t" << "subsd xmm0, xmm1" << std::endl;
+					}
 					break;
 				default:
 					// the minus operator is undefined for all other types
@@ -695,6 +701,26 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			case MULT:
 			{
 				// mult only allowed for int and float
+				if (left_type.get_primary() == INT) {
+					// we have to decide between mul and imul instructions -- use imul if either of the operands is signed
+					if (left_type.get_qualities().is_signed() || right_type.get_qualities().is_signed()) {
+						eval_ss << "\t" << "imul rax, rbx" << std::endl;
+					}
+					else {
+						eval_ss << "\t" << "mul rax, rbx" << std::endl;
+					}
+				}
+				else if (left_type.get_primary() == FLOAT) {
+					if (data_width == sin_widths::FLOAT_WIDTH) {
+						eval_ss << "\t" << "mulss xmm0, xmm1" << std::endl;
+					}
+					else {
+						eval_ss << "\t" << "mulsd xmm0, xmm1" << std::endl;
+					}
+				}
+				else {
+					// todo: throw exception
+				}
 				break;
 			}
 			case DIV:

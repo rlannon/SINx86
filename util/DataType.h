@@ -66,6 +66,8 @@ public:
 
 	size_t get_width() const;
 
+	static bool is_valid_type(DataType &t);
+
     DataType(Type primary, DataType subtype, symbol_qualities qualities, size_t array_length = 0, std::string struct_name = "");
 	DataType(Type primary);
 	DataType(const DataType &ref);
