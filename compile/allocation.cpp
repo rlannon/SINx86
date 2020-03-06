@@ -18,6 +18,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
     DataType alloc_data = alloc_stmt.get_type_information();
     std::stringstream allocation_ss;
 
+	// allocate the variable if our type was valid
 	if (DataType::is_valid_type(alloc_data)) {
 
 		// variables in the global scope do not need to be marked as 'static' by the programmer, though they are located in static memory so we must set the static quality if we are in the global scope

@@ -554,13 +554,28 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
             // expression must be a boolean
 
             if (unary_type.get_primary() == BOOL) {
-                // todo: unary on booleans
+                // XOR against a bitmask of 0xFF, as a boolean checks for zero or non-zero, not 1 or 0
+				// a boolean will be in al
+				eval_ss << "\t" << "mov ah, 0xFF" << std::endl;
+				eval_ss << "\t" << "xor al, ah" << std::endl;
             } else {
                 throw UnaryTypeNotSupportedError(line);
             }
 
             break;
         }
+		case exp_operator::BIT_NOT:
+		{
+			// expression does not have to be a boolean, it can be any fixed-width type in RAX
+
+			if (unary_type.get_primary() != STRING && unary_type.get_primary() != ARRAY && unary_type.get_primary() != STRUCT) {
+				// simply use the x86 NOT instruction
+				eval_ss << "\t" << "not rax" << std::endl;
+			}
+			else {
+				throw UnaryTypeNotSupportedError(line);
+			}
+		}
         default:
             throw IllegalUnaryOperatorError(line);
             break;
@@ -648,6 +663,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 
 		// finally, act according to the operator and type
 		switch (to_evaluate.get_operator()) {
+			// Arithmetic operators
 			case PLUS:
 			{
 				switch (left_type.get_primary()) {
@@ -726,6 +742,64 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			case DIV:
 			{
 				// div only allowed for int and float
+				break;
+			}
+			case MODULO:
+			{
+				// modulo only allowed for int and float
+				break;
+			}
+
+			// Bitwise operators; these may use int or float
+			case exp_operator::BIT_AND:
+			{
+				// bitwise and
+				break;
+			}
+			case exp_operator::BIT_OR:
+			{
+				// bitwise or
+				break;
+			}
+			// todo: add bitwise xor
+
+			// Logical operators; these may only use binary
+			case exp_operator::AND:
+			{
+				// logical and
+				break;
+			}
+			case exp_operator::OR:
+			{
+				// logical or
+				break;
+			}
+			// logical not is a unary operator
+			// todo: add logical xor
+
+			// Equivalency operators
+			case exp_operator::EQUAL:
+			{
+				break;
+			}
+			case exp_operator::NOT_EQUAL:
+			{
+				break;
+			}
+			case exp_operator::GREATER:
+			{
+				break;
+			}
+			case exp_operator::LESS:
+			{
+				break;
+			}
+			case exp_operator::GREATER_OR_EQUAL:
+			{
+				break;
+			}
+			case exp_operator::LESS_OR_EQUAL:
+			{
 				break;
 			}
 
