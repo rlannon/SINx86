@@ -868,9 +868,12 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			// write the comparison
 			eval_ss << "\t" << "cmp rax, rbx" << std::endl;
 
+			// a variable to hold our instruction mnemonic
+			std::string instruction = "";
+
 			// determine the branch name
 			std::string branch_name = "B" + this->scope_block_num;
-			std::string instruction = "";
+			this->scope_block_num += 1;	// be sure to increment the scope block
 
 			// now, switch to determine which branching instruction we need
 			switch (to_evaluate.get_operator()) {
@@ -903,8 +906,10 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		}
 	}
 	else {
+		// if the types were not compatible, throw a type error
 		throw TypeException(line);
 	}
 
+	// finally, return the generated code
 	return eval_ss;
 }

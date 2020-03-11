@@ -1,23 +1,9 @@
 // sample.sin
 // A test file for our compiler
 
-decl void print(decl string to_print);
-
 def void main() {
-    // the main function
-	if (true) {
-		alloc int x;
-		alloc int y: 23 &unsigned;
-    
-		let x = sizeof<int>;
-		let x = x + y;
-	}
-
-	if (false) {
-		@print("error!");
-	} else {
-		@print("success!");
-	}
+    alloc int a;
+	let a = 65535 ^ 255;
 
 	return void;
 }
