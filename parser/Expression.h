@@ -19,10 +19,7 @@ Contains the Expression class and all of its child classes; these are used by th
 #include "../util/DataType.h"
 
 
-const exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
-
 const bool is_literal(std::string candidate_type);
-
 
 // Base class for all expressions
 class Expression

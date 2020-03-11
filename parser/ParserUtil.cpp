@@ -10,9 +10,10 @@ Contains the implementations of various utility functions for the parser.
 
 #include "Parser.h"
 
+// todo: refactor precedence vector to a hash table
 
 // Define our symbols and their precedences as a vector of tuples containing the operator string and its precedence (size_t)
-const std::vector<std::tuple<std::string, size_t>> Parser::precedence{ std::make_tuple("or", 2), std::make_tuple("and", 2), std::make_tuple("!", 2),
+const std::vector<std::tuple<std::string, size_t>> Parser::precedence{ std::make_tuple("or", 2), std::make_tuple("and", 2), std::make_tuple("xor", 2), std::make_tuple("!", 2),
 	std::make_tuple("<", 4), std::make_tuple(">", 7), std::make_tuple("<", 7), std::make_tuple(">=", 7), std::make_tuple("<=", 7), std::make_tuple("=", 7),
 	std::make_tuple("!=", 7), std::make_tuple("|", 8), std::make_tuple("^", 8), std::make_tuple("&", 9), std::make_tuple("+", 10),
 	std::make_tuple("-", 10),std::make_tuple("$", 15), std::make_tuple("*", 20), std::make_tuple("/", 20), std::make_tuple("%", 20) };
@@ -42,7 +43,7 @@ const size_t Parser::get_precedence(std::string symbol, size_t line) {
 	}
 }
 
-// Utility functinos for traversing the token list
+// Utility functions for traversing the token list
 
 bool Parser::is_at_end() {
 	// Determines whether we have run out of tokens. Returns true if we have, false if not.

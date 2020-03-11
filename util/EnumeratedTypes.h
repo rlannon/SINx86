@@ -81,9 +81,11 @@ enum exp_operator {
 	AND,	// 'AND' is logical-AND (C++ &&) -- keyowrd 'and'
 	NOT,	// logical not
 	OR,		// logical or
+	XOR,	// logical xor
 	MODULO,
 	BIT_AND,	// 'BIT_AND' is bitwise-AND (C++ &) -- operator '&'
 	BIT_OR,		// same goes with BIT_OR
+	BIT_XOR,	// same with BIT_XOR
 	BIT_NOT,	// same with BIT_NOT
 	NO_OP
 };

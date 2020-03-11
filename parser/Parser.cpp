@@ -11,14 +11,47 @@ Implementations of statement and expression parsing functions can be found in Pa
 
 #include "Parser.h"
 
+const exp_operator Parser::translate_operator(std::string op_string) {
+	// todo: refactor this algorithm to work more efficiently (and to be more maintainable)
 
-/*
+	const size_t num_operators = 18;
 
-Create an abstract syntax tree using Parser::tokens. This is used not only as the entry function to the parser, but whenever an AST is needed as part of a statement. For example, a "Definition" statement requires an AST as one of its members; parse_top() is used to genereate the function's procedure's AST.
+	// our operator strings and list;
+	std::string string_operators_list[num_operators] = { "+", "-", "*", "/", "=", "!=", ">", "<", ">=", "<=", "&", "!", "|", "^", "%", "and", "or", "xor" };
+	exp_operator operators_list[num_operators] = { PLUS, MINUS, MULT, DIV, EQUAL, NOT_EQUAL, GREATER, LESS, GREATER_OR_EQUAL, LESS_OR_EQUAL, BIT_AND, NOT, BIT_OR, BIT_XOR, MODULO, AND, OR, XOR };
 
-*/
+	size_t i = 0;
+	bool found = false;
+	while (i < num_operators && !found) {
+		if (op_string == string_operators_list[i]) {
+			found = true;
+		}
+		else {
+			i += 1;
+		}
+	}
+
+	// return the operator; if we didn't find the one we wanted, return NO_OP
+	if (found) {
+		return operators_list[i];
+	}
+	else {
+		return NO_OP;
+	}
+}
+
 
 StatementBlock Parser::create_ast() {
+	/*
+
+	create_ast
+	Creates an abstract syntax tree based on a list of tokens
+
+	Create an abstract syntax tree using Parser::tokens. This is used not only as the entry function to the parser, but whenever an AST is needed as part of a statement.
+	For example, a "Definition" statement requires an AST as one of its members; parse_top() is used to genereate the function's procedure's AST.
+
+	*/
+
 	// allocate a StatementBlock, which will be used to store our AST
 	StatementBlock prog = StatementBlock();
 
