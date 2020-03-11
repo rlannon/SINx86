@@ -100,9 +100,12 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 					}
 				}
 				else {
-					throw ParserException("Inline Assembly must include the target architecture!", 000, current_lex.line_number);
-					return nullptr;
+					throw ParserException("Inline assembly must include the target architecture!", 000, current_lex.line_number);
 				}
+			}
+			else {
+				// syntax error; 'asm' must be followed by the type
+				throw ParserException("Inline assembly must include the target architecture (syntax is 'asm< target >{ ... }'", 000, current_lex.line_number);
 			}
 		}
 		// parse a "free" statement
@@ -129,12 +132,10 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 				}
 				else {
 					throw MissingSemicolonError(current_lex.line_number);
-					return nullptr;
 				}
 			}
 			else {
 				throw ParserException("Expected identifier after 'free'", 0, current_lex.line_number);
-				return nullptr;
 			}
 		}
 		// parse a declaration
@@ -172,7 +173,6 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		// if none of the keywords were valid, throw an error
 		else {
 			throw ParserException("Invalid keyword", 211, current_lex.line_number);
-			return nullptr;
 		}
 
 	}
@@ -184,21 +184,21 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		}
 		else {
 			throw ParserException("Lexeme '" + current_lex.value + "' is not a valid beginning to a statement", 000, current_lex.line_number);
-			return nullptr;
 		}
 	}
 
 	// if it is a curly brace, advance the character and return a nullptr; the compiler will skip this
 	else if (current_lex.value == "}") {
-		this->next();	// todo: return empty statement; compiler should skip empty statements (this function must return a value...)
-		return nullptr;
+		this->next();
+		return std::make_shared<Statement>(STATEMENT_GENERAL, current_lex.line_number);
 	}
 
 	// otherwise, if the lexeme is not a valid beginning to a statement, abort
 	else {
 		throw ParserException("Lexeme '" + current_lex.value + "' is not a valid beginning to a statement", 000, current_lex.line_number);
-		return nullptr;
 	}
+
+	return nullptr;
 }
 
 std::shared_ptr<Statement> Parser::parse_include(lexeme current_lex)
