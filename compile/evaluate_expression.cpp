@@ -623,7 +623,10 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 	// get the left and right branches
 	DataType left_type = get_expression_data_type(to_evaluate.get_left(), this->symbol_table, line);
 	DataType right_type = get_expression_data_type(to_evaluate.get_right(), this->symbol_table, line);
+
+	Type primary = left_type.get_primary();
 	size_t data_width = left_type.get_width();
+	bool is_signed = left_type.get_qualities().is_signed() || right_type.get_qualities().is_signed();
 
 	// ensure the types are compatible before proceeding with evaluation
 	if (left_type.is_compatible(right_type)) {
@@ -662,182 +665,241 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		}
 
 		// finally, act according to the operator and type
-		switch (to_evaluate.get_operator()) {
-			// Arithmetic operators
-			case PLUS:
-			{
-				switch (left_type.get_primary()) {
-				case INT:
-				case PTR:	// pointer arithmetic with + and - is allowed in SIN with
-					eval_ss << "\t" << "add rax, rbx" << std::endl;
-					break;
-				case FLOAT:
-					// single- and double-precision floats use different SSE instructions
-					if (data_width == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "addss xmm0, xmm1" << std::endl;	// add scalar single
-					}
-					else {
-						eval_ss << "\t" << "addsd xmm0, xmm1" << std::endl;	// add scalar double
-					}
-					break;
-				case STRING:
-					// todo: string concatenation (passes pointer to string)
-					break;
-				default:
-					// todo: throw exception if we have an invalid type
-					// todo: should array concatenation be allowed with the + operator?
-					throw UndefinedOperatorError("plus", line);
-					break;
-				}
-
+		if (to_evaluate.get_operator() == PLUS) {
+			switch (primary) {
+			case INT:
+			case PTR:	// pointer arithmetic with + and - is allowed in SIN with
+				eval_ss << "\t" << "add rax, rbx" << std::endl;
 				break;
-			}
-			case MINUS:
-			{
-				switch (left_type.get_primary()) {
-				case INT:
-				case PTR:
-					eval_ss << "\t" << "sub rax, rbx" << std::endl;
-					break;
-				case FLOAT:
-					// single- and double-precision floats use different SSE instructions
-					if (data_width == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "subss xmm0, xmm1" << std::endl;
-					}
-					else {
-						eval_ss << "\t" << "subsd xmm0, xmm1" << std::endl;
-					}
-					break;
-				default:
-					// the minus operator is undefined for all other types
-					throw UndefinedOperatorError("minus", line);
-					break;
-				}
-
-				break;
-			}
-			case MULT:
-			{
-				// mult only allowed for int and float
-				if (left_type.get_primary() == INT) {
-					// we have to decide between mul and imul instructions -- use imul if either of the operands is signed
-					if (left_type.get_qualities().is_signed() || right_type.get_qualities().is_signed()) {
-						eval_ss << "\t" << "imul rax, rbx" << std::endl;
-					}
-					else {
-						eval_ss << "\t" << "mul rax, rbx" << std::endl;
-					}
-				}
-				else if (left_type.get_primary() == FLOAT) {
-					if (data_width == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "mulss xmm0, xmm1" << std::endl;
-					}
-					else {
-						eval_ss << "\t" << "mulsd xmm0, xmm1" << std::endl;
-					}
+			case FLOAT:
+				// single- and double-precision floats use different SSE instructions
+				if (data_width == sin_widths::FLOAT_WIDTH) {
+					eval_ss << "\t" << "addss xmm0, xmm1" << std::endl;	// add scalar single
 				}
 				else {
-					// todo: throw exception
-					throw UndefinedOperatorError("multiplication", line);
+					eval_ss << "\t" << "addsd xmm0, xmm1" << std::endl;	// add scalar double
 				}
 				break;
-			}
-			case DIV:
-			{
-				// div only allowed for int and float
-				if (left_type.get_primary() == INT) {
-					// todo: integer division
-				}
-				else if (left_type.get_primary() == FLOAT) {
-					// todo: floating-point division
-				}
-				else {
-					throw UndefinedOperatorError("division", line);
-				}
+			case STRING:
+				// todo: string concatenation (passes pointer to string)
 				break;
-			}
-			case MODULO:
-			{
-				// modulo only allowed for int and float
-				if (left_type.get_primary() == INT) {
-
-				}
-				else if (left_type.get_primary() == FLOAT) {
-
-				}
-				else {
-					throw UndefinedOperatorError("modulo", line);
-				}
-				break;
-			}
-
-			// Bitwise operators; these may use int or float
-			case exp_operator::BIT_AND:
-			{
-				// bitwise and
-				break;
-			}
-			case exp_operator::BIT_OR:
-			{
-				// bitwise or
-				break;
-			}
-			case exp_operator::BIT_XOR:
-			{
-				// bitwise xor
-				break;
-			}
-			// bitwise not is a unary operator
-
-			// Logical operators; these may only use binary
-			case exp_operator::AND:
-			{
-				// logical and
-				break;
-			}
-			case exp_operator::OR:
-			{
-				// logical or
-				break;
-			}
-			case exp_operator::XOR:
-			{
-				// logical xor
-				break;
-			}
-			// logical not is a unary operator
-
-			// Equivalency operators
-			case exp_operator::EQUAL:
-			{
-				break;
-			}
-			case exp_operator::NOT_EQUAL:
-			{
-				break;
-			}
-			case exp_operator::GREATER:
-			{
-				break;
-			}
-			case exp_operator::LESS:
-			{
-				break;
-			}
-			case exp_operator::GREATER_OR_EQUAL:
-			{
-				break;
-			}
-			case exp_operator::LESS_OR_EQUAL:
-			{
-				break;
-			}
-
-			// todo: more operators
-
 			default:
-				// the default condition should really never be met
+				// if we have an invalid type, throw an exception
+				// todo: should array concatenation be allowed with the + operator?
+				throw UndefinedOperatorError("plus", line);
 				break;
+			}
+		}
+		else if (to_evaluate.get_operator() == MINUS) {
+			switch (primary) {
+			case INT:
+			case PTR:
+				eval_ss << "\t" << "sub rax, rbx" << std::endl;
+				break;
+			case FLOAT:
+				// single- and double-precision floats use different SSE instructions
+				if (data_width == sin_widths::FLOAT_WIDTH) {
+					eval_ss << "\t" << "subss xmm0, xmm1" << std::endl;
+				}
+				else {
+					eval_ss << "\t" << "subsd xmm0, xmm1" << std::endl;
+				}
+				break;
+			default:
+				// the minus operator is undefined for all other types
+				throw UndefinedOperatorError("minus", line);
+				break;
+			}
+		}
+		else if (to_evaluate.get_operator() == MULT) {
+			// mult only allowed for int and float
+			if (left_type.get_primary() == INT) {
+				// we have to decide between mul and imul instructions -- use imul if either of the operands is signed
+				if (is_signed) {
+					eval_ss << "\t" << "imul rax, rbx" << std::endl;
+				}
+				else {
+					eval_ss << "\t" << "mul rax, rbx" << std::endl;
+				}
+			}
+			else if (left_type.get_primary() == FLOAT) {
+				if (data_width == sin_widths::FLOAT_WIDTH) {
+					eval_ss << "\t" << "mulss xmm0, xmm1" << std::endl;
+				}
+				else {
+					eval_ss << "\t" << "mulsd xmm0, xmm1" << std::endl;
+				}
+			}
+			else {
+				// todo: throw exception
+				throw UndefinedOperatorError("multiplication", line);
+			}
+		}
+		else if (to_evaluate.get_operator() == DIV)
+		{
+			// div only allowed for int and float
+			if (left_type.get_primary() == INT) {
+				// how we handle integer division depends on whether we are using signed or unsigned integers
+				if (is_signed) {
+					// use idiv
+					eval_ss << "\t" << "idiv rax, rbx" << std::endl;
+				}
+				else {
+					// use div
+					eval_ss << "\t" << "div rax, rbx" << std::endl;
+				}
+			}
+			else if (left_type.get_primary() == FLOAT) {
+				// which instruction depends on the width of the values; in either case, we are operating on scalar values (not packed)
+				if (data_width == sin_widths::FLOAT_WIDTH) {
+					eval_ss << "\t" << "divss xmm0, xmm1" << std::endl;
+				}
+				else {
+					eval_ss << "\t" << "divsd xmm0, xmm1" << std::endl;
+				}
+			}
+			else {
+				throw UndefinedOperatorError("division", line);
+			}
+		}
+		else if (to_evaluate.get_operator() == MODULO)
+		{
+			// modulo only allowed for int and float
+			if (left_type.get_primary() == INT) {
+				// for modulo, we need to determine what should happen if we are using signed numbers
+				// todo: modulo
+			}
+			else if (left_type.get_primary() == FLOAT) {
+				// todo: implement modulo with floating-point numbers
+			}
+			else {
+				throw UndefinedOperatorError("modulo", line);
+			}
+		}
+
+		// Bitwise operators; these may use int or float
+		else if (to_evaluate.get_operator() == exp_operator::BIT_AND)
+		{
+			if (left_type.get_primary() == INT) {
+				// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
+				if (left_type.get_width() != right_type.get_width()) {
+					compiler_warning("Operands in bitwise operation are different widths", line);
+				}
+
+				eval_ss << "\t" << "and rax, rbx" << std::endl;
+			}
+			else if (left_type.get_primary() == FLOAT) {
+				// todo: floats with bitwise operators
+			}
+			else {
+				throw UndefinedOperatorError("bitwise-and", line);
+			}
+		}
+		else if (to_evaluate.get_operator() == exp_operator::BIT_OR)
+		{
+			// same procedure as bitwise-and
+			if (left_type.get_primary() == INT) {
+				// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
+				if (left_type.get_width() != right_type.get_width()) {
+					compiler_warning("Operands in bitwise operation are different widths", line);
+				}
+
+				eval_ss << "\t" << "or rax, rbx" << std::endl;
+			}
+			else if (left_type.get_primary() == FLOAT) {
+				// todo: floats with bitwise operators
+			}
+			else {
+				throw UndefinedOperatorError("bitwise-or", line);
+			}
+		}
+		else if (to_evaluate.get_operator() == exp_operator::BIT_XOR)
+		{
+			// bitwise xor
+			if (left_type.get_primary() == INT) {
+				// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
+				if (left_type.get_width() != right_type.get_width()) {
+					compiler_warning("Operands in bitwise operation are different widths", line);
+				}
+
+				eval_ss << "\t" << "xor rax, rbx" << std::endl;
+			}
+			else if (left_type.get_primary() == FLOAT) {
+				// todo: floats with bitwise operators
+			}
+			else {
+				throw UndefinedOperatorError("bitwise-xor", line);
+			}
+		}
+		// bitwise not is a unary operator
+
+		// Logical operators; these may only use boolean types
+		else if (to_evaluate.get_operator() == exp_operator::AND)
+		{
+			// logical and
+		}
+		else if (to_evaluate.get_operator() == exp_operator::OR)
+		{
+			// logical or
+		}
+		else if (to_evaluate.get_operator() == exp_operator::XOR)
+		{
+			// logical xor
+		}
+		// logical not is a unary operator
+
+		// since we have tested all other valid operators, it must be an equivalency operator
+		else {
+			/*
+
+			Equivalency operators may be used on all types
+			Note, that all equivalency operators use the CMP instruction; all that differs is what branching instruction is used
+
+			The branching instructions used are:
+				=	je
+				!=	jne
+				>	jg
+				<	jl
+				>=	jge
+				<=	jle
+
+			*/
+
+			// write the comparison
+			eval_ss << "\t" << "cmp rax, rbx" << std::endl;
+
+			// determine the branch name
+			std::string branch_name = "B" + this->scope_block_num;
+			std::string instruction = "";
+
+			// now, switch to determine which branching instruction we need
+			switch (to_evaluate.get_operator()) {
+			case exp_operator::EQUAL:
+				instruction = "je";
+				break;
+			case exp_operator::NOT_EQUAL:
+				instruction = "jne";
+				break;
+			case exp_operator::GREATER:
+				instruction = "jg";
+				break;
+			case exp_operator::LESS:
+				instruction = "jl";
+				break;
+			case exp_operator::GREATER_OR_EQUAL:
+				instruction = "jge";
+				break;
+			case exp_operator::LESS_OR_EQUAL:
+				instruction = "jle";
+				break;
+			default:
+				// if the parser didn't catch a 'no operator', throw the exception here -- we have no more valid operators
+				throw CompilerException("Undefined operator", compiler_errors::UNDEFINED_ERROR, line);
+				break;
+			}
+
+			// finally, write the instruction data -- tab, instruction, label, newline
+			eval_ss << "\t" << instruction << " " << branch_name << std::endl;
 		}
 	}
 	else {
