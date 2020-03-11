@@ -305,3 +305,12 @@ CallError::CallError(const unsigned int &line):
 {
 	// super called
 }
+
+UndefinedOperatorError::UndefinedOperatorError(std::string op, unsigned int line) :
+	CompilerException(
+		"The " + op + " operator is undefined for this data type",
+		line
+	)
+{
+	// super called
+}

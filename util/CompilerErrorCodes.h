@@ -31,6 +31,7 @@ namespace compiler_errors {
 
     const unsigned int INVALID_UNARY_OPERATOR_ERROR = 55;   // if the operator given for a unary is not a valid unary operator
     const unsigned int UNARY_TYPE_NOT_SUPPORTED = 56;   // if the unary operator is not supported with a given type
+	const unsigned int UNDEFINED_OPERATOR_ERROR = 57;	// the operator used is undefined for the data type
     
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;

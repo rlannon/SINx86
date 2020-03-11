@@ -686,6 +686,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				default:
 					// todo: throw exception if we have an invalid type
 					// todo: should array concatenation be allowed with the + operator?
+					throw UndefinedOperatorError("plus", line);
 					break;
 				}
 
@@ -709,6 +710,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					break;
 				default:
 					// the minus operator is undefined for all other types
+					throw UndefinedOperatorError("minus", line);
 					break;
 				}
 
@@ -736,17 +738,36 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				}
 				else {
 					// todo: throw exception
+					throw UndefinedOperatorError("multiplication", line);
 				}
 				break;
 			}
 			case DIV:
 			{
 				// div only allowed for int and float
+				if (left_type.get_primary() == INT) {
+					// todo: integer division
+				}
+				else if (left_type.get_primary() == FLOAT) {
+					// todo: floating-point division
+				}
+				else {
+					throw UndefinedOperatorError("division", line);
+				}
 				break;
 			}
 			case MODULO:
 			{
 				// modulo only allowed for int and float
+				if (left_type.get_primary() == INT) {
+
+				}
+				else if (left_type.get_primary() == FLOAT) {
+
+				}
+				else {
+					throw UndefinedOperatorError("modulo", line);
+				}
 				break;
 			}
 
@@ -761,7 +782,12 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				// bitwise or
 				break;
 			}
-			// todo: add bitwise xor
+			case exp_operator::BIT_XOR:
+			{
+				// bitwise xor
+				break;
+			}
+			// bitwise not is a unary operator
 
 			// Logical operators; these may only use binary
 			case exp_operator::AND:
@@ -774,8 +800,12 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				// logical or
 				break;
 			}
+			case exp_operator::XOR:
+			{
+				// logical xor
+				break;
+			}
 			// logical not is a unary operator
-			// todo: add logical xor
 
 			// Equivalency operators
 			case exp_operator::EQUAL:

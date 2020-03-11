@@ -170,6 +170,12 @@ public:
 	explicit UnaryTypeNotSupportedError(unsigned int line);
 };
 
+class UndefinedOperatorError : public CompilerException
+{
+public:
+	explicit UndefinedOperatorError(std::string op, unsigned int line);
+};
+
 class ConstAssignmentException : public CompilerException
 {
 public:
