@@ -78,7 +78,7 @@ enum exp_operator {
 	LESS,
 	GREATER_OR_EQUAL,
 	LESS_OR_EQUAL,
-	AND,	// 'AND' is logical-AND (C++ &&) -- keyowrd 'and'
+	AND,	// 'AND' is logical-AND (C++ &&) -- Python keyword 'and'
 	NOT,	// logical not
 	OR,		// logical or
 	XOR,	// logical xor

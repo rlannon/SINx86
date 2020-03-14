@@ -668,7 +668,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		if (to_evaluate.get_operator() == PLUS) {
 			switch (primary) {
 			case INT:
-			case PTR:	// pointer arithmetic with + and - is allowed in SIN with
+			case PTR:	// pointer arithmetic with + and - is allowed in SIN
 				eval_ss << "\t" << "add rax, rbx" << std::endl;
 				break;
 			case FLOAT:
@@ -713,7 +713,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		}
 		else if (to_evaluate.get_operator() == MULT) {
 			// mult only allowed for int and float
-			if (left_type.get_primary() == INT) {
+			if (primary == INT) {
 				// we have to decide between mul and imul instructions -- use imul if either of the operands is signed
 				if (is_signed) {
 					eval_ss << "\t" << "imul rax, rbx" << std::endl;
@@ -722,7 +722,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					eval_ss << "\t" << "mul rax, rbx" << std::endl;
 				}
 			}
-			else if (left_type.get_primary() == FLOAT) {
+			else if (primary == FLOAT) {
 				if (data_width == sin_widths::FLOAT_WIDTH) {
 					eval_ss << "\t" << "mulss xmm0, xmm1" << std::endl;
 				}
@@ -738,7 +738,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		else if (to_evaluate.get_operator() == DIV)
 		{
 			// div only allowed for int and float
-			if (left_type.get_primary() == INT) {
+			if (primary == INT) {
 				// how we handle integer division depends on whether we are using signed or unsigned integers
 				if (is_signed) {
 					// use idiv
@@ -749,7 +749,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					eval_ss << "\t" << "div rax, rbx" << std::endl;
 				}
 			}
-			else if (left_type.get_primary() == FLOAT) {
+			else if (primary == FLOAT) {
 				// which instruction depends on the width of the values; in either case, we are operating on scalar values (not packed)
 				if (data_width == sin_widths::FLOAT_WIDTH) {
 					eval_ss << "\t" << "divss xmm0, xmm1" << std::endl;
@@ -765,11 +765,11 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		else if (to_evaluate.get_operator() == MODULO)
 		{
 			// modulo only allowed for int and float
-			if (left_type.get_primary() == INT) {
+			if (primary == INT) {
 				// for modulo, we need to determine what should happen if we are using signed numbers
 				// todo: modulo
 			}
-			else if (left_type.get_primary() == FLOAT) {
+			else if (primary == FLOAT) {
 				// todo: implement modulo with floating-point numbers
 			}
 			else {
@@ -780,7 +780,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		// Bitwise operators; these may use int or float
 		else if (to_evaluate.get_operator() == exp_operator::BIT_AND)
 		{
-			if (left_type.get_primary() == INT) {
+			if (primary == INT) {
 				// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
 				if (left_type.get_width() != right_type.get_width()) {
 					compiler_warning("Operands in bitwise operation are different widths", line);
@@ -788,7 +788,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 
 				eval_ss << "\t" << "and rax, rbx" << std::endl;
 			}
-			else if (left_type.get_primary() == FLOAT) {
+			else if (primary == FLOAT) {
 				// todo: floats with bitwise operators
 			}
 			else {
@@ -798,7 +798,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		else if (to_evaluate.get_operator() == exp_operator::BIT_OR)
 		{
 			// same procedure as bitwise-and
-			if (left_type.get_primary() == INT) {
+			if (primary == INT) {
 				// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
 				if (left_type.get_width() != right_type.get_width()) {
 					compiler_warning("Operands in bitwise operation are different widths", line);
@@ -806,7 +806,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 
 				eval_ss << "\t" << "or rax, rbx" << std::endl;
 			}
-			else if (left_type.get_primary() == FLOAT) {
+			else if (primary == FLOAT) {
 				// todo: floats with bitwise operators
 			}
 			else {
@@ -816,7 +816,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		else if (to_evaluate.get_operator() == exp_operator::BIT_XOR)
 		{
 			// bitwise xor
-			if (left_type.get_primary() == INT) {
+			if (primary == INT) {
 				// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
 				if (left_type.get_width() != right_type.get_width()) {
 					compiler_warning("Operands in bitwise operation are different widths", line);
@@ -833,18 +833,43 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		}
 		// bitwise not is a unary operator
 
-		// Logical operators; these may only use boolean types
+		/*
+		
+		Logical operators
+
+		These may only operate on boolean types
+		They generate identical code to their bitwise counterparts but different errors
+		
+		*/
 		else if (to_evaluate.get_operator() == exp_operator::AND)
 		{
 			// logical and
+			if (primary == BOOL) {
+				eval_ss << "\t" << "and al, bl" << std::endl;
+			}
+			else {
+				throw UndefinedOperatorError("logical-and", line);
+			}
 		}
 		else if (to_evaluate.get_operator() == exp_operator::OR)
 		{
 			// logical or
+			if (primary == BOOL) {
+				eval_ss << "\t" << "or al, bl" << std::endl;
+			}
+			else {
+				throw UndefinedOperatorError("logical-or", line);
+			}
 		}
 		else if (to_evaluate.get_operator() == exp_operator::XOR)
 		{
 			// logical xor
+			if (primary == BOOL) {
+				eval_ss << "\t" << "xor al, bl" << std::endl;
+			}
+			else {
+				throw UndefinedOperatorError("logical-xor", line);
+			}
 		}
 		// logical not is a unary operator
 
