@@ -135,11 +135,11 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
         
-        if (type.get_width() == 2) {
+        if (type.get_width() == sin_widths::SHORT_WIDTH) {
             eval_ss << "\t" << "mov ax, " << to_evaluate.get_value() << std::endl;
-        } else if (type.get_width() == 4) {
+        } else if (type.get_width() == sin_widths::INT_WIDTH) {
             eval_ss << "\t" << "mov eax, " << to_evaluate.get_value() << std::endl;
-        } else if (type.get_width() == 8) {
+        } else if (type.get_width() == sin_widths::DOUBLE_WIDTH) {
             eval_ss << "\t" << "mov rax, " << to_evaluate.get_value() << std::endl;
         } else {
             throw CompilerException("Invalid type width", 0, line);
@@ -168,7 +168,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        if (type.get_width() == 1) {
+        if (type.get_width() == sin_widths::CHAR_WIDTH) {
             // NASM supports an argument like 'a' for mov to load the char's ASCII value
             eval_ss << "mov al, '" << to_evaluate.get_value() << "'" << std::endl;
         } else {
@@ -255,13 +255,13 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
             } else if (can_pass_in_register(sym.get_data_type())) {
                 // the data width determines which register size to use
                 std::string reg_string;
-                if (sym.get_data_type().get_width() == 1 || sym.get_data_type().get_width() == 8) {
+                if (sym.get_data_type().get_width() == sin_widths::BOOL_WIDTH) {
                     reg_string = "al";
-                } else if (sym.get_data_type().get_width() == 16) {
+                } else if (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH) {
                     reg_string = "ax";
-                } else if (sym.get_data_type().get_width() == 32) {
+                } else if (sym.get_data_type().get_width() == sin_widths::INT_WIDTH) {
                     reg_string = "eax";
-                } else if (sym.get_data_type().get_width() == 64) {
+                } else if (sym.get_data_type().get_width() == sin_widths::PTR_WIDTH) {
                     reg_string = "rax";
                 } else {
                     // todo: is this necessary?
@@ -642,6 +642,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		}
 
 		// evaluate the right-hand side
+		eval_ss << this->evaluate_expression(to_evaluate.get_right(), line).str();
 		if (right_type.get_primary() == FLOAT) {
 			// this depends on the data width; note that floating-point values must always convert to double if a double is used
 			eval_ss << "\t" << ((right_type.get_width() == sin_widths::DOUBLE_WIDTH) ? "movsd" : "movss") << " xmm1, xmm0" << std::endl;

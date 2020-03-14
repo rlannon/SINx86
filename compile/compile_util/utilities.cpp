@@ -112,6 +112,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             /*
 
             Binary expressions are a little more tricky because they can involve multiple operands of different types
+			Further, some operators (the (in)equality operators) return different types than their operands
 
             We must get the types of the left and right operands and compare them. The qualifiers (including sizes) might change:
                 - If one operand is signed, and the other is unsigned, the result may or may not be signed; it will generate a 'signed/unsigned mismatch' warning
@@ -126,11 +127,19 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 
             // ensure the types are compatible
             if (left.is_compatible(right)) {
-                if (left.get_width() >= right.get_width()) {
-                    type_information = left;
-                } else {
-                    type_information = right;
-                }
+				// check for in/equality operators -- these will return booleans instead of the original type!
+				exp_operator op = binary->get_operator();
+				if (op == EQUAL || op == NOT_EQUAL || op == GREATER || op == GREATER_OR_EQUAL || op == LESS || op == LESS_OR_EQUAL) {
+					type_information = DataType(BOOL, DataType(), symbol_qualities());
+				}
+				else {
+					if (left.get_width() >= right.get_width()) {
+						type_information = left;
+					}
+					else {
+						type_information = right;
+					}
+				}
             } else {
                 throw TypeException(line);  // throw an exception if the types are not compatible with one another
             }
