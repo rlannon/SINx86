@@ -853,15 +853,9 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			/*
 
 			Equivalency operators may be used on all types
-			Note, that all equivalency operators use the CMP instruction; all that differs is what branching instruction is used
-
-			The branching instructions used are:
-				=	je
-				!=	jne
-				>	jg
-				<	jl
-				>=	jge
-				<=	jle
+			
+			The equivalency operators will use the CMP instruction on RAX and RBX to test for (in)equality, then use the SETcc instruction to set RAX
+			This will result in 1 in AL if the condition was true, or 0 if it was false; we then use MOVZX to extend AL to RAX, ensuring we don't have any garbage data remaining in higher bits in the register
 
 			*/
 
@@ -871,29 +865,27 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			// a variable to hold our instruction mnemonic
 			std::string instruction = "";
 
-			// determine the branch name
-			std::string branch_name = "B" + this->scope_block_num;
-			this->scope_block_num += 1;	// be sure to increment the scope block
+			// todo: we could write a simple utility function to get a string for the equality based on an operator (e.g., turning EQUAL into 'e' or LESS OR EQUAL to 'le'), assuming we need to use it more than once
 
 			// now, switch to determine which branching instruction we need
 			switch (to_evaluate.get_operator()) {
 			case exp_operator::EQUAL:
-				instruction = "je";
+				instruction = "sete";
 				break;
 			case exp_operator::NOT_EQUAL:
-				instruction = "jne";
+				instruction = "setne";
 				break;
 			case exp_operator::GREATER:
-				instruction = "jg";
+				instruction = "setg";
 				break;
 			case exp_operator::LESS:
-				instruction = "jl";
+				instruction = "setl";
 				break;
 			case exp_operator::GREATER_OR_EQUAL:
-				instruction = "jge";
+				instruction = "setge";
 				break;
 			case exp_operator::LESS_OR_EQUAL:
-				instruction = "jle";
+				instruction = "setle";
 				break;
 			default:
 				// if the parser didn't catch a 'no operator', throw the exception here -- we have no more valid operators
@@ -901,8 +893,9 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				break;
 			}
 
-			// finally, write the instruction data -- tab, instruction, label, newline
-			eval_ss << "\t" << instruction << " " << branch_name << std::endl;
+			// write the instruction sequence
+			eval_ss << "\t" << instruction << " al" << std::endl;
+			eval_ss << "\t" << "movzx rax, al" << std::endl;
 		}
 	}
 	else {
