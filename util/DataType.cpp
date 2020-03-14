@@ -132,14 +132,16 @@ bool DataType::is_compatible(DataType to_compare) const
 
 	*/
 
+	bool compatible;
+
 	if (this->primary == RAW || to_compare.get_primary() == RAW) {
-		return true;
+		compatible = true;
 	}
 	else if ((this->primary == PTR && to_compare.get_primary() == PTR) || (this->primary == ARRAY && to_compare.get_primary() == ARRAY))
 	{
 		// cast the subtypes to DataType (with a subtype of NONE) and call is_compatible on them
 		if (this->subtype && to_compare.subtype) {
-			return this->subtype->is_compatible(
+			compatible = this->subtype->is_compatible(
 				*dynamic_cast<DataType*>(to_compare.get_full_subtype().get())
 			);
 		} else {
@@ -149,8 +151,10 @@ bool DataType::is_compatible(DataType to_compare) const
 	else {
 		// primary types must be equal
 		// todo: generate warnings for width and sign differences
-		return this->primary == to_compare.primary;
+		compatible = this->primary == to_compare.primary;
 	}
+
+	return compatible;
 }
 
 Type DataType::get_primary() const

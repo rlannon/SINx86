@@ -57,7 +57,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             Indexed indexed_exp = *dynamic_cast<Indexed*>(to_evaluate.get());
             
             // dispatch appropriately; evaluation of indexed expressions is sufficiently complicated to warrant it
-            
+			evaluation_ss = this->evaluate_indexed(indexed_exp, line);
             break;
         }
         case LIST:
@@ -354,6 +354,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 
     // first, get the symbol for the array or string we are indexing
     symbol indexed_sym = *(this->lookup(to_evaluate.getValue(), line).get());
+	DataType contained_type = *indexed_sym.get_data_type().get_full_subtype().get();
 
     // ensure it is a valid type to be indexed; if so, get the offset in ebx
     if (indexed_sym.get_symbol_type() == VARIABLE && 
@@ -386,7 +387,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     }
 
 	// get the register name so that we can ensure we are reading a value of the appropriate width
-	std::string reg_name = get_rax_name_variant(indexed_sym.get_data_type(), line);
+	std::string reg_name = get_rax_name_variant(contained_type, line);
 
     // now that we have the offset in RBX, fetch the value
 	if (indexed_sym.get_data_type().get_qualities().is_static()) {

@@ -35,9 +35,8 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             type_information = literal->get_data_type();
             break;
         }
-        // since indexed inherits from lvalue, and we are just getting types, we can put them in the same case
         case LVALUE:
-        case INDEXED:
+		case INDEXED:	// since Indexed expressions inherit from lvalue, we can use one switch case
         {
             // look into the symbol table for an LValue
             LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
@@ -49,7 +48,14 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             } else {
                 // get the symbol and return its type data
                 std::shared_ptr<symbol> sym = it->second;
-                type_information = sym->get_data_type();
+
+				// depending on whether we have an indexed or lvalue expression, we have to return different type data
+				if (expression_type == INDEXED) {
+					type_information = *sym->get_data_type().get_full_subtype().get();
+				}
+				else {
+					type_information = sym->get_data_type();
+				}
             }
             break;
         }
