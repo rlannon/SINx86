@@ -25,6 +25,8 @@ Our various compiler utilities
 #include "../../util/data_widths.h"
 #include "../struct_info.h"
 
+// todo: put these in their own namespace
+
 DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, std::shared_ptr<symbol>> &symbol_table, unsigned int line);
 
 bool returns(StatementBlock &to_check);
@@ -33,7 +35,7 @@ bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
 
 bool can_pass_in_register(DataType to_check);
 
-std::string get_register_name(DataType t);
+std::string get_rax_name_variant(DataType t, unsigned int line);
 
 struct_info define_struct(StructDefinition definition);
 

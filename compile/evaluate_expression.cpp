@@ -254,7 +254,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                 throw VoidException(line);
             } else if (can_pass_in_register(sym.get_data_type())) {
                 // the data width determines which register size to use
-                std::string reg_string = get_register_name(sym.get_data_type());
+                std::string reg_string = get_rax_name_variant(sym.get_data_type(), line);
 
                 if (sym.get_data_type().get_qualities().is_const()) {
                     // const variables can be looked up by their name -- they are in the .data section
@@ -349,8 +349,6 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     @return A stringstream containing the generated code
 
     */
-
-    // todo: evaluate indexed expressions
     
     std::stringstream eval_ss;
 
@@ -388,7 +386,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     }
 
 	// get the register name so that we can ensure we are reading a value of the appropriate width
-	std::string reg_name = get_register_name(indexed_sym.get_data_type());
+	std::string reg_name = get_rax_name_variant(indexed_sym.get_data_type(), line);
 
     // now that we have the offset in RBX, fetch the value
 	if (indexed_sym.get_data_type().get_qualities().is_static()) {

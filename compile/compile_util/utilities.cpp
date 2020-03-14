@@ -278,7 +278,7 @@ bool can_pass_in_register(DataType to_check) {
     return can_pass;
 }
 
-std::string get_register_name(DataType t) {
+std::string get_rax_name_variant(DataType t, unsigned int line) {
 	/*
 	
 	get_register_name
@@ -301,7 +301,6 @@ std::string get_register_name(DataType t) {
 		reg_string = "rax";
 	}
 	else {
-		// todo: is this necessary?
 		throw CompilerException("Invalid data width for symbol", compiler_errors::DATA_WIDTH_ERROR, line);
 	}
 
