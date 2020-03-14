@@ -33,6 +33,8 @@ bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
 
 bool can_pass_in_register(DataType to_check);
 
+std::string get_register_name(DataType t);
+
 struct_info define_struct(StructDefinition definition);
 
 template<class T>

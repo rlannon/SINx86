@@ -278,6 +278,36 @@ bool can_pass_in_register(DataType to_check) {
     return can_pass;
 }
 
+std::string get_register_name(DataType t) {
+	/*
+	
+	get_register_name
+	Gets the name of the variant of RAX that is to hold the data of the given type
+	
+	*/
+
+	std::string reg_string = "";
+
+	if (t.get_width() == sin_widths::BOOL_WIDTH) {
+		reg_string = "al";
+	}
+	else if (t.get_width() == sin_widths::SHORT_WIDTH) {
+		reg_string = "ax";
+	}
+	else if (t.get_width() == sin_widths::INT_WIDTH) {
+		reg_string = "eax";
+	}
+	else if (t.get_width() == sin_widths::PTR_WIDTH) {
+		reg_string = "rax";
+	}
+	else {
+		// todo: is this necessary?
+		throw CompilerException("Invalid data width for symbol", compiler_errors::DATA_WIDTH_ERROR, line);
+	}
+
+	return reg_string;
+}
+
 struct_info define_struct(StructDefinition definition) {
     /*
     
