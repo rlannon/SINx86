@@ -62,14 +62,38 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case LIST:
         {
+			// todo: evaluate list expressions (using pointers)
             break;
         }
         case ADDRESS_OF:
         {
+			// todo: enable address-of with indexed expressions
+			AddressOf addr_exp = *dynamic_cast<AddressOf*>(to_evaluate.get());
+			std::shared_ptr<symbol> s = this->lookup(addr_exp.get_target().getValue(), line);
+			if (s->get_symbol_type() == SymbolType::VARIABLE) {
+				// how we get the address depends on where in memory the symbol lives
+				if (s->get_data_type().get_qualities().is_static()) {
+					// static data just uses the name
+					evaluation_ss << "\t" << "mov rax, " << s->get_name() << std::endl;
+				}
+				else if (s->get_data_type().get_qualities().is_dynamic()) {
+					// dynamic data uses [rbp - offset] because we want the heap address
+					evaluation_ss << "\t" << "mov rax, [rbp - " << s->get_stack_offset() << std::endl;
+				}
+				else {
+					// automatic memory uses rbp - offset
+					evaluation_ss << "\t" << "mov rax, rbp" << std::endl;
+					evaluation_ss << "\t" << "sub rax, " << s->get_stack_offset() << std::endl;
+				}
+			}
+			else {
+				throw InvalidSymbolException(line);
+			}
             break;
         }
         case DEREFERENCED:
         {
+			// todo: evaluate dereferenced expressions
             break;
         }
         case BINARY:
@@ -81,6 +105,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case UNARY:
         {
+			Unary unary_exp = *dynamic_cast<Unary*>(to_evaluate.get());
+			evaluation_ss << this->evaluate_unary(unary_exp, line).str();
             break;
         }
         case VALUE_RETURNING_CALL:
@@ -109,7 +135,8 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
     Evaluates a literal expression
 
     This function will generate code to put a literal value in the A register, or on the stack if necessary. Note that the value will be in RAX, EAX, AX, or AL depending on the data width.
-    This function will add data to the compiler's .data section if a string literal is used.
+    This function will add data to the compiler's .data or .rodata section where needed.
+	Note that pointer literals are considered 'address-of' expressions and so are not included in this function.
 
     @param  to_evaluate The literal expression we are evaluating
     @param  line    The line number of the expression (for error handling)
@@ -162,45 +189,27 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
             throw CompilerException("Invalid syntax", 0, line);
         }
     } else if (type.get_primary() == CHAR) {
-        /*
-
-        Since SIN uses ASCII (for now), all chars get loaded into al as they are only a byte wide
-
-        */
-
+        // Since SIN uses ASCII (for now), all chars get loaded into al as they are only a byte wide
         if (type.get_width() == sin_widths::CHAR_WIDTH) {
             // NASM supports an argument like 'a' for mov to load the char's ASCII value
             eval_ss << "mov al, '" << to_evaluate.get_value() << "'" << std::endl;
         } else {
             throw CompilerException("Unicode currently not supported", compiler_errors::UNICODE_ERROR, line);
         }
-    } else if (type.get_primary() == PTR) {
-        /*
-
-        Since we are on x64, all pointers are 64-bit and get loaded into rax
-
-        */
-
-        // todo: a literal pointer is an address-of -- so this case may be entirely unnecessary
     } else if (type.get_primary() == STRING) {
         /*
         
         Keep in mind that strings are really _pointers_ under the hood -- so we will return a pointer to the string literal, not the string itself on the stack
 
-        However, we need to reserve space for the string in the .data segment
+        However, we need to reserve space for the string in the .rodata segment
 
         */
 
-        // Reserve space for the string in the .data segment
-        // name the constant
         std::string name = "strc_" + std::to_string(this->strc_num);
-        // create the .data declaration -- and enclose the string in backticks in case we have escaped characters
-        std::stringstream data;
-        data << name << " .dd " << to_evaluate.get_value().length() << " `" << to_evaluate.get_value() << "`" << std::endl;
-        this->strc_num += 1;
 
-        // now, make sure our strings goes into the DATA section
-        this->data_segment << data.str();
+        // actually reserve the data and enclose the string in backticks in case we have escaped characters
+        this->rodata_segment << name << " .dd " << to_evaluate.get_value().length() << " `" << to_evaluate.get_value() << "`" << std::endl;
+        this->strc_num += 1;
 
         // now, load the a register with the address of the string
         eval_ss << "\t" << "mov rax, " << name << std::endl;
@@ -210,12 +219,9 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         Array literals are just lists, so this may not be necessary as it may be caught by another function
 
         */
-    } else if (type.get_primary() == STRUCT) {
-        // todo: struct literals are not possible in SIN
-        // todo: enable JSON-style objects to allow them?
     } else {
         // invalid data type
-        throw TypeException(line);
+        throw TypeException(line);	// todo: enable JSON-style objects to allow struct literals?
     }
 
     // finally, return the generated code
@@ -358,7 +364,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 	DataType contained_type = *indexed_sym.get_data_type().get_full_subtype().get();
 	size_t full_array_width = indexed_sym.get_data_type().get_array_length() * contained_type.get_width() + 4;
 
-    // ensure it is a valid type to be indexed; if so, get the offset in ebx
+    // ensure it is a valid type to be indexed (array or string); if so, get the index number in ecx
     if (indexed_sym.get_symbol_type() == VARIABLE && 
 		(
 			indexed_sym.get_data_type().get_primary() == ARRAY || 
@@ -368,7 +374,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
         eval_ss << this->evaluate_expression(to_evaluate.get_index_value(), line).str();
 		
 		// preserve the element number in ecx
-		eval_ss << "\t" << "mov ecx, eax" << std::endl;
+		eval_ss << "\t" << "mov ecx, eax" << std::endl;	// todo: ensure the index can fit into a 32-bit integer?
         
         // mark RBX and RCX as "in use" in case a future operation requires them
         // this will also cause any function that uses these registers to preserve them when called
