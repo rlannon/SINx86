@@ -319,12 +319,12 @@ struct_info define_struct(StructDefinition definition) {
     define_struct
     Creates a struct_info object based on a syntax tree for a struct definition
 
-    Since this doens't actually affect our symbol table, we don't need compiler members
+    Since this doesn't actually affect our symbol table, we don't need compiler members
     Note that the caller should ensure that the definition statement occurs within the globa scope -- it is not the responsibility of this function
 
     @param  definition  The definition statement for the struct
     @return A 'struct_info' object which may be added to the compiler's struct table
-    @throws Throws a StructDefinitionException if there are statements other than
+    @throws Throws a StructDefinitionException if there are statements other than allocations
 
     */
 
@@ -341,13 +341,13 @@ struct_info define_struct(StructDefinition definition) {
             Allocation *alloc = dynamic_cast<Allocation*>(s.get());
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
             
-            // todo: allow default values (alloc-init syntax) in structs?
+            // todo: allow default values (alloc-init syntax) in structs
 
             // add that symbol to our vector
             members.push_back(sym);
 
             // update the data offset
-            // todo: how to handle struct or array members? allocate space for a pointer?
+            // todo: handle struct and array members
             current_offset += alloc->get_type_information().get_width();
         } else {
             throw StructDefinitionException(definition.get_line_number());

@@ -65,7 +65,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 			// todo: evaluate list expressions (using pointers)
             break;
         }
-        case ADDRESS_OF:
+        case ADDRESS_OF:	// todo: move implementation of pointer-related expressions into separate functions
         {
 			// todo: enable address-of with indexed expressions
 			AddressOf addr_exp = *dynamic_cast<AddressOf*>(to_evaluate.get());

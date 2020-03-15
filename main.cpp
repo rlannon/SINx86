@@ -8,12 +8,11 @@ For a documentation of the language, see either the doc folder in this project o
 
 */
 
-// All pre-existing headers used in this file are already included in other project files
-
+// C++/STL headers
 #include <fstream>
 #include <iostream>
 
-// Our headers
+// Custom headers
 #include "parser/Parser.h"
 #include "compile/compiler.h"
 
@@ -25,10 +24,6 @@ void file_error(std::string filename) {
 }
 
 int main (int argc, char *argv[]) {
-    // current usage: sinx86
-
-    // create new compiler and parser objects
-
     try {
         // todo: refactor constructors to streamline this process
         std::ifstream infile;
