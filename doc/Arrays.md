@@ -38,9 +38,4 @@ Note that while arrays usually require the length, there are a few scenarios whe
 * the array is a subtype of `ptr`; if a length is given, it will be ignored by the compiler (the programmer shall be notified this is the behavior by the compiler in a compiler note)
 * the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations. Note that if a length is not given, the array will not have elements and the runtime bounds checks will prevent the array from being accessed
 
-### Array Internals
-
-Arrays are always structured with the 32-bit length followed immediately by the array's elements, starting at 0. Where each of these elements are placed in memory depends on where the array is allocated.
-
-* In automatic arrays, the array is structured according to stack allocation rules of all other data types. The length is located at the highest memory address, and array elements, starting from 0, are written to lower addresses
-* In static and dynamic memory, it is the opposite; the length is stored at the lowest memory address, and array elements, again starting from 0, are written to subsequent (higher) memory addresses
+Finally, arrays are always structured with the 32-bit length followed immediately by the array's elements, starting at 0. Regardless of where they are allocated, the length is at the lowest memory address and the final element is at the highest.
