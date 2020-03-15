@@ -2,11 +2,11 @@
 
 ## Arrays
 
-Arrays in SIN operate in a similar manner as in Java; the array's length is tracked via a 32-bit integer at the array's head, and the data follows immediately after, allowing an array's length to be checked at runtime (beneficial for both static and dynamic arrays). Like arrays in other languages, SIN arrays have fixed lengths.
+Arrays in SIN operate in a similar manner as in Java; the array's length is tracked via a 32-bit integer at the array's head, and the data follows immediately after. This allows an array's length to be checked at runtime, which is beneficial for both static and dynamic arrays. SIN arrays may have fixed or variable lengths, though this entirely depends on how the array is allocated. Automatic and static arrays are always fixed lengths, while arrays located on the heap allow dynamic lengths.
 
 ### Allocating an array
 
-Whenever an array is allocated, the programmer must specify both the width _and_ the type contained within the array. The number of elements must be known at compile time unless dynamic memory is utilized. This looks like:
+Whenever an array is allocated, the programmer must specify both the width _and_ the type contained within the array, in that order. The number of elements to be contained within the array must be known at compile time unless dynamic memory is utilized. This looks like:
 
     alloc array<3, int> my_array;
 
@@ -27,3 +27,20 @@ Note that if we had _not_ marked the array as `dynamic`, a compiler error would 
     alloc static array<my_int &constexpr, int>;
 
 The use of the `constexpr` keyword indicates to the compiler that the expression should be evaluated at compile-time (to save on compilation time, constants are not evaluated at compile-time unless the `constexpr` keyword is used). See the page on SIN constants for more information.
+
+Note that arrays may *not* contain other arrays, though they may contain *pointers* to arrays. For example:
+
+    alloc array<5, array<int>> x;  // illegal
+    alloc array<5, ptr<array<int>>> x; // legal way of doing this
+
+Note that while arrays usually require the length, there are a few scenarios when it isn't:
+
+* the array is a subtype of `ptr`; if a length is given, it will be ignored by the compiler (the programmer shall be notified this is the behavior by the compiler in a compiler note)
+* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations. Note that if a length is not given, the array will not have elements and the runtime bounds checks will prevent the array from being accessed
+
+### Array Internals
+
+Arrays are always structured with the 32-bit length followed immediately by the array's elements, starting at 0. Where each of these elements are placed in memory depends on where the array is allocated.
+
+* In automatic arrays, the array is structured according to stack allocation rules of all other data types. The length is located at the highest memory address, and array elements, starting from 0, are written to lower addresses
+* In static and dynamic memory, it is the opposite; the length is stored at the lowest memory address, and array elements, again starting from 0, are written to subsequent (higher) memory addresses
