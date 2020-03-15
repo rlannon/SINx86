@@ -341,8 +341,9 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     evaluate_indexed
     Evaluates an indexed expression
 
-    Generates x86 to determine the result of an indexed expression.
-    Determines the byte offset based on data type and index, locates the symbol, and fetches the data accordingly
+    All array indices utilize effective addresses as follows:
+		memory_base + index*size + 4
+	The program first ensures the array index is within bounds by looking at the 32-bit integer at [array_base]; if we have a valid index, then it fetches the value using the effective address
 
     @param  to_evaluate The indexed expression we are examining
     @param  line    The line number where the expression occurs (for error handling)
@@ -355,6 +356,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     // first, get the symbol for the array or string we are indexing
     symbol indexed_sym = *(this->lookup(to_evaluate.getValue(), line).get());
 	DataType contained_type = *indexed_sym.get_data_type().get_full_subtype().get();
+	size_t full_array_width = indexed_sym.get_data_type().get_array_length() * contained_type.get_width() + 4;
 
     // ensure it is a valid type to be indexed; if so, get the offset in ebx
     if (indexed_sym.get_symbol_type() == VARIABLE && 
@@ -362,26 +364,16 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 			indexed_sym.get_data_type().get_primary() == ARRAY || 
 			indexed_sym.get_data_type().get_primary() == STRING)
 		) {
-        // todo: perform bounds checking on arrays? the length is known, but we will need to figure out how to handle that error in the assembly, since SIN does not utilize exceptions (could print an error message and quit?)
-
         // next, get the index and multiply it by the data width to get our byte offset
         eval_ss << this->evaluate_expression(to_evaluate.get_index_value(), line).str();
 		
-		// preserve the element number in edx
-		eval_ss << "\t" << "mov edx, eax" << std::endl;
-
-        // the integer value will now be in eax; multiply by the data width (use MUL for unsigned multiplication -- SIN does not support negative indices)
-        eval_ss << "\t" << "mul eax, " << std::dec << indexed_sym.get_data_type().get_width() << std::endl;
-
-        // move the offset into ebx and add INT_WIDTH to it so that we can account for the width of the array
-        eval_ss << "\t" << "mov ebx, eax" << std::endl;
-		eval_ss << "\t" << "add ebx, " << sin_widths::INT_WIDTH << std::endl;
+		// preserve the element number in ecx
+		eval_ss << "\t" << "mov ecx, eax" << std::endl;
         
-        // mark RBX as "in use" in case a future operation requires it
-        // this will also cause any function that uses RBX to preserve it when called
+        // mark RBX and RCX as "in use" in case a future operation requires them
+        // this will also cause any function that uses these registers to preserve them when called
         this->reg_stack.peek().set(RBX);
-		this->reg_stack.peek().set(RCX);	// todo: use RSI for the source?
-		this->reg_stack.peek().set(RDX);
+		this->reg_stack.peek().set(RCX);
     } else {
         throw TypeException(line);
     }
@@ -389,47 +381,39 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 	// get the register name so that we can ensure we are reading a value of the appropriate width
 	std::string reg_name = get_rax_name_variant(contained_type, line);
 
-    // now that we have the offset in RBX, fetch the value
+    // now that we have the index in RCX, fetch the value
 	if (indexed_sym.get_data_type().get_qualities().is_static()) {
 		/*
 		
 		Static arrays can use the name of the variable since they're reserved as named variables prior to runtime
 		Note that because they are static, their width must be known at compile time
-
-		The first element in the array is the lowest in memory, and subsequent elements are [array_base + offset]
 		
 		*/
 
 		eval_ss << "\t" << "mov eax, [" << indexed_sym.get_name() << "]" << std::endl;
-		eval_ss << "\t" << "cmp edx, eax" << std::endl;	// perform the bounds check
+		eval_ss << "\t" << "cmp ecx, eax" << std::endl;	// perform the bounds check
 		// todo: SIN runtime errors; handle the error if necessary
 
 		// access the element
-		eval_ss << "\t" << "mov " << reg_name << ", [" << indexed_sym.get_name() << " + rbx]" << std::endl;
-	} 
+		eval_ss << "\t" << "mov " << reg_name << ", [" << indexed_sym.get_name() << " + rcx*" << contained_type.get_width() << " + " << sin_widths::INT_WIDTH << "]" << std::endl;
+	}
 	else if (indexed_sym.get_data_type().get_qualities().is_dynamic()) {
-        /*
-		
-		Dynamic arrays will use a pointer; their width may be variable
-		Like static arrays, the first element of the array is at the lowest area in memory, and each subsequent element is at a higher address
+		// Dynamic arrays will use a pointer; their width may be variable
 
-		*/
-
-		eval_ss << "\t" << "mov rcx, [rbp - " << indexed_sym.get_stack_offset() << "]" << std::endl;
-
-		// perform a bounds check
-		eval_ss << "\t" << "mov eax, [rcx]" << std::endl;	// get the length of the array
-		eval_ss << "\t" << "cmp edx, eax" << std::endl;	// compare EDX (element's index number) with EAX (number of elements in the array)
+		// first, get the length and perform the bounds check
+		eval_ss << "\t" << "mov rax, [rbp - " << indexed_sym.get_stack_offset() << "]" << std::endl;
+		eval_ss << "\t" << "mov eax, [rax]" << std::endl;	// get the length of the array
+		eval_ss << "\t" << "cmp ecx, eax" << std::endl;	// compare EDX (element's index number) with EAX (number of elements in the array)
 		// todo: SIN runtime errors -- run an error routine if we are out of bounds
 		
-		eval_ss << "\t" << "add rcx, rbx" << std::endl;	// add the element's offset (ebx) to rcx
-		eval_ss << "\t" << "mov " << reg_name << ", [rcx]" << std::endl;	// dereference the pointer
+		eval_ss << "\t" << "mov rbx, [rbp - " << indexed_sym.get_stack_offset() << "]" << std::endl;
+		eval_ss << "\t" << "mov " << reg_name << ", [rbx + rcx*" << contained_type.get_width() << " + " << sin_widths::INT_WIDTH << "]" << std::endl;
     }
 	else {
         /*
 		
 		Automatic arrays can live on the stack because their width _must_ be known at compile time
-		Following the convention of other stack-allocated variables, the first element of the array lives in the highest memory location, and subsequent elements are accessed by [stack_base - array_offset - element_offset]
+		They also follow the convention of all other arrays where the lowest address in the array contains the width and the highest address contains the final element. This allows us to utilize effective addresses
 
 		The algorithm is simple:
 			- Get the address of the base element for the array
@@ -438,16 +422,15 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 
 		*/
 
-		eval_ss << "\t" << "mov rcx, rbp" << std::endl;
-		eval_ss << "\t" << "sub rcx, " << indexed_sym.get_stack_offset() << std::endl;
+		eval_ss << "\t" << "mov rbx, rbp" << std::endl;
+		eval_ss << "\t" << "sub rbx, " << full_array_width << std::endl;
 
 		// perform a bounds check
-		eval_ss << "\t" << "mov eax, [rcx]" << std::endl;
-		eval_ss << "\t" << "cmp edx, eax" << std::endl;	// compare EDX (element's index number) with EAX (number of elements in the array)
-		// todo: SIN runtime errors, jump to error routine if the element access is out of bounds
+		eval_ss << "\t" << "mov eax, [rbx]" << std::endl;
+		eval_ss << "\t" << "cmp ecx, eax" << std::endl;	// compare the index number with the number of elements
+		// todo: SRE error routine
 
-		eval_ss << "\t" << "sub rcx, rbx" << std::endl;
-		eval_ss << "\t" << "mov " << reg_name << ", [rcx]" << std::endl;
+		eval_ss << "\t" << "mov " << reg_name << ", [rbx + rcx*" << contained_type.get_width() << " + " << sin_widths::INT_WIDTH << "]" << std::endl;
     }
 
     // return our generated code
