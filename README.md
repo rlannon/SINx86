@@ -21,7 +21,7 @@ There are currently no working binaries for the toolchain; you must compile and 
 This is not a full compiler suite, and as such, a few third-party applications are required. Without them, the compiler will be not be able to generate working binaries for the programs you write. The required programs are:
 
 * A working C compiler (such as GCC) - the compiler relies on certain C standard functions for things like memory allocation, so a C compiler with the standard library is necessary
-* NASM - the compiler does not generate object code directly; instead, it generates x64 assembly in Intel syntax, meaning an assembler is required
+* An assembler (NASM is recommended) - the compiler does not generate object code directly; instead, it generates x64 assembly in Intel syntax, meaning an assembler is required. While I prefer NASM, any assembler that supports Intel x86 syntax should work without too much difficulty
 
 ### Using SIN
 
