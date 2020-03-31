@@ -173,10 +173,15 @@ std::stringstream compiler::call_function(T call, unsigned int line, bool allow_
         }
 
         // behaves according to the calling convention
-        if (func_sym.get_calling_convention() == SINCALL) {
+        if (func_sym.get_calling_convention() == calling_convention::SINCALL) {
             // SIN calling convention
             call_ss << this->sincall(func_sym, call.get_args(), line).str(); // todo: return this function's result directly?
-        } else {
+		}
+		else if (func_sym.get_calling_convention() == calling_convention::CDECL) {
+			// cdecl calling convention
+			call_ss << this->ccall(func_sym, call.get_args(), line).str();
+		}
+		else {
             // todo: other calling conventions
             throw CompilerException("Other calling conventions not supported at this time", 0, line);
         }
@@ -259,6 +264,29 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
     // finally, return our call code
     return sincall_ss;
+}
+
+std::stringstream compiler::ccall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line) {
+	/*
+	
+	ccall
+	Generates set-up and clean-up code for functions that are to be called with the cdecl convention
+
+	This function generates code for the cdecl convention. For more information, see 'doc/Interfacing with C'
+
+	@param	s	The function symbol for which we are generating a call
+	@param	args	The arguments supplied to the call
+	@param	line	The line on which the call is located
+
+	@return	The stringstream containing the generated code
+
+	*/
+
+	std::stringstream cdecl_ss;
+
+	// todo: ccall
+
+	return cdecl_ss;
 }
 
 std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol signature) {

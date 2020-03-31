@@ -81,6 +81,7 @@ class compiler {
 
 	template<typename T> std::stringstream call_function(T to_call, unsigned int line, bool allow_void = true);
 	std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
+	std::stringstream ccall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
 	std::stringstream handle_return(ReturnStatement ret, function_symbol signature);
 	std::stringstream sincall_return(ReturnStatement &ret, DataType return_type);
 
