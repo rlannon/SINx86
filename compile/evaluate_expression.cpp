@@ -89,6 +89,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 			else {
 				throw InvalidSymbolException(line);
 			}
+
             break;
         }
         case DEREFERENCED:
@@ -180,7 +181,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        // todo: shouldn't all other values get caught by the parser as not literals?
+        // todo: shouldn't all other values get caught by the parser as non-literals?
         if (to_evaluate.get_value() == "true") {
             eval_ss << "\t" << "mov al, 1" << std::endl;
         } else if (to_evaluate.get_value() == "false") {
@@ -479,13 +480,30 @@ std::stringstream compiler::evaluate_sizeof(SizeOf &to_evaluate, unsigned int li
         eval_ss << "\t" << "mov eax, " << sin_widths::BOOL_WIDTH << std::endl;
     } else if (to_evaluate.get_type().get_primary() == PTR) {
         eval_ss << "\t" << "mov eax, " << sin_widths::PTR_WIDTH << std::endl;
-    } else {
-        // todo: look into compiler table to see if we have a struct -- then make sure this is a "compiler" method
-        
-        // todo: should a struct name be a valid sizeof argument? we should keep a note in the struct table that says whether its size is known or not
-        // todo: maybe structs can't have arrays inside them, only pointers to arrays (or dynamic arrays)
-        
-        // todo: sizeof<array> and sizeof<string> are invalid
+	}
+	else if (to_evaluate.get_type().get_primary() == STRUCT) {
+		// look into compiler table to see if we have a struct
+		std::unordered_map<std::string, struct_info>::iterator s_it = this->struct_table.find(to_evaluate.get_type().get_struct_name());
+
+		// ensure we actually have a valid iterator
+		if (s_it == this->struct_table.end()) {
+			throw CompilerException("Undefined type", compiler_errors::TYPE_ERROR, line);
+		}
+		else {
+			// if the struct width is known at compile time, we can utilize the value; else, throw an error
+			
+			// todo: require struct widths to be known at compile time; any variable-width types must be dynamic or utilize pointers
+
+			struct_info s_info = s_it->second;
+			if (s_info.is_width_known()) {
+				eval_ss << "\t" << "mov eax, " << s_info.get_width() << std::endl;
+			}
+			else {
+				throw CompilerException("sizeof<T> cannot be used with this struct type because its width is unknown", compiler_errors::UNDEFINED_ERROR, line);
+			}
+		}
+	} else {
+        // sizeof<array> and sizeof<string> are invalid
         throw CompilerException("Invalid argument for sizeof<T>; only fixed-width types can be used", compiler_errors::DATA_WIDTH_ERROR, line);
     }
 
