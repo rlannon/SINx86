@@ -19,6 +19,11 @@ This file contains the function/class declarations required for the compiler's c
 
 class compile_time_evaluator {
 	std::unordered_map<std::string, const_symbol> constants;
+	const_symbol lookup(std::string sym_name, std::string scope_name, unsigned int scope_level);
+
+	std::string get_mangled_name(std::string sym_name, std::string scope_name, unsigned int scope_level);
+
+	std::string evaluate_literal(Literal& literal);
 public:
 	void add_constant(Allocation &alloc, symbol &s);
 
