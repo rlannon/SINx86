@@ -24,6 +24,12 @@ const_symbol::const_symbol(symbol s, std::string v) :
 	// super called
 }
 
+const_symbol::const_symbol() :
+	symbol(), value(std::string())
+{
+	// super called
+}
+
 const_symbol::~const_symbol()
 {
 }

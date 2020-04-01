@@ -20,5 +20,6 @@ public:
 	std::string get_value();
 
 	const_symbol(symbol s, std::string v);
+	const_symbol();
 	~const_symbol();
 };

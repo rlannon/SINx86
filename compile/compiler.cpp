@@ -244,6 +244,21 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
         compile_ss << this->compile_statement(s, signature).str();
     }
 
+	// todo: is there a more efficient way to handle this? maybe in blocked scopes we save a *copy* of the map? that might involve *huge* memory overhead (depending on the size of the user's program) that would be avoided with this method, though...
+
+	// delete all symbols from the current scope upon exiting -- both from this symbol table AND from the constant evaluation table
+	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.begin();
+	while (it != this->symbol_table.end()) {
+		if (it->second->get_scope_name() == this->current_scope_name && it->second->get_scope_level() == this->current_scope_level) {
+			it = this->symbol_table.erase(it);
+		}
+		else {
+			it++;
+		}
+	}
+	// todo: call compile_time_evaluator::remove_symbols_in_scope to remove symbols
+	// note the scope name and level are updated elsewhere
+
     return compile_ss;
 }
 
