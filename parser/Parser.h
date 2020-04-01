@@ -26,9 +26,9 @@ Note that:
 #include "Statement.h"
 #include "Expression.h"
 #include "Lexer.h"
+
 #include "../util/Exceptions.h"	// ParserException
 #include "../util/DataType.h"	// type information
-
 
 class Parser
 {	

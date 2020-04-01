@@ -1,6 +1,11 @@
 section .text
 main:
 	mov ax, 5
+	push rax
+	mov ax, 5
+	mov rbx, rax
+	pop rax
+	add rax, rbx
 	mov [rbp - 16], eax
 
 

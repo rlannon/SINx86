@@ -2,8 +2,8 @@
 // A test file for our compiler
 
 def void main() {
-	alloc int x: 5;
-    alloc array<x, int> my_arr;
+	alloc int x: (5 + 5);
+	alloc dynamic array<10, int> myarr;
 
 	return void;
 }

@@ -275,7 +275,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 
 	Type new_var_type;
 	DataType new_var_subtype;
-	size_t array_length = 0;
+	std::shared_ptr<Expression> array_length_exp = nullptr;
 	std::string struct_name = "";
 
 	if (current_lex.value == "ptr") {
@@ -300,32 +300,21 @@ DataType Parser::get_type(std::string grouping_symbol)
 		if (this->peek().value == "<") {
 			this->next();	// eat the angle bracket
 
-			// we must see the size next; must be an int
+			// parse an expression to obtain the array length; the _current lexeme_ should be the first lexeme of the expression		
+			this->next();
+			array_length_exp = this->parse_expression();
 			
-			// todo: change array size parsing to parse an expression; if it is a constexpr, pass it to the evaluator, else we must have a dynamic array
-			
-			if (this->peek().type == "int" || this->peek().type == "ident") {
-				if (this->peek().type == "int") {
-					array_length = (size_t)std::stoi(this->next().value);	// get the array length
-				}
-				else {
-					this->next();	// skip the identifier
-					array_length = 0;	// identifiers will default to array length of 0; if the array is not dynamic, this error will be handled later
-				}
+			// the array length will be evaluated by the compiler; continue parsing
 
-				// a comma should follow the size
-				if (this->peek().value == ",") {
-					this->next();
+			// a comma should follow the size
+			if (this->peek().value == ",") {
+				this->next();
 					
-					// parse a full type
-					new_var_subtype = this->parse_subtype("<");
-				}
-				else {
-					throw ParserException("The size of an array must be followed by the type", 0, current_lex.line_number);
-				}
+				// parse a full type
+				new_var_subtype = this->parse_subtype("<");
 			}
 			else {
-				throw ParserException("The size of an array must be a positive integer expression (or identifier if using a dynamic array)", 0, current_lex.line_number);
+				throw ParserException("The size of an array must be followed by the type", 0, current_lex.line_number);
 			}
 		}
 		else {
@@ -363,7 +352,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 	}
 
 	// create the symbol type data
-	DataType symbol_type_data(new_var_type, new_var_subtype, qualities, array_length, struct_name);
+	DataType symbol_type_data(new_var_type, new_var_subtype, qualities, array_length_exp, struct_name);
 	return symbol_type_data;
 }
 

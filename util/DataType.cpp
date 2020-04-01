@@ -83,6 +83,7 @@ DataType& DataType::operator=(const DataType &right)
 		this->array_length = right.array_length;
 		this->struct_name = right.struct_name;
 		this->width = right.width;
+		this->array_length_expression = right.array_length_expression;
 	}
 
 	return *this;
@@ -183,6 +184,10 @@ std::string DataType::get_struct_name() const {
 	return this->struct_name;
 }
 
+std::shared_ptr<Expression> DataType::get_array_length_expression() const {
+	return this->array_length_expression;
+}
+
 std::shared_ptr<DataType> DataType::get_full_subtype() const {
 	// static_cast to a subtype does not work; we need a function to return the entire shared pointer
 	return this->subtype;
@@ -268,13 +273,16 @@ bool DataType::is_valid_type(DataType &t) {
 	return is_valid;
 }
 
-DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, size_t array_length, std::string struct_name) :
+DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp, std::string struct_name) :
     primary(primary),
 	subtype(nullptr),
     qualities(qualities),
-	array_length(array_length),
+	array_length_expression(array_length_exp),
 	struct_name(struct_name)
 {
+	// the array length will be evaluated by the compiler; start at 0
+	this->array_length = 0;
+
 	// if the subtype has a type of NONE, then the subtype should be a nullptr; otherwise, construct an object
 	if (subtype.get_primary() != NONE) {
 		this->subtype = std::make_shared<DataType>(subtype);
@@ -298,7 +306,7 @@ DataType::DataType(Type primary) :
 		primary,
 		DataType(),
 		symbol_qualities(),
-		0,
+		nullptr,
 		""
 	)
 {
@@ -311,6 +319,7 @@ DataType::DataType(const DataType &ref) {
 	this->subtype = ref.subtype;
 	this->qualities = ref.qualities;
 	this->array_length = ref.array_length;
+	this->array_length_expression = ref.array_length_expression;
 	this->struct_name = ref.struct_name;
 	this->width = ref.width;
 }
@@ -322,6 +331,7 @@ DataType::DataType()
 	this->qualities = symbol_qualities();	// no qualities to start
 	this->array_length = 0;
 	this->struct_name = "";
+	this->array_length_expression = nullptr;
 }
 
 DataType::~DataType()

@@ -150,7 +150,7 @@ CompilerException(
 	// super called
 }
 
-TypeValidityViolation::TypeValidityViolation(unsigned int & line) :
+TypeValidityViolation::TypeValidityViolation(unsigned int line) :
 	CompilerException(
 		"Type was parsed correctly, but violates SIN's type validity policy",
 		compiler_errors::TYPE_VALIDITY_RULE_VIOLATION_ERROR,

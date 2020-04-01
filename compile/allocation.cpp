@@ -20,7 +20,6 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 	// allocate the variable if our type was valid
 	if (DataType::is_valid_type(alloc_data)) {
-
 		// variables in the global scope do not need to be marked as 'static' by the programmer, though they are located in static memory so we must set the static quality if we are in the global scope
 		if (this->current_scope_name == "global") {
 			alloc_data.get_qualities().add_quality(SymbolQuality::STATIC);
@@ -75,7 +74,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		}
 	}
 	else {
-		throw TypeException(alloc_stmt.get_line_number());
+		throw TypeValidityViolation(alloc_stmt.get_line_number());	// todo: generate a more specific error saying what the policy violation was
 	}
 
     // return our allocation code

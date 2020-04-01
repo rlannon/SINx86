@@ -122,6 +122,9 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				// use our type parsing function to parse the sizeof< T > type
 				DataType to_check = this->parse_subtype("<");
 				left = std::make_shared<SizeOf>(to_check);
+
+				// sizeof expressions are compile-time constants
+				is_const = true;
 			}
 			else {
 				throw ParserException("Syntax error; expected '<'", 0, current_lex.line_number);
@@ -239,7 +242,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	}
 
 	// if is_const is set, then set 'left' to be a constexpr
-	if (is_const) left->set_const();
+	if (is_const || left->get_expression_type() == LITERAL) left->set_const();
 
 	// Use the maybe_binary function to determine whether we need to return a binary expression or a simple expression
 
@@ -376,6 +379,10 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 
 			// Create the binary expression
 			std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
+
+			// if the left and right sides are constants, the whole expression is a constant
+			if (left->is_const() && right->is_const())
+				binary->set_const();
 
 			// call maybe_binary again at the old prec level in case this expression is followed by one of a higher precedence
 			return this->maybe_binary(binary, my_prec, grouping_symbol);

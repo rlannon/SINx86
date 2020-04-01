@@ -137,7 +137,7 @@ public:
 class TypeValidityViolation : public CompilerException
 {
 public:
-	explicit TypeValidityViolation(unsigned int &line);
+	explicit TypeValidityViolation(unsigned int line);
 };
 
 class VariabilityPolicyViolation : public CompilerException

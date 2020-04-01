@@ -22,6 +22,8 @@ DataType contains the type, subtype, and qualities of a given expression alongsi
 #include "Exceptions.h"
 #include "symbol_qualities.h"
 
+class Expression;
+
 class DataType
 {
 	Type primary;	// always has a primary type
@@ -30,6 +32,8 @@ class DataType
 	symbol_qualities qualities;	// the qualities of the symbol (const, signed, etc.)
 	size_t array_length;	// if it's an array, track the length
 	size_t width;	// the width (in bytes) of the type
+
+	std::shared_ptr<Expression> array_length_expression;
 
 	std::string struct_name;	// if the data type is 'struct', we need to know its name so we can look it up in the struct table
 
@@ -52,6 +56,8 @@ public:
 	size_t get_array_length() const;
 	std::string get_struct_name() const;
 
+	std::shared_ptr<Expression> get_array_length_expression() const;
+
 	std::shared_ptr<DataType> get_full_subtype() const;
 
 	void set_primary(Type new_primary);
@@ -68,7 +74,7 @@ public:
 
 	static bool is_valid_type(DataType &t);
 
-    DataType(Type primary, DataType subtype, symbol_qualities qualities, size_t array_length = 0, std::string struct_name = "");
+    DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp = nullptr, std::string struct_name = "");
 	DataType(Type primary);
 	DataType(const DataType &ref);
 	DataType();
