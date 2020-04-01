@@ -63,6 +63,8 @@ public:
 	void set_primary(Type new_primary);
 	void set_subtype(DataType new_subtype);
 
+	void set_array_length(size_t new_length);
+
 	void add_qualities(symbol_qualities to_add);
     void add_quality(SymbolQuality to_add);
 

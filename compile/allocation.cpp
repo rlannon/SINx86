@@ -18,6 +18,39 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
     DataType alloc_data = alloc_stmt.get_type_information();
     std::stringstream allocation_ss;
 
+	// if the type is 'array', we need to evaluate the array width that was parsed earlier
+	if (alloc_data.get_primary() == ARRAY) {
+		// if it's a constant, evaluate it
+		if (alloc_data.get_array_length_expression()->is_const()) {
+			if (
+				get_expression_data_type(
+					alloc_data.get_array_length_expression(),
+					this->symbol_table,
+					alloc_stmt.get_line_number()
+				).get_primary() == INT)
+			{
+				// pass the expression to our expression evaluator to get the array width
+				// todo: compile-time evaluation
+			}
+			else {
+				throw CompilerException("An array width must be a positive integer", compiler_errors::TYPE_ERROR, alloc_stmt.get_line_number());
+			}
+		}
+		else {
+			// if the length is not constant, check to see if we have a dynamic array; if not, then it's not legal
+			if (alloc_data.get_qualities().is_dynamic()) {
+				alloc_data.set_array_length(0);
+			}
+			else {
+				throw CompilerException(
+					"The length of a non-dynamic array must be known at compile time (use a literal or a valid constexpr)",
+					compiler_errors::TYPE_VALIDITY_RULE_VIOLATION_ERROR,
+					alloc_stmt.get_line_number()
+				);
+			}
+		}
+	}
+
 	// allocate the variable if our type was valid
 	if (DataType::is_valid_type(alloc_data)) {
 		// variables in the global scope do not need to be marked as 'static' by the programmer, though they are located in static memory so we must set the static quality if we are in the global scope

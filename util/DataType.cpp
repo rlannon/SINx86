@@ -201,6 +201,10 @@ void DataType::set_subtype(DataType new_subtype) {
 	this->subtype = std::make_shared<DataType>(new_subtype);
 }
 
+void DataType::set_array_length(size_t new_length) {
+	this->array_length = new_length;
+}
+
 void DataType::add_qualities(symbol_qualities to_add) {
 	// simply use the "SymbolQualities::add_qualities" function
 	this->qualities.add_qualities(to_add);
