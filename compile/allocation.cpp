@@ -58,9 +58,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			alloc_data.get_qualities().add_quality(SymbolQuality::STATIC);
 		}
 
-		// if a constant is to be allocated but no initial value was given, generate an error
-		if (alloc_data.get_qualities().is_const() && !alloc_stmt.was_initialized()) {
-			throw ConstAllocationException(alloc_stmt.get_line_number());
+		// we have some special things we need to do when we allocate constants
+		if (alloc_data.get_qualities().is_const()) {
+			// check to ensure it was initialized
+			if (!alloc_stmt.was_initialized())
+				throw ConstAllocationException(alloc_stmt.get_line_number());
+
+			// todo: evaluate the constant and add it to the constant table
 		}
 
 		// perform the allocation

@@ -22,7 +22,7 @@ DataType contains the type, subtype, and qualities of a given expression alongsi
 #include "Exceptions.h"
 #include "symbol_qualities.h"
 
-class Expression;
+class Expression;	// since 'DataType' uses 'shared_ptr<Expression>' to track array length, we must forward-declare 'Expression' here
 
 class DataType
 {
