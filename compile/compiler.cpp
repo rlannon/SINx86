@@ -71,14 +71,14 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
     }
 }
 
-struct_info compiler::get_struct_info(std::string struct_name, unsigned int line) {
+struct_info& compiler::get_struct_info(std::string struct_name, unsigned int line) {
     /*
     
     get_struct_info
     Looks up a struct with the given name in the struct table
 
     @param  struct_name The name of the struct to find
-    @param  line    The line where the lookup is needed
+    @param  line    The line where the lookup occurs; necessary in case this function throws an exception
     @return A struct_info object containing the information
     @throws Throws an UndefinedException if the struct is not known
 

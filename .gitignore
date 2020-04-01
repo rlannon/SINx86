@@ -11,6 +11,9 @@ sinx86
 # Also ignore our constexpr evaluation files for the time being
 compile/compile_util/evaluate_constexpr.h
 
+# ignore the struct.cpp file until we have more functions for structs
+compile/struct.cpp
+
 # Visual Studio files
 *.sln
 Debug/*

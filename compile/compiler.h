@@ -41,7 +41,7 @@ class compiler {
     template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
 
     std::unordered_map<std::string, struct_info> struct_table;
-    struct_info get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
+    struct_info& get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
 
 	// We need to track the number for string constants, if/else blocks, etc.
 	size_t strc_num;
@@ -93,7 +93,6 @@ class compiler {
 	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
-
 public:
     // the compiler's entry function
     void generate_asm(std::string filename, Parser &p);

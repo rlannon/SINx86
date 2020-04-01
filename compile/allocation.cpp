@@ -31,9 +31,12 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			throw ConstAllocationException(alloc_stmt.get_line_number());
 		}
 
-		// now we may make the assignment
+		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
 			// todo: allocate dynamically
+
+			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// if we have a const here, throw an exception -- constants may not be dynamic
 			if (alloc_data.get_qualities().is_const()) {
@@ -42,6 +45,9 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		}
 		else if (alloc_data.get_qualities().is_static()) {
 			// todo: allocate static memory
+			
+			symbol allocated = generate_symbol(alloc_stmt, "global", 0, this->max_offset);
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// static const variables can go in the .rodata segment, so check to see if it is also const
 			if (alloc_data.get_qualities().is_const()) {
@@ -52,7 +58,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// must be automatic memory
 			// allocate memory on the stack
 
-			// construct the symbol with our utility function and add it to the symbol table
+			// construct the symbol and add it to the symbol table
 			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
@@ -69,7 +75,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		}
 	}
 	else {
-		// todo: throw type error because our type is not valid
+		throw TypeException(alloc_stmt.get_line_number());
 	}
 
     // return our allocation code

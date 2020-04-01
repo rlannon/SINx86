@@ -10,6 +10,14 @@ The implementation of the struct_info class
 
 #include "struct_info.h"
 
+bool struct_info::is_width_known() const {
+	return this->width_known;
+}
+
+size_t struct_info::get_width() const {
+	return this->struct_width;
+}
+
 struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned int line) {
     /*
     
@@ -37,8 +45,13 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
             if (sym_width != 0) {
                 this->struct_width += s.get_data_type().get_width();
             } else {
-                this->width_known = false;
-            }
+				if (s.get_data_type().get_qualities().is_dynamic()) {
+					this->struct_width += sin_widths::PTR_WIDTH;
+				}
+				else {
+					this->width_known = false;
+				}
+			}
         } catch (std::exception &e) {
             throw DuplicateSymbolException(line);
         }

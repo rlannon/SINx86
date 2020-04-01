@@ -181,7 +181,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        // todo: shouldn't all other values get caught by the parser as non-literals?
+        // all other values should get caught by the parser as non-literals, but we will just be extra safe
         if (to_evaluate.get_value() == "true") {
             eval_ss << "\t" << "mov al, 1" << std::endl;
         } else if (to_evaluate.get_value() == "false") {
@@ -483,24 +483,15 @@ std::stringstream compiler::evaluate_sizeof(SizeOf &to_evaluate, unsigned int li
 	}
 	else if (to_evaluate.get_type().get_primary() == STRUCT) {
 		// look into compiler table to see if we have a struct
-		std::unordered_map<std::string, struct_info>::iterator s_it = this->struct_table.find(to_evaluate.get_type().get_struct_name());
+			
+		// todo: require struct widths to be known at compile time; any variable-width types must be dynamic or utilize pointers
 
-		// ensure we actually have a valid iterator
-		if (s_it == this->struct_table.end()) {
-			throw CompilerException("Undefined type", compiler_errors::TYPE_ERROR, line);
+		struct_info &s_info = this->get_struct_info(to_evaluate.get_type().get_struct_name(), line);
+		if (s_info.is_width_known()) {
+			eval_ss << "\t" << "mov eax, " << s_info.get_width() << std::endl;
 		}
 		else {
-			// if the struct width is known at compile time, we can utilize the value; else, throw an error
-			
-			// todo: require struct widths to be known at compile time; any variable-width types must be dynamic or utilize pointers
-
-			struct_info s_info = s_it->second;
-			if (s_info.is_width_known()) {
-				eval_ss << "\t" << "mov eax, " << s_info.get_width() << std::endl;
-			}
-			else {
-				throw CompilerException("sizeof<T> cannot be used with this struct type because its width is unknown", compiler_errors::UNDEFINED_ERROR, line);
-			}
+			throw CompilerException("sizeof<T> cannot be used with this struct type because its width is unknown", compiler_errors::UNDEFINED_ERROR, line);
 		}
 	} else {
         // sizeof<array> and sizeof<string> are invalid

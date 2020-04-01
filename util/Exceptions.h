@@ -134,6 +134,12 @@ public:
 	explicit IllegalQualityException(std::string &offending_quality, unsigned int &line);
 };
 
+class TypeValidityViolation : public CompilerException
+{
+public:
+	explicit TypeValidityViolation(unsigned int &line);
+};
+
 class VariabilityPolicyViolation : public CompilerException
 {
 public:

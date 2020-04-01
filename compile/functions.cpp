@@ -284,7 +284,8 @@ std::stringstream compiler::ccall(function_symbol s, std::vector<std::shared_ptr
 
 	std::stringstream cdecl_ss;
 
-	// todo: ccall
+	// todo: ccall / cdecl
+	// todo: should SIN, being a language targeting 64-bit systems, support the cdecl calling convention?
 
 	return cdecl_ss;
 }
@@ -336,16 +337,12 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
 
     This function is _not_ responsible for restoring used registers; it simply evaluates the expression and returns it according to the calling convention.
 
+	All we need to do is evaluate the expression; the result will be in RAX or XMM0 automatically
+	Structs, arrays, and strings will pass _pointers_ to these members in RAX; subsequent assignments will use memory copying, as usual
+
     */
 
-    std::stringstream sincall_ss;
-
-    // all we need to do is evaluate the expression; the result will be in RAX or XMM0 automatically
-    // structs, arrays, and strings will pass _pointers_ to these members in RAX; subsequent assignments will use memory copying, as usual
-
-    sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
-
-    // todo: solidify and implement struct/array/string conventions
-
+	std::stringstream sincall_ss;
+	sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
     return sincall_ss;
 }

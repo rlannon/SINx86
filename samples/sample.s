@@ -1,14 +1,8 @@
 section .text
 main:
-
-	mov ax, 0
-	mov ecx, eax
-	mov rbx, rbp
-	sub rbx, 16
-	mov eax, [rbx]
-	cmp ecx, eax
-	mov eax, [rbx + rcx*4 + 4]
+	mov ax, 5
 	mov [rbp - 16], eax
+
 
 	mov rax, 0
 

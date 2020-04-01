@@ -238,7 +238,13 @@ bool DataType::is_valid_type(DataType &t) {
 
 	bool is_valid = true;
 
-	if (t.primary == FLOAT) {
+	if (t.primary == ARRAY) {
+		// the array length must not be 0 if the array is not dynamic
+		if (t.array_length == 0 && !t.qualities.is_dynamic()) {
+			is_valid = false;
+		}
+	}
+	else if (t.primary == FLOAT) {
 		// half-precision or short floats are not supported
 		if (t.qualities.is_short()) {
 			is_valid = false;

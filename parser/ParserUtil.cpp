@@ -301,8 +301,17 @@ DataType Parser::get_type(std::string grouping_symbol)
 			this->next();	// eat the angle bracket
 
 			// we must see the size next; must be an int
-			if (this->peek().type == "int") {
-				array_length = (size_t)std::stoi(this->next().value);	// get the array length
+			
+			// todo: change array size parsing to parse an expression; if it is a constexpr, pass it to the evaluator, else we must have a dynamic array
+			
+			if (this->peek().type == "int" || this->peek().type == "ident") {
+				if (this->peek().type == "int") {
+					array_length = (size_t)std::stoi(this->next().value);	// get the array length
+				}
+				else {
+					this->next();	// skip the identifier
+					array_length = 0;	// identifiers will default to array length of 0; if the array is not dynamic, this error will be handled later
+				}
 
 				// a comma should follow the size
 				if (this->peek().value == ",") {
@@ -316,7 +325,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 				}
 			}
 			else {
-				throw ParserException("The size of an array must be a positive integer expression", 0, current_lex.line_number);
+				throw ParserException("The size of an array must be a positive integer expression (or identifier if using a dynamic array)", 0, current_lex.line_number);
 			}
 		}
 		else {

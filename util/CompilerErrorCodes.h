@@ -48,6 +48,7 @@ namespace compiler_errors {
     const unsigned int VOID_TYPE_ERROR = 211;
     const unsigned int OPERATOR_TYPE_ERROR = 212;   // the specified operator could not be used on the given expression
     const unsigned int RETURN_MISMATCH_ERROR = 215; // a function's return type does not match its signature
+	const unsigned int TYPE_VALIDITY_RULE_VIOLATION_ERROR = 220;	// SIN has strict type validity rules, and one or more were violated
     const unsigned int QUALITY_CONFLICT_ERROR = 230;
     const unsigned int ILLEGAL_QUALITY_ERROR = 231;
 	const unsigned int VARIABILITY_ERROR = 232;
