@@ -21,6 +21,7 @@ Note that:
 #include <vector>
 #include <string>
 #include <tuple>
+#include <unordered_map>
 
 #include "type_deduction.h"
 #include "Statement.h"
@@ -45,8 +46,9 @@ class Parser
 	// translates an operator character into an exp_operator type
 	static const exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
 
-	// our precedence handlers
-	static const std::vector<std::tuple<std::string, size_t>> precedence;
+	// our operator and precedence handlers
+	static const std::unordered_map<std::string, exp_operator> op_strings;
+	static const std::unordered_map<exp_operator, size_t> op_precedence;	// todo: create operator class
 	static const size_t get_precedence(std::string symbol, size_t line = 0);
 
 	// Some utility functions

@@ -10,37 +10,79 @@ Contains the implementations of various utility functions for the parser.
 
 #include "Parser.h"
 
-// todo: refactor precedence vector to a hash table
+const std::unordered_map<std::string, exp_operator> Parser::op_strings({
+	{"+", PLUS},
+	{"-", MINUS},
+	{"*", MULT},
+	{"/", DIV},
+	{"%", MODULO},
+	{"=", EQUAL},
+	{"!=", NOT_EQUAL},
+	{">", GREATER},
+	{"<", LESS},
+	{">=", GREATER_OR_EQUAL},
+	{"<=", LESS_OR_EQUAL},
+	{"&", BIT_AND},
+	{"|", BIT_OR},
+	{"^", BIT_XOR},
+	{"~", BIT_NOT},
+	{"and", AND},
+	{"or", OR},
+	{"xor", XOR},
+	{".", DOT},
+	{"->", ARROW}
+});
 
-// Define our symbols and their precedences as a vector of tuples containing the operator string and its precedence (size_t)
-const std::vector<std::tuple<std::string, size_t>> Parser::precedence{ std::make_tuple("or", 2), std::make_tuple("and", 2), std::make_tuple("xor", 2), std::make_tuple("!", 2),
-	std::make_tuple("<", 4), std::make_tuple(">", 7), std::make_tuple("<", 7), std::make_tuple(">=", 7), std::make_tuple("<=", 7), std::make_tuple("=", 7),
-	std::make_tuple("!=", 7), std::make_tuple("|", 8), std::make_tuple("^", 8), std::make_tuple("&", 9), std::make_tuple("+", 10),
-	std::make_tuple("-", 10),std::make_tuple("$", 15), std::make_tuple("*", 20), std::make_tuple("/", 20), std::make_tuple("%", 20) };
+const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
+	{OR, 2},
+	{AND, 2},
+	{XOR, 2},
+	{NOT, 2},
+	{LESS, 7},
+	{GREATER, 7},
+	{LESS_OR_EQUAL, 7},
+	{GREATER_OR_EQUAL, 7},
+	{EQUAL, 7},
+	{NOT_EQUAL, 7},
+	{BIT_AND, 8},
+	{BIT_OR, 8},
+	{BIT_XOR, 8},
+	{BIT_NOT, 8},
+	{PLUS, 10},
+	{MINUS, 10},
+	{exp_operator::ADDRESS, 15},	// todo: remove this operator
+	{MULT, 20},
+	{DIV, 20},
+	{MODULO, 20},
+	{DOT, 25},
+	{ARROW, 25}
+});
 
-const size_t Parser::get_precedence(std::string symbol, size_t line) {
-	// Iterate through the vector and find the tuple that matches our symbol; if found, return its precedence; if not, throw an exception and return 0
-	std::vector<std::tuple<std::string, size_t>>::const_iterator it = Parser::precedence.begin();
-	bool match = false;
-	size_t precedence;
-
-	while (it != Parser::precedence.end()) {
-		if (std::get<0>(*it) == symbol && !match) {
-			match = true;
-			precedence = std::get<1>(*it);
-		}
-		else {
-			it++;
-		}
-	}
-
-	if (match) {
-		return precedence;
+const exp_operator Parser::translate_operator(std::string op_string) {
+	// try and find the operator
+	std::unordered_map<std::string, exp_operator>::const_iterator it = Parser::op_strings.find(op_string);
+	if (it == Parser::op_strings.end()) {
+		return NO_OP;
 	}
 	else {
-		throw ParserException("Unknown operator '" + symbol + "'!", 0, line);
-		return 0;
+		return it->second;
 	}
+}
+
+const size_t Parser::get_precedence(std::string symbol, size_t line) {
+	// get the precedence of an operator
+
+	size_t precedence = 0;
+	std::unordered_map<exp_operator, size_t>::const_iterator it = Parser::op_precedence.find(Parser::translate_operator(symbol));
+	
+	if (it == Parser::op_precedence.end()) {
+		throw ParserException("Unknown operator '" + symbol + "'!", 0, line);
+	}
+	else {
+		precedence = it->second;
+	}
+
+	return precedence;
 }
 
 // Utility functions for traversing the token list

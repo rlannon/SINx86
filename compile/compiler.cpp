@@ -77,7 +77,7 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
     // throw an exception if the symbol could not be inserted
     if (!ok) {
 		// if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
-		if (to_add.get_symbol_type == SymbolType::FUNCTION_SYMBOL)
+		if (to_add.get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
 			throw DuplicateDefinitionException(line);
 		else
 			throw DuplicateSymbolException(line);
