@@ -41,6 +41,7 @@ class compiler {
     template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
 
     std::unordered_map<std::string, struct_info> struct_table;
+	void add_struct(struct_info to_add, unsigned int line);	// add a struct to the table
     struct_info& get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
 
 	// We need to track the number for string constants, if/else blocks, etc.

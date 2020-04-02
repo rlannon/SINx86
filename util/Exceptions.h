@@ -74,6 +74,12 @@ public:
 	explicit DuplicateSymbolException(unsigned int line);
 };
 
+class DuplicateDefinitionException : public CompilerException
+{
+public:
+	explicit DuplicateDefinitionException(unsigned int line);
+};
+
 class UndefinedException : public CompilerException
 {
 public:

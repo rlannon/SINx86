@@ -66,6 +66,12 @@ DuplicateSymbolException::DuplicateSymbolException(unsigned int line) :
 	// function body not necessary (super called)
 }
 
+DuplicateDefinitionException::DuplicateDefinitionException(unsigned int line) :
+	CompilerException("Definition for this resource (struct/function) already found", compiler_errors::DUPLICATE_DEFINITION_ERROR, line)
+{
+	// super called
+}
+
 UndefinedException::UndefinedException(unsigned int line) :
 	CompilerException("Undefined reference to object", compiler_errors::UNDEFINED_ERROR, line)
 {

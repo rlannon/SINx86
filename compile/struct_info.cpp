@@ -14,6 +14,32 @@ bool struct_info::is_width_known() const {
 	return this->width_known;
 }
 
+std::string struct_info::get_struct_name() const
+{
+	return this->struct_name;
+}
+
+symbol struct_info::get_member(std::string name)
+{
+	/*
+	
+	get_member
+	Gets the symbol information for the member of a given struct
+	
+	*/
+	
+	symbol to_return;
+	std::unordered_map<std::string, symbol>::iterator it = this->members.find(name);
+	if (it == this->members.end()) {
+		throw SymbolNotFoundException(0);	// todo: add a 'line' parameter?
+	}
+	else {
+		to_return = it->second;
+	}
+
+	return to_return;
+}
+
 size_t struct_info::get_width() const {
 	return this->struct_width;
 }

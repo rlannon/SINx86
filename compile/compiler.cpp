@@ -55,7 +55,8 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
     @param  to_add  The symbol we want to add
     @param  line    The line number where the allocation occurs
 
-    @throws DuplicateSymbolException
+    @throws DuplicateSymbolException if T is class 'symbol' and it couldn't be added
+	@throws	DuplicateDefinitionException if T is class 'function_symbol' and it couldn't be added
 
     */
 
@@ -75,8 +76,44 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 
     // throw an exception if the symbol could not be inserted
     if (!ok) {
-        throw DuplicateSymbolException(line);
+		// if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
+		if (to_add.get_symbol_type == SymbolType::FUNCTION_SYMBOL)
+			throw DuplicateDefinitionException(line);
+		else
+			throw DuplicateSymbolException(line);
     }
+}
+
+void compiler::add_struct(struct_info to_add, unsigned int line) {
+	/*
+	
+	add_struct
+	Adds a struct to the compiler's struct table
+
+	@param	to_add	The struct_info object we need to put in the struct table (contains information about the struct)
+	@param	line	The line where the definition occurs
+
+	@throws	DuplicateDefinitionException if the struct couldn't be added
+	
+	*/
+
+	// todo: can this function and add_symbol utilize templates to be combined into one function?
+
+	size_t pos = to_add.get_struct_name().find("sinl_");
+	if (pos != std::string::npos && pos == 0) {
+		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
+	}
+
+	bool ok = this->struct_table.insert(
+		std::make_pair<>(
+			to_add.get_struct_name(),
+			to_add
+		)
+	).second;
+
+	if (!ok) {
+		throw DuplicateDefinitionException(line);
+	}
 }
 
 struct_info& compiler::get_struct_info(std::string struct_name, unsigned int line) {
@@ -200,8 +237,14 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             break;
         }
         case STRUCT_DEFINITION:
-            // todo: add struct to the struct table so we can utilize them
-            break;
+		{
+			StructDefinition *def_stmt = dynamic_cast<StructDefinition*>(s.get());
+
+			struct_info defined = define_struct(*def_stmt);
+			this->add_struct(defined, s->get_line_number());
+
+			break;
+		}
         case CALL:
         {
             Call *call_stmt = dynamic_cast<Call*>(s.get());

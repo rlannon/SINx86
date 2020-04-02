@@ -25,6 +25,7 @@ namespace compiler_errors {
     const unsigned int DATA_WIDTH_ERROR = 3;
 	const unsigned int CONST_ALLOCATION_ERROR = 11;	// constants must be initialized in their allocation
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
+	const unsigned int DUPLICATE_DEFINITION_ERROR = 31;	// The definition for this resource was already found
     const unsigned int ILLEGAL_OPERATION_ERROR = 50;    // The statement is not allowed where it was found
     const unsigned int ILLEGAL_RETURN_ERROR = 51;   // Return statements must only occur within functions
 	const unsigned int NO_RETURN_ERROR = 52;	// used for when not all control paths in a function return a value
