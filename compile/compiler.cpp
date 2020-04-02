@@ -50,6 +50,7 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 
     Adds a symbol to the symbol table, throwing an exception if it's a duplicate.
     Since this is a template function, it can handle either symbols or function symbols. And, since the symbol table uses shared pointers, truncation won't be an issue.
+	Note this function checks to see if the symbol name begins with "sinl_", the prefix for SIN Runtime Environment functions and data. If it does, the compiler will issue a warning stating that errors may be encountered at link time, but it will continue compilation.
 
     @param  to_add  The symbol we want to add
     @param  line    The line number where the allocation occurs
@@ -58,6 +59,13 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 
     */
 
+	// check for sinl_ prefix
+	size_t pos = to_add.get_name().find("sinl_");
+	if (pos != std::string::npos && pos == 0) {
+		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
+	}
+
+	// insert the symbol
     bool ok = this->symbol_table.insert(
         std::make_pair(
             to_add.get_name(),
