@@ -10,6 +10,12 @@ Some functions within the SRE provide runtime error functionality. While SIN, li
 
 This document is to serve as a reference for the built-in runtime environment. Note that much of the SRE's functionality utilizes functions from the C standard library (such as `malloc` and `free`), which is why the SIN compiler requires a working copy of your C compiler of choice to create executables. A compiled copy of the SRE is not included in this project, but a copy of its source will be.
 
+## The Memory Allocation Management System (MAM)
+
+In SIN, memory management is typically done with the `alloc` and `free` keywords in combination with location specifiers like `dynamic`. Unlike C, these are done with *keywords* instead of library functions. However, this means that some library support is still required, even though it is not visible to the programmer. Rather, it is done automatically by SIN's memory management system, also called the Memory Allocation Manager, or MAM.
+
+For more information on the MAM, see [the appropriate document](Memory%20Allocation%20Manager.md).
+
 ## The SRE
 
 The SRE is divided into a series of modules, divided up by the role they serve in the library. All functions in the SRE are prefixed with `sinl_` to indicate they are a SIN language function.
