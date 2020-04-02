@@ -15,6 +15,7 @@ Our various compiler utilities
 #include <cinttypes>
 #include <unordered_map>
 
+#include "const_symbol.h"
 #include "../../util/DataType.h"
 #include "../../parser/Statement.h" // includes 'Expression.h'
 #include "../symbol.h"
@@ -27,7 +28,8 @@ Our various compiler utilities
 
 // todo: put these in their own namespace
 
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, std::shared_ptr<symbol>> &symbol_table, unsigned int line);
+template<typename T>
+DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, T> &symbol_table, unsigned int line);
 
 bool returns(StatementBlock &to_check);
 
@@ -39,10 +41,10 @@ std::string get_rax_name_variant(DataType t, unsigned int line);
 
 struct_info define_struct(StructDefinition definition);
 
-template<class T>
+template<typename T>
 function_symbol create_function_symbol(T def);
 
-template<class T>
+template<typename T>
 symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope_level, size_t &stack_offset);
 
 std::stringstream push_used_registers(register_usage regs, bool ignore_ab = false);
