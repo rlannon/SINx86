@@ -11,6 +11,9 @@ sinx86
 # ignore the struct.cpp file until we have more functions for structs
 compile/struct.cpp
 
+# ignore main.cpp on this branch
+main.cpp
+
 # Visual Studio files
 *.sln
 Debug/*
