@@ -74,7 +74,7 @@ Aggregate types (arrays) and user-defined types (structs) must always be passed 
 
 ### Return Values
 
-Values are returned on RAX (or another variant of the register depending on the data width) where possible. Floating-point types are returned in XMM0. Any unused bits in the register are undefined.
+Values are returned on RAX (or another variant of the register depending on the data width) where possible. Floating-point types are returned in XMM0 as scalar values. Any unused bits in the register are undefined; as an example, returning a value in `al` does not necessarily mean that `ah` will have been zeroed.
 
 #### Non-Primitive Return Values
 
@@ -85,6 +85,10 @@ Note that, since structs and arrays are written in "reverse order" onto the stac
     (struct_stack_offset + struct_width) - (struct_member_offset + struct_member_width)
 
 Writing structs to the stack in reverse order will make it easy to copy between the stack and other areas of memory (as struct member order does not need to be accounted for).
+
+#### Secondary Return Values
+
+Some SIN runtime library functions utilize multiple return values, meaning values will be contained in `rax` and `rbx`. While secondary return values are not a feature in SIN, the calling convention allows for them because they are required by the language. For example, the ASM dynamic memory allocation functions in the runtime environment return a pointer to the allocated memory in `rax`, but they will also return the number of allocated bytes in `rbx`.
 
 ### Register Preservation
 

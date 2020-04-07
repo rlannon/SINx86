@@ -39,16 +39,16 @@ The assignment statements will generate the following code (or something like it
 
 The following is an overview of these 'hidden pointer types.' Note that `array` and `string` may not be used as `sizeof< T >` arguments, but any user-defined `struct` type may, as a struct's width *must* be known at compile time.
 
-**NB:** In subtypes, `T` is used to mean "type" (referring to any fully-parsed type) and `N` is used to indicate an integer.
+**NB:** In subtypes, `T` is used to mean "type" (referring to any **fully-parsed** type) and `N` is used to indicate an integer.
 
 #### `array< (N,) T >`
 
 Arrays, like pointers, always contain a fully-parsed subtype; this tells the compiler what type of data is stored within the array, allowing it to be safely used in any expression as well as allowing the compiler to accurately calculate the array's width. Arrays may also contain, before the type, an unsigned integer indicating the number of elements in the array; this is *almost always* required, the only situations it is *not* being when:
 
 * the array is a subtype of `ptr`; if a length is given, it will be ignored by the compiler (the programmer shall be notified this is the behavior by the compiler in a compiler note)
-* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations
+* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations. Note that if a length is not given, the array will not have elements and the runtime bounds checks will prevent the array from being accessed
 
-All arrays contain a 4-byte header containing an `unsigned int` indicating the number of elements contained by the array; this allows for runtime bounds and length checks without any additional variables to be tracked by the programmer.
+All arrays contain a 4-byte header containing an `unsigned int` indicating the number of elements contained by the array; this allows for runtime bounds and length checks without any additional variables to be tracked by the programmer. See the [array documentation](Arrays.md) for more information.
 
 **NB:** Arrays may not contain other arrays, but they may contain pointers to them; these pointer and array types must all be fully-parsed subtypes.
 
