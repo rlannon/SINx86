@@ -1,9 +1,18 @@
 // sample.sin
 // A test file for our compiler
 
+def struct point {
+	alloc int x;
+	alloc int y;
+}
+
 def void main() {
-	alloc int x: (5 + 5);
-	alloc dynamic array<10, int> myarr;
+	alloc int test: -(3 + 2);
+	// test dot operator precedence parsing
+	alloc point p;
+	alloc int n: p.x;
+	alloc int m: p.y * 2;
+	alloc int a: -p.x;
 
 	return void;
 }

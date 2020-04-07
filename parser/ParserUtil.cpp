@@ -37,7 +37,6 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{OR, 2},
 	{AND, 2},
 	{XOR, 2},
-	{NOT, 2},
 	{LESS, 7},
 	{GREATER, 7},
 	{LESS_OR_EQUAL, 7},
@@ -47,13 +46,16 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{BIT_AND, 8},
 	{BIT_OR, 8},
 	{BIT_XOR, 8},
-	{BIT_NOT, 8},
 	{PLUS, 10},
 	{MINUS, 10},
 	{exp_operator::ADDRESS, 15},	// todo: remove this operator
 	{MULT, 20},
 	{DIV, 20},
 	{MODULO, 20},
+	{NOT, 23},
+	{BIT_NOT, 23},
+	{UNARY_PLUS, 24},
+	{UNARY_MINUS, 24},
 	{DOT, 25},
 	{ARROW, 25}
 });
@@ -70,13 +72,18 @@ const exp_operator Parser::translate_operator(std::string op_string) {
 }
 
 const size_t Parser::get_precedence(std::string symbol, size_t line) {
-	// get the precedence of an operator
+	// get the precedence of an operator based on the string
 
 	size_t precedence = 0;
-	std::unordered_map<exp_operator, size_t>::const_iterator it = Parser::op_precedence.find(Parser::translate_operator(symbol));
+	return Parser::get_precedence(Parser::translate_operator(symbol), line);
+}
+
+const size_t Parser::get_precedence(exp_operator op, size_t line) {
+	size_t precedence = 0;
 	
+	std::unordered_map<exp_operator, size_t>::const_iterator it = Parser::op_precedence.find(op);
 	if (it == Parser::op_precedence.end()) {
-		throw ParserException("Unknown operator '" + symbol + "'!", 0, line);
+		throw ParserException("Invalid operator", 0, line);
 	}
 	else {
 		precedence = it->second;

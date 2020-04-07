@@ -189,30 +189,20 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			left = this->create_dereference_object();
 		}
 		// check to see if we have a unary operator
-		else if ((current_lex.value == "+") || (current_lex.value == "-") || (current_lex.value == "!")) {
-			// get the next leceme
-			lexeme next = this->next();
-			// declare our operand
-			std::shared_ptr<Expression> operand;
+		else if ((current_lex.value == "+") || (current_lex.value == "-") || (current_lex.value == "!") || (current_lex.value == "~")) {
+			// get the precedence of the unary operator
+			size_t precedence;
+			if (current_lex.value == "+") precedence = Parser::get_precedence(UNARY_PLUS);
+			else if (current_lex.value == "-") precedence = Parser::get_precedence(UNARY_MINUS);
+			else if (current_lex.value == "!") precedence = Parser::get_precedence(NOT);
+			else precedence = Parser::get_precedence(BIT_NOT);
 
-			if (next.type == "ident") {
-				// make a shared pointer to our variable (lvalue, type will be "var")
-				operand = std::make_shared<LValue>(next.value);
-			}
-			else if (next.type == "int") {
-				// make our operand a literal
-				operand = std::make_shared<Literal>(INT, next.value);
-			}
-			else if (next.type == "float") {
-				// make our operand a literal
-				operand = std::make_shared<Literal>(FLOAT, next.value);
-			}
-			else {
-				throw OperatorTypeError(current_lex.value, next.value, next.line_number);
-			}
+			// advance the token pointer and parse the expression
+			this->next();
+			std::shared_ptr<Expression> operand = this->parse_expression(precedence);	// parse an expression at the precedence level of our unary operator
 
-			// now, "operand" should have our operand (and if the type was invalid, it will have thrown an error)
-			// make a unary + or - depending on the type; we have already checked to make sure it's a valid unary operator
+			// todo: simplify this a little
+			// now that we have the operand, create the expression
 			if (current_lex.value == "+") {
 				left = std::make_shared<Unary>(operand, PLUS);
 			}
@@ -221,6 +211,9 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			}
 			else if (current_lex.value == "!") {
 				left = std::make_shared<Unary>(operand, NOT);
+			}
+			else {
+				left = std::make_shared<Unary>(operand, BIT_NOT);
 			}
 		}
 	}

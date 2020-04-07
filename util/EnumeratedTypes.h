@@ -70,6 +70,8 @@ enum exp_operator {
 	// So that we have a clear list of operators
 	PLUS,
 	MINUS,
+	UNARY_PLUS,
+	UNARY_MINUS,
 	MULT,
 	DIV,
 	EQUAL,
