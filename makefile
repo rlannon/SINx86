@@ -8,8 +8,8 @@ target=sinx86
 bin=bin/
 
 # object file dependencies
-compiler_objs=allocation.o assign.o evaluate_expression.o functions.o function_symbol.o struct_info.o symbol.o
-compiler_util_objs=register_usage.o utilities.o
+compiler_objs=allocation.o assign.o evaluate_expression.o operator_expressions.o functions.o function_symbol.o struct_info.o symbol.o
+compiler_util_objs=constant_eval.o constant_eval_util.o const_symbol.o  register_usage.o utilities.o
 parser_objs=lexeme.o lexer.o type_deduction.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
 util_objs=datatype.o symbol_qualities.o exceptions.o binaryio.o
 build_objs=compiler.o parser.o $(compiler_objs) $(compiler_util_objs) $(parser_objs) $(util_objs)
@@ -44,6 +44,9 @@ assign.o: compile/assign.cpp compile/compiler.h
 evaluate_expression.o: compile/evaluate_expression.cpp compile/compiler.h
 	$(cc) $(flags) -o evaluate_expression.o -c compile/evaluate_expression.cpp
 
+operator_expressions.o: compile/compiler.h
+	$(cc) $(flags) -o operator_expressions.o -c compile/operator_expressions.cpp
+
 functions.o: compile/compiler.h compile/functions.cpp function_symbol.o
 	$(cc) $(flags) -o functions.o -c compile/functions.cpp
 
@@ -57,10 +60,19 @@ symbol.o: compile/symbol.cpp compile/symbol.h
 	$(cc) $(flags) -o symbol.o -c compile/symbol.cpp
 
 # compiler utilities
+const_symbol.o: compile/compile_util/const_symbol.h
+	$(cc) $(flags) -o const_symbol.o -c compile/compile_util/const_symbol.cpp
+
+constant_eval.o: constant_eval_util.o compile/compile_util/constant_eval.h utilities.o
+	$(cc) $(flags) -o constant_eval.o -c compile/compile_util/constant_eval.cpp
+
+constant_eval_util.o: compile/compile_util/constant_eval.h
+	$(cc) $(flags) -o constant_eval_util.o -c compile/compile_util/constant_eval_util.cpp
+
 register_usage.o: compile/compile_util/register_usage.cpp compile/compile_util/register_usage.h
 	$(cc) $(flags) -o register_usage.o -c compile/compile_util/register_usage.cpp
 
-utilities.o: compile/compile_util/*
+utilities.o: compile/compile_util/utilities.h
 	$(cc) $(flags) -o utilities.o -c compile/compile_util/utilities.cpp
 
 # Build the parser
