@@ -9,7 +9,12 @@ Some utility functions for the compiler
 
 #include "utilities.h"
 
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, std::shared_ptr<symbol>> &symbol_table, unsigned int line) {
+// Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
+template DataType get_expression_data_type(std::shared_ptr<Expression>, std::unordered_map<std::string, std::shared_ptr<symbol>>&, unsigned int);
+template DataType get_expression_data_type(std::shared_ptr<Expression>, std::unordered_map<std::string, std::shared_ptr<const_symbol>>&, unsigned int);
+
+template<typename T>
+DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, T> &symbol_table, unsigned int line) {
     /*
 
     get_expression_data_type
@@ -36,18 +41,18 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             break;
         }
         case LVALUE:
-		case INDEXED:	// since Indexed expressions inherit from lvalue, we can use one switch case
+		case INDEXED:	// since Indexed expressions inherit from LValue, we can use one switch case
         {
             // look into the symbol table for an LValue
             LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
-            std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = symbol_table.find(lvalue->getValue());
+            typename std::unordered_map<std::string, T>::iterator it = symbol_table.find(lvalue->getValue());
 
             // if the symbol isn't in the table, throw an exception; else, continue
             if (it == symbol_table.end()) {
                 throw SymbolNotFoundException(line);
             } else {
                 // get the symbol and return its type data
-                std::shared_ptr<symbol> sym = it->second;
+                T sym = it->second;
 
 				// depending on whether we have an indexed or lvalue expression, we have to return different type data
 				if (expression_type == INDEXED) {
@@ -165,7 +170,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
         {
             // look into the symbol table to get the return type of the function
             ValueReturningFunctionCall *call_exp = dynamic_cast<ValueReturningFunctionCall*>(to_eval.get());
-            std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = symbol_table.find(call_exp->get_func_name());
+            typename std::unordered_map<std::string, T>::iterator it = symbol_table.find(call_exp->get_func_name());
 
             // make sure it's in the table
             if (it == symbol_table.end()) {
@@ -358,11 +363,12 @@ struct_info define_struct(StructDefinition definition) {
     return struct_info(struct_name, members, definition.get_line_number());
 }
 
-// Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
+// Again, since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
+
 template function_symbol create_function_symbol(FunctionDefinition);
 template function_symbol create_function_symbol(Declaration);
 
-template <class T>
+template <typename T>
 function_symbol create_function_symbol(T def) {
     /*
 
@@ -410,11 +416,10 @@ function_symbol create_function_symbol(T def) {
     return to_return;
 }
 
-// Again, since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 template symbol generate_symbol(Declaration&, std::string, unsigned int, size_t&);
 template symbol generate_symbol(Allocation&, std::string, unsigned int, size_t&);
 
-template <class T>
+template <typename T>
 symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope_level, size_t &stack_offset) {
     /*
 
