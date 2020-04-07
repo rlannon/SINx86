@@ -27,7 +27,7 @@ StatementBlock Parser::create_ast() {
 
 	// creating an empty lexeme will allow us to test if the current token has nothing in it
 	// sometimes, the lexer will produce a null lexeme, so we want to skip over it if we find one
-	lexeme null_lexeme("", "", 0);
+	lexeme null_lexeme(NULL_LEXEME, "", 0);
 
 	// Parse a token file
 	// While we are within the program and we have not reached the end of a procedure block, keep parsing
@@ -63,58 +63,13 @@ StatementBlock Parser::create_ast() {
 }
 
 
-// Populate our tokens list
-void Parser::populate_token_list(std::ifstream* token_stream) {
-	token_stream->peek();	// to make sure we haven't gone beyond the end of the file
-
-	while (!token_stream->eof()) {
-		lexeme current_token;
-		std::string type;
-		std::string value;
-		std::string line_number_string;
-		unsigned int line_number = 0;
-
-		// get the type
-		if (token_stream->peek() != '\n') {
-			*token_stream >> type;
-
-			// get the value
-			if (token_stream->peek() == '\n') {
-				token_stream->get();
-			}
-			std::getline(*token_stream, value);
-
-			// get the line number
-			if (token_stream->peek() == '\n') {
-				token_stream->get();
-			}
-			// convert the line number to an int
-			std::getline(*token_stream, line_number_string);
-			line_number = std::stoi(line_number_string);
-		}
-		else {
-			token_stream->get();
-		}
-
-		// ensure that empty tokens are not added to the tokens list
-		current_token = lexeme(type, value, line_number);
-		if (current_token.type == "") {
-			continue;
-		}
-		else {
-			this->tokens.push_back(current_token);
-		}
-	}
-}
-
-
 Parser::Parser(Lexer& lexer) {
 	std::cout << "Lexing..." << std::endl;
 	while (!lexer.eof() && !lexer.exit_flag_is_set()) {
 		lexeme token = lexer.read_next();
 
 		// only push back tokens that aren't empty
-		if ((token.type != "") && (token.value != "") && (token.line_number != 0)) {
+		if ((token.type != NULL_LEXEME) && (token.value != "") && (token.line_number != 0)) {
 			Parser::tokens.push_back(token);
 		}
 		else {
@@ -126,14 +81,6 @@ Parser::Parser(Lexer& lexer) {
 	Parser::can_use_include_statement = true;	// include statements must be first in the file
 	Parser::position = 0;
 	Parser::num_tokens = Parser::tokens.size();
-}
-
-Parser::Parser(std::ifstream* token_stream) {
-	Parser::quit = false;
-	Parser::position = 0;
-	Parser::populate_token_list(token_stream);
-	Parser::num_tokens = Parser::tokens.size();
-	Parser::can_use_include_statement = false;	// initialize to false
 }
 
 Parser::Parser()

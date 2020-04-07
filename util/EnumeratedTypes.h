@@ -11,6 +11,20 @@ These are to be used so that this code might be more maintainable and less error
 
 #pragma once
 
+enum lexeme_type {
+	// The types of lexemes possible in the lexer, expressed as an enum
+	FLOAT_LEX,
+	INT_LEX,
+	STRING_LEX,
+	BOOL_LEX,
+	IDENTIFIER,
+	KEYWORD,
+	PUNCTUATION,
+	OPERATOR,
+	ESCAPED,
+	NULL_LEXEME
+};
+
 enum stmt_type {
 	// The various types of statements we can have in SIN
 	STATEMENT_GENERAL,

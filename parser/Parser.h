@@ -102,15 +102,11 @@ class Parser
 	std::shared_ptr<Expression> create_dereference_object();
 	LValue getDereferencedLValue(Dereferenced to_eval);
 	std::shared_ptr<Expression> maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol = "(");	// check to see if we need to fashion a binary expression
-
-	// Create a list of tokens for the parser from an input stream
-	void populate_token_list(std::ifstream* token_stream);
 public:
 	// our entry function
 	StatementBlock create_ast();
 
 	Parser(Lexer& lexer);
-	Parser(std::ifstream* token_stream);
 	Parser();
 	~Parser();
 };

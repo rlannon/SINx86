@@ -225,7 +225,7 @@ Reads the next character in the stream to determine what to do next.
 */
 
 lexeme Lexer::read_next() {
-	std::string type = "";
+	lexeme_type type = NULL_LEXEME;
 	std::string value = "";
 	lexeme next_lexeme;
 
@@ -234,7 +234,7 @@ lexeme Lexer::read_next() {
 	char ch = this->peek();	// peek to see if we are still within the file
 
 	if (this->stream->eof()) {
-		next_lexeme = lexeme("", "", 0);	// return an empty tuple if we have reached the end of the file
+		next_lexeme = lexeme(NULL_LEXEME, "", 0);	// return an empty tuple if we have reached the end of the file
 		this->exit_flag = true;	// set our exit flag
 		return next_lexeme;
 	}
@@ -257,7 +257,7 @@ lexeme Lexer::read_next() {
 				ch = this->peek();
 
 				if (this->stream->eof() || this->eof()) {	// check to make sure we haven't gone past the end of the file
-					next_lexeme = lexeme("", "", 0);	// if we are, set the exit flag return an empty tuple
+					next_lexeme = lexeme(NULL_LEXEME, "", 0);	// if we are, set the exit flag return an empty tuple
 					this->exit_flag = true;	// set our exit flag
 					return next_lexeme;	// return the empty lexeme
 				}
@@ -294,19 +294,19 @@ lexeme Lexer::read_next() {
 	if (ch != EOF && ch != NULL) {
 		// test our various data types
 		if (ch == '"') {
-			type = "string";
+			type = lexeme_type::STRING_LEX;
 			value = this->read_string();
 		}
 		else if (this->is_id_start(ch)) {
 			value = this->read_while(&this->is_id);
 			if (this->is_keyword(value)) {
-				type = "kwd";
+				type = KEYWORD;
 			}
 			else if (this->is_boolean(value)) {
-				type = "bool";
+				type = BOOL_LEX;
 			}
 			else {
-				type = "ident";
+				type = IDENTIFIER;
 			}
 		}
 		else if (this->is_digit(ch)) {
@@ -314,18 +314,18 @@ lexeme Lexer::read_next() {
 
 			// Now we must test whether the number we got is an int or a float
 			if (std::regex_search(value, std::regex("\\."))) {
-				type = "float";
+				type = FLOAT_LEX;
 			}
 			else {
-				type = "int";
+				type = INT_LEX;
 			}
 		}
 		else if (this->is_punc(ch)) {
-			type = "punc";
+			type = PUNCTUATION;
 			value = this->next();	// we only want to read one punctuation mark at a time, so do not use "read_while"; they are to be kept separate
 		}
 		else if (this->is_op_char(ch)) {
-			type = "op_char";
+			type = OPERATOR;
 			char next_ch = this->peek();
 			if (next_ch != '*') {
 				value = this->read_while(&this->is_op_char);
@@ -338,7 +338,7 @@ lexeme Lexer::read_next() {
 		else if (ch == '\n') {	// if we encounter a newline character
 			this->peek();
 			if (this->stream->eof()) {
-				next_lexeme = lexeme("", "", 0);	// if we have reached the end of file, set the exit flag and return an empty tuple
+				next_lexeme = lexeme(NULL_LEXEME, "", 0);	// if we have reached the end of file, set the exit flag and return an empty tuple
 				this->exit_flag = true;
 				return next_lexeme;
 			}
@@ -360,17 +360,17 @@ lexeme Lexer::read_next() {
 		std::cout << ch << "   (NULL)" << std::endl;
 		std::cout << "ch == NULL; done." << std::endl;
 		this->exit_flag = true;
-		return lexeme("", "NULL", 0);
+		return lexeme(NULL_LEXEME, "NULL", 0);
 	}
 	else if (ch == EOF) {	// if the end of file was reached
 		std::cout << ch << "   (EOF)" << std::endl;
 		std::cout << "end of file reached." << std::endl;
 		this->exit_flag = true;
-		return lexeme("", "EOF", 0);
+		return lexeme(NULL_LEXEME, "EOF", 0);
 	}
 	else {
 		throw LexerException("Unexpected lexeme", this->position, ch);
-		return lexeme("", "", 0);
+		return lexeme(NULL_LEXEME, "", 0);
 	}
 }
 

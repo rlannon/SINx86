@@ -12,8 +12,10 @@ The definition of the struct that contains lexeme data
 
 #include <string>
 
+#include "../util/EnumeratedTypes.h"
+
 struct lexeme {
-	std::string type;	// todo: refactor to use enum
+	lexeme_type type;
 	std::string value;
 	unsigned int line_number;
 	
@@ -21,5 +23,5 @@ struct lexeme {
 	bool operator==(const lexeme& b);
 
 	lexeme();
-	lexeme(std::string type, std::string value, unsigned int line_number);
+	lexeme(lexeme_type type, std::string value, unsigned int line_number);
 };

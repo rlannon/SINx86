@@ -10,6 +10,22 @@ The implementation of our type deduction functions
 
 #include "type_deduction.h"
 
+const Type type_deduction::get_type_from_lexeme(lexeme_type lex_type)
+{
+	switch (lex_type) {
+	case STRING_LEX:
+		return STRING;
+	case BOOL_LEX:
+		return BOOL;
+	case INT_LEX:
+		return INT;
+	case FLOAT_LEX:
+		return FLOAT;
+	default:
+		return STRUCT;
+	}
+}
+
 const Type type_deduction::get_type_from_string(std::string candidate) {
 	// if it can, this function gets the proper type of an input string
 	// an array of the valid types as strings
@@ -25,10 +41,7 @@ const Type type_deduction::get_type_from_string(std::string candidate) {
 		}
 	}
 
-    // todo: check to ensure the string is an identifier? else, throw exception (expected valid type name)
-
-	// if we arrive here, we have not found a primitive type, and we should assume it's a struct
-    // if no such struct exists, then the compiler will notice
+	// if we arrive here, we have not found a primitive type, and we should assume it's a struct; if no such struct exists, then the compiler will notice
 	return STRUCT;
 }
 

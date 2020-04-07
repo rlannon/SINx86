@@ -69,7 +69,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			return left;
 		}
 		// if our next character is an op_char, returning the expression would skip it, so we need to parse a binary using the expression in parens as our left expression
-		else if (this->peek().type == "op_char") {
+		else if (this->peek().type == OPERATOR) {
 			return this->maybe_binary(left, prec, grouping_symbol);
 		}
 	}
@@ -99,9 +99,12 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	}
 	// if it is not an expression within a grouping symbol, it is parsed below
 	else if (is_literal(current_lex.type)) {
-		left = std::make_shared<Literal>(type_deduction::get_type_from_string(current_lex.type), current_lex.value);
+		left = std::make_shared<Literal>(
+			type_deduction::get_type_from_lexeme(current_lex.type),
+			current_lex.value
+		);
 	}
-	else if (current_lex.type == "ident") {
+	else if (current_lex.type == IDENTIFIER) {
 		// check to see if we have the identifier alone, or whether we have an index
 		if (this->peek().value == "[") {
 			this->next();
@@ -112,7 +115,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		}
 	}
 	// if we have a keyword to begin an expression, parse it (could be a sizeof expression)
-	else if (current_lex.type == "kwd") {
+	else if (current_lex.type == KEYWORD) {
 		if (current_lex.value == "sizeof") {
 			// expression must be enclosed in angle brackets
 			if (this->peek().value == "<") {
@@ -135,12 +138,12 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		}
 	}
 	// if we have an op_char to begin an expression, parse it (could be a pointer or a function call)
-	else if (current_lex.type == "op_char") {
+	else if (current_lex.type == OPERATOR) {
 		// if we have a function call
 		if (current_lex.value == "@") {
 			current_lex = this->next();
 
-			if (current_lex.type == "ident") {
+			if (current_lex.type == IDENTIFIER) {
 				// Same code as is in statement
 				std::vector<std::shared_ptr<Expression>> args;
 
@@ -170,7 +173,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			// current lexeme is the $, so get the variable for which we need the address
 			lexeme next_lexeme = this->next();
 			// the next lexeme MUST be an identifier
-			if (next_lexeme.type == "ident") {
+			if (next_lexeme.type == IDENTIFIER) {
 
 				// turn the identifier into an LValue
 				LValue target_var(next_lexeme.value, "var_address");
@@ -263,7 +266,7 @@ std::shared_ptr<Expression> Parser::create_dereference_object() {
 
 	lexeme previous_lex = this->previous();	// note that previous() does not update the current position
 
-	if (this->peek().type == "ident") {
+	if (this->peek().type == IDENTIFIER) {
 		// get the identifier and advance the position counter
 		lexeme next_lexeme = this->next();
 
@@ -343,14 +346,14 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 		return left;
 	}
 	// Otherwise, if we have an op_char or the 'and' or 'or' keyword
-	else if (next.type == "op_char" || next.value == "and" || next.value == "or") {
+	else if (next.type == OPERATOR || next.value == "and" || next.value == "or") {
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
 		if (next.value == "&") {
 			this->next();	// advance the iterator so we can see what comes after the ampersand
 			lexeme operand = this->peek();
 			
 			// if the operand is a keyword, the & must not be intended to be the bitwise-and operator
-			if (operand.type == "kwd") {
+			if (operand.type == KEYWORD) {
 				this->back();	// move the iterator back
 				return left;	// return our left argument
 			}

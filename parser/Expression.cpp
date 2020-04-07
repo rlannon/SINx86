@@ -4,8 +4,8 @@
 #include "Expression.h"
 
 
-const bool is_literal(std::string candidate_type) {
-	if (candidate_type == "int" || candidate_type == "float" || candidate_type == "bool" || candidate_type == "string") {
+const bool is_literal(lexeme_type candidate_type) {
+	if (candidate_type == INT_LEX || candidate_type == FLOAT_LEX || candidate_type == BOOL_LEX || candidate_type == STRING_LEX) {
 		return true;
 	}
 	else {

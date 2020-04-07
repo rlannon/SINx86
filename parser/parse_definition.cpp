@@ -55,7 +55,7 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 
 	// Get the function name and verify it is of the correct type
 	lexeme func_name = this->next();
-	if (func_name.type == "ident") {
+	if (func_name.type == IDENTIFIER) {
 		lexeme _peek = this->peek();
 		if (_peek.value == "(") {
 			this->next();
@@ -141,7 +141,7 @@ std::shared_ptr<Statement> Parser::parse_struct_definition(lexeme current_lex) {
     StatementBlock procedure;
 
     lexeme struct_name = this->next();
-    if (struct_name.type == "ident") {
+    if (struct_name.type == IDENTIFIER) {
         // The next lexeme should be a curly brace
         if (this->peek().value == "{") {
             this->next();   // eat the curly brace

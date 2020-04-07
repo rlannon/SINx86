@@ -31,7 +31,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 	// set the statement's line number
 
 	// first, we will check to see if we need any keyword parsing
-	if (current_lex.type == "kwd") {
+	if (current_lex.type == KEYWORD) {
 
 		// Check to see what the keyword is
 
@@ -50,7 +50,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 			if (next.value == "<") {
 				lexeme asm_type = this->next();
-				if (asm_type.type == "ident") {
+				if (asm_type.type == IDENTIFIER) {
 					std::string asm_architecture = asm_type.value;
 
 					if (this->peek().value == ">") {
@@ -86,7 +86,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 								asm_code << asm_data.value;
 
 								// put a space after idents, but not if a colon follows; also put spaces before semicolons
-								if (((asm_data.type == "ident") && (this->peek().value != ":")) || (this->peek().value == ";")) {
+								if (((asm_data.type == IDENTIFIER) && (this->peek().value != ":")) || (this->peek().value == ";")) {
 									asm_code << " ";
 								}
 								// advance to the next token, but ONLY if we haven't hit the closing curly brace
@@ -119,7 +119,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 			*/
 
-			if (this->peek().type == "ident") {
+			if (this->peek().type == IDENTIFIER) {
 				current_lex = this->next();
 
 				// make sure we end the statement correctly
@@ -178,7 +178,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 	}
 
 	// if it's not a keyword, check to see if we need to parse a function call
-	else if (current_lex.type == "op_char") {	// "@" is an op_char, but we may update the lexer to make it a "control_char"
+	else if (current_lex.type == OPERATOR) {	// "@" is an op_char, but we may update the lexer to make it a "control_char"
 		if (current_lex.value == "@") {
 			return this->parse_function_call(current_lex);
 		}
@@ -209,7 +209,7 @@ std::shared_ptr<Statement> Parser::parse_include(lexeme current_lex)
 
 		lexeme next = this->next();
 
-		if (next.type == "string") {
+		if (next.type == STRING_LEX) {
 			std::string filename = next.value;
 
 			stmt = std::make_shared<Include>(filename);
@@ -240,14 +240,14 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 	lexeme next_lexeme = this->peek();
 
 	// the next lexeme must be a keyword (specifically, a type)
-	if (next_lexeme.type == "kwd") {
+	if (next_lexeme.type == KEYWORD) {
 		next_lexeme = this->next();
 		DataType symbol_type_data = this->get_type();
 		std::shared_ptr<Expression> initial_value = std::make_shared<Expression>(EXPRESSION_GENERAL);
 
 		// get the variable name
 		next_lexeme = this->next();
-		if (next_lexeme.type == "ident") {		// variable names must be identifiers; if an identifier doesn't follow the type, we have an error
+		if (next_lexeme.type == IDENTIFIER) {		// variable names must be identifiers; if an identifier doesn't follow the type, we have an error
 			// get our variable name
 			std::string var_name = next_lexeme.value;
 			bool is_function = false;
@@ -417,13 +417,13 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
 
 	// check our next token; it must be a keyword or a struct name (ident)
 	lexeme next_token = this->next();
-	if (next_token.type == "kwd" || next_token.type == "ident") {
+	if (next_token.type == KEYWORD || next_token.type == IDENTIFIER) {
 		// get the type data using Parser::get_type() -- this will tell us if the memory is to be dynamically allocated
 		// It will also throw an exception if the type specifier was invalid
 		DataType symbol_type_data = this->get_type();
 
 		// next, get the name
-		if (this->peek().type == "ident") {
+		if (this->peek().type == IDENTIFIER) {
 			next_token = this->next();
 			new_var_name = next_token.value;
 			bool initialized = false;
@@ -482,7 +482,7 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 	std::shared_ptr<Expression> lvalue;
 
 	// if the next lexeme is an op_char, we have a pointer
-	if (this->peek().type == "op_char") {
+	if (this->peek().type == OPERATOR) {
 		// get the pointer operator
 		lexeme ptr_op = this->next();
 		// check to see if it is an address-of or dereference operator
@@ -503,7 +503,7 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 		lexeme _lvalue_lex = this->next();
 
 		// ensure it's an identifier
-		if (_lvalue_lex.type == "ident") {
+		if (_lvalue_lex.type == IDENTIFIER) {
 			// the lvalue might be a dereferenced value; check to see if that's the case
 			std::shared_ptr<Expression> index_number;
 			if (this->peek().value == "[") {
@@ -634,7 +634,7 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 
 	// Get the function's name
 	lexeme func_name = this->next();
-	if (func_name.type == "ident") {
+	if (func_name.type == IDENTIFIER) {
 		std::vector<std::shared_ptr<Expression>> args;
 		this->next();
 		this->next();
