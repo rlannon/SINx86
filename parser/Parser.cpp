@@ -76,6 +76,7 @@ Parser::Parser(Lexer& lexer) {
 			continue;
 		}
 	}
+	std::cout << "Done." << std::endl << std::endl;
 
 	Parser::quit = false;
 	Parser::can_use_include_statement = true;	// include statements must be first in the file
