@@ -13,6 +13,7 @@ An implementation of the Stack data structures using C++ templates and STL Alloc
 #include <initializer_list>
 #include <memory>
 #include <stdexcept>
+#include <cstring>  // for memcpy
 
 template <typename T, typename Allocator = std::allocator<T>>
 class stack
