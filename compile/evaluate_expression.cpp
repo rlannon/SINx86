@@ -99,10 +99,18 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case BINARY:
         {
-			// cast to Binary class and dispatch
+			// cast to Binary class and dispatch appropriately
 			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
-			evaluation_ss << this->evaluate_binary(bin_exp, line).str();
-            break;
+
+			// if we have a dot or arrow operator, use a separate function; it must be handled slightly differently than other binary expressions
+			if (bin_exp.get_operator() == exp_operator::DOT || bin_exp.get_operator() == exp_operator::ARROW) {
+
+			}
+			else {
+				evaluation_ss << this->evaluate_binary(bin_exp, line).str();
+			}
+
+			break;
         }
         case UNARY:
         {

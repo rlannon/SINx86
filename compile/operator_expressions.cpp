@@ -77,7 +77,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 			*/
 
 			if (unary_type.get_qualities().is_unsigned()) {
-				compiler_warning("Note: unary minus on unsigned data may result in a loss of data because the compiler will not increase the data's width", line);
+				compiler_warning("Note: unary minus on unsigned data may result in data loss because the compiler will not modify the data's width", line);
 			}
 
 			// the expression is in RAX; check the width to get which register size to use

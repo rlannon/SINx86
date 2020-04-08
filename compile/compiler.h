@@ -41,7 +41,7 @@ class compiler {
 	std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
     template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
 
-    std::unordered_map<std::string, struct_info> struct_table;
+    std::unordered_map<std::string, struct_info> struct_table;	// todo: refactor this and add a 'struct_table' class for maintainability
 	void add_struct(struct_info to_add, unsigned int line);	// add a struct to the table
     struct_info& get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
 
@@ -95,6 +95,8 @@ class compiler {
 	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
+	std::stringstream evaluate_arrow(Binary &arrow_exp, unsigned int line);
+	std::stringstream evaluate_dot(Binary &dot_exp, unsigned int line);
 public:
     // the compiler's entry function
     void generate_asm(std::string filename, Parser &p);
