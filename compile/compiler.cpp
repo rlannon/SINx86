@@ -291,8 +291,11 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
         compile_ss << this->compile_statement(s, signature).str();
     }
 
-	// todo: call leave_scope on the compile-time evaluator
-	this->symbols.leave_scope();
+	// when we leave a scope, remove local variables -- but NOT global variables
+	if (this->current_scope_name != "global") {
+		// todo: call leave_scope on the compile-time evaluator
+		this->symbols.leave_scope();
+	}
 
     return compile_ss;
 }
