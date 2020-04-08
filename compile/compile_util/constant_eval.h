@@ -15,13 +15,14 @@ This file contains the function/class declarations required for the compiler's c
 #include <memory>
 
 #include "const_symbol.h"
+#include "symbol_table.h"
 #include "utilities.h"
 #include "../../util/Exceptions.h"
 #include "../../parser/Statement.h"	// includes "Expression.h"
 
 class compile_time_evaluator {
 	// data members
-	std::unordered_map<std::string, std::shared_ptr<const_symbol>> constants;
+	symbol_table* constants;
 	
 	/*
 	
@@ -34,7 +35,7 @@ class compile_time_evaluator {
 
 	const_symbol lookup(std::string sym_name, std::string scope_name, unsigned int scope_level, unsigned int line) const;
 
-	void remove_symbols_in_scope(std::string scope_name, unsigned int scope_level);
+	void leave_scope();
 
 	static std::string evaluate_literal(Literal& exp);
 	std::string evaluate_lvalue(LValue& exp, std::string scope_name, unsigned int scope_level, unsigned int line);

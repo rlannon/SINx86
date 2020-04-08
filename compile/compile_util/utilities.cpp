@@ -9,12 +9,8 @@ Some utility functions for the compiler
 
 #include "utilities.h"
 
-// Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
-template DataType get_expression_data_type(std::shared_ptr<Expression>, std::unordered_map<std::string, std::shared_ptr<symbol>>&, unsigned int);
-template DataType get_expression_data_type(std::shared_ptr<Expression>, std::unordered_map<std::string, std::shared_ptr<const_symbol>>&, unsigned int);
-
-template<typename T>
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, T> &symbol_table, unsigned int line) {
+// todo: don't use a template here; we can dynamic_cast to symbol because it is the parent class of symbol; similarly, we don't need symbol_table to be a template
+DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, unsigned int line) {
     /*
 
     get_expression_data_type
@@ -45,23 +41,17 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
         {
             // look into the symbol table for an LValue
             LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
-            typename std::unordered_map<std::string, T>::iterator it = symbol_table.find(lvalue->getValue());
+            
+            // get the symbol and return its type data
+            std::shared_ptr<symbol> sym = symbols.find(lvalue->getValue());
 
-            // if the symbol isn't in the table, throw an exception; else, continue
-            if (it == symbol_table.end()) {
-                throw SymbolNotFoundException(line);
-            } else {
-                // get the symbol and return its type data
-                T sym = it->second;
-
-				// depending on whether we have an indexed or lvalue expression, we have to return different type data
-				if (expression_type == INDEXED) {
-					type_information = *sym->get_data_type().get_full_subtype().get();
-				}
-				else {
-					type_information = sym->get_data_type();
-				}
-            }
+			// depending on whether we have an indexed or lvalue expression, we have to return different type data
+			if (expression_type == INDEXED) {
+				type_information = *sym->get_data_type().get_full_subtype().get();
+			}
+			else {
+				type_information = sym->get_data_type();
+			}
             break;
         }
         case LIST:
@@ -70,7 +60,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             ListExpression *init_list = dynamic_cast<ListExpression*>(to_eval.get());
             
             // A list expression is a vector of other expressions, get the first item and pass it into this function recursively
-            DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbol_table, line);
+            DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbols, line);
 
             // the subtype will be the current primary type, and the primary type will be array
             sub_data_type.set_subtype(sub_data_type);
@@ -94,7 +84,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 				type_information.set_subtype(
 					get_expression_data_type(
 						std::make_shared<LValue>(addr_of->get_target()),
-						symbol_table,
+						symbols,
 						line
 					)
 				);
@@ -112,7 +102,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             Dereferenced *deref = dynamic_cast<Dereferenced*>(to_eval.get());
             
             // Dereferenced expressions contain a pointer to another expression; get its type
-            type_information = get_expression_data_type(deref->get_ptr_shared(), symbol_table, line);
+            type_information = get_expression_data_type(deref->get_ptr_shared(), symbols, line);
             break;
         }
         case BINARY:
@@ -133,8 +123,8 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 
             */
 
-            DataType left = get_expression_data_type(binary->get_left(), symbol_table, line);
-            DataType right = get_expression_data_type(binary->get_right(), symbol_table, line);
+            DataType left = get_expression_data_type(binary->get_left(), symbols, line);
+            DataType right = get_expression_data_type(binary->get_right(), symbols, line);
 
             // ensure the types are compatible
             if (left.is_compatible(right)) {
@@ -163,29 +153,24 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             Unary *u = dynamic_cast<Unary*>(to_eval.get());
 
             // Unary expressions contain an expression inside of them; call this function recursively using said expression as a parameter
-            type_information = get_expression_data_type(u->get_operand(), symbol_table, line);
+            type_information = get_expression_data_type(u->get_operand(), symbols, line);
             break;
         }
         case VALUE_RETURNING_CALL:
         {
             // look into the symbol table to get the return type of the function
             ValueReturningFunctionCall *call_exp = dynamic_cast<ValueReturningFunctionCall*>(to_eval.get());
-            typename std::unordered_map<std::string, T>::iterator it = symbol_table.find(call_exp->get_func_name());
+			std::shared_ptr<symbol> sym = symbols.find(call_exp->get_func_name());
 
-            // make sure it's in the table
-            if (it == symbol_table.end()) {
-                throw SymbolNotFoundException(line);
+            // ensure the symbol is a function symbol
+            if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
+                // get the function symbol
+                function_symbol *func_sym = dynamic_cast<function_symbol*>(sym.get());
+
+                // get the return type data
+                type_information = func_sym->get_data_type();
             } else {
-                // ensure the symbol is a function symbol
-                if (it->second->get_symbol_type() == FUNCTION_SYMBOL) {
-                    // get the function symbol
-                    function_symbol *func_sym = dynamic_cast<function_symbol*>(it->second.get());
-
-                    // get the return type data
-                    type_information = func_sym->get_data_type();
-                } else {
-                    throw InvalidSymbolException(line);
-                }
+                throw InvalidSymbolException(line);
             }
             break;
         }

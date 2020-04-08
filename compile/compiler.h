@@ -21,6 +21,7 @@ Copyright 2019 Riley Lannon
 #include "struct_info.h"
 #include "../parser/Parser.h"
 #include "compile_util/utilities.h"
+#include "compile_util/symbol_table.h"
 #include "../util/stack.h"  // the stack data structure
 
 class compiler {
@@ -36,7 +37,7 @@ class compiler {
 
     stack<register_usage> reg_stack;    // a stack for tracking which registers are in use in a given scope
 
-    std::unordered_map<std::string, std::shared_ptr<symbol>> symbol_table;    // the symbol table will be implemented through an unordered map
+    symbol_table symbols;    // todo: dynamically allocate?
 	std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
     template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
 

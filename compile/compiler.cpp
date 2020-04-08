@@ -26,15 +26,12 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
 
     */
 
-    // use the unordered_map::find function
-    std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.find(name);
-
-    // if the symbol wasn't found, throw an exception
-    if (it == this->symbol_table.end()) {
-        throw SymbolNotFoundException(line);
-    } else {
-        return it->second;
-    }
+	try {
+		return this->symbols.find(name);
+	}
+	catch (std::exception & e) {
+		throw SymbolNotFoundException(line);
+	}
 }
 
 // we need to specify which classes can be used for our <typename T> since it's implemented in a separate file
@@ -67,12 +64,7 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 	}
 
 	// insert the symbol
-    bool ok = this->symbol_table.insert(
-        std::make_pair(
-            to_add.get_name(),
-            std::make_shared<T>(to_add)
-        )
-    ).second;
+	bool ok = this->symbols.insert(std::make_shared<T>(to_add));
 
     // throw an exception if the symbol could not be inserted
     if (!ok) {
@@ -295,20 +287,8 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
         compile_ss << this->compile_statement(s, signature).str();
     }
 
-	// todo: is there a more efficient way to handle this? maybe in blocked scopes we save a *copy* of the map? that might involve *huge* memory overhead (depending on the size of the user's program) that would be avoided with this method, though...
-
-	// delete all symbols from the current scope upon exiting -- both from this symbol table AND from the constant evaluation table
-	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.begin();
-	while (it != this->symbol_table.end()) {
-		if (it->second->get_scope_name() == this->current_scope_name && it->second->get_scope_level() == this->current_scope_level) {
-			it = this->symbol_table.erase(it);
-		}
-		else {
-			it++;
-		}
-	}
-	// todo: call compile_time_evaluator::remove_symbols_in_scope to remove symbols
-	// note the scope name and level are updated elsewhere
+	// todo: call leave_scope on the compile-time evaluator
+	this->symbols.leave_scope();
 
     return compile_ss;
 }
@@ -336,7 +316,7 @@ void compiler::generate_asm(std::string filename, Parser &p) {
         // The code we are generating will go in the text segment -- writes to the data and bss sections will be done as needed in other functions
         this->text_segment << this->compile_ast(ast).str();
 
-        // now, we want to see if we have a function 'main' in the symbol table
+        // now, we want to see if we have a function 'main' in the symbol table; if so, we need to set it up and call it
         try {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
             std::shared_ptr<symbol> main_function = this->lookup("main", 0);
@@ -399,6 +379,9 @@ void compiler::generate_asm(std::string filename, Parser &p) {
 
         // close the outfile
         outfile.close();
+
+		// print a message saying compilation has finished
+		std::cout << "Compilation finished successfully" << std::endl;
     } catch (std::exception &e) {
         // todo: exception handling should be improved
         std::cout << "An error occurred during compilation:" << std::endl;

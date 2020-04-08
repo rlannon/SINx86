@@ -25,7 +25,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			if (
 				get_expression_data_type(
 					alloc_data.get_array_length_expression(),
-					this->symbol_table,
+					this->symbols,
 					alloc_stmt.get_line_number()
 				).get_primary() == INT)
 			{
