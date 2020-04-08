@@ -26,12 +26,16 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
 
     */
 
+	std::shared_ptr<symbol> to_return;
+
 	try {
-		return this->symbols.find(name);
+		to_return = this->symbols.find(name);
 	}
-	catch (std::exception & e) {
+	catch (std::exception e) {
 		throw SymbolNotFoundException(line);
 	}
+
+	return to_return;
 }
 
 // we need to specify which classes can be used for our <typename T> since it's implemented in a separate file

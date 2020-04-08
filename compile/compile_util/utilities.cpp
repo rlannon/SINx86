@@ -41,9 +41,15 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
         {
             // look into the symbol table for an LValue
             LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
-            
-            // get the symbol and return its type data
-            std::shared_ptr<symbol> sym = symbols.find(lvalue->getValue());
+			std::shared_ptr<symbol> sym;
+
+			try {
+				// get the symbol and return its type data
+				sym = symbols.find(lvalue->getValue());
+			}
+			catch (std::exception& e) {
+				throw SymbolNotFoundException(line);
+			}
 
 			// depending on whether we have an indexed or lvalue expression, we have to return different type data
 			if (expression_type == INDEXED) {
