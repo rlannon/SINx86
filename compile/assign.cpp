@@ -9,6 +9,8 @@ Implementation of the assignment functions for the compiler
 
 #include "compiler.h"
 
+// todo: overhaul assignment
+
 std::stringstream compiler::assign(Assignment assign_stmt) {
     /*
 
@@ -24,7 +26,7 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
     */
 
     // find the symbol
-    LValue *lvalue = dynamic_cast<LValue*>(assign_stmt.get_lvalue().get());
+    LValue *lvalue = dynamic_cast<LValue*>(assign_stmt.get_lvalue().get());	// todo: special function for assignments to struct members
     symbol &sym = *(this->lookup(lvalue->getValue(), assign_stmt.get_line_number()).get()); // will throw an exception if the symbol doesn't exist
 
     // ensure we can make the assignment
@@ -59,6 +61,8 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
 
     */
 
+	// todo: this function cannot actually handle pointer assignments; fix this
+
 	std::stringstream handle_ss;
 
     // First, we need to determine some information about the symbol
@@ -82,6 +86,8 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
 				break;
             case PTR:
 			{
+				// todo: this is not actually how we should be handling pointer assignments!
+
 				// check that the type qualities are valid - pointers have special rules due to the language's type variability policy
 				std::shared_ptr<DataType> left_type = sym.get_data_type().get_full_subtype();
 				std::shared_ptr<DataType> right_type = get_expression_data_type(value, this->symbols, line).get_full_subtype();
@@ -127,6 +133,9 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
     @return A stringstream containing the generated code
 
     */
+
+	// todo: write function to get the assembly destination operand
+	// todo: enable pointer assignment
 
     std::stringstream assign_ss;
 

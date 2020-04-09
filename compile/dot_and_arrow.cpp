@@ -10,6 +10,8 @@ Handles expressions which use the dot and arrow operators
 
 #include "compiler.h"
 
+// todo: combine dot and arrow into one function
+
 std::stringstream compiler::evaluate_arrow(Binary &arrow_exp, unsigned int line) {
 	/*
 	
@@ -18,8 +20,10 @@ std::stringstream compiler::evaluate_arrow(Binary &arrow_exp, unsigned int line)
 	
 	*/
 
-	if (member_selection_types_valid(arrow_exp, this->symbols, line)) {
+	std::stringstream eval_ss;
 
+	if (member_selection_types_valid(arrow_exp, this->symbols, line)) {
+		// todo: evaluate arrows
 	}
 	else {
 		throw CompilerException(
@@ -28,6 +32,8 @@ std::stringstream compiler::evaluate_arrow(Binary &arrow_exp, unsigned int line)
 			line
 		);
 	}
+
+	return eval_ss;
 }
 
 std::stringstream compiler::evaluate_dot(Binary &dot_exp, unsigned int line) {
@@ -36,7 +42,11 @@ std::stringstream compiler::evaluate_dot(Binary &dot_exp, unsigned int line) {
 	evaluate_dot
 	Generates code to evaluate an expression that uses the dot operator (e.g., "p.a")
 
-	The left-hand expression must be "struct" type in order for the expression to be valid.
+	The left-hand expression must be "struct" type in order for the expression to be valid. It can really only be one of the following expressions:
+		- lvalue
+		- dereferenced
+		- binary (dot/arrow expression)
+	The compiler evaluates the address of the left-hand struct and uses the 
 
 	*/
 
