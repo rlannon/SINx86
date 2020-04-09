@@ -354,7 +354,30 @@ struct_info define_struct(StructDefinition definition) {
     return struct_info(struct_name, members, definition.get_line_number());
 }
 
-// Again, since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
+bool member_selection_types_valid(Binary & to_check, symbol_table & symbols, unsigned int line)
+{
+	/*
+
+	member_selection_types_valid
+	Checks to see whether the left-hand side of a dot or arrow expression is a struct
+
+	*/
+
+	bool valid = false;
+
+	DataType &left_type = get_expression_data_type(to_check.get_left(), symbols, line);
+	if (to_check.get_operator() == exp_operator::DOT)
+		valid = (left_type.get_primary() == STRUCT);
+	else if (to_check.get_operator() == exp_operator::ARROW)
+		valid = (left_type.get_primary() == PTR && left_type.get_subtype() == STRUCT);
+	else {
+		throw CompilerException("Expected member selection expression (e.g., 'a.b' or 'a->b')", compiler_errors::OPERATOR_TYPE_ERROR, line);
+	}
+
+	return valid;
+}
+
+// Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
 template function_symbol create_function_symbol(FunctionDefinition);
 template function_symbol create_function_symbol(Declaration);

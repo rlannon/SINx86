@@ -41,6 +41,8 @@ std::string get_rax_name_variant(DataType t, unsigned int line);
 
 struct_info define_struct(StructDefinition definition);
 
+bool member_selection_types_valid(Binary &to_check, symbol_table &symbols, unsigned int line);
+
 template<typename T>
 function_symbol create_function_symbol(T def);
 

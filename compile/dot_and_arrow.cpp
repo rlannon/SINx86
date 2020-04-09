@@ -17,6 +17,17 @@ std::stringstream compiler::evaluate_arrow(Binary &arrow_exp, unsigned int line)
 	Generates code to evaluate an expression that uses the arrow operator (e.g., "p->a")
 	
 	*/
+
+	if (member_selection_types_valid(arrow_exp, this->symbols, line)) {
+
+	}
+	else {
+		throw CompilerException(
+			"Invalid left-hand data type in arrow operator expression; 'struct' expected",
+			compiler_errors::STRUCT_TYPE_EXPECTED_RROR,
+			line
+		);
+	}
 }
 
 std::stringstream compiler::evaluate_dot(Binary &dot_exp, unsigned int line) {
@@ -29,12 +40,19 @@ std::stringstream compiler::evaluate_dot(Binary &dot_exp, unsigned int line) {
 
 	*/
 
+	std::stringstream eval_ss;
+
 	// ensure left_type is of 'struct' data type
-	DataType &left_type = get_expression_data_type(dot_exp.get_left(), this->symbols, line);
-	if (left_type.get_primary() == STRUCT) {
-		DataType &right_type = get_expression_data_type(dot_exp.get_right(), this->symbols, line);
-	}
-	else {
+	if (member_selection_types_valid(dot_exp, this->symbols, line)) {
 		
 	}
+	else {
+		throw CompilerException(
+			"Invalid left-hand data type in dot operator expression; 'struct' expected",
+			compiler_errors::STRUCT_TYPE_EXPECTED_RROR,
+			line
+		);
+	}
+
+	return eval_ss;
 }
