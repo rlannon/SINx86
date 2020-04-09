@@ -19,6 +19,7 @@ Copyright 2019 Riley Lannon
 #include "symbol.h"
 #include "function_symbol.h"
 #include "struct_info.h"
+#include "compile_util/member_selection.h"
 #include "../parser/Parser.h"
 #include "compile_util/utilities.h"
 #include "compile_util/symbol_table.h"
