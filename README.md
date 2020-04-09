@@ -27,7 +27,7 @@ This is not a full compiler suite, and as such, a few third-party applications a
 
 ### Using SIN
 
-I intend on using [GitHub Pages](rlannon.github.com/SIN) for introductory programming materials. Note that currently, not everything is up-to-date, and the site will be updated periodically.
+I intend on using [GitHub Pages](rlannon.github.com/SINx86) for introductory programming materials. Note that currently, not everything is up-to-date, and the site will be updated periodically.
 
 ## Future Goals
 
