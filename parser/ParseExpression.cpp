@@ -14,7 +14,7 @@ Contains the implementations of the functions to parse expressions, including:
 
 #include "Parser.h"
 
-std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string grouping_symbol, bool not_binary) {
+std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string grouping_symbol, bool not_binary, bool omit_equals) {
 	lexeme current_lex = this->current_token();
 
 	// Create a pointer to our first value
@@ -243,7 +243,17 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	// Use the maybe_binary function to determine whether we need to return a binary expression or a simple expression
 
 	// always start it at 0; the first time it is called, it will be 0, as nothing will have been passed to parse_expression, but will be updated to the appropriate precedence level each time after. This results in a binary tree that shows the proper order of operations
-	return this->maybe_binary(left, prec, grouping_symbol);
+	if (not_binary) {
+		return left;
+	}
+	else {
+		if (this->peek().value == "=" && omit_equals) {
+			return left;
+		}
+		else {
+			return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
+		}
+	}
 }
 
 
@@ -318,7 +328,7 @@ LValue Parser::getDereferencedLValue(Dereferenced to_eval) {
 	}
 }
 
-std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol) {
+std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol, bool omit_equals) {
 	/*
 
 	maybe_binary
@@ -342,7 +352,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	lexeme next = this->peek();
 
 	// if the next character is a semicolon, another end paren, or a comma, return
-	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == ",") {
+	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == "," || (next.value == "=" && omit_equals)) {
 		return left;
 	}
 	// Otherwise, if we have an op_char or the 'and' or 'or' keyword
@@ -371,7 +381,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 			this->next();	// go to the character after the op char
 
 			// Parse out the next expression
-			std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+			std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
 			// Create the binary expression
 			std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
@@ -381,7 +391,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 				binary->set_const();
 
 			// call maybe_binary again at the old prec level in case this expression is followed by one of a higher precedence
-			return this->maybe_binary(binary, my_prec, grouping_symbol);
+			return this->maybe_binary(binary, my_prec, grouping_symbol, omit_equals);
 		}
 		else {
 			return left;
