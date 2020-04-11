@@ -19,7 +19,7 @@ std::string struct_info::get_struct_name() const
 	return this->struct_name;
 }
 
-symbol struct_info::get_member(std::string name)
+symbol& struct_info::get_member(std::string name)
 {
 	/*
 	
@@ -27,17 +27,14 @@ symbol struct_info::get_member(std::string name)
 	Gets the symbol information for the member of a given struct
 	
 	*/
-	
-	symbol to_return;
-	std::unordered_map<std::string, symbol>::iterator it = this->members.find(name);
-	if (it == this->members.end()) {
-		throw SymbolNotFoundException(0);	// todo: add a 'line' parameter?
-	}
-	else {
-		to_return = it->second;
-	}
 
-	return to_return;
+	try {
+		std::shared_ptr<symbol> sym = this->members.find(name);
+		return *sym;
+	}
+	catch (std::exception& e) {
+		throw SymbolNotFoundException(0);	// todo: line number?
+	}
 }
 
 size_t struct_info::get_width() const {
@@ -65,18 +62,18 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
 
     for (symbol s: members) {
         try {
-            this->members.insert(std::make_pair(s.get_name(), s));
+            this->members.insert(s);
 
             size_t sym_width = s.get_data_type().get_width();
-            if (sym_width != 0) {
-                this->struct_width += s.get_data_type().get_width();
-            } else {
+            if (sym_width == 0) {
 				if (s.get_data_type().get_qualities().is_dynamic()) {
 					this->struct_width += sin_widths::PTR_WIDTH;
 				}
 				else {
-					this->width_known = false;
+					this->width_known = false;	// todo: should this throw an error?
 				}
+            } else {
+				this->struct_width += s.get_data_type().get_width();
 			}
         } catch (std::exception &e) {
             throw DuplicateSymbolException(line);

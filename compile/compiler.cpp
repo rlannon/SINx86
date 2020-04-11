@@ -100,12 +100,7 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
 		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
 	}
 
-	bool ok = this->struct_table.insert(
-		std::make_pair<>(
-			to_add.get_struct_name(),
-			to_add
-		)
-	).second;
+	bool ok = this->structs.insert(to_add);
 
 	if (!ok) {
 		throw DuplicateDefinitionException(line);
@@ -124,16 +119,13 @@ struct_info& compiler::get_struct_info(std::string struct_name, unsigned int lin
     @throws Throws an UndefinedException if the struct is not known
 
     */
+	
+	// check to see whether our struct is in the table first
+	if (!this->structs.contains(struct_name)) {
+		throw UndefinedException(line);
+	}
 
-    // look up our struct
-    std::unordered_map<std::string, struct_info>::iterator it = this->struct_table.find(struct_name);
-
-    // if found, return its data; else, throw an UndefinedException
-    if (it == this->struct_table.end()) {
-        throw UndefinedException(line);
-    } else {
-        return it->second;
-    }
+	return this->structs.find(struct_name);
 }
 
 std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature) {
