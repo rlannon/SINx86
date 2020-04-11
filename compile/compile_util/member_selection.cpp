@@ -21,10 +21,12 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 			A.	If the type is 'binary', we need to call this function recursively on it
 			B.	If the type is some other valid expression (LValue or Dereferenced) then we look up the information for that struct
 		II. Look at the right side
-			A.	Ensure it is a correct type (LValue only -- dereferences must use the arrow operator)
+			A.	Ensure it is a correct type (LValue and Dereferenced only)
 			B.	Look up the symbol within the left-hand struct
 			C.	Create a node pointing to this symbol
 		III. Finalize our member_selection object and return it
+
+	If the expression we encounter is a Dereferenced expression, we need to get the symbol being dereferenced correctly. Further, the compiler also needs to verify that the number of dereferences is actually accessing the right object -- otherwise, we will run into problems.
 
 	@param	exp	The binary dot/arrow expression we are evaluating
 	@param	structs	The struct table we need to look into for our struct data
@@ -43,18 +45,54 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 	}
 
 	member_selection m;
+
+	// first, handle the left hand side
 	if (exp.get_left()->get_expression_type() == BINARY) {
 		Binary* left = dynamic_cast<Binary*>(exp.get_left().get());
 		m = create_member_selection(*left, structs, symbols, line);
 	}
 	else if (exp.get_left()->get_expression_type() == LVALUE) {
-		// todo: handle left-hand lvalue expressions
+		LValue* left = dynamic_cast<LValue*>(exp.get_left().get());
+
+		// get the symbol information
+		symbol* left_sym = dynamic_cast<symbol*>(symbols.find(left->getValue()).get());
+		if (left_sym->get_data_type().get_primary() != STRUCT) {
+			throw CompilerException("Expected left-hand argument of 'struct' type", compiler_errors::STRUCT_TYPE_EXPECTED_RROR, line);
+		}
+
+		// add the symbol to our list
+		m.append(*left_sym);
 	}
 	else if (exp.get_left()->get_expression_type() == DEREFERENCED) {
-		// todo: handle dereferenced left-hand expression
+		Dereferenced* left = dynamic_cast<Dereferenced*>(exp.get_left().get());
+		// todo: handle this such that pointers to pointers, etc, are dereferenced correctly
+	}
+	else {
+		throw CompilerException("Invalid expression in member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 
-	return member_selection();
+	// now, handle the right hand side
+	if (exp.get_right()->get_expression_type() == LVALUE) {
+		LValue* right = dynamic_cast<LValue*>(exp.get_right().get());
+		
+		// get the symbol and append it
+		try {
+			symbol* right_sym = dynamic_cast<symbol*>(symbols.find(right->getValue()).get());
+			m.append(*right_sym);
+		}
+		catch (std::exception& e) {
+			throw SymbolNotFoundException(line);
+		}
+	}
+	else if (exp.get_right()->get_expression_type() == DEREFERENCED) {
+		Dereferenced* right = dynamic_cast<Dereferenced*>(exp.get_right().get());
+		// todo: handle this such that multiple dereferences are parsed ok
+	}
+	else {
+		throw CompilerException("Invalid expression in member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+	}
+
+	return m;
 }
 
 void member_selection::append(symbol & to_add)
