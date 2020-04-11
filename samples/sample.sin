@@ -7,12 +7,8 @@ def struct point {
 }
 
 def void main() {
-	alloc int test: -(3 + 2);
-	// test dot operator precedence parsing
-	alloc point p;
-	alloc int n: p.x;
-	alloc int m: p.y * 2;
-	alloc int a: -p.x;
+	alloc ptr<point> p;
+	let p.x = 10;
 
 	return void;
 }
