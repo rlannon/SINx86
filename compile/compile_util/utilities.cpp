@@ -108,7 +108,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             Dereferenced *deref = dynamic_cast<Dereferenced*>(to_eval.get());
             
             // Dereferenced expressions contain a pointer to another expression; get its type
-            type_information = get_expression_data_type(deref->get_ptr_shared(), symbols, line);
+            type_information = get_expression_data_type(deref->get_contained_expression(), symbols, line);
             break;
         }
         case BINARY:

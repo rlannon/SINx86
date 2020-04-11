@@ -163,22 +163,11 @@ AddressOf::AddressOf() {
 }
 
 
-
-LValue Dereferenced::get_ptr() {
-	if (this->ptr->get_expression_type() == LVALUE) {
-		LValue* lvalue = dynamic_cast<LValue*>(this->ptr.get());
-		return *lvalue;
-	}
-	else {
-		throw std::runtime_error("Cannot convert type");
-	}
+std::shared_ptr<Expression> Dereferenced::get_contained_expression() {
+	return this->contained_expression;
 }
 
-std::shared_ptr<Expression> Dereferenced::get_ptr_shared() {
-	return this->ptr;
-}
-
-Dereferenced::Dereferenced(std::shared_ptr<Expression> ptr) : ptr(ptr) {
+Dereferenced::Dereferenced(std::shared_ptr<Expression> ptr) : contained_expression(ptr) {
 	this->expression_type = DEREFERENCED;
 }
 

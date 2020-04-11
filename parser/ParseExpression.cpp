@@ -264,68 +264,14 @@ std::shared_ptr<Expression> Parser::create_dereference_object() {
 	create_dereference_object
 	Parses out a 'Dereferenced' expression
 
-	Although the asterisk can be either the multiplication operator or the dereference operator, it is impossible for the parser to get them confused because they appear in completely different contexts. For example:
-		let x = *p;
-	The asterisk cannot be interpreted as multiplication because there is nothing preceding it
-		let x = 2 * p;
-	The asterisk here cannot be interpreted as the dereference operator because it is part of a binary expression
-		let x = 2 * **p;
-	Here, we have a binary expression which will parse out a doubly-dereferenced pointer as the right-hand argument of multiplication
+	Although the asterisk can be either the multiplication operator or the dereference operator, it is impossible for the parser to get them confused because they appear in completely different contexts.
+	This function creates a dereferenced expression by parsing the expression that is contained within it
 	
 	*/
 
-	lexeme previous_lex = this->previous();	// note that previous() does not update the current position
-
-	if (this->peek().type == IDENTIFIER) {
-		// get the identifier and advance the position counter
-		lexeme next_lexeme = this->next();
-
-		// turn the pointer into an LValue
-		LValue _ptr(next_lexeme.value, "var_dereferenced");
-
-		// return a shared_ptr to the Dereferenced object containing _ptr
-		return std::make_shared<Dereferenced>(std::make_shared<LValue>(_ptr));
-	}
-	// the next character CAN be an asterisk; in that case, we have a double or triple ref pointer that we need to parse
-	else if (this->peek().value == "*") {
-		// advance the position pointer
-		this->next();
-
-		// dereference the pointer to get the address so we can dereference the other pointer
-		std::shared_ptr<Expression> deref = this->create_dereference_object();
-		if (deref->get_expression_type() == DEREFERENCED) {
-			// get the Dereferenced obj
-			return std::make_shared<Dereferenced>(deref);
-		}
-		else {
-			// todo: what to do in this case?
-			throw ParserException("Could not parse multiply-dereferenced pointer", 0, previous_lex.line_number);
-			return nullptr;
-		}
-	}
-	// if it is not a literal or an ident and the next character is also not an ident or asterisk, we have an error
-	else {
-		throw MissingIdentifierError(this->peek().line_number);
-		return nullptr;
-	}
-}
-
-
-// get the end LValue pointed to by a pointer recursively
-LValue Parser::getDereferencedLValue(Dereferenced to_eval) {
-	// if the type of the Expression within "to_eval" is an LValue, we are done
-	if (to_eval.get_ptr_shared()->get_expression_type() == LVALUE) {
-		return to_eval.get_ptr();
-	}
-	// otherwise, if it is another Dereferenced object, get the object stored within that
-	// the recutsion here will return the LValue pointed to by the last pointer
-	else if (to_eval.get_ptr_shared()->get_expression_type() == DEREFERENCED) {
-		Dereferenced* _deref = dynamic_cast<Dereferenced*>(to_eval.get_ptr_shared().get());
-		return this->getDereferencedLValue(*_deref);
-	}
-	else {
-		throw ParserException("Invalid expression type for dereferenced lvalue", 0, 0);	// todo: get line number
-	}
+	this->next();
+	Dereferenced deref(this->parse_expression());
+	return std::make_shared<Dereferenced>(deref);
 }
 
 std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol, bool omit_equals) {

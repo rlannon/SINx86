@@ -100,7 +100,6 @@ class Parser
 	*/
 	std::shared_ptr<Expression> parse_expression(size_t prec=0, std::string grouping_symbol = "(", bool not_binary = false, bool omit_equals = false);
 	std::shared_ptr<Expression> create_dereference_object();
-	LValue getDereferencedLValue(Dereferenced to_eval);
 	std::shared_ptr<Expression> maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol = "(", bool omit_equals = false);	// check to see if we need to fashion a binary expression
 public:
 	// our entry function

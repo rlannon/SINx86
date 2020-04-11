@@ -106,10 +106,9 @@ public:
 // Dereferenced -- the value of a dereferenced ptr
 class Dereferenced : public Expression
 {
-	std::shared_ptr<Expression> ptr;	// the Expression that this Dereferenced expression is dereferencing -- e.g., in "*my_var", LValue<my_var> is 'ptr'
+	std::shared_ptr<Expression> contained_expression;	// the Expression that this Dereferenced expression is dereferencing
 public:
-	LValue get_ptr();
-	std::shared_ptr<Expression> get_ptr_shared();
+	std::shared_ptr<Expression> get_contained_expression();
 
 	Dereferenced(std::shared_ptr<Expression> ptr);
 	Dereferenced();
