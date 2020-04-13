@@ -493,27 +493,40 @@ std::stringstream compiler::evaluate_dot(Binary &dot_exp, unsigned int line) {
 	evaluate_dot
 	Generates code to evaluate an expression that uses the dot operator (e.g., "p.a")
 
-	The left-hand expression must be "struct" type in order for the expression to be valid. It can really only be one of the following expressions:
-		- lvalue
-		- dereferenced
-		- binary (dot/arrow expression)
-	The compiler evaluates the address of the left-hand struct and uses the
+	This function utilizes the member_selection class to create a chain of symbols (in a doubly-linked list, implemented by std::list) in the selection expression.
+	This list allows us to perform type checks and ensure any dereferences are handled properly. Further, it allows code generation *after* the selection tree is fully parsed.
+
+	If the program contains the following code:
+		(*a).b
+	the create_member_selection algorithm will generate something like
+		{ a, struct, some_struct_name } -> { b, int }
+	However, when the algorithm looks up a in the symbol table, it will see
+		{ a, ptr < struct, some_struct_name > }
+	for the symbol data; this means it must have been dereferenced. As such, it will generate code to dereference and then check for symbol equality again.
+	Note that create_member_selection will check Dereferenced expression types to ensure the dereference is actually legal
+
+	@param	dot_exp	A reference to the expression where the members are being selected
+	@param	line	The line where this selection occurs
+
+	@returns	A stringstream containing the generated code
 
 	*/
 
 	std::stringstream eval_ss;
 
-	// ensure left_type is of 'struct' data type
-	if (member_selection_types_valid(dot_exp, this->symbols, line)) {
+	// create the member_selection object from the expression so it can be evaluated
+	member_selection m = member_selection::create_member_selection(dot_exp, this->structs, this->symbols, line);
 
+	// step through the list, obtaining each symbol as we go
+	// since member_selection's methods will always return references, and we can't update the class outside of it, it will be safe to compare references
+	symbol& current = m.first();
+	while (&current != &m.last()) {
+		// todo: handle the symbol
+		// update the current symbol
+		current = m.next();
 	}
-	else {
-		throw CompilerException(
-			"Invalid left-hand data type in dot operator expression; 'struct' expected",
-			compiler_errors::STRUCT_TYPE_EXPECTED_RROR,
-			line
-		);
-	}
+
+	// todo: handle last symbol
 
 	return eval_ss;
 }

@@ -93,20 +93,77 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 
 void member_selection::append(symbol & to_add)
 {
+	// appends an element to the list
 	this->symbols.push_back(to_add);
+
+	// if the iterator points to the end, then we must update it to point it to the last element
+	if (this->it == this->symbols.end()) {
+		this->it--;
+	}
 }
 
 symbol & member_selection::last()
 {
-	return this->symbols.back();
+	// sets the iterator to the last element and returns it
+	if (this->symbols.empty()) {
+		throw std::out_of_range("Empty list in member selection object");
+	}
+
+	this->it = this->symbols.end();
+	this->it--;
+	return *this->it;
 }
 
 symbol & member_selection::first()
 {
-	return this->symbols.front();
+	// sets the iterator to the first element and returns it
+	if (this->symbols.empty()) {
+		throw std::out_of_range("Empty list in member selection object");
+	}
+
+	this->it = this->symbols.begin();
+	return *this->it;
 }
 
-member_selection member_selection::operator=(member_selection& right) {
+symbol & member_selection::peek_previous()
+{
+	// peeks the member *before* the current one
+	if (this->it == this->symbols.begin()) {
+		throw std::out_of_range("Cannot peek before first element in list");
+	}
+
+	std::list<symbol>::iterator temp = this->it;
+	temp--;
+	return *temp;
+}
+
+symbol & member_selection::previous()
+{
+	// decrements the iterator and returns the result
+	if (this->it == this->symbols.begin()) {
+		throw std::out_of_range("Cannot peek before the first element in list");
+	}
+
+	this->it--;
+	return *it;
+}
+
+symbol & member_selection::peek() {
+	// if the iterator isn't at the end, get the next item
+	std::list<symbol>::iterator temp = this->it;
+	temp++;
+	if (temp == this->symbols.end()) {
+		throw std::out_of_range("No more members in member selection list");
+	}
+
+	return *temp;
+}
+
+symbol & member_selection::next() {
+	// increment the
+}
+
+member_selection & member_selection::operator=(member_selection& right) {
 	/*
 	
 	operator==
@@ -117,11 +174,13 @@ member_selection member_selection::operator=(member_selection& right) {
 	*/
 
 	this->symbols = right.symbols;	// all we really need to do is initialize this list with the other one
+	this->it = this->symbols.begin();
 	return *this;
 }
 
 member_selection::member_selection()
 {
+	this->it = this->symbols.begin();
 }
 
 member_selection::~member_selection()

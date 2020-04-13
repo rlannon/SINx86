@@ -19,15 +19,24 @@ A class to contain information about dot/arrow expressions so that they may be p
 
 class member_selection {
 	std::list<symbol> symbols;
+	std::list<symbol>::iterator it;	// todo: devise better way to iterate through elements?
+
+	// this should only be accessed by this class
+	void append(symbol& to_add);
 public:
 	static member_selection create_member_selection(Binary& exp, struct_table& structs, symbol_table& symbols, unsigned int line);
 
-	void append(symbol& to_add);
-
+	// get a reference to a member
 	symbol& last();
 	symbol& first();
 
-	member_selection operator=(member_selection& right);
+	// uses the internal iterator
+	symbol& peek();
+	symbol& next();
+	symbol& peek_previous();
+	symbol& previous();
+
+	member_selection& operator=(member_selection& right);
 
 	member_selection();
 	~member_selection();
