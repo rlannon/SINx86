@@ -21,7 +21,7 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 			A.	If the type is 'binary', we need to call this function recursively on it
 			B.	If the type is some other valid expression (LValue or Dereferenced) then we look up the information for that struct
 		II. Look at the right side
-			A.	Ensure it is a correct type (LValue and Dereferenced only)
+			A.	Ensure it is a correct type (LValue only)
 			B.	Look up the symbol within the left-hand struct
 			C.	Create a node pointing to this symbol
 		III. Finalize our member_selection object and return it
@@ -68,10 +68,10 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 		// todo: handle this such that pointers to pointers, etc, are dereferenced correctly
 	}
 	else {
-		throw CompilerException("Invalid expression in member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+		throw CompilerException("Invalid expression in left-hand position of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 
-	// now, handle the right hand side
+	// now, handle the right hand side -- note that dereferenced expressions are forbidden here (only allowed on the left side)
 	if (exp.get_right()->get_expression_type() == LVALUE) {
 		LValue* right = dynamic_cast<LValue*>(exp.get_right().get());
 		
@@ -84,12 +84,8 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 			throw SymbolNotFoundException(line);
 		}
 	}
-	else if (exp.get_right()->get_expression_type() == DEREFERENCED) {
-		Dereferenced* right = dynamic_cast<Dereferenced*>(exp.get_right().get());
-		// todo: handle this such that multiple dereferences are parsed ok
-	}
 	else {
-		throw CompilerException("Invalid expression in member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+		throw CompilerException("Invalid expression type in right-hand position of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 
 	return m;

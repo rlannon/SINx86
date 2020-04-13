@@ -4,7 +4,8 @@ SIN Toolchain (x86 target)
 operator_expressions.cpp
 Copyright 2020 Riley Lannon
 
-Includes the implementations for some expression evaluations, namely those involving operators
+Includes the implementations for some expression evaluations, namely those involving operators (unary, binary, and dot/member selection expressions)
+Note that SIN does *not* support the arrow operator as syntactic sugar; you must dereference pointer structures directly
 
 */
 
@@ -483,5 +484,36 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 	}
 
 	// finally, return the generated code
+	return eval_ss;
+}
+
+std::stringstream compiler::evaluate_dot(Binary &dot_exp, unsigned int line) {
+	/*
+
+	evaluate_dot
+	Generates code to evaluate an expression that uses the dot operator (e.g., "p.a")
+
+	The left-hand expression must be "struct" type in order for the expression to be valid. It can really only be one of the following expressions:
+		- lvalue
+		- dereferenced
+		- binary (dot/arrow expression)
+	The compiler evaluates the address of the left-hand struct and uses the
+
+	*/
+
+	std::stringstream eval_ss;
+
+	// ensure left_type is of 'struct' data type
+	if (member_selection_types_valid(dot_exp, this->symbols, line)) {
+
+	}
+	else {
+		throw CompilerException(
+			"Invalid left-hand data type in dot operator expression; 'struct' expected",
+			compiler_errors::STRUCT_TYPE_EXPECTED_RROR,
+			line
+		);
+	}
+
 	return eval_ss;
 }
