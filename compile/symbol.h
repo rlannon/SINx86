@@ -25,7 +25,7 @@ class symbol {
     */
     
 	// these are not necessary for child classes and so should remain private to 'symbol'
-    unsigned int stack_offset;  // the offset, in bytes, from the stack frame base
+    unsigned int offset;  // the offset, in bytes, from the stack frame base or from the struct base, depending on what the symbol is used for
     reg current_reg;    // current register holding the symbol
 protected:
     SymbolType symbol_type;
@@ -50,7 +50,7 @@ public:
     unsigned int get_scope_level() const;
 
     DataType get_data_type() const;
-    unsigned int get_stack_offset() const;
+    unsigned int get_offset() const;
 
     // note these won't have any effect on functions (as functions are not allocated in SIN)
     bool was_initialized() const;
@@ -60,7 +60,7 @@ public:
     void free();
 
     // constructors
-    explicit symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset);
+    explicit symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int offset);
     symbol();
     virtual ~symbol(); // the destructor must be virtual for the sake of the child class
 };

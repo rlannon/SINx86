@@ -78,12 +78,12 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 				}
 				else if (s->get_data_type().get_qualities().is_dynamic()) {
 					// dynamic data uses [rbp - offset] because we want the heap address
-					evaluation_ss << "\t" << "mov rax, [rbp - " << s->get_stack_offset() << std::endl;
+					evaluation_ss << "\t" << "mov rax, [rbp - " << s->get_offset() << std::endl;
 				}
 				else {
 					// automatic memory uses rbp - offset
 					evaluation_ss << "\t" << "mov rax, rbp" << std::endl;
-					evaluation_ss << "\t" << "sub rax, " << s->get_stack_offset() << std::endl;
+					evaluation_ss << "\t" << "sub rax, " << s->get_offset() << std::endl;
 				}
 			}
 			else {
@@ -298,7 +298,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     }
 
                     // get the dereferenced pointer in A
-                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
                     eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
 
                     // if we had to push a register, restore it
@@ -309,7 +309,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     // automatic memory
                     // get the stack offset; instruction should be something like
                     //      mov rax, [rbp - 4]
-                    eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
                 }
 
                 return eval_ss;
@@ -325,7 +325,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                 } else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory -- the address of the dynamic memory is on the stack, so we need the offset
                     // get address in A
-                    eval_ss << "\t" << "mov rax, [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                    eval_ss << "\t" << "mov rax, [rbp - " << sym.get_offset() << "]" << std::endl;
                 } else {
                     /*
 
@@ -338,7 +338,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
                     */
 
-                    eval_ss << "\t" << "mov rax, rbp - " << sym.get_stack_offset() << std::endl;
+                    eval_ss << "\t" << "mov rax, rbp - " << sym.get_offset() << std::endl;
                 }
             }
         } else {
@@ -416,12 +416,12 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 		// Dynamic arrays will use a pointer; their width may be variable
 
 		// first, get the length and perform the bounds check
-		eval_ss << "\t" << "mov rax, [rbp - " << indexed_sym.get_stack_offset() << "]" << std::endl;
+		eval_ss << "\t" << "mov rax, [rbp - " << indexed_sym.get_offset() << "]" << std::endl;
 		eval_ss << "\t" << "mov eax, [rax]" << std::endl;	// get the length of the array
 		eval_ss << "\t" << "cmp ecx, eax" << std::endl;	// compare EDX (element's index number) with EAX (number of elements in the array)
 		// todo: SIN runtime errors -- run an error routine if we are out of bounds
 		
-		eval_ss << "\t" << "mov rbx, [rbp - " << indexed_sym.get_stack_offset() << "]" << std::endl;
+		eval_ss << "\t" << "mov rbx, [rbp - " << indexed_sym.get_offset() << "]" << std::endl;
 		eval_ss << "\t" << "mov " << reg_name << ", [rbx + rcx*" << contained_type.get_width() << " + " << sin_widths::INT_WIDTH << "]" << std::endl;
     }
 	else {

@@ -35,8 +35,8 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	switch (to_evaluate.get_operator()) {
 	case exp_operator::PLUS:
 	{
-		// does nothing but is allowed; generates a warning stating as such
-		compiler_warning("While the unary plus operator is technically allowed, it does nothing", line);
+		// does nothing but is allowed; generates a note stating as such
+		compiler_note("Note the unary plus operator has no effect", line);
 		break;
 	}
 	case exp_operator::MINUS:
@@ -517,16 +517,73 @@ std::stringstream compiler::evaluate_dot(Binary &dot_exp, unsigned int line) {
 	// create the member_selection object from the expression so it can be evaluated
 	member_selection m = member_selection::create_member_selection(dot_exp, this->structs, this->symbols, line);
 
-	// step through the list, obtaining each symbol as we go
-	// since member_selection's methods will always return references, and we can't update the class outside of it, it will be safe to compare references
-	symbol& current = m.first();
-	while (&current != &m.last()) {
-		// todo: handle the symbol
-		// update the current symbol
-		current = m.next();
+	// the first symbol is a special case because it is going to be in the symbol table as an individual entry
+	symbol& current_node = m.first();
+	
+	// since it's the first symbol, it must be in the compiler's symbol table
+	symbol& table_entry = *dynamic_cast<symbol*>(this->lookup(current_node.get_name(), line).get());
+	DataType entry_type = table_entry.get_data_type();	// this will be updated, so do not use a reference
+
+	// move the address into RBX; if it is a pointer type (but not 'dynamic'), this will be handled in a second -- this will move the address of the *pointer* into memory, and the actual address will be fetched if necessary
+	if (entry_type.get_qualities().is_dynamic()) {
+		// dynamic memory and pointers fetch the data at the offset
+		eval_ss << "\t" << "mov rbx, " << "[rbp - " << table_entry.get_offset() << "]" << std::endl;
+	}
+	else if (entry_type.get_qualities().is_static()) {
+		// static memory utilizes the name
+		eval_ss << "\t" << "mov rbx, " << table_entry.get_name() << std::endl;
+	}
+	else {
+		// automatic memory
+		eval_ss << "\t" << "mov rbx, rbp" << std::endl;
+		eval_ss << "\t" << "sub rbx, " << table_entry.get_offset() << std::endl;
 	}
 
-	// todo: handle last symbol
+	// sufficiently dereference it if necessary
+	while (current_node.get_data_type() != entry_type) {
+		// dereference the pointer and update the type
+		eval_ss << "\t" << "mov rbx, " << "[rbx]" << std::endl;
+		entry_type = *entry_type.get_full_subtype();
+	}
+
+	// now, step through the member_selection object, fetching each from the _previous_ struct's symbol table
+	current_node = m.next();
+	bool done = false;
+
+	// note we want to compare the *identity* of the symbols because we always use references
+	while (!done) {
+		// ensure the previous type is 'struct'
+		if (m.peek_previous().get_data_type().get_primary() != STRUCT) {
+			throw CompilerException("Expected left-hand argument of struct type", compiler_errors::STRUCT_TYPE_EXPECTED_RROR, line);
+		}
+
+		// fetch the struct data of the previous symbol
+		struct_info& s = this->get_struct_info(m.peek_previous().get_data_type().get_struct_name(), line);	// this function throws an exception if the struct hasn't been defined
+		
+		// now, get the symbol for the struct member
+		symbol& member_data = s.get_member(current_node.get_name());
+		DataType member_data_type = member_data.get_data_type();
+
+		// now that the address is in RBX, update our offset (as long as it isn't 0 -- else, no point in updating it)
+		if (member_data.get_offset() != 0)
+			eval_ss << "\t" << "add rbx, " << member_data.get_offset() << std::endl;
+
+		// if the types don't match, ensure we have pointers and continue updating until we have sufficiently dereferenced the symbol
+		while (current_node.get_data_type() != member_data_type) {
+			eval_ss << "\t" << "mov rbx, [rbx]" << std::endl;
+			member_data_type = *member_data_type.get_full_subtype();
+		}
+
+		// update the current node; if we can't, then we are done
+		if (&current_node == &m.last()) {
+			done = true;
+		}
+		else {
+			current_node = m.next();
+		}
+	}
+
+	// now, the address of the data we want is in RBX
 
 	return eval_ss;
 }

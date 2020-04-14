@@ -40,8 +40,8 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 	*/
 
 	// ensure the operator is valid
-	if (exp.get_operator() != DOT && exp.get_operator() != ARROW) {
-		throw CompilerException("Expected dot or arrow operator in member selection", compiler_errors::OPERATOR_TYPE_ERROR, line);
+	if (exp.get_operator() != DOT) {
+		throw CompilerException("Expected dot operator in member selection", compiler_errors::OPERATOR_TYPE_ERROR, line);
 	}
 
 	member_selection m;
@@ -71,21 +71,30 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 		throw CompilerException("Invalid expression in left-hand position of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 
+	// get the struct_info object for the last struct in the chain; this is where we look up the next symbol
+	if (!structs.contains(m.last().get_data_type().get_struct_name())) {
+		throw SymbolNotFoundException(line);
+	}
+	struct_info& last_struct = structs.find(m.last().get_data_type().get_struct_name());
+
 	// now, handle the right hand side -- note that dereferenced expressions are forbidden here (only allowed on the left side)
 	if (exp.get_right()->get_expression_type() == LVALUE) {
 		LValue* right = dynamic_cast<LValue*>(exp.get_right().get());
 		
 		// get the symbol and append it
 		try {
-			symbol* right_sym = dynamic_cast<symbol*>(symbols.find(right->getValue()).get());
-			m.append(*right_sym);
+			symbol& right_sym = last_struct.get_member(right->getValue());
+			m.append(right_sym);
 		}
 		catch (std::exception& e) {
 			throw SymbolNotFoundException(line);
 		}
 	}
+	else if (exp.get_right()->get_expression_type() == DEREFERENCED) {
+		throw CompilerException("Dereferenced expressions are not allowed on the right-hand side of a member selection expression (dot operator)", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+	}
 	else {
-		throw CompilerException("Invalid expression type in right-hand position of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+		throw CompilerException("Invalid expression type on right-hand side of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 
 	return m;
@@ -160,7 +169,13 @@ symbol & member_selection::peek() {
 }
 
 symbol & member_selection::next() {
-	// increment the
+	// increment the iterator and return the value at it
+	this->it++;
+	if (this->it == this->symbols.end()) {
+		throw std::out_of_range("No more members in member selection list");
+	}
+
+	return *this->it;
 }
 
 member_selection & member_selection::operator=(member_selection& right) {

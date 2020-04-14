@@ -91,7 +91,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // update the stack offset -- since symbols are pushed in order, just get the last one; if we had no parameters, the offset should be 8 (a qword -- because of how the x86 stack works)
     if (func_sym.get_formal_parameters().size() != 0) {
         const symbol &last_sym = func_sym.get_formal_parameters().back(); 
-        this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_stack_offset();
+        this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_offset();
     } else {
         this->max_offset = 8;
     }

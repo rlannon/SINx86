@@ -19,7 +19,7 @@ std::string const_symbol::get_value()
 }
 
 const_symbol::const_symbol(symbol s, std::string v) :
-	symbol(s.get_name(), s.get_scope_name(), s.get_scope_level(), s.get_data_type(), s.get_stack_offset()), value(v)
+	symbol(s.get_name(), s.get_scope_name(), s.get_scope_level(), s.get_data_type(), s.get_offset()), value(v)
 {
 	// super called
 }

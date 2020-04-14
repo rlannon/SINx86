@@ -164,7 +164,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
 
         // make the assignment
         // first, move the pointer to dynamic memory into rsi
-        assign_ss << "\t" << "mov rsi, [rbp - " << std::dec << sym.get_stack_offset() << "]" << std::endl;
+        assign_ss << "\t" << "mov rsi, [rbp - " << std::dec << sym.get_offset() << "]" << std::endl;
 
         // then, assign to the address pointed to by rsi
         assign_ss << "\t" << "mov [rsi], " << src << std::endl;
@@ -180,7 +180,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
         automatic memory will write to the appropriate address on the stack for integral types
         simply use the stack offset of the symbol in the assignment, subtracting from rbp
         */
-        assign_ss << "\t" << "mov [rbp - " << std::dec << sym.get_stack_offset() << "], " << src << std::endl;
+        assign_ss << "\t" << "mov [rbp - " << std::dec << sym.get_offset() << "], " << src << std::endl;
     }
 
     // return our generated code
@@ -224,7 +224,7 @@ std::stringstream compiler::handle_bool_assignment(symbol &sym, std::shared_ptr<
             }
 
             // the pointer to dynamic memory is located on the stack
-            assign_ss << "\t" << "mov rsi, [rbp - " << std::dec << sym.get_stack_offset() << "]" << std::endl;
+            assign_ss << "\t" << "mov rsi, [rbp - " << std::dec << sym.get_offset() << "]" << std::endl;
 
             // move the contents of al into the location pointed to by RSI
             assign_ss << "\t" << "mov [rsi], al" << std::endl;
@@ -238,7 +238,7 @@ std::stringstream compiler::handle_bool_assignment(symbol &sym, std::shared_ptr<
             }
         } else {
             // automatic memory -- move the contents of al to [rbp - offset]
-            assign_ss << "\t" << "mov [rbp - " << sym.get_stack_offset() << "], al" << std::endl;
+            assign_ss << "\t" << "mov [rbp - " << sym.get_offset() << "], al" << std::endl;
         }
     } else {
         throw TypeException(line);
