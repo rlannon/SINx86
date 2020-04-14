@@ -44,6 +44,7 @@ public:
 
 	bool contains(std::string symbol_name);
 	std::shared_ptr<symbol> & find(std::string to_find);
+	
 	void leave_scope();
 
 	// constructor, destructor

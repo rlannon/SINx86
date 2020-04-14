@@ -97,7 +97,7 @@ class compiler {
 	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
-	std::stringstream evaluate_dot(Binary &dot_exp, unsigned int line);
+	std::stringstream evaluate_dot(member_selection &m, unsigned int line);
 public:
     // the compiler's entry function
     void generate_asm(std::string filename, Parser &p);

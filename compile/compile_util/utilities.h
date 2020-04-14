@@ -26,6 +26,7 @@ Our various compiler utilities
 #include "../../util/stack.h"
 #include "../../util/data_widths.h"
 #include "../struct_info.h"
+#include "member_selection.h"
 
 // todo: put these in their own namespace
 
