@@ -150,11 +150,11 @@ ListExpression::~ListExpression() {
 
 // Pointers
 
-LValue AddressOf::get_target() {
+std::shared_ptr<Expression> AddressOf::get_target() {
 	return this->target;
 }
 
-AddressOf::AddressOf(LValue target) : target(target) {
+AddressOf::AddressOf(std::shared_ptr<Expression> target) : target(target) {
 	AddressOf::expression_type = ADDRESS_OF;
 }
 

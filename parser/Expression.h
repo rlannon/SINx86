@@ -94,12 +94,11 @@ public:
 // Address Of -- the address of a variable
 class AddressOf : public Expression
 {
-	//LValue target;	// the variable whose information we want
-	LValue target;
+	std::shared_ptr<Expression> target;
 public:
-	LValue get_target();	// return the target variable
+	std::shared_ptr<Expression> get_target();
 
-	AddressOf(LValue target);
+	AddressOf(std::shared_ptr<Expression> target);
 	AddressOf();
 };
 

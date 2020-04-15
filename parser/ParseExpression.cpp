@@ -172,20 +172,8 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			// if we have a $ character, it HAS TO be the address-of operator
 			// current lexeme is the $, so get the variable for which we need the address
 			lexeme next_lexeme = this->next();
-			// the next lexeme MUST be an identifier
-			if (next_lexeme.type == IDENTIFIER) {
-
-				// turn the identifier into an LValue
-				LValue target_var(next_lexeme.value, "var_address");
-
-				// get the address of the vector position of the variable
-				return std::make_shared<AddressOf>(target_var);
-			}
-			// if it's not, throw an exception
-			else {
-				throw ParserException("An address-of operator must be followed by an identifier; illegal to follow with '" + next_lexeme.value + "' (not an identifier)", 111, current_lex.line_number);
-			}
-
+			left = this->parse_expression(get_precedence(exp_operator::ADDRESS));
+			// todo: ensure address-of expressions parse correctly
 		}
 		// check to see if we have a pointer dereference operator
 		else if (current_lex.value == "*") {

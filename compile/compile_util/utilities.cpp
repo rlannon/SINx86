@@ -81,24 +81,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 			// get the pointer
 			AddressOf *addr_of = dynamic_cast<AddressOf*>(to_eval.get());
 
-			// the address-of operator is considered a pointer literal, so the primary type is 'ptr'
-			type_information.set_primary(PTR);
-			type_information.add_qualities(std::vector<SymbolQuality> { UNSIGNED, LONG });
-
-			// set the subtype appropriately -- it must be an LValue
-			if (addr_of->get_target().get_expression_type() == exp_type::LVALUE) {
-				type_information.set_subtype(
-					get_expression_data_type(
-						std::make_shared<LValue>(addr_of->get_target()),
-						symbols,
-						line
-					)
-				);
-			}
-			else {
-				// throw an exception if it's not an lvalue
-				throw CompilerException("The address-of operator ($) must be used with a variable name", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
-			}
+			// todo: properly implement address-of parsing and evaluation
 
 			break;
 		}

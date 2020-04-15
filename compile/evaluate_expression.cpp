@@ -67,28 +67,9 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case ADDRESS_OF:	// todo: move implementation of pointer-related expressions into separate functions
         {
-			// todo: enable address-of with indexed expressions
 			AddressOf addr_exp = *dynamic_cast<AddressOf*>(to_evaluate.get());
-			std::shared_ptr<symbol> s = this->lookup(addr_exp.get_target().getValue(), line);
-			if (s->get_symbol_type() == SymbolType::VARIABLE) {
-				// how we get the address depends on where in memory the symbol lives
-				if (s->get_data_type().get_qualities().is_static()) {
-					// static data just uses the name
-					evaluation_ss << "\t" << "mov rax, " << s->get_name() << std::endl;
-				}
-				else if (s->get_data_type().get_qualities().is_dynamic()) {
-					// dynamic data uses [rbp - offset] because we want the heap address
-					evaluation_ss << "\t" << "mov rax, [rbp - " << s->get_offset() << std::endl;
-				}
-				else {
-					// automatic memory uses rbp - offset
-					evaluation_ss << "\t" << "mov rax, rbp" << std::endl;
-					evaluation_ss << "\t" << "sub rax, " << s->get_offset() << std::endl;
-				}
-			}
-			else {
-				throw InvalidSymbolException(line);
-			}
+			
+			// todo: properly implement AddressOf expression evaluation
 
             break;
         }
