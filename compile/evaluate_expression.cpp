@@ -106,6 +106,12 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 			if (bin_exp.get_operator() == exp_operator::DOT) {
 				// create the member_selection object from the expression so it can be evaluated
 				member_selection m = member_selection::create_member_selection(bin_exp, this->structs, this->symbols, line);
+
+				// before we evaluate it, check to see whether the last member was initialized -- if not, then we can't safely evaluate it
+				if (!m.last().was_initialized())
+					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
+
+				// now, generate the code
 				evaluation_ss << this->evaluate_dot(m, line).str();
 			}
 			else {
@@ -253,8 +259,10 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
     std::stringstream eval_ss;
 
-    // get the symbol for the lvalue
+    // get the symbol for the lvalue; make sure it was initialized
     symbol &sym = *(this->lookup(to_evaluate.getValue(), line).get());
+	if (!sym.was_initialized())
+		throw ReferencedBeforeInitializationException(sym.get_name(), line);
 
     // it must be a variable symbol, not a function definition
     if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
@@ -370,8 +378,11 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     
     std::stringstream eval_ss;
 
-    // first, get the symbol for the array or string we are indexing
+    // first, get the symbol for the array or string we are indexing; make sure it was initialized
     symbol indexed_sym = *(this->lookup(to_evaluate.getValue(), line).get());
+	if (!indexed_sym.was_initialized())
+		throw ReferencedBeforeInitializationException(indexed_sym.get_name(), line);
+
 	DataType contained_type = *indexed_sym.get_data_type().get_full_subtype().get();
 	size_t full_array_width = indexed_sym.get_data_type().get_array_length() * contained_type.get_width() + 4;
 

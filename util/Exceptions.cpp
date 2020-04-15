@@ -340,3 +340,13 @@ NonModifiableLValueException::NonModifiableLValueException(unsigned int line) :
 {
 	// super called
 }
+
+ReferencedBeforeInitializationException::ReferencedBeforeInitializationException(std::string symbol_name, unsigned int line) :
+	CompilerException(
+		"Symbol '" + symbol_name + "' referenced before assignment",
+		compiler_errors::REFERENCED_BEFORE_ASSIGNMENT_ERROR,
+		line
+	)
+{
+	// super called
+}

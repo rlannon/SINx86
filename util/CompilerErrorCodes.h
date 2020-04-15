@@ -27,6 +27,7 @@ namespace compiler_errors {
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
 	const unsigned int DUPLICATE_DEFINITION_ERROR = 31;	// The definition for this resource was already found
 	const unsigned int NON_MODIFIABLE_LVALUE_ERROR = 40;	// left hand expressions in assignments must be modifiable-lvalues
+	const unsigned int REFERENCED_BEFORE_ASSIGNMENT_ERROR = 41;	// all symbols must be assigned before they can be referenced safely
     const unsigned int ILLEGAL_OPERATION_ERROR = 50;    // The statement is not allowed where it was found
     const unsigned int ILLEGAL_RETURN_ERROR = 51;   // Return statements must only occur within functions
 	const unsigned int NO_RETURN_ERROR = 52;	// used for when not all control paths in a function return a value
