@@ -43,7 +43,7 @@ class compiler {
 	std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
     template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
 
-    struct_table structs;	// todo: refactor this and add a 'struct_table' class for maintainability
+	struct_table structs;
 	void add_struct(struct_info to_add, unsigned int line);	// add a struct to the table
     struct_info& get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
 

@@ -107,7 +107,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 				// create the member_selection object from the expression so it can be evaluated
 				member_selection m = member_selection::create_member_selection(bin_exp, this->structs, this->symbols, line);
 
-				// before we evaluate it, check to see whether the last member was initialized -- if not, then we can't safely evaluate it
+				// before we evaluate it, check to see whether the last member was initialized -- if not, then we can't safely evaluate it (must do this here because 'evaluated_dot' is also used for assignment, as it fetches an address
 				if (!m.last().was_initialized())
 					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
 

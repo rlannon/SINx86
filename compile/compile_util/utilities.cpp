@@ -381,7 +381,6 @@ bool member_selection_types_valid(Binary & to_check, symbol_table & symbols, uns
 
 template function_symbol create_function_symbol(FunctionDefinition);
 template function_symbol create_function_symbol(Declaration);
-
 template <typename T>
 function_symbol create_function_symbol(T def) {
     /*
@@ -432,7 +431,6 @@ function_symbol create_function_symbol(T def) {
 
 template symbol generate_symbol(Declaration&, std::string, unsigned int, size_t&);
 template symbol generate_symbol(Allocation&, std::string, unsigned int, size_t&);
-
 template <typename T>
 symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope_level, size_t &stack_offset) {
     /*

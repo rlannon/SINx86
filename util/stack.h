@@ -1,10 +1,9 @@
 /*
 
-Algorithms and Data Structures
-Copyright 2019 Riley Lannon
 Stack.h
+An implementation of a template data structure
 
-An implementation of the Stack data structure using C++ templates
+Currently, this implementation utilizes std::vector at its core. Once the newer version (that utilizes std::allocator) is properly debugged, this will be changed back. However, it was causing significant memory access bugs due to improper reallocation procedures.
 
 */
 

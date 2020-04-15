@@ -21,11 +21,12 @@ bool struct_table::insert(struct_info to_add) {
 	
 	*/
 
-	std::pair<std::unordered_map<std::string, struct_info>::iterator, bool> returned = this->structs.insert(std::make_pair<>(to_add.get_struct_name(), to_add));	 // insert the pair containing our key/value pair, store the result in a pair
-
-	// todo: throw exception? if it does, we don't need to return a boolean
-
-	return returned.second;
+	std::pair<std::string, struct_info> to_insert(to_add.get_struct_name(), to_add);
+	std::pair<std::unordered_map<std::string, struct_info>::iterator, bool> returned = this->structs.insert(to_insert);	 // insert the pair containing our key/value pair, store the result in a pair
+	if (returned.second)
+		return true;
+	else
+		return false;
 }
 
 bool struct_table::contains(std::string name) {

@@ -13,9 +13,19 @@ Handle allocations for the compiler class.
 // todo: struct allocations -- when a struct is allocated, it should allocate all of its data members -- like a primitive form of a constructor; when free is called on a struct, it will free _all_ data, but dynamic data will not be freed when the struct goes out of scope
 
 std::stringstream compiler::allocate(Allocation alloc_stmt) {
-    // Dispatches the allocation to the appropriate function
+	/*
     
-    DataType alloc_data = alloc_stmt.get_type_information();
+	allocate
+	Dispatches the allocation to the appropriate function
+    
+	@param	alloc_stmt	The statement containing the allocation
+	@returns	A stringstream containing the generated code
+
+	*/
+
+	// todo: advance rsp so that we may safely push data to the stack even when we are allocating local data
+    
+	DataType alloc_data = alloc_stmt.get_type_information();
     std::stringstream allocation_ss;
 
 	// if the type is 'array', we need to evaluate the array width that was parsed earlier
@@ -69,14 +79,21 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
-			// todo: allocate dynamically
-
+			// dynamic allocation
 			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+			
+			// add the symbol and move RSP further into the stack, by the width of a pointer
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
+			allocation_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
 
 			// if we have a const here, throw an exception -- constants may not be dynamic
 			if (alloc_data.get_qualities().is_const()) {
 				throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
+			}
+
+			// if we have static, that should also generate an error
+			if (alloc_data.get_qualities().is_static()) {
+				throw CompilerException("Use of 'static' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
 			}
 		}
 		else if (alloc_data.get_qualities().is_static()) {
@@ -88,6 +105,9 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// static const variables can go in the .rodata segment, so check to see if it is also const
 			if (alloc_data.get_qualities().is_const()) {
 				// todo: static const memory
+			}
+			else {
+
 			}
 		}
 		else {
@@ -107,7 +127,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				allocation_ss << this->handle_symbol_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
 			}
 
-			// do not return yet in case we have any other code we wish to add later
+			// now, move RSP by the width of the type
+			allocation_ss << "\t" << "sub rsp, " << allocated.get_data_type().get_width();
 		}
 	}
 	else {

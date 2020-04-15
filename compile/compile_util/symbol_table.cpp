@@ -29,7 +29,6 @@ symbol_table::node::node() {
 }
 
 symbol_table::node::~node() {
-
 }
 
 /*
