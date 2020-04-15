@@ -92,7 +92,7 @@ std::stringstream compiler::handle_dot_assignment(member_selection &m, std::shar
 		throw FinalAssignmentException(line);
 	}
 
-	DataType rvalue_type = get_expression_data_type(rvalue, this->symbols, line);
+	DataType rvalue_type = get_expression_data_type(rvalue, this->symbols, this->structs, line);
 	if (!to_assign_type.is_compatible(rvalue_type)) {
 		throw TypeException(line);
 	}
@@ -129,7 +129,7 @@ std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_pt
     // First, we need to determine some information about the symbol
     // Look at its type and dispatch accordingly
     DataType symbol_type = sym.get_data_type();
-    DataType expression_type = get_expression_data_type(value, this->symbols, line);
+    DataType expression_type = get_expression_data_type(value, this->symbols, this->structs, line);
 
     // ensure our expression's data type is compatible with our variable's data type
     if (symbol_type.is_compatible(expression_type)) {
@@ -149,7 +149,7 @@ std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_pt
 			{
 				// check that the type qualities are valid - pointers have special rules due to the language's type variability policy
 				std::shared_ptr<DataType> left_type = sym.get_data_type().get_full_subtype();
-				std::shared_ptr<DataType> right_type = get_expression_data_type(value, this->symbols, line).get_full_subtype();
+				std::shared_ptr<DataType> right_type = get_expression_data_type(value, this->symbols, this->structs, line).get_full_subtype();
 
 				if (is_valid_type_promotion(left_type->get_qualities(), right_type->get_qualities())) {
 					// pointers are really just integers, so we can
@@ -264,7 +264,7 @@ std::stringstream compiler::handle_bool_assignment(symbol &sym, std::shared_ptr<
     // todo: should the language allow implicit conversion between integers and booleans? or not allow any implicit conversions?
 
     // ensure the types are compatible
-    if (sym.get_data_type().is_compatible(get_expression_data_type(value, this->symbols, line))) {
+    if (sym.get_data_type().is_compatible(get_expression_data_type(value, this->symbols, this->structs, line))) {
         // evaluate the boolean expression -- the result will be in al
         assign_ss << this->evaluate_expression(value, line).str();
 

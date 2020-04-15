@@ -16,6 +16,7 @@ This file contains the function/class declarations required for the compiler's c
 
 #include "const_symbol.h"
 #include "symbol_table.h"
+#include "struct_table.h"
 #include "utilities.h"
 #include "../../util/Exceptions.h"
 #include "../../parser/Statement.h"	// includes "Expression.h"
@@ -23,6 +24,7 @@ This file contains the function/class declarations required for the compiler's c
 class compile_time_evaluator {
 	// data members
 	symbol_table* constants;
+	struct_table* structs;	// it must have access to the struct table in case we have access to const members
 	
 	/*
 	
@@ -46,6 +48,6 @@ public:
 
 	std::string evaluate_expression(std::shared_ptr<Expression> to_evaluate, std::string scope_name, unsigned int scope_level, unsigned int line);
 
-	compile_time_evaluator();
+	compile_time_evaluator(struct_table* structs);
 	~compile_time_evaluator();
 };

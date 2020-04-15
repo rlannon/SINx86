@@ -36,6 +36,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				get_expression_data_type(
 					alloc_data.get_array_length_expression(),
 					this->symbols,
+					this->structs,
 					alloc_stmt.get_line_number()
 				).get_primary() == INT)
 			{

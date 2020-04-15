@@ -231,7 +231,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         std::vector<symbol>::iterator it = formal_parameters.begin();
         for (std::shared_ptr<Expression> arg: args) {
             // first, ensure the types match
-            DataType arg_type = get_expression_data_type(arg, this->symbols, line);
+            DataType arg_type = get_expression_data_type(arg, this->symbols, this->structs, line);
             if (arg_type.is_compatible(it->get_data_type())) {
                 // evaluate the expression and pass it in the appropriate manner
                 sincall_ss << this->evaluate_expression(arg, line).str();
@@ -310,7 +310,7 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     std::stringstream ret_ss;
 
     // first, ensure that the return statement's data type is compatible with the signature
-    DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbols, ret.get_line_number());
+    DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbols, this->structs, ret.get_line_number());
     if (return_type.is_compatible(signature.get_data_type())) {
         // types are compatible; how the value gets returned (and how the callee gets cleaned up) depends on the function's calling convention
         if (signature.get_calling_convention() == SINCALL) {

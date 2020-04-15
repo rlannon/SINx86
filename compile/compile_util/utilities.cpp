@@ -10,7 +10,7 @@ Some utility functions for the compiler
 #include "utilities.h"
 
 // todo: don't use a template here; we can dynamic_cast to symbol because it is the parent class of symbol; similarly, we don't need symbol_table to be a template
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, unsigned int line) {
+DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line) {
     /*
 
     get_expression_data_type
@@ -22,6 +22,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
     */
 
 	// todo: ensure that with floating-point expressions, if a double-precision float is used, the result has a width of DOUBLE_WIDTH
+    // todo: write function to handle evaluation of dot operator expressions
    
     DataType type_information;
 
@@ -66,7 +67,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             ListExpression *init_list = dynamic_cast<ListExpression*>(to_eval.get());
             
             // A list expression is a vector of other expressions, get the first item and pass it into this function recursively
-            DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbols, line);
+            DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbols, structs, line);
 
             // the subtype will be the current primary type, and the primary type will be array
             sub_data_type.set_subtype(sub_data_type);
@@ -91,7 +92,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             Dereferenced *deref = dynamic_cast<Dereferenced*>(to_eval.get());
             
             // Dereferenced expressions contain a pointer to another expression; get its type
-            type_information = get_expression_data_type(deref->get_contained_expression(), symbols, line);
+            type_information = get_expression_data_type(deref->get_contained_expression(), symbols, structs, line);
             break;
         }
         case BINARY:
@@ -103,6 +104,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 
             Binary expressions are a little more tricky because they can involve multiple operands of different types
 			Further, some operators (the (in)equality operators) return different types than their operands
+            Note, however, that dot operator expressions must be handled differently (via member_selection) than others because they require a bit more involvement.
 
             We must get the types of the left and right operands and compare them. The qualifiers (including sizes) might change:
                 - If one operand is signed, and the other is unsigned, the result may or may not be signed; it will generate a 'signed/unsigned mismatch' warning
@@ -112,26 +114,35 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 
             */
 
-            DataType left = get_expression_data_type(binary->get_left(), symbols, line);
-            DataType right = get_expression_data_type(binary->get_right(), symbols, line);
+            if (binary->get_operator() == exp_operator::DOT) {
+                // create a member_selection object for the expression
+                member_selection m(*binary, structs, symbols, line);
 
-            // ensure the types are compatible
-            if (left.is_compatible(right)) {
-				// check for in/equality operators -- these will return booleans instead of the original type!
-				exp_operator op = binary->get_operator();
-				if (op == EQUAL || op == NOT_EQUAL || op == GREATER || op == GREATER_OR_EQUAL || op == LESS || op == LESS_OR_EQUAL) {
-					type_information = DataType(BOOL, DataType(), symbol_qualities());
-				}
-				else {
-					if (left.get_width() >= right.get_width()) {
-						type_information = left;
-					}
-					else {
-						type_information = right;
-					}
-				}
+                // now, just look at the data type of the last node
+                type_information = m.last().get_data_type();
             } else {
-                throw TypeException(line);  // throw an exception if the types are not compatible with one another
+                // get both expression types
+                DataType left = get_expression_data_type(binary->get_left(), symbols, structs, line);
+                DataType right = get_expression_data_type(binary->get_right(), symbols, structs, line);
+
+                // ensure the types are compatible
+                if (left.is_compatible(right)) {
+                    // check for in/equality operators -- these will return booleans instead of the original type!
+                    exp_operator op = binary->get_operator();
+                    if (op == EQUAL || op == NOT_EQUAL || op == GREATER || op == GREATER_OR_EQUAL || op == LESS || op == LESS_OR_EQUAL) {
+                        type_information = DataType(BOOL, DataType(), symbol_qualities());
+                    }
+                    else {
+                        if (left.get_width() >= right.get_width()) {
+                            type_information = left;
+                        }
+                        else {
+                            type_information = right;
+                        }
+                    }
+                } else {
+                    throw TypeException(line);  // throw an exception if the types are not compatible with one another
+                }
             }
 
             break;
@@ -142,7 +153,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             Unary *u = dynamic_cast<Unary*>(to_eval.get());
 
             // Unary expressions contain an expression inside of them; call this function recursively using said expression as a parameter
-            type_information = get_expression_data_type(u->get_operand(), symbols, line);
+            type_information = get_expression_data_type(u->get_operand(), symbols, structs, line);
             break;
         }
         case VALUE_RETURNING_CALL:
@@ -335,29 +346,6 @@ struct_info define_struct(StructDefinition definition) {
 
     // construct and return a struct_info object
     return struct_info(struct_name, members, definition.get_line_number());
-}
-
-bool member_selection_types_valid(Binary & to_check, symbol_table & symbols, unsigned int line)
-{
-	/*
-
-	member_selection_types_valid
-	Checks to see whether the left-hand side of a dot or arrow expression is a struct
-
-	*/
-
-	bool valid = false;
-
-	DataType left_type = get_expression_data_type(to_check.get_left(), symbols, line);
-	if (to_check.get_operator() == exp_operator::DOT)
-		valid = (left_type.get_primary() == STRUCT);
-	else if (to_check.get_operator() == exp_operator::ARROW)
-		valid = (left_type.get_primary() == PTR && left_type.get_subtype() == STRUCT);
-	else {
-		throw CompilerException("Expected member selection expression (e.g., 'a.b' or 'a->b')", compiler_errors::OPERATOR_TYPE_ERROR, line);
-	}
-
-	return valid;
 }
 
 // Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions

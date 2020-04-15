@@ -17,6 +17,7 @@ Our various compiler utilities
 
 #include "const_symbol.h"
 #include "symbol_table.h"
+#include "struct_table.h"
 #include "../../util/DataType.h"
 #include "../../parser/Statement.h" // includes 'Expression.h'
 #include "../symbol.h"
@@ -30,7 +31,7 @@ Our various compiler utilities
 
 // todo: put these in their own namespace
 
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, unsigned int line);
+DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
 
 bool returns(StatementBlock &to_check);
 
@@ -41,8 +42,6 @@ bool can_pass_in_register(DataType to_check);
 std::string get_rax_name_variant(DataType t, unsigned int line);
 
 struct_info define_struct(StructDefinition definition);
-
-bool member_selection_types_valid(Binary &to_check, symbol_table &symbols, unsigned int line);
 
 template<typename T>
 function_symbol create_function_symbol(T def);
