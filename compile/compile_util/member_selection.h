@@ -38,6 +38,7 @@ public:
 
 	member_selection& operator=(member_selection& right);
 
+	member_selection(Binary &exp, struct_table &structs, symbol_table &symbols, unsigned int line);
 	member_selection();
 	~member_selection();
 };

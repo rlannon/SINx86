@@ -193,6 +193,11 @@ member_selection & member_selection::operator=(member_selection& right) {
 	return *this;
 }
 
+member_selection::member_selection(Binary & exp, struct_table & structs, symbol_table & symbols, unsigned int line) : member_selection()
+{
+	*this = member_selection::create_member_selection(exp, structs, symbols, line);
+}
+
 member_selection::member_selection()
 {
 	this->it = this->symbols.begin();

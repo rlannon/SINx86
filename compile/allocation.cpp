@@ -104,7 +104,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
 
 				// make an assignment of 'initial_value' to 'allocated'
-				allocation_ss << this->handle_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
+				allocation_ss << this->handle_symbol_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
 			}
 
 			// do not return yet in case we have any other code we wish to add later

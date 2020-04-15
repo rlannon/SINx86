@@ -71,7 +71,8 @@ class compiler {
 
 	// assignments
 	std::stringstream assign(Assignment assign_stmt);
-	std::stringstream handle_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
+	std::stringstream handle_dot_assignment(member_selection &m, std::shared_ptr<Expression> rvalue, unsigned int line);
+	std::stringstream handle_symbol_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
 	std::stringstream handle_int_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
 	std::stringstream handle_bool_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
 	std::stringstream handle_string_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);

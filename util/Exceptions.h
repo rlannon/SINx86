@@ -80,6 +80,12 @@ public:
 	explicit DuplicateDefinitionException(unsigned int line);
 };
 
+class NonModifiableLValueException : public CompilerException
+{
+public:
+	explicit NonModifiableLValueException(unsigned int line);
+};
+
 class UndefinedException : public CompilerException
 {
 public:

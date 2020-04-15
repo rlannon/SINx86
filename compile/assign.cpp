@@ -25,28 +25,89 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
 
     */
 
-    // find the symbol
-    LValue *lvalue = dynamic_cast<LValue*>(assign_stmt.get_lvalue().get());	// todo: special function for assignments to struct members
-    symbol &sym = *(this->lookup(lvalue->getValue(), assign_stmt.get_line_number()).get()); // will throw an exception if the symbol doesn't exist
+	std::stringstream assign_ss;
 
-    // ensure we can make the assignment
-    if (sym.get_data_type().get_qualities().is_const()) {
-        // ensure we aren't assigning to a const-qualified variable
-        throw ConstAssignmentException(assign_stmt.get_line_number());
+    // we must dispatch based on type
+	if (assign_stmt.get_lvalue()->get_expression_type() == LVALUE) {
+		LValue *lvalue = dynamic_cast<LValue*>(assign_stmt.get_lvalue().get());
+		symbol &sym = *(this->lookup(lvalue->getValue(), assign_stmt.get_line_number()).get()); // will throw an exception if the symbol doesn't exist
+
+		// ensure we can make the assignment
+		if (sym.get_data_type().get_qualities().is_const()) {
+			// ensure we aren't assigning to a const-qualified variable
+			throw ConstAssignmentException(assign_stmt.get_line_number());
+		}
+		else if (sym.get_data_type().get_qualities().is_final() && sym.was_initialized()) {
+			// ensure we don't write to final data if it has been initialized
+			throw FinalAssignmentException(assign_stmt.get_line_number());
+		}
+		else if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
+			// if the symbol is a function symbol, then we have an error
+			throw InvalidSymbolException(assign_stmt.get_line_number());
+		}
+		else {
+			// dispatch to the assignment handler
+			assign_ss << this->handle_symbol_assignment(sym, assign_stmt.get_rvalue(), assign_stmt.get_line_number()).str();
+		}
 	}
-	else if (sym.get_data_type().get_qualities().is_final() && sym.was_initialized()) {
-		// ensure we don't write to final data if it has been initialized
-		throw FinalAssignmentException(assign_stmt.get_line_number());
-	} else if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
-        // if the symbol is a function symbol, then we have an error
-        throw InvalidSymbolException(assign_stmt.get_line_number());
-    } else {
-        // dispatch to the assignment handler
-        return this->handle_assignment(sym, assign_stmt.get_rvalue(), assign_stmt.get_line_number());
-    }
+	else if (assign_stmt.get_lvalue()->get_expression_type() == BINARY) {
+		// the only binary operator that produces a modifiable lvalue is the dot operator
+		Binary *binary = dynamic_cast<Binary*>(assign_stmt.get_lvalue().get());
+		if (binary->get_operator() == DOT) {
+			member_selection m(*binary, this->structs, this->symbols, assign_stmt.get_line_number());
+			assign_ss << this->handle_dot_assignment(m, assign_stmt.get_rvalue(), assign_stmt.get_line_number()).str();
+		}
+		else {
+			throw NonModifiableLValueException(assign_stmt.get_line_number());
+		}
+	}
+	else if (assign_stmt.get_lvalue()->get_expression_type() == DEREFERENCED) {
+		Dereferenced *deref = dynamic_cast<Dereferenced*>(assign_stmt.get_lvalue().get());
+		// todo: handle assignment to dereferenced pointer
+	}
+	else {
+		// no other expression types return modifiable-lvalues
+		throw NonModifiableLValueException(assign_stmt.get_line_number());
+	}
+
+	return assign_ss;
 }
 
-std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line) {
+std::stringstream compiler::handle_dot_assignment(member_selection &m, std::shared_ptr<Expression> rvalue, unsigned int line) {
+	/*
+	
+	handle_dot_assignment
+	Assigns the rvalue to the left-hand struct member evaluation
+	
+	*/
+
+	std::stringstream assign_ss;
+
+	// first, we need to check the types to ensure that they match and that the lhs is a modifiable-lvalue
+	DataType &to_assign_type = m.last().get_data_type();
+	if (to_assign_type.get_qualities().is_const()) {
+		throw ConstAssignmentException(line);
+	}
+	else if (to_assign_type.get_qualities().is_final() && m.last().was_initialized()) {
+		throw FinalAssignmentException(line);
+	}
+
+	DataType rvalue_type = get_expression_data_type(rvalue, this->symbols, line);
+	if (!to_assign_type.is_compatible(rvalue_type)) {
+		throw TypeException(line);
+	}
+
+	// evaluating the member_selection object
+	assign_ss << this->evaluate_dot(m, line).str();
+
+	// todo: push RBX onto the end of the stack
+	// todo: evaluate RHS, store in RAX
+	// todo: assign to [RBX] appropriately (based on type)
+
+	return assign_ss;
+}
+
+std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line) {
     /*
 
     handle_assignment
@@ -55,13 +116,13 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
     We need this as a separate function because it will be called by the allocation code generator if the user uses alloc-assign syntax
 	As a result, this function will *not* check for initialized const/final data members; that check is done by compiler::assign
 
+	Note that when *pointer* types are passed into this function, it is directly reassigning addresses; dereferenced pointer assignments are handled differently
+
     @param  sym The symbol to which we are assigning data
     @param  value   A shared pointer to the expression for the assignment
     @return A stringstream containing the generated code
 
     */
-
-	// todo: this function cannot actually handle pointer assignments; fix this
 
 	std::stringstream handle_ss;
 
@@ -86,8 +147,6 @@ std::stringstream compiler::handle_assignment(symbol &sym, std::shared_ptr<Expre
 				break;
             case PTR:
 			{
-				// todo: this is not actually how we should be handling pointer assignments!
-
 				// check that the type qualities are valid - pointers have special rules due to the language's type variability policy
 				std::shared_ptr<DataType> left_type = sym.get_data_type().get_full_subtype();
 				std::shared_ptr<DataType> right_type = get_expression_data_type(value, this->symbols, line).get_full_subtype();

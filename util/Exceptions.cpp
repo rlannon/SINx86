@@ -330,3 +330,13 @@ UndefinedOperatorError::UndefinedOperatorError(std::string op, unsigned int line
 {
 	// super called
 }
+
+NonModifiableLValueException::NonModifiableLValueException(unsigned int line) :
+	CompilerException(
+		"Left-hand side of assignment must be a modifiable-lvalue",
+		compiler_errors::NON_MODIFIABLE_LVALUE_ERROR,
+		line
+	)
+{
+	// super called
+}
