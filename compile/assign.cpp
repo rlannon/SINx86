@@ -84,7 +84,7 @@ std::stringstream compiler::handle_dot_assignment(member_selection &m, std::shar
 	std::stringstream assign_ss;
 
 	// first, we need to check the types to ensure that they match and that the lhs is a modifiable-lvalue
-	DataType &to_assign_type = m.last().get_data_type();
+	DataType to_assign_type = m.last().get_data_type();
 	if (to_assign_type.get_qualities().is_const()) {
 		throw ConstAssignmentException(line);
 	}

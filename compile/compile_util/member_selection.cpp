@@ -178,7 +178,7 @@ symbol & member_selection::next() {
 	return *this->it;
 }
 
-member_selection & member_selection::operator=(member_selection& right) {
+member_selection & member_selection::operator=(member_selection right) {
 	/*
 	
 	operator==

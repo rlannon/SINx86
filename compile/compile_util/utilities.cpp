@@ -348,7 +348,7 @@ bool member_selection_types_valid(Binary & to_check, symbol_table & symbols, uns
 
 	bool valid = false;
 
-	DataType &left_type = get_expression_data_type(to_check.get_left(), symbols, line);
+	DataType left_type = get_expression_data_type(to_check.get_left(), symbols, line);
 	if (to_check.get_operator() == exp_operator::DOT)
 		valid = (left_type.get_primary() == STRUCT);
 	else if (to_check.get_operator() == exp_operator::ARROW)
