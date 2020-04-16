@@ -595,5 +595,6 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 	}
 
 	// now, the address of the data we want is in RBX
+	this->reg_stack.peek().set(RBX);	// todo: push RBX if it is in use before this function?
 	return eval_ss;
 }

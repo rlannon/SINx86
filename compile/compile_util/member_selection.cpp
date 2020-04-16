@@ -46,6 +46,8 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 
 	member_selection m;
 
+	// todo: allow indexed expressions on LHS
+
 	// first, handle the left hand side
 	if (exp.get_left()->get_expression_type() == BINARY) {
 		Binary* left = dynamic_cast<Binary*>(exp.get_left().get());
@@ -77,6 +79,8 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 	}
 	struct_info& last_struct = structs.find(m.last().get_data_type().get_struct_name());
 
+	// todo: allow indexed expressions on RHS
+
 	// now, handle the right hand side -- note that dereferenced expressions are forbidden here (only allowed on the left side)
 	if (exp.get_right()->get_expression_type() == LVALUE) {
 		LValue* right = dynamic_cast<LValue*>(exp.get_right().get());
@@ -91,7 +95,7 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 		}
 	}
 	else if (exp.get_right()->get_expression_type() == DEREFERENCED) {
-		throw CompilerException("Dereferenced expressions are not allowed on the right-hand side of a member selection expression (dot operator)", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+		throw CompilerException("Dereferenced expressions are not allowed on the right-hand side of a member selection expression (e.g., a.*b); proper syntax is *a.b", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 	else {
 		throw CompilerException("Invalid expression type on right-hand side of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
