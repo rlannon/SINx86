@@ -118,8 +118,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 				// create the member_selection object from the expression so it can be evaluated
 				member_selection m = member_selection::create_member_selection(bin_exp, this->structs, this->symbols, line);
 
-				// before we evaluate it, check to see whether the last member was initialized -- if not, then we can't safely evaluate it (must do this here because 'evaluated_dot' is also used for assignment, as it fetches an address
-				if (!m.last().was_initialized())
+				// before we evaluate it, check to see whether the struct was initialized; since individual members are not allocated, if *any* member is assigned, the symbol is considered initialized
+				if (!m.first().was_initialized())
 					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
 
 				// now, generate the code
@@ -274,6 +274,10 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
     symbol &sym = *(this->lookup(to_evaluate.getValue(), line).get());
 	if (!sym.was_initialized())
 		throw ReferencedBeforeInitializationException(sym.get_name(), line);
+    
+    // check to see if it was freed; we can't know for sure, but if the compiler has it marked as freed, issue a warning that it may have been freed before the reference to it
+    if (sym.was_freed())
+        compiler_warning("Symbol '" + sym.get_name() + "' may have been freed", line);
 
     // it must be a variable symbol, not a function definition
     if (sym.get_symbol_type() == FUNCTION_SYMBOL) {

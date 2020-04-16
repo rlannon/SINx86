@@ -104,6 +104,9 @@ std::stringstream compiler::handle_dot_assignment(member_selection &m, std::shar
 	// todo: evaluate RHS, store in RAX
 	// todo: assign to [RBX] appropriately (based on type)
 
+    // mark the struct as initialized
+    m.first().set_initialized();
+
 	return assign_ss;
 }
 

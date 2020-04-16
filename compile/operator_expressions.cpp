@@ -485,7 +485,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 
 				// write the instruction sequence
 				eval_ss << "\t" << instruction << " al" << std::endl;
-				eval_ss << "\t" << "movzx rax, al" << std::endl;
+				eval_ss << "\t" << "movzx rax, al" << std::endl;	// movzx - move with zero extend
 			}
 		}
 		else {
@@ -595,6 +595,5 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 	}
 
 	// now, the address of the data we want is in RBX
-
 	return eval_ss;
 }

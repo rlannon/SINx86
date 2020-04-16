@@ -97,6 +97,11 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 		throw CompilerException("Invalid expression type on right-hand side of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 
+	// issue a warning if the first member is marked as freed (we can't know for sure -- it may not be freed in the scope we are looking in, so issue a warning, not an error)
+	if (m.first().was_freed()) {
+		compiler_warning("Symbol '" + m.first().get_name() + "' may have been freed", line);
+	}
+
 	return m;
 }
 
