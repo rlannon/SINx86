@@ -69,7 +69,37 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         {
 			AddressOf addr_exp = *dynamic_cast<AddressOf*>(to_evaluate.get());
 			
-			// todo: properly implement AddressOf expression evaluation
+			// how we generate code for this depends on the type
+            if (addr_exp.get_target()->get_expression_type() == BINARY) {
+                // if we have a binary expression, it *must* be the dot operator; if so, just return what's in RBX after we evaluate it
+                Binary* target = dynamic_cast<Binary*>(addr_exp.get_target().get());
+                if (target->get_operator() != DOT) {
+                    throw CompilerException("Illegal binary operand in address-of expression", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
+                }
+
+                evaluation_ss << this->evaluate_binary(*target, line).str();
+                evaluation_ss << "mov rax, rbx" << std::endl;
+                this->reg_stack.peek().clear(RBX);  // now we can use RBX again
+            } else if (addr_exp.get_target()->get_expression_type() == LVALUE) {
+                LValue* target = dynamic_cast<LValue*>(addr_exp.get_target().get());
+                // look up the symbol; obtain the address based on its memory location
+                std::shared_ptr<symbol> s = this->lookup(target->getValue(), line);
+                if (s->get_data_type().get_qualities().is_static()) {
+                    evaluation_ss << "\t" << "mov rax, " << s->get_name() << std::endl;
+                } 
+                else {
+                    // first, get the stack address
+                    evaluation_ss << "\t" << "mov rax, rbp" << std::endl;
+                    evaluation_ss << "\t" << "sub rax, " << s->get_offset() << std::endl;
+
+                    // if the variable is dynamic or a string, dereference RAX
+                    if (s->get_data_type().get_qualities().is_dynamic() || s->get_data_type().get_primary() == STRING) {
+                        evaluation_ss << "\t" << "mov rax, [rax]" << std::endl;
+                    }
+                }
+            } else {
+                throw CompilerException("Illegal address-of argument", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
+            }
 
             break;
         }
@@ -83,7 +113,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 			// cast to Binary class and dispatch appropriately
 			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
 
-			// if we have a dot opereator, use a separate function; it must be handled slightly differently than other binary expressions
+			// if we have a dot operator, use a separate function; it must be handled slightly differently than other binary expressions
 			if (bin_exp.get_operator() == exp_operator::DOT) {
 				// create the member_selection object from the expression so it can be evaluated
 				member_selection m = member_selection::create_member_selection(bin_exp, this->structs, this->symbols, line);
@@ -93,7 +123,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
 
 				// now, generate the code
-				evaluation_ss << this->evaluate_dot(m, line).str();
+				evaluation_ss << this->evaluate_member_selection(m, line).str();
 			}
 			else {
 				evaluation_ss << this->evaluate_binary(bin_exp, line).str();

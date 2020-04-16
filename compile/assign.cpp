@@ -98,7 +98,7 @@ std::stringstream compiler::handle_dot_assignment(member_selection &m, std::shar
 	}
 
 	// evaluating the member_selection object
-	assign_ss << this->evaluate_dot(m, line).str();
+	assign_ss << this->evaluate_member_selection(m, line).str();
 
 	// todo: push RBX onto the end of the stack
 	// todo: evaluate RHS, store in RAX
