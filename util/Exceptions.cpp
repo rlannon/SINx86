@@ -20,7 +20,7 @@ const char* CompilerException::what() const noexcept {
 }
 
 CompilerException::CompilerException(const std::string& message, unsigned int code, unsigned int line) : message(message), code(code), line(line) {
-	this->message = "**** Error encountered in compilation; E" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
+	this->message = "**** Compiler error C" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
 
 IllegalOperationException::IllegalOperationException(unsigned int line):
@@ -265,7 +265,7 @@ const char* ParserException::what() const noexcept {
 }
 
 ParserException::ParserException(const std::string& message, const unsigned int& code, const unsigned int& line) : message_(message), code_(code), line_(line) {
-	message_ = "**** Error occurred when parsing file; E" + std::to_string(code_) + ": " + message_ + " (line " + std::to_string(line_) + ")";
+	message_ = "**** Compiler error E" + std::to_string(code_) + ": " + message_ + " (line " + std::to_string(line_) + ")";
 }
 
 InvalidTokenException::InvalidTokenException(

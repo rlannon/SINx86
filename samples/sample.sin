@@ -4,14 +4,14 @@
 def struct point {
 	alloc int x;
 	alloc int y;
-	alloc ptr<int> z;
 }
 
 def void main() {
 	alloc point p;
-	alloc ptr< ptr< int > > x;
-	let x = p.z;
-	alloc int y: **x;
+	let p.x = 10;
+	let p.y = 20;
+	alloc int x: p.x;
+	alloc int y: p.y;
 
 	return void;
 }

@@ -35,6 +35,7 @@ public:
 	symbol& next();
 	symbol& peek_previous();
 	symbol& previous();
+	bool is_at_end();
 
 	member_selection& operator=(member_selection right);
 

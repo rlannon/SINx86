@@ -147,7 +147,7 @@ symbol & member_selection::peek_previous()
 	}
 
 	std::list<symbol>::iterator temp = this->it;
-	temp--;
+	--temp;
 	return *temp;
 }
 
@@ -183,6 +183,13 @@ symbol & member_selection::next() {
 	return *this->it;
 }
 
+bool member_selection::is_at_end() {
+	// check if we are pointing to the last element
+	std::list<symbol>::iterator temp = it;
+	++temp;
+	return (temp == this->symbols.end());
+}
+
 member_selection & member_selection::operator=(member_selection right) {
 	/*
 	
@@ -201,6 +208,7 @@ member_selection & member_selection::operator=(member_selection right) {
 member_selection::member_selection(Binary & exp, struct_table & structs, symbol_table & symbols, unsigned int line) : member_selection()
 {
 	*this = member_selection::create_member_selection(exp, structs, symbols, line);
+	this->it = this->symbols.begin();
 }
 
 member_selection::member_selection()

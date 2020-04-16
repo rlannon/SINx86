@@ -529,7 +529,7 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 	std::stringstream eval_ss;
 
 	// the first symbol is a special case because it is going to be in the symbol table as an individual entry
-	symbol& current_node = m.first();
+	symbol current_node = m.first();
 	
 	// since it's the first symbol, it must be in the compiler's symbol table
 	symbol& table_entry = *dynamic_cast<symbol*>(this->lookup(current_node.get_name(), line).get());
@@ -586,7 +586,7 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 		}
 
 		// update the current node; if we can't, then we are done
-		if (&current_node == &m.last()) {
+		if (m.is_at_end()) {
 			done = true;
 		}
 		else {

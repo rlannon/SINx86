@@ -105,8 +105,11 @@ std::stringstream compiler::handle_dot_assignment(member_selection &m, std::shar
 	// todo: assign to [RBX] appropriately (based on type)
 
     // mark the struct as initialized
-    m.first().set_initialized();
+    // todo: better way than looking up the symbol again? a *copy* is contained within member_selection (as containers cannot be stored in STL containers), but we could contain something like a shared_ptr
+    symbol& s = *dynamic_cast<symbol*>(this->lookup(m.first().get_name(), line).get());
+    s.set_initialized();
 
+    // finally, return the generated code
 	return assign_ss;
 }
 
