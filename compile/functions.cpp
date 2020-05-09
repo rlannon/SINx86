@@ -93,7 +93,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
     if (func_sym.get_formal_parameters().size() != 0) {
         const symbol &last_sym = func_sym.get_formal_parameters().back(); 
-        this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_offset();
+        this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
     }
 
     // get the register_usage object from func_sym and push that

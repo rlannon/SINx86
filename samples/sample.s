@@ -1,22 +1,33 @@
 section .text
 main:
-	sub rsp, 0
-	mov rbx, rbp
-	sub rbx, 16
+	sub rsp, 8
 
 	mov rbx, rbp
-	sub rbx, 16
-	add rbx, 4
+	sub rbx, 20
+	mov r10, rbx
+	mov ax, 10
+	mov rbx, r10
+	mov [rbx], eax
 
 	mov rbx, rbp
-	sub rbx, 16
-	mov [rbp - 16], eax
-	sub rsp, 4
-	mov rbx, rbp
-	sub rbx, 16
+	sub rbx, 20
 	add rbx, 4
+	mov r10, rbx
+	mov ax, 20
+	mov rbx, r10
+	mov [rbx], eax
+
+	mov rbx, rbp
+	sub rbx, 20
 	mov [rbp - 20], eax
 	sub rsp, 4
+
+	mov rbx, rbp
+	sub rbx, 20
+	add rbx, 4
+	mov [rbp - 24], eax
+	sub rsp, 4
+
 	mov rax, 0
 
 
