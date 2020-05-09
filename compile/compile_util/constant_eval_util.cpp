@@ -29,7 +29,7 @@ void compile_time_evaluator::add_constant(Allocation & alloc, symbol & s)
 	std::string initial_value = this->evaluate_expression(alloc.get_initial_value(), s.get_scope_name(), s.get_scope_level(), alloc.get_line_number());
 	const_symbol sym(s, initial_value);	// initialize our const_symbol object
 
-	this->constants->insert(sym);	// todo: ensure the symbol was inserted successfully
+	this->constants->insert(std::make_shared<const_symbol>(sym));	// todo: ensure the symbol was inserted successfully
 }
 
 const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string scope_name, unsigned int scope_level, unsigned int line) const {

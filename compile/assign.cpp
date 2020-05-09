@@ -101,8 +101,29 @@ std::stringstream compiler::handle_dot_assignment(member_selection &m, std::shar
 	assign_ss << this->evaluate_member_selection(m, line).str();
 
 	// todo: push RBX onto the end of the stack OR move into a free register if possible
-	// todo: evaluate RHS, store in RAX
-	// todo: assign to [RBX] appropriately (based on type)
+	reg rbx_contents = this->reg_stack.peek().get_available_register(to_assign_type.get_primary());
+	if (rbx_contents == reg::NO_REGISTER) {
+		// todo: push RBX onto the end of the stack
+	}
+	else {
+		assign_ss << "\t" << "mov " << register_usage::get_register_name(rbx_contents) << ", rbx" << std::endl;
+		this->reg_stack.peek().set(rbx_contents);	// mark the register as in use
+	}
+
+	// evaluate RHS -- the result is in RAX
+	assign_ss << this->evaluate_expression(rvalue, line).str();
+	
+	// move the pointer back into RBX from wherever it was and assign
+	if (rbx_contents == reg::NO_REGISTER) {
+		// todo: pop from stack
+	}
+	else {
+		assign_ss << "\t" << "mov rbx, " << register_usage::get_register_name(rbx_contents) << std::endl;
+		this->reg_stack.peek().clear(rbx_contents);	// mark the register as available again
+	}
+
+	// perform the assignment
+	assign_ss << "\t" << "mov [rbx], " << get_rax_name_variant(to_assign_type, line) << std::endl;
 
     // mark the struct as initialized
     // todo: better way than looking up the symbol again? a *copy* is contained within member_selection (as containers cannot be stored in STL containers), but we could contain something like a shared_ptr
@@ -123,7 +144,7 @@ std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_pt
 	As a result, this function will *not* check for initialized const/final data members; that check is done by compiler::assign
 
 	Note that when *pointer* types are passed into this function, it is directly reassigning addresses; dereferenced pointer assignments are handled differently
-
+	
     @param  sym The symbol to which we are assigning data
     @param  value   A shared pointer to the expression for the assignment
     @return A stringstream containing the generated code

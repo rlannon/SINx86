@@ -27,38 +27,10 @@ class register_usage {
     */
 
     // using an unordered_map will allow much easier access to these booleans
-    std::unordered_map<reg, std::pair<bool&, bool&>> regs;  // first = currently in use; second = has been used
+    std::unordered_map<reg, std::pair<bool, bool>> regs;  // first = currently in use; second = has been used
     static std::unordered_map<reg, std::string> reg_strings;
     static std::unordered_map<reg, std::string> reg_32_strings;
     static std::unordered_map<reg, std::string> reg_16_strings;
-
-    // todo: do we really need named boolean variables? or can we just use the unordered_map?
-
-    // The four general-purpose named registers
-    bool rax;
-    bool rbx;
-    bool rcx;
-    bool rdx;
-
-    // source and data registers
-    bool rsi;
-    bool rdi;
-
-    // don't track usage of rsp and rbp
-
-    // additional registers for x86_64
-    // Data widths are 64 = r8; 32 = r8d; 16 = r8w; 8 = r8b
-    bool r8;
-    bool r9;
-    bool r10;
-    bool r11;
-    bool r12;
-    bool r13;
-    bool r14;
-    bool r15;
-
-    // we have 8 128-bit xmm registers available, called xmm_
-    bool xmm[8] = { false };
     
     // track if a register has been used at all
     bool used[24] = { false };

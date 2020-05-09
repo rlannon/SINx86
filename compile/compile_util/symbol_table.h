@@ -16,6 +16,8 @@ The hash table (std::unordered_map) keeps track of all symbols in all scopes, wh
 #include <memory>
 
 #include "../symbol.h"
+#include "../function_symbol.h"
+#include "const_symbol.h"
 #include "../../util/stack.h"
 
 class symbol_table {
@@ -39,7 +41,6 @@ class symbol_table {
 	void erase(node to_erase);
 public:
 	// public member functions
-	bool insert(symbol to_insert);
 	bool insert(std::shared_ptr<symbol> to_insert);
 
 	bool contains(std::string symbol_name);

@@ -87,11 +87,6 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	}
 }
 
-bool symbol_table::insert(symbol to_insert)
-{
-	return this->insert(std::make_shared<symbol>(to_insert));
-}
-
 bool symbol_table::contains(std::string symbol_name)
 {
 	// returns whether the symbol with a given name is in the symbol table	

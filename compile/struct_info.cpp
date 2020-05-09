@@ -62,7 +62,7 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
 
     for (symbol s: members) {
         try {
-            this->members.insert(s);
+            this->members.insert(std::make_shared<symbol>(s));
 
             size_t sym_width = s.get_data_type().get_width();
             if (sym_width == 0) {

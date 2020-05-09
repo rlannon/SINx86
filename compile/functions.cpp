@@ -80,20 +80,20 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // todo: optimize by enabling symbol table additions in template function?
     std::set<reg> arg_regs;
     for (symbol &sym: func_sym.get_formal_parameters()) {
-        // add the symbol to the table and update our stack offset
-        this->add_symbol(func_sym, definition.get_line_number());
-        reg r = sym.get_register();
+        // add the parameter symbol to the table
+        this->add_symbol(sym, definition.get_line_number());
+        
+		// if r was passed in a register, then we must add it to arg_regs
+		reg r = sym.get_register();
         if (r != NO_REGISTER) {
             arg_regs.insert(sym.get_register());
         }
     }
 
-    // update the stack offset -- since symbols are pushed in order, just get the last one; if we had no parameters, the offset should be 8 (a qword -- because of how the x86 stack works)
+    // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
     if (func_sym.get_formal_parameters().size() != 0) {
         const symbol &last_sym = func_sym.get_formal_parameters().back(); 
         this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_offset();
-    } else {
-        this->max_offset = 8;
     }
 
     // get the register_usage object from func_sym and push that
@@ -103,7 +103,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     definition_ss << func_sym.get_name() << ":" << std::endl;
 
     // since we will be using the 'call' instruction, we must increase our stack offset by one qword so that we don't overwrite the return address
-    this->max_offset += 8; 
+    this->max_offset += 8;	// todo: delete this? we began at an offset of 8 earlier
 
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
     procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
