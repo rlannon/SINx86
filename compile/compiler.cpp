@@ -263,7 +263,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     return compile_ss;
 }
 
-std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature, size_t return_offset) {
+std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature) {
     /*
 
     compile_ast

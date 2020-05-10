@@ -108,10 +108,9 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // since we will be using the 'call' instruction, we must increase our stack offset by the width of a pointer so that we don't overwrite the return address
     this->max_offset += sin_widths::PTR_WIDTH;
-    size_t return_offset = this->max_offset;    // get the offset we need to return to when we leave
-
+    
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
-    procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym), return_offset);
+    procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
 
     // now, put everything together in definition_ss by adding procedure_ss onto the end
     definition_ss << procedure_ss.str() << std::endl;

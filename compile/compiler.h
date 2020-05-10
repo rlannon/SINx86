@@ -61,7 +61,7 @@ class compiler {
     size_t max_offset;
 
 	// compile an entire statement block
-	std::stringstream compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature = nullptr, size_t return_offset = 0);
+	std::stringstream compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature = nullptr);
 
 	// a function to compile a single statement
 	std::stringstream compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature);
