@@ -122,8 +122,16 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 				if (!m.first().was_initialized())
 					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
 
-				// now, generate the code
+				// now, generate the code to get our data member
 				evaluation_ss << this->evaluate_member_selection(m, line).str();
+
+                // now, the address of our data is in RBX; dereference accordingly
+                if (can_pass_in_register(m.last().get_data_type())) {
+                    evaluation_ss << "\t" << "mov " << get_rax_name_variant(m.last().get_data_type(), line) << ", [rbx]" << std::endl;
+                } else {
+                    // if it can't pass in a register, move the pointer into RAX
+                    // todo: array and struct members
+                }
 			}
 			else {
 				evaluation_ss << this->evaluate_binary(bin_exp, line).str();

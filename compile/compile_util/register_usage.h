@@ -17,7 +17,7 @@ A class to track the current general-purpose registers in use
 
 #include "../../util/EnumeratedTypes.h"
 #include "../../util/Exceptions.h"
-
+#include "../../util/DataType.h"
 
 class register_usage {
     /*
@@ -31,6 +31,7 @@ class register_usage {
     static std::unordered_map<reg, std::string> reg_strings;
     static std::unordered_map<reg, std::string> reg_32_strings;
     static std::unordered_map<reg, std::string> reg_16_strings;
+    static std::unordered_map<reg, std::string> reg_8_strings;
     
     // track if a register has been used at all
     bool used[24] = { false };
@@ -56,8 +57,7 @@ public:
     
     // get the name of a register
     static std::string get_register_name(const reg to_get);    // full 64-bit register
-    // std::string get_r32_name(reg to_get); // 32-bit name
-    // std::string get_r16_name(reg to_get); // 16-bit name
+    static std::string get_register_name(const reg to_get, DataType t); // get the appropriate name based on type width
 
     register_usage();
     ~register_usage();

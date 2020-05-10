@@ -90,6 +90,21 @@ std::unordered_map<reg, std::string> register_usage::reg_16_strings {
     { R15, "r15w" }
 };
 
+std::unordered_map<reg, std::string> register_usage::reg_8_strings {
+    { RAX, "al" },
+    { RBX, "bl" },
+    { RCX, "cl" },
+    { RDX, "dl" },
+    { R8, "r8b" },
+    { R9, "r9b" },
+    { R10, "r10b" },
+    { R11, "r11b" },
+    { R12, "r12b" },
+    { R13, "r13b" },
+    { R14, "r14b" },
+    { R15, "r15b" }
+};
+
 bool register_usage::is_int_register(reg to_test) {
     // Returns whether the register is one of our 64-bit integer registers
     return !is_xmm_register(to_test);
@@ -232,6 +247,31 @@ std::string register_usage::get_register_name(const reg to_get) {
 	} else {
 		return it->second;
 	}
+}
+
+std::string register_usage::get_register_name(const reg to_get, DataType t) {
+    // Get the string value of a register name based on its width
+    std::unordered_map<reg, std::string>::iterator it;
+    bool found = false;
+    if (t.get_width() == 4) {
+        it = reg_32_strings.find(to_get);
+        found = it != reg_32_strings.end();
+    } else if (t.get_width() == 2) {
+        it = reg_16_strings.find(to_get);
+        found = it != reg_16_strings.end();
+    } else if (t.get_width() == 1) {
+        it = reg_8_strings.find(to_get);
+        found = it != reg_8_strings.end();
+    } else {
+        it = reg_strings.find(to_get);
+        found = it != reg_strings.end();
+    }
+
+    if (!found) {
+        throw CompilerException("Invalid register selection");
+    }
+
+    return it->second;
 }
 
 register_usage::register_usage(): 

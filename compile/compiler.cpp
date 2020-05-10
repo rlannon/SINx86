@@ -263,7 +263,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     return compile_ss;
 }
 
-std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature) {
+std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature, size_t return_offset) {
     /*
 
     compile_ast
@@ -280,6 +280,20 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
 
     // iterate over it and compile each statement in turn, adding it to the stringstream
     for (std::shared_ptr<Statement> s: ast.statements_list) {
+        // return the stack pointer to where the return address is kept before we actually return
+        if (s->get_statement_type() == RETURN_STATEMENT) {
+            size_t r = 0;
+            for (symbol s: signature->get_formal_parameters()) {
+                if (s.get_register() != NO_REGISTER)
+                    r += s.get_data_type().get_width();
+            }
+            r += sin_widths::PTR_WIDTH;
+
+            compile_ss << "\t" << "mov rsp, rbp" << std::endl;
+            compile_ss << "\t" << "sub rsp, " << r << std::endl;
+        }
+
+        // compile the statement
         compile_ss << this->compile_statement(s, signature).str();
     }
 
@@ -324,23 +338,23 @@ void compiler::generate_asm(std::string filename, Parser &p) {
         try {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
             std::shared_ptr<symbol> main_function = this->lookup("main", 0);
+            function_symbol main_symbol = *dynamic_cast<function_symbol*>(main_function.get());
+            // todo: get actual command-line arguments, convert them into SIN data types
+            std::vector<std::shared_ptr<Expression>> cmd_args = {};
+            for (symbol s: main_symbol.get_formal_parameters()) {
+                if (s.get_data_type().get_primary() == INT) {
+                    cmd_args.push_back(
+                        std::make_shared<Literal>(Type::INT, "0")
+                    );
+                }
+            }
 
             // insert our wrapper for the program
             this->text_segment << "global _start" << std::endl;
             this->text_segment << "_start:" << std::endl;
 
-            // set up the stack frame
-            this->text_segment << "\t" << "push rbp" << std::endl;
-            this->text_segment << "\t" << "mov rbp, rsp" << std::endl;
-
-            // todo: set up program arguments for main?
-
-            // call main
-            this->text_segment << "\t" << "call main" << std::endl;
-
-            // restore old stack frame
-            this->text_segment << "\t" << "mov rsp, rbp" << std::endl;
-            this->text_segment << "\t" << "pop rbp" << std::endl;
+            // call the main function with SINCALL
+            this->text_segment << this->sincall(main_symbol, cmd_args, 0).str();
 
             // exit the program using the linux syscall
             this->text_segment << "\t" << "mov rbx, rax" << std::endl;

@@ -25,7 +25,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 	// todo: advance rsp so that we may safely push data to the stack even when we are allocating local data
     
-	DataType &alloc_data = alloc_stmt.get_type_information();
+	DataType alloc_data = alloc_stmt.get_type_information();
     std::stringstream allocation_ss;
 
 	// if the type is 'array', we need to evaluate the array width that was parsed earlier

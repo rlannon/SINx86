@@ -412,6 +412,9 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
     This template function is responsible for creating symbols based on Allocation or Declaration objects. Note that this does not handle the actual allocation of the variable, it just constructs the symbol based on the name, scope, etc. As such, whether the variable was initialized does not matter.
     This will also update the stack offset passed into it to account for the width of the symbol.
 
+    Note this function updates the stack offset *before* it creates the symbol; this prevents us from overwriting the base pointer.
+    For example, when an integer is allocated as the first item in a function, its offset will be rbp-4
+
     @param  allocation  A Declaration or Allocation statement
     @param  scope_name  The name of the scope where the symbol is located
     @param  scope_level The scope level of the symbol
@@ -421,9 +424,8 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
 
     */
 
-    // construct the symbol
+    stack_offset += allocation.get_type_information().get_width();
     symbol to_return(allocation.get_name(), scope_name, scope_level, allocation.get_type_information(), stack_offset);
-    stack_offset += allocation.get_type_information().get_width();  // update the stack offset
 
     return to_return;
 }
