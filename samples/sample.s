@@ -4,30 +4,34 @@ main:
 
 	mov rbx, rbp
 	sub rbx, 20
-	mov r10, rbx
+	mov r15, rbx
 	mov ax, 10
-	mov rbx, r10
+	mov rbx, r15
 	mov [rbx], eax
 
 	mov rbx, rbp
 	sub rbx, 20
 	add rbx, 4
-	mov r10, rbx
+	mov r15, rbx
 	mov ax, 20
-	mov rbx, r10
+	mov rbx, r15
 	mov [rbx], eax
 
 	mov rbx, rbp
 	sub rbx, 20
-	mov [rbp - 20], eax
-	sub rsp, 4
-
-	mov rbx, rbp
-	sub rbx, 20
-	add rbx, 4
+	mov eax, [rbx]
 	mov [rbp - 24], eax
 	sub rsp, 4
 
+	mov rbx, rbp
+	sub rbx, 20
+	add rbx, 4
+	mov eax, [rbx]
+	mov [rbp - 28], eax
+	sub rsp, 4
+
+	mov rsp, rbp
+	sub rsp, 12
 	mov rax, 0
 
 
@@ -37,11 +41,16 @@ main:
 
 global _start
 _start:
+	pushfq
 	push rbp
 	mov rbp, rsp
+	mov ax, 0
+	mov esi, eax
+	sub rsp, 4
 	call main
 	mov rsp, rbp
 	pop rbp
+	popfq
 	mov rbx, rax
 	mov rax, 0x01
 	int 0x80

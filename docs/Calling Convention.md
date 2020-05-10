@@ -48,6 +48,8 @@ Note, then, that the return address will be located somewhere in the stack below
 | -32 | return address |
 | -40 | local `long int` |
 
+This means that before the function returns, it has to be sure to move the stack pointer back to `rbp - 32`, which can be obtained simply by looking at the offset of the last parameter and adding the width of a pointer -- in this case, it will give us an offset of `24 + 8`, yielding a return location at`[rbp - 32]`
+
 Now, we will look more in-depth at the rules for calling functions and returning values, as how values are passed and return depends on their data type.
 
 ### Function Arguments

@@ -282,11 +282,8 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
     for (std::shared_ptr<Statement> s: ast.statements_list) {
         // return the stack pointer to where the return address is kept before we actually return
         if (s->get_statement_type() == RETURN_STATEMENT) {
-            size_t r = 0;
-            for (symbol s: signature->get_formal_parameters()) {
-                if (s.get_register() != NO_REGISTER)
-                    r += s.get_data_type().get_width();
-            }
+            // the location of the return address is simply the offset of the last parameter + a quadword
+            size_t r = signature->get_formal_parameters()[signature->get_formal_parameters().size() - 1].get_offset();
             r += sin_widths::PTR_WIDTH;
 
             compile_ss << "\t" << "mov rsp, rbp" << std::endl;
