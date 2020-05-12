@@ -121,14 +121,21 @@ void symbol_table::leave_scope()
 	
 	// so that exceptions aren't thrown, always make sure our stack isn't empty before we look at it
 	if (!this->locals.empty()) {
-		// get our sentinel variables
+		// create a sentinel variable
+		bool done = false;
+
+		// scope information
 		std::string leaving_scope_name = this->locals.peek().scope_name;
 		unsigned int leaving_scope_level = this->locals.peek().scope_level;
 
 		while (!this->locals.empty() && this->locals.peek().scope_level == leaving_scope_level && this->locals.peek().scope_name == leaving_scope_name) {
 			// pop the last node and erase it
 			node to_erase = this->locals.pop_back();
-			this->erase(to_erase);
+
+			// ensure that we don't delete symbols from the global scope
+			if (to_erase.scope_name != "global") {
+				this->erase(to_erase);
+			}
 		}
 	}
 }

@@ -116,9 +116,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// must be automatic memory
 			// allocate memory on the stack
 
-			// construct the symbol and add it to the symbol table
+			// construct the symbol
 			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
-			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
@@ -127,7 +126,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 				// make an assignment of 'initial_value' to 'allocated'
 				allocation_ss << this->handle_symbol_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
+
+				// mark the symbol as initialized
+				allocated.set_initialized();
 			}
+
+			// add it to the table
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			/*
 			

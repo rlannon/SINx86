@@ -283,7 +283,7 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
         // return the stack pointer to where the return address is kept before we actually return
         if (s->get_statement_type() == RETURN_STATEMENT) {
             // the location of the return address is simply the offset of the last parameter + a quadword
-            size_t r = signature->get_formal_parameters()[signature->get_formal_parameters().size() - 1].get_offset();
+            size_t r = signature->get_formal_parameters().empty() ? 0 : signature->get_formal_parameters()[signature->get_formal_parameters().size() - 1].get_offset();
             r += sin_widths::PTR_WIDTH;
 
             compile_ss << "\t" << "mov rsp, rbp" << std::endl;

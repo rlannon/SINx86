@@ -74,7 +74,9 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     function_symbol func_sym = create_function_symbol(definition);
 
     // now, update the stack offset to account for all parameters
-    this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
+    if (!func_sym.get_formal_parameters().empty()) {
+        this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
+    }
 
     // add the symbol to the table
     this->add_symbol(func_sym, definition.get_line_number());
@@ -94,7 +96,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     }
 
     // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
-    if (func_sym.get_formal_parameters().size() != 0) {
+    if (!func_sym.get_formal_parameters().empty()) {
         const symbol &last_sym = func_sym.get_formal_parameters().back(); 
         this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
     }
@@ -254,7 +256,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         }
 
         // adjust the offset if we ended with a register parameter
-        if (formal_parameters[formal_parameters.size() - 1].get_register() != NO_REGISTER) {
+        if (!formal_parameters.empty() && formal_parameters[formal_parameters.size() - 1].get_register() != NO_REGISTER) {
             sincall_ss << "\t" << "sub rsp, " << rsp_offset_adjust << std::endl;
         }
 
