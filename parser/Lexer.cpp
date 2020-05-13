@@ -10,9 +10,8 @@ The implementation of the lexer
 
 #include "Lexer.h"
 
-// keywords is an alphabetized list of the keywords in SIN; it must be alphabetized in order to use the 'find' algorithm from the standard library
-// todo: change this to an unordered_set and use 'std::unordered_set::count' instead of 'std::algorithm::find'
-const std::vector<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "const", "constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static", "string", "struct", "unsigned", "void", "while", "windows", "xor" };
+// The list of language keywords
+const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "const", "constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static", "string", "struct", "unsigned", "void", "while", "windows", "xor" };
 
 // Our regular expressions
 const std::string Lexer::punc_exp = R"([',:;\[\]\{\}\(\)])";	// expression for punctuation
@@ -25,12 +24,7 @@ const std::string Lexer::bool_exp = "[(true)|(false)]";
 
 bool Lexer::eof() {
 	char eof_test = this->stream->peek();
-	if (eof_test == EOF) {
-		return true;
-	}
-	else {
-		return false;
-	}
+	return eof_test == EOF;
 }
 
 char Lexer::peek() {
@@ -183,12 +177,7 @@ bool Lexer::is_boolean(std::string candidate) {
 }
 
 bool Lexer::is_keyword(std::string candidate) {
-	if (std::binary_search(keywords.begin(), keywords.end(), candidate)) {
-		return true;
-	}
-	else {
-		return false;
-	}
+	return (bool)keywords.count(candidate);
 }
 
 /*
@@ -291,7 +280,7 @@ lexeme Lexer::read_next() {
 	}
 
 	// If ch is not the end of the file and it is also not null
-	if (ch != EOF && ch != NULL) {
+	if (ch != EOF && ch != '\0') {
 		// test our various data types
 		if (ch == '"') {
 			type = lexeme_type::STRING_LEX;
@@ -356,7 +345,7 @@ lexeme Lexer::read_next() {
 
 	}
 	// the following circumstances will return a lexeme of no type with the value of NULL, EOF, or nothing; all will say it occurred on line 0
-	else if (ch == NULL) {	// if there is a NULL character
+	else if (ch == '\0') {	// if there is a NULL character
 		std::cout << ch << "   (NULL)" << std::endl;
 		std::cout << "ch == NULL; done." << std::endl;
 		this->exit_flag = true;

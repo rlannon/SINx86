@@ -21,6 +21,7 @@ Note that the Lexer class does /not/ parse source files; it simply puts those fi
 #include <functional>
 #include <algorithm>
 #include <vector>
+#include <set>
 #include <exception>
 
 #include "lexeme.h"
@@ -34,7 +35,7 @@ class Lexer
 	lexeme current_lexeme;
 	unsigned int current_line;	// track what line we are on in the file
 
-	static const std::vector<std::string> keywords;	// our keyword vector
+	static const std::set<std::string> keywords;	// our keywords
 
 	// Strings for our longer/more complex regular expressions; this will make it easier to edit them
 	static const std::string punc_exp;
