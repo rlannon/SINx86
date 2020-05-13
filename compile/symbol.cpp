@@ -45,9 +45,9 @@ DataType symbol::get_data_type() const {
 	return this->type;
 }
 
-unsigned int symbol::get_stack_offset() const {
+unsigned int symbol::get_offset() const {
 	// get the symbol's offset from the stack frame base
-	return this->stack_offset;
+	return this->offset;
 }
 
 bool symbol::was_initialized() const {
@@ -75,7 +75,7 @@ symbol::symbol(std::string name, std::string scope_name, unsigned int scope_leve
     scope_name(scope_name),
     scope_level(scope_level),
     type(type_information),
-    stack_offset(stack_offset)
+    offset(stack_offset)
 {
     this->current_reg = NO_REGISTER;
     this->symbol_type = VARIABLE;

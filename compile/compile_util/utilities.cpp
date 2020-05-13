@@ -9,12 +9,8 @@ Some utility functions for the compiler
 
 #include "utilities.h"
 
-// Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
-template DataType get_expression_data_type(std::shared_ptr<Expression>, std::unordered_map<std::string, std::shared_ptr<symbol>>&, unsigned int);
-template DataType get_expression_data_type(std::shared_ptr<Expression>, std::unordered_map<std::string, std::shared_ptr<const_symbol>>&, unsigned int);
-
-template<typename T>
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, T> &symbol_table, unsigned int line) {
+// todo: don't use a template here; we can dynamic_cast to symbol because it is the parent class of symbol; similarly, we don't need symbol_table to be a template
+DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line) {
     /*
 
     get_expression_data_type
@@ -26,6 +22,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
     */
 
 	// todo: ensure that with floating-point expressions, if a double-precision float is used, the result has a width of DOUBLE_WIDTH
+    // todo: write function to handle evaluation of dot operator expressions
    
     DataType type_information;
 
@@ -45,23 +42,23 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
         {
             // look into the symbol table for an LValue
             LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
-            typename std::unordered_map<std::string, T>::iterator it = symbol_table.find(lvalue->getValue());
+			std::shared_ptr<symbol> sym;
 
-            // if the symbol isn't in the table, throw an exception; else, continue
-            if (it == symbol_table.end()) {
-                throw SymbolNotFoundException(line);
-            } else {
-                // get the symbol and return its type data
-                T sym = it->second;
+			try {
+				// get the symbol and return its type data
+				sym = symbols.find(lvalue->getValue());
+			}
+			catch (std::exception& e) {
+				throw SymbolNotFoundException(line);
+			}
 
-				// depending on whether we have an indexed or lvalue expression, we have to return different type data
-				if (expression_type == INDEXED) {
-					type_information = *sym->get_data_type().get_full_subtype().get();
-				}
-				else {
-					type_information = sym->get_data_type();
-				}
-            }
+			// depending on whether we have an indexed or lvalue expression, we have to return different type data
+			if (expression_type == INDEXED) {
+				type_information = *sym->get_data_type().get_full_subtype().get();
+			}
+			else {
+				type_information = sym->get_data_type();
+			}
             break;
         }
         case LIST:
@@ -70,7 +67,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             ListExpression *init_list = dynamic_cast<ListExpression*>(to_eval.get());
             
             // A list expression is a vector of other expressions, get the first item and pass it into this function recursively
-            DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbol_table, line);
+            DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbols, structs, line);
 
             // the subtype will be the current primary type, and the primary type will be array
             sub_data_type.set_subtype(sub_data_type);
@@ -85,24 +82,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 			// get the pointer
 			AddressOf *addr_of = dynamic_cast<AddressOf*>(to_eval.get());
 
-			// the address-of operator is considered a pointer literal, so the primary type is 'ptr'
-			type_information.set_primary(PTR);
-			type_information.add_qualities(std::vector<SymbolQuality> { UNSIGNED, LONG });
-
-			// set the subtype appropriately -- it must be an LValue
-			if (addr_of->get_target().get_expression_type() == exp_type::LVALUE) {
-				type_information.set_subtype(
-					get_expression_data_type(
-						std::make_shared<LValue>(addr_of->get_target()),
-						symbol_table,
-						line
-					)
-				);
-			}
-			else {
-				// throw an exception if it's not an lvalue
-				throw CompilerException("The address-of operator ($) must be used with a variable name", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
-			}
+			// todo: properly implement address-of parsing and evaluation
 
 			break;
 		}
@@ -112,7 +92,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             Dereferenced *deref = dynamic_cast<Dereferenced*>(to_eval.get());
             
             // Dereferenced expressions contain a pointer to another expression; get its type
-            type_information = get_expression_data_type(deref->get_ptr_shared(), symbol_table, line);
+            type_information = get_expression_data_type(deref->get_contained_expression(), symbols, structs, line);
             break;
         }
         case BINARY:
@@ -124,6 +104,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 
             Binary expressions are a little more tricky because they can involve multiple operands of different types
 			Further, some operators (the (in)equality operators) return different types than their operands
+            Note, however, that dot operator expressions must be handled differently (via member_selection) than others because they require a bit more involvement.
 
             We must get the types of the left and right operands and compare them. The qualifiers (including sizes) might change:
                 - If one operand is signed, and the other is unsigned, the result may or may not be signed; it will generate a 'signed/unsigned mismatch' warning
@@ -133,26 +114,35 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
 
             */
 
-            DataType left = get_expression_data_type(binary->get_left(), symbol_table, line);
-            DataType right = get_expression_data_type(binary->get_right(), symbol_table, line);
+            if (binary->get_operator() == exp_operator::DOT) {
+                // create a member_selection object for the expression
+                member_selection m(*binary, structs, symbols, line);
 
-            // ensure the types are compatible
-            if (left.is_compatible(right)) {
-				// check for in/equality operators -- these will return booleans instead of the original type!
-				exp_operator op = binary->get_operator();
-				if (op == EQUAL || op == NOT_EQUAL || op == GREATER || op == GREATER_OR_EQUAL || op == LESS || op == LESS_OR_EQUAL) {
-					type_information = DataType(BOOL, DataType(), symbol_qualities());
-				}
-				else {
-					if (left.get_width() >= right.get_width()) {
-						type_information = left;
-					}
-					else {
-						type_information = right;
-					}
-				}
+                // now, just look at the data type of the last node
+                type_information = m.last().get_data_type();
             } else {
-                throw TypeException(line);  // throw an exception if the types are not compatible with one another
+                // get both expression types
+                DataType left = get_expression_data_type(binary->get_left(), symbols, structs, line);
+                DataType right = get_expression_data_type(binary->get_right(), symbols, structs, line);
+
+                // ensure the types are compatible
+                if (left.is_compatible(right)) {
+                    // check for in/equality operators -- these will return booleans instead of the original type!
+                    exp_operator op = binary->get_operator();
+                    if (op == EQUAL || op == NOT_EQUAL || op == GREATER || op == GREATER_OR_EQUAL || op == LESS || op == LESS_OR_EQUAL) {
+                        type_information = DataType(BOOL, DataType(), symbol_qualities());
+                    }
+                    else {
+                        if (left.get_width() >= right.get_width()) {
+                            type_information = left;
+                        }
+                        else {
+                            type_information = right;
+                        }
+                    }
+                } else {
+                    throw TypeException(line);  // throw an exception if the types are not compatible with one another
+                }
             }
 
             break;
@@ -163,29 +153,24 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unor
             Unary *u = dynamic_cast<Unary*>(to_eval.get());
 
             // Unary expressions contain an expression inside of them; call this function recursively using said expression as a parameter
-            type_information = get_expression_data_type(u->get_operand(), symbol_table, line);
+            type_information = get_expression_data_type(u->get_operand(), symbols, structs, line);
             break;
         }
         case VALUE_RETURNING_CALL:
         {
             // look into the symbol table to get the return type of the function
             ValueReturningFunctionCall *call_exp = dynamic_cast<ValueReturningFunctionCall*>(to_eval.get());
-            typename std::unordered_map<std::string, T>::iterator it = symbol_table.find(call_exp->get_func_name());
+			std::shared_ptr<symbol> sym = symbols.find(call_exp->get_func_name());
 
-            // make sure it's in the table
-            if (it == symbol_table.end()) {
-                throw SymbolNotFoundException(line);
+            // ensure the symbol is a function symbol
+            if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
+                // get the function symbol
+                function_symbol *func_sym = dynamic_cast<function_symbol*>(sym.get());
+
+                // get the return type data
+                type_information = func_sym->get_data_type();
             } else {
-                // ensure the symbol is a function symbol
-                if (it->second->get_symbol_type() == FUNCTION_SYMBOL) {
-                    // get the function symbol
-                    function_symbol *func_sym = dynamic_cast<function_symbol*>(it->second.get());
-
-                    // get the return type data
-                    type_information = func_sym->get_data_type();
-                } else {
-                    throw InvalidSymbolException(line);
-                }
+                throw InvalidSymbolException(line);
             }
             break;
         }
@@ -363,11 +348,10 @@ struct_info define_struct(StructDefinition definition) {
     return struct_info(struct_name, members, definition.get_line_number());
 }
 
-// Again, since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
+// Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
 template function_symbol create_function_symbol(FunctionDefinition);
 template function_symbol create_function_symbol(Declaration);
-
 template <typename T>
 function_symbol create_function_symbol(T def) {
     /*
@@ -418,7 +402,6 @@ function_symbol create_function_symbol(T def) {
 
 template symbol generate_symbol(Declaration&, std::string, unsigned int, size_t&);
 template symbol generate_symbol(Allocation&, std::string, unsigned int, size_t&);
-
 template <typename T>
 symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope_level, size_t &stack_offset) {
     /*
@@ -429,6 +412,9 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
     This template function is responsible for creating symbols based on Allocation or Declaration objects. Note that this does not handle the actual allocation of the variable, it just constructs the symbol based on the name, scope, etc. As such, whether the variable was initialized does not matter.
     This will also update the stack offset passed into it to account for the width of the symbol.
 
+    Note this function updates the stack offset *before* it creates the symbol; this prevents us from overwriting the base pointer.
+    For example, when an integer is allocated as the first item in a function, its offset will be rbp-4
+
     @param  allocation  A Declaration or Allocation statement
     @param  scope_name  The name of the scope where the symbol is located
     @param  scope_level The scope level of the symbol
@@ -438,9 +424,8 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
 
     */
 
-    // construct the symbol
+    stack_offset += allocation.get_type_information().get_width();
     symbol to_return(allocation.get_name(), scope_name, scope_level, allocation.get_type_information(), stack_offset);
-    stack_offset += allocation.get_type_information().get_width();  // update the stack offset
 
     return to_return;
 }

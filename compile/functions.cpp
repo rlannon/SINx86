@@ -65,13 +65,18 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // todo: should be package this together in an object and use a stack to keep track of it? that might make things a little cleaner
 
-    // update the scope info -- name = function name, level = 1, offset = 8
+    // update the scope information
     this->current_scope_name = definition.get_name();
     this->current_scope_level = 1;
-    this->max_offset = 8;
+    this->max_offset = 0;
 
     // construct the symbol for the function -- everything is offloaded to the utility
     function_symbol func_sym = create_function_symbol(definition);
+
+    // now, update the stack offset to account for all parameters
+    if (!func_sym.get_formal_parameters().empty()) {
+        this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
+    }
 
     // add the symbol to the table
     this->add_symbol(func_sym, definition.get_line_number());
@@ -80,20 +85,20 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // todo: optimize by enabling symbol table additions in template function?
     std::set<reg> arg_regs;
     for (symbol &sym: func_sym.get_formal_parameters()) {
-        // add the symbol to the table and update our stack offset
-        this->add_symbol(func_sym, definition.get_line_number());
-        reg r = sym.get_register();
+        // add the parameter symbol to the table
+        this->add_symbol(sym, definition.get_line_number());
+        
+		// if r was passed in a register, then we must add it to arg_regs
+		reg r = sym.get_register();
         if (r != NO_REGISTER) {
             arg_regs.insert(sym.get_register());
         }
     }
 
-    // update the stack offset -- since symbols are pushed in order, just get the last one; if we had no parameters, the offset should be 8 (a qword -- because of how the x86 stack works)
-    if (func_sym.get_formal_parameters().size() != 0) {
+    // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
+    if (!func_sym.get_formal_parameters().empty()) {
         const symbol &last_sym = func_sym.get_formal_parameters().back(); 
-        this->max_offset = last_sym.get_data_type().get_width() + last_sym.get_stack_offset();
-    } else {
-        this->max_offset = 8;
+        this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
     }
 
     // get the register_usage object from func_sym and push that
@@ -101,30 +106,18 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // add a label for the function
     definition_ss << func_sym.get_name() << ":" << std::endl;
+    // note: we don't need to account for parameters passed in registers as these will be located *above* the return address
 
-    // since we will be using the 'call' instruction, we must increase our stack offset by one qword so that we don't overwrite the return address
-    this->max_offset += 8; 
-
+    // since we will be using the 'call' instruction, we must increase our stack offset by the width of a pointer so that we don't overwrite the return address
+    this->max_offset += sin_widths::PTR_WIDTH;
+    
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
     procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
-
-    // our register saving and clean-up will be affected by the calling convention
-    if (definition.get_calling_convention() == SINCALL) {
-        // todo: any clean up that the callee has to do
-
-        // originally, this convention was going to preserve and restore registers used by the function, but this screws with our stack offsets, so unless we push and restore all registers before each call, we will not preserve registers
-    } else {
-        throw CompilerException("Currently, calling convention specification is not supported", compiler_errors::ILLEGAL_QUALITY_ERROR, definition.get_line_number());
-    }
 
     // now, put everything together in definition_ss by adding procedure_ss onto the end
     definition_ss << procedure_ss.str() << std::endl;
 
-    // our register stack was already popped; don't do it again
-
-    // todo: clean up our symbol table (delete local variables from it)? or is iterating through and deleting these variables not worth it?
-
-    // restore our scope information
+    // restore our scope information (except our register stack -- it was already popped)
     this->current_scope_name = previous_scope_name;
     this->current_scope_level = previous_scope_level;
     this->max_offset = previous_max_offset;
@@ -228,23 +221,43 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
 
         // iterate over our arguments, ensure the types match and that we have an appropriate number
-        std::vector<symbol>::iterator it = formal_parameters.begin();
-        for (std::shared_ptr<Expression> arg: args) {
+        size_t to_reserve = 0;  // the amount of space we need to reserve on the stack for parameters
+        bool adjusted_rsp = false;  // make sure we adjust RSP before we push stack arguments
+        size_t rsp_offset_adjust = 0;
+        for (size_t i = 0; i < args.size(); i++) {
+            // get the argument and its corresponding symbol
+            std::shared_ptr<Expression> arg = args[i];
+            symbol param = formal_parameters[i];
+
             // first, ensure the types match
-            DataType arg_type = get_expression_data_type(arg, this->symbol_table, line);
-            if (arg_type.is_compatible(it->get_data_type())) {
+            DataType arg_type = get_expression_data_type(arg, this->symbols, this->structs, line);
+            if (arg_type.is_compatible(param.get_data_type())) {
+                // before we evaluate the expression, adjust the stack offset if we need to push this argument and we haven't already adjusted it
+                if (param.get_register() == NO_REGISTER && !adjusted_rsp && rsp_offset_adjust != 0) {
+                    sincall_ss << "\t" << "sub rsp, " << rsp_offset_adjust << std::endl;
+                    adjusted_rsp = true;
+                }
+
                 // evaluate the expression and pass it in the appropriate manner
                 sincall_ss << this->evaluate_expression(arg, line).str();
 
                 // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
-                // todo: pass value
+                // if the symbol has a register, pass it there; else, push it
+                if (param.get_register() == NO_REGISTER) {
+                    // todo: pass data on stack
+                } else {
+                    sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << get_rax_name_variant(param.get_data_type(), line) << std::endl;
+                    rsp_offset_adjust += param.get_data_type().get_width(); // add the width to the RSP offset adjustment
+                }
             } else {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
             }
+        }
 
-            // increment our parameter iterator; since args.size is <= formal_parameters.size, we don't have to worry about it running past the end of the vector
-            it++;
+        // adjust the offset if we ended with a register parameter
+        if (!formal_parameters.empty() && formal_parameters[formal_parameters.size() - 1].get_register() != NO_REGISTER) {
+            sincall_ss << "\t" << "sub rsp, " << rsp_offset_adjust << std::endl;
         }
 
         // next, call the function
@@ -310,7 +323,7 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     std::stringstream ret_ss;
 
     // first, ensure that the return statement's data type is compatible with the signature
-    DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbol_table, ret.get_line_number());
+    DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbols, this->structs, ret.get_line_number());
     if (return_type.is_compatible(signature.get_data_type())) {
         // types are compatible; how the value gets returned (and how the callee gets cleaned up) depends on the function's calling convention
         if (signature.get_calling_convention() == SINCALL) {

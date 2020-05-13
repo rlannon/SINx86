@@ -1,8 +1,9 @@
 # VSCode settings should be ignored
 .vscode
 
-# ignore our samples (for now)
+# ignore our samples and assembly files (for now)
 samples/*
+*.s
 
 # Ignore object files and executables
 *.o

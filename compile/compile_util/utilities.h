@@ -16,6 +16,8 @@ Our various compiler utilities
 #include <unordered_map>
 
 #include "const_symbol.h"
+#include "symbol_table.h"
+#include "struct_table.h"
 #include "../../util/DataType.h"
 #include "../../parser/Statement.h" // includes 'Expression.h'
 #include "../symbol.h"
@@ -25,11 +27,11 @@ Our various compiler utilities
 #include "../../util/stack.h"
 #include "../../util/data_widths.h"
 #include "../struct_info.h"
+#include "member_selection.h"
 
 // todo: put these in their own namespace
 
-template<typename T>
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, std::unordered_map<std::string, T> &symbol_table, unsigned int line);
+DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
 
 bool returns(StatementBlock &to_check);
 

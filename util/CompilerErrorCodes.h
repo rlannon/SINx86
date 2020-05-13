@@ -26,6 +26,8 @@ namespace compiler_errors {
 	const unsigned int CONST_ALLOCATION_ERROR = 11;	// constants must be initialized in their allocation
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
 	const unsigned int DUPLICATE_DEFINITION_ERROR = 31;	// The definition for this resource was already found
+	const unsigned int NON_MODIFIABLE_LVALUE_ERROR = 40;	// left hand expressions in assignments must be modifiable-lvalues
+	const unsigned int REFERENCED_BEFORE_ASSIGNMENT_ERROR = 41;	// all symbols must be assigned before they can be referenced safely
     const unsigned int ILLEGAL_OPERATION_ERROR = 50;    // The statement is not allowed where it was found
     const unsigned int ILLEGAL_RETURN_ERROR = 51;   // Return statements must only occur within functions
 	const unsigned int NO_RETURN_ERROR = 52;	// used for when not all control paths in a function return a value
@@ -33,6 +35,7 @@ namespace compiler_errors {
     const unsigned int INVALID_UNARY_OPERATOR_ERROR = 55;   // if the operator given for a unary is not a valid unary operator
     const unsigned int UNARY_TYPE_NOT_SUPPORTED = 56;   // if the unary operator is not supported with a given type
 	const unsigned int UNDEFINED_OPERATOR_ERROR = 57;	// the operator used is undefined for the data type
+    const unsigned int ILLEGAL_ADDRESS_OF_ARGUMENT = 61;    // the address-of operator may only be used with lvalues and member selection binary expressions
     
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
@@ -50,6 +53,7 @@ namespace compiler_errors {
     const unsigned int OPERATOR_TYPE_ERROR = 212;   // the specified operator could not be used on the given expression
     const unsigned int RETURN_MISMATCH_ERROR = 215; // a function's return type does not match its signature
 	const unsigned int TYPE_VALIDITY_RULE_VIOLATION_ERROR = 220;	// SIN has strict type validity rules, and one or more were violated
+	const unsigned int STRUCT_TYPE_EXPECTED_RROR = 225;	// to use the dot operator, the left-hand expression must be 'struct' type
     const unsigned int QUALITY_CONFLICT_ERROR = 230;
     const unsigned int ILLEGAL_QUALITY_ERROR = 231;
 	const unsigned int VARIABILITY_ERROR = 232;

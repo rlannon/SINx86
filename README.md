@@ -6,7 +6,7 @@ SIN is a custom procedural programming language based on C, C++, and Python, des
 
 ## Goal of the Project
 
-I cannot stress enough that this is a *learning exercise,* not an attempt at creating the next Python or Rust. This project is a hands-on way of learning compiler development. The purpose is not to create a particularly good compiler, but rather to serve as an exercise in compiler design and implementation. I intend on producing a *functioning* compiler, one that can be improved and expanded upon in the future.
+I cannot stress enough that this is a *learning exercise,* not an attempt at creating the next Python or Rust. This project is a hands-on way of learning compiler development. The purpose is not to create a particularly good compiler, but rather to serve as an exercise in compiler design and implementation. I intend on producing a *functioning* compiler, one that can be improved and expanded upon in the future. This fact should explain why I decided to write a parser by hand, instead of using yacc/lex/bison/some other tool; doing so would not have allowed me to learn how parsers (can) work as deeply as I did by writing this one.
 
 ## Getting Started
 
@@ -16,7 +16,13 @@ There are currently no working binaries for the toolchain; you must compile and 
 
 ### The SRE
 
-In order to compile working SIN binaries, you will need a copy of the [SIN Runtime Environment](https://github.com/rlannon/SRE), a small library which provides necessary runtime support for the language. Currently, the library is unfinished and so any compiled SIN programs will fail at the link stage.
+In order to compile working SIN binaries, you will need a copy of the [SIN Runtime Environment](https://github.com/rlannon/SRE), a small library which provides necessary runtime support for the language. Currently, the library is unfinished and so any compiled SIN programs will likely fail at the link stage, especially if they utilize any language functionality that relies on the [MAM](https://rlannon.github.io/SINx86/Memory%20Allocation%20Manager) (such as the `dynamic` and `free` keywords).
+
+### The SIN Standard Library
+
+SIN, like many other programs, has a standard library for various functionality that fleshes out the language and integrates it with the development environment. This library is located in a [separate repository](https://github.com/rlannon/sinstdlib). While it is not required, it will ultimately serve to make the language more useful (as I/O with the environment is not included by default), and so it is highly encouraged that any brave souls who decide to try out this programming language build and use it.
+
+Note that this repo *should* be fairly portable, as it is implemented in a combo of SIN and C, but I can't make any guarantees.
 
 ### Third-Party Software
 
@@ -35,5 +41,5 @@ I hope to use this project as a stepping stone to develop other languages and ex
 
 * Various compiler optimizations
 * Debugging support
-* VSCode integration
+* VSCode integration (there's currently a [syntax highlighting extension!](https://github.com/rlannon/vscode-sin-lang))
 * Native support for UTF-8 instead of ASCII

@@ -90,6 +90,21 @@ std::unordered_map<reg, std::string> register_usage::reg_16_strings {
     { R15, "r15w" }
 };
 
+std::unordered_map<reg, std::string> register_usage::reg_8_strings {
+    { RAX, "al" },
+    { RBX, "bl" },
+    { RCX, "cl" },
+    { RDX, "dl" },
+    { R8, "r8b" },
+    { R9, "r9b" },
+    { R10, "r10b" },
+    { R11, "r11b" },
+    { R12, "r12b" },
+    { R13, "r13b" },
+    { R14, "r14b" },
+    { R15, "r15b" }
+};
+
 bool register_usage::is_int_register(reg to_test) {
     // Returns whether the register is one of our 64-bit integer registers
     return !is_xmm_register(to_test);
@@ -111,7 +126,7 @@ bool register_usage::is_xmm_register(reg to_test) {
 
 bool register_usage::is_in_use(reg to_test) const {
     // Returns whether the specified register is in use
-    std::unordered_map<reg, std::pair<bool&, bool&>>::const_iterator it = this->regs.find(to_test);
+    std::unordered_map<reg, std::pair<bool, bool>>::const_iterator it = this->regs.find(to_test);
 
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
@@ -123,7 +138,7 @@ bool register_usage::is_in_use(reg to_test) const {
 
 bool register_usage::was_used(reg to_test) const {
     // Returns whether the specified register has been used at all
-    std::unordered_map<reg, std::pair<bool&,bool&>>::const_iterator it = this->regs.find(to_test);
+    std::unordered_map<reg, std::pair<bool,bool>>::const_iterator it = this->regs.find(to_test);
 
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register choice");
@@ -134,7 +149,7 @@ bool register_usage::was_used(reg to_test) const {
 
 void register_usage::set(reg to_set) {
     // Sets a given register to 'in use'
-    std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.find(to_set);
+    std::unordered_map<reg, std::pair<bool, bool>>::iterator it = this->regs.find(to_set);
     
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
@@ -147,7 +162,7 @@ void register_usage::set(reg to_set) {
 
 void register_usage::clear(reg to_clear) {
     // Marks a register as available
-    std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.find(to_clear);
+    std::unordered_map<reg, std::pair<bool, bool>>::iterator it = this->regs.find(to_clear);
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register selection");
     } else {
@@ -170,8 +185,8 @@ reg register_usage::get_available_register(Type data_type) {
 
     // iterate through the registers until we find one that isn't in use and is of the type we want
     // call is_type via implicit dereferencing
-    std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.begin();
-    while (it != this->regs.end() && it->second.first && is_type(it->first)) {
+    std::unordered_map<reg, std::pair<bool, bool>>::iterator it = this->regs.begin();
+    while (it != this->regs.end() && (it->second.first || !is_type(it->first)) ) {
         it++;
     }
 
@@ -234,38 +249,58 @@ std::string register_usage::get_register_name(const reg to_get) {
 	}
 }
 
-register_usage::register_usage(): 
-    regs(
-            {
-                {RAX, std::pair<bool&, bool&>(this->rax, this->used[0])},
-                {RBX, std::pair<bool&, bool&>(this->rbx, this->used[1])},
-                {RCX, std::pair<bool&, bool&>(this->rcx, this->used[2])},
-                {RDX, std::pair<bool&, bool&>(this->rdx, this->used[3])},
-                {RSI, std::pair<bool&, bool&>(this->rsi, this->used[4])},
-                {RDI, std::pair<bool&, bool&>(this->rdi, this->used[5])},
-                {R8, std::pair<bool&, bool&>(this->r8, this->used[6])},
-                {R9, std::pair<bool&, bool&>(this->r9, this->used[7])},
-                {R10, std::pair<bool&, bool&>(this->r10, this->used[8])},
-                {R11, std::pair<bool&, bool&>(this->r11, this->used[9])},
-                {R12, std::pair<bool&, bool&>(this->r12, this->used[10])},
-                {R13, std::pair<bool&, bool&>(this->r13, this->used[11])},
-                {R14, std::pair<bool&, bool&>(this->r14, this->used[12])},
-                {R15, std::pair<bool&, bool&>(this->r15, this->used[13])},
-                {XMM0, std::pair<bool&, bool&>(this->xmm[0], this->used[14])},
-                {XMM1, std::pair<bool&, bool&>(this->xmm[1], this->used[15])},
-                {XMM2, std::pair<bool&, bool&>(this->xmm[2], this->used[16])},
-                {XMM3, std::pair<bool&, bool&>(this->xmm[3], this->used[17])},
-                {XMM4, std::pair<bool&, bool&>(this->xmm[4], this->used[18])},
-                {XMM5, std::pair<bool&, bool&>(this->xmm[5], this->used[19])},
-                {XMM6, std::pair<bool&, bool&>(this->xmm[6], this->used[19])},
-                {XMM7, std::pair<bool&, bool&>(this->xmm[7], this->used[20])}
-            }
-    )
-{
-    // zero out our booleans
-    for(std::unordered_map<reg, std::pair<bool&, bool&>>::iterator it = this->regs.begin(); it != this->regs.end(); it++) {
-        it->second.first = false;
+std::string register_usage::get_register_name(const reg to_get, DataType t) {
+    // Get the string value of a register name based on its width
+    std::unordered_map<reg, std::string>::iterator it;
+    bool found = false;
+    if (t.get_width() == 4) {
+        it = reg_32_strings.find(to_get);
+        found = it != reg_32_strings.end();
+    } else if (t.get_width() == 2) {
+        it = reg_16_strings.find(to_get);
+        found = it != reg_16_strings.end();
+    } else if (t.get_width() == 1) {
+        it = reg_8_strings.find(to_get);
+        found = it != reg_8_strings.end();
+    } else {
+        it = reg_strings.find(to_get);
+        found = it != reg_strings.end();
     }
+
+    if (!found) {
+        throw CompilerException("Invalid register selection");
+    }
+
+    return it->second;
+}
+
+register_usage::register_usage(): 
+    regs({
+		{RAX, std::pair<bool, bool>(false, false)},
+		{RBX, std::pair<bool, bool>(false, false)},
+		{RCX, std::pair<bool, bool>(false, false)},
+		{RDX, std::pair<bool, bool>(false, false)},
+		{RSI, std::pair<bool, bool>(false, false)},
+		{RDI, std::pair<bool, bool>(false, false)},
+		{R8, std::pair<bool, bool>(false, false)},
+		{R9, std::pair<bool, bool>(false, false)},
+		{R10, std::pair<bool, bool>(false, false)},
+		{R11, std::pair<bool, bool>(false, false)},
+		{R12, std::pair<bool, bool>(false, false)},
+		{R13, std::pair<bool, bool>(false, false)},
+		{R14, std::pair<bool, bool>(false, false)},
+		{R15, std::pair<bool, bool>(false, false)},
+		{XMM0, std::pair<bool, bool>(false, false)},
+		{XMM1, std::pair<bool, bool>(false, false)},
+		{XMM2, std::pair<bool, bool>(false, false)},
+		{XMM3, std::pair<bool, bool>(false, false)},
+		{XMM4, std::pair<bool, bool>(false, false)},
+		{XMM5, std::pair<bool, bool>(false, false)},
+		{XMM6, std::pair<bool, bool>(false, false)},
+		{XMM7, std::pair<bool, bool>(false, false)}
+	})
+{
+    // nothing to do here
 }
 
 register_usage::~register_usage() {

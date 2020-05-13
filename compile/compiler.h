@@ -19,8 +19,11 @@ Copyright 2019 Riley Lannon
 #include "symbol.h"
 #include "function_symbol.h"
 #include "struct_info.h"
+#include "compile_util/member_selection.h"
 #include "../parser/Parser.h"
 #include "compile_util/utilities.h"
+#include "compile_util/symbol_table.h"
+#include "compile_util/struct_table.h"
 #include "../util/stack.h"  // the stack data structure
 
 class compiler {
@@ -36,11 +39,11 @@ class compiler {
 
     stack<register_usage> reg_stack;    // a stack for tracking which registers are in use in a given scope
 
-    std::unordered_map<std::string, std::shared_ptr<symbol>> symbol_table;    // the symbol table will be implemented through an unordered map
+    symbol_table symbols;    // todo: dynamically allocate?
 	std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
     template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
 
-    std::unordered_map<std::string, struct_info> struct_table;
+	struct_table structs;
 	void add_struct(struct_info to_add, unsigned int line);	// add a struct to the table
     struct_info& get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
 
@@ -68,7 +71,8 @@ class compiler {
 
 	// assignments
 	std::stringstream assign(Assignment assign_stmt);
-	std::stringstream handle_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
+	std::stringstream handle_dot_assignment(member_selection &m, std::shared_ptr<Expression> rvalue, unsigned int line);
+	std::stringstream handle_symbol_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
 	std::stringstream handle_int_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
 	std::stringstream handle_bool_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
 	std::stringstream handle_string_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
@@ -94,6 +98,7 @@ class compiler {
 	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
+	std::stringstream evaluate_member_selection(member_selection &m, unsigned int line);
 public:
     // the compiler's entry function
     void generate_asm(std::string filename, Parser &p);

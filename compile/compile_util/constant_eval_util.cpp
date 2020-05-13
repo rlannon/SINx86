@@ -29,13 +29,7 @@ void compile_time_evaluator::add_constant(Allocation & alloc, symbol & s)
 	std::string initial_value = this->evaluate_expression(alloc.get_initial_value(), s.get_scope_name(), s.get_scope_level(), alloc.get_line_number());
 	const_symbol sym(s, initial_value);	// initialize our const_symbol object
 
-	// todo: should we be using unordered_map::emplace instead of unordered_map::insert?
-	this->constants.insert(
-		std::make_pair<>(
-			s.get_name(),
-			std::make_shared<const_symbol>(sym)
-		)
-	);
+	this->constants->insert(std::make_shared<const_symbol>(sym));	// todo: ensure the symbol was inserted successfully
 }
 
 const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string scope_name, unsigned int scope_level, unsigned int line) const {
@@ -57,27 +51,18 @@ const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string sc
 
 	const_symbol to_return;
 
-	std::unordered_map<std::string, std::shared_ptr<const_symbol>>::const_iterator it = this->constants.find(
-		sym_name
-	);
-
-	if (it == this->constants.end()) {
-		throw SymbolNotFoundException(line);
+	try {
+		std::shared_ptr<symbol>& s = this->constants->find(sym_name);
+		const_symbol to_return = *dynamic_cast<const_symbol*>(s.get());
 	}
-	else {
-		// make sure the scope is accessible
-		if ((it->second->get_scope_name() == "global" || it->second->get_scope_name() == scope_name) && (it->second->get_scope_level() <= scope_level)) {
-			to_return = *it->second;
-		}
-		else {
-			throw OutOfScopeException(line);
-		}
+	catch (std::exception & e) {
+		throw SymbolNotFoundException(line);
 	}
 
 	return to_return;
 }
 
-void compile_time_evaluator::remove_symbols_in_scope(std::string scope_name, unsigned int scope_level)
+void compile_time_evaluator::leave_scope()
 {
 	/*
 
@@ -86,13 +71,5 @@ void compile_time_evaluator::remove_symbols_in_scope(std::string scope_name, uns
 
 	*/
 
-	std::unordered_map<std::string, std::shared_ptr<const_symbol>>::iterator it = this->constants.begin();
-	while (it != this->constants.end()) {
-		if (it->second->get_scope_name() == scope_name && it->second->get_scope_level() == scope_level) {
-			it = this->constants.erase(it);
-		}
-		else {
-			it++;
-		}
-	}
+	this->constants->leave_scope();
 }

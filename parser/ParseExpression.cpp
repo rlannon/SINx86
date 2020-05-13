@@ -14,7 +14,7 @@ Contains the implementations of the functions to parse expressions, including:
 
 #include "Parser.h"
 
-std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string grouping_symbol, bool not_binary) {
+std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string grouping_symbol, bool not_binary, bool omit_equals) {
 	lexeme current_lex = this->current_token();
 
 	// Create a pointer to our first value
@@ -172,20 +172,8 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			// if we have a $ character, it HAS TO be the address-of operator
 			// current lexeme is the $, so get the variable for which we need the address
 			lexeme next_lexeme = this->next();
-			// the next lexeme MUST be an identifier
-			if (next_lexeme.type == IDENTIFIER) {
-
-				// turn the identifier into an LValue
-				LValue target_var(next_lexeme.value, "var_address");
-
-				// get the address of the vector position of the variable
-				return std::make_shared<AddressOf>(target_var);
-			}
-			// if it's not, throw an exception
-			else {
-				throw ParserException("An address-of operator must be followed by an identifier; illegal to follow with '" + next_lexeme.value + "' (not an identifier)", 111, current_lex.line_number);
-			}
-
+			left = this->parse_expression(get_precedence(exp_operator::ADDRESS));
+			// todo: ensure address-of expressions parse correctly
 		}
 		// check to see if we have a pointer dereference operator
 		else if (current_lex.value == "*") {
@@ -243,7 +231,17 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	// Use the maybe_binary function to determine whether we need to return a binary expression or a simple expression
 
 	// always start it at 0; the first time it is called, it will be 0, as nothing will have been passed to parse_expression, but will be updated to the appropriate precedence level each time after. This results in a binary tree that shows the proper order of operations
-	return this->maybe_binary(left, prec, grouping_symbol);
+	if (not_binary) {
+		return left;
+	}
+	else {
+		if (this->peek().value == "=" && omit_equals) {
+			return left;
+		}
+		else {
+			return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
+		}
+	}
 }
 
 
@@ -254,71 +252,17 @@ std::shared_ptr<Expression> Parser::create_dereference_object() {
 	create_dereference_object
 	Parses out a 'Dereferenced' expression
 
-	Although the asterisk can be either the multiplication operator or the dereference operator, it is impossible for the parser to get them confused because they appear in completely different contexts. For example:
-		let x = *p;
-	The asterisk cannot be interpreted as multiplication because there is nothing preceding it
-		let x = 2 * p;
-	The asterisk here cannot be interpreted as the dereference operator because it is part of a binary expression
-		let x = 2 * **p;
-	Here, we have a binary expression which will parse out a doubly-dereferenced pointer as the right-hand argument of multiplication
+	Although the asterisk can be either the multiplication operator or the dereference operator, it is impossible for the parser to get them confused because they appear in completely different contexts.
+	This function creates a dereferenced expression by parsing the expression that is contained within it
 	
 	*/
 
-	lexeme previous_lex = this->previous();	// note that previous() does not update the current position
-
-	if (this->peek().type == IDENTIFIER) {
-		// get the identifier and advance the position counter
-		lexeme next_lexeme = this->next();
-
-		// turn the pointer into an LValue
-		LValue _ptr(next_lexeme.value, "var_dereferenced");
-
-		// return a shared_ptr to the Dereferenced object containing _ptr
-		return std::make_shared<Dereferenced>(std::make_shared<LValue>(_ptr));
-	}
-	// the next character CAN be an asterisk; in that case, we have a double or triple ref pointer that we need to parse
-	else if (this->peek().value == "*") {
-		// advance the position pointer
-		this->next();
-
-		// dereference the pointer to get the address so we can dereference the other pointer
-		std::shared_ptr<Expression> deref = this->create_dereference_object();
-		if (deref->get_expression_type() == DEREFERENCED) {
-			// get the Dereferenced obj
-			return std::make_shared<Dereferenced>(deref);
-		}
-		else {
-			// todo: what to do in this case?
-			throw ParserException("Could not parse multiply-dereferenced pointer", 0, previous_lex.line_number);
-			return nullptr;
-		}
-	}
-	// if it is not a literal or an ident and the next character is also not an ident or asterisk, we have an error
-	else {
-		throw MissingIdentifierError(this->peek().line_number);
-		return nullptr;
-	}
+	this->next();
+	Dereferenced deref(this->parse_expression());
+	return std::make_shared<Dereferenced>(deref);
 }
 
-
-// get the end LValue pointed to by a pointer recursively
-LValue Parser::getDereferencedLValue(Dereferenced to_eval) {
-	// if the type of the Expression within "to_eval" is an LValue, we are done
-	if (to_eval.get_ptr_shared()->get_expression_type() == LVALUE) {
-		return to_eval.get_ptr();
-	}
-	// otherwise, if it is another Dereferenced object, get the object stored within that
-	// the recutsion here will return the LValue pointed to by the last pointer
-	else if (to_eval.get_ptr_shared()->get_expression_type() == DEREFERENCED) {
-		Dereferenced* _deref = dynamic_cast<Dereferenced*>(to_eval.get_ptr_shared().get());
-		return this->getDereferencedLValue(*_deref);
-	}
-	else {
-		throw ParserException("Invalid expression type for dereferenced lvalue", 0, 0);	// todo: get line number
-	}
-}
-
-std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol) {
+std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol, bool omit_equals) {
 	/*
 
 	maybe_binary
@@ -342,7 +286,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	lexeme next = this->peek();
 
 	// if the next character is a semicolon, another end paren, or a comma, return
-	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == ",") {
+	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == "," || (next.value == "=" && omit_equals)) {
 		return left;
 	}
 	// Otherwise, if we have an op_char or the 'and' or 'or' keyword
@@ -371,7 +315,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 			this->next();	// go to the character after the op char
 
 			// Parse out the next expression
-			std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+			std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
 			// Create the binary expression
 			std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
@@ -381,7 +325,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 				binary->set_const();
 
 			// call maybe_binary again at the old prec level in case this expression is followed by one of a higher precedence
-			return this->maybe_binary(binary, my_prec, grouping_symbol);
+			return this->maybe_binary(binary, my_prec, grouping_symbol, omit_equals);
 		}
 		else {
 			return left;
