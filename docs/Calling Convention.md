@@ -9,7 +9,7 @@ The SIN convention is a **caller clean-up** convention which requires the caller
 Typically, this will end up looking something like:
 
     caller:
-        ; function signature 'decl int callee(decl int a, decl int b, decl int c, decl int d, decl int e)'
+        ; function signature 'decl int callee(decl int a, decl int b, decl int c, decl int d, decl int e &long)'
 
         push rflags ; preserve the status
         push rbp   ; preserve old call frame
@@ -18,8 +18,11 @@ Typically, this will end up looking something like:
         ; pass arguments (call is '@callee(10, 20, 30, 40, 50)' )
         mov esi, 10
         mov edi, 20
-        mov rcx, 30
-        mov rdx, 40  ; first four integers passed in registers
+        mov ecx, 30
+        mov edx, 40
+        mov r8, 50  ; we can pass all of these in registers
+
+        sub rsp, 24 ; we need to reserve space for these as local variables above the return address
 
         call callee ; call the function
 
@@ -31,6 +34,21 @@ Typically, this will end up looking something like:
 
         ; move the returned value into some variable from the higher scope
         mov [rbp - 16], eax
+
+Note, then, that the return address will be located somewhere in the stack below `ebp`, exactly where depending on the number (and type) of parameters. Parameters will still need space in the stack *above* the return address, no matter whether they were passed in registers or on the stack. So, our stack will look like:
+
+|   Offset  |   Data    |
+| --------- | --------- |
+| 0 | `rbp` |
+| -4 | `a:int` |
+| -8 | `b:int` |
+| -12 | `c:int` |
+| -16 | `d:int` |
+| -24 | `e:long int` |
+| -32 | return address |
+| -40 | local `long int` |
+
+This means that before the function returns, it has to be sure to move the stack pointer back to `rbp - 32`, which can be obtained simply by looking at the offset of the last parameter and adding the width of a pointer -- in this case, it will give us an offset of `24 + 8`, yielding a return location at`[rbp - 32]`
 
 Now, we will look more in-depth at the rules for calling functions and returning values, as how values are passed and return depends on their data type.
 

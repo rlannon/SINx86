@@ -6,13 +6,12 @@ def struct point {
 	alloc int y;
 }
 
-def void main() {
-	alloc int test: -(3 + 2);
-	// test dot operator precedence parsing
+def void main(alloc int argc) {
 	alloc point p;
-	alloc int n: p.x;
-	alloc int m: p.y * 2;
-	alloc int a: -p.x;
+	let p.x = 10;
+	let p.y = 20;
+	alloc int x: p.x;
+	alloc int y: p.y;
 
 	return void;
 }

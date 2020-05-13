@@ -25,16 +25,24 @@ void file_error(std::string filename) {
 }
 
 int main (int argc, char *argv[]) {
+	// give a default filename
+	std::string sin_file = "samples/sample.sin";
+
+	// if a filename was supplied, it should be the first argument
+	if (argc > 1) {
+		sin_file = std::string(argv[1]);
+	}
+
 	try {
 		// todo: refactor constructors to streamline this process
 		std::ifstream infile;
-		infile.open("samples/sample.sin", std::ios::in);
+		infile.open(sin_file, std::ios::in);
 		Lexer l(infile);
 		Parser *p = new Parser(l);
 		compiler *c = new compiler();
 
 		// compile our code
-		c->generate_asm("samples/sample.sin", *p);
+		c->generate_asm(sin_file, *p);
 
 		// clean-up
 		infile.close();

@@ -481,45 +481,9 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 	// Create an object for our left expression
 	std::shared_ptr<Expression> lvalue;
 
-	// if the next lexeme is an op_char, we have a pointer
-	if (this->peek().type == OPERATOR) {
-		// get the pointer operator
-		lexeme ptr_op = this->next();
-		// check to see if it is an address-of or dereference operator
-		if (ptr_op.value == "$") {
-			// address-of operators are not allowed as lvalues
-			throw ParserException("Expression must be a modifiable-lvalue (address-of is not)", 0, ptr_op.line_number);
-		}
-		else if (ptr_op.value == "*") {
-			lvalue = this->create_dereference_object();
-		}
-		// if it isn't $ or *, it's an invalid op_char before an LValue
-		else {
-			throw ParserException("Operator character not allowed in an lvalue", 211, current_lex.line_number);
-		}
-	}
-	else {
-		// get the next token, which should be the variable name
-		lexeme _lvalue_lex = this->next();
-
-		// ensure it's an identifier
-		if (_lvalue_lex.type == IDENTIFIER) {
-			// the lvalue might be a dereferenced value; check to see if that's the case
-			std::shared_ptr<Expression> index_number;
-			if (this->peek().value == "[") {
-				this->next();
-				index_number = this->parse_expression(0, "[", true);	// set the not_binary flag to true
-				lvalue = std::make_shared<Indexed>(_lvalue_lex.value, "var", index_number);
-			}
-			else {
-				lvalue = std::make_shared<LValue>(_lvalue_lex.value);
-			}
-		}
-		// if it isn't a valid LValue, then we can't continue
-		else {
-			throw ParserException("Expression must be a modifiable-lvalue", 111, current_lex.line_number);
-		}
-	}
+	// parse an expression for our lvalue (the compiler will verify the type later)
+	this->next();	// Parser::parse_expression must have the token pointer on the first token of the expression
+	lvalue = this->parse_expression(0, "(", false, true);
 
 	// now, "lvalue" should hold the proper variable reference for the assignment
 	// get the operator character, make sure it's an equals sign

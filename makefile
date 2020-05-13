@@ -9,7 +9,7 @@ bin=bin/
 
 # object file dependencies
 compiler_objs=allocation.o assign.o evaluate_expression.o operator_expressions.o functions.o function_symbol.o struct_info.o symbol.o
-compiler_util_objs=constant_eval.o constant_eval_util.o const_symbol.o  register_usage.o utilities.o
+compiler_util_objs=symbol_table.o struct_table.o member_selection.o constant_eval.o constant_eval_util.o const_symbol.o  register_usage.o utilities.o
 parser_objs=lexeme.o lexer.o type_deduction.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
 util_objs=datatype.o symbol_qualities.o exceptions.o binaryio.o
 build_objs=compiler.o parser.o $(compiler_objs) $(compiler_util_objs) $(parser_objs) $(util_objs)
@@ -60,6 +60,15 @@ symbol.o: compile/symbol.cpp compile/symbol.h
 	$(cc) $(flags) -o symbol.o -c compile/symbol.cpp
 
 # compiler utilities
+symbol_table.o: compile/compile_util/symbol_table.h
+	$(cc) $(flags) -o symbol_table.o -c compile/compile_util/symbol_table.cpp
+
+struct_table.o: compile/compile_util/struct_table.h
+	$(cc) $(flags) -o struct_table.o -c compile/compile_util/struct_table.cpp
+
+member_selection.o: compile/compile_util/member_selection.h
+	$(cc) $(flags) -o member_selection.o -c compile/compile_util/member_selection.cpp
+
 const_symbol.o: compile/compile_util/const_symbol.h
 	$(cc) $(flags) -o const_symbol.o -c compile/compile_util/const_symbol.cpp
 

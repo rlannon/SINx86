@@ -13,9 +13,19 @@ Handle allocations for the compiler class.
 // todo: struct allocations -- when a struct is allocated, it should allocate all of its data members -- like a primitive form of a constructor; when free is called on a struct, it will free _all_ data, but dynamic data will not be freed when the struct goes out of scope
 
 std::stringstream compiler::allocate(Allocation alloc_stmt) {
-    // Dispatches the allocation to the appropriate function
+	/*
     
-    DataType alloc_data = alloc_stmt.get_type_information();
+	allocate
+	Dispatches the allocation to the appropriate function
+    
+	@param	alloc_stmt	The statement containing the allocation
+	@returns	A stringstream containing the generated code
+
+	*/
+
+	// todo: advance rsp so that we may safely push data to the stack even when we are allocating local data
+    
+	DataType alloc_data = alloc_stmt.get_type_information();
     std::stringstream allocation_ss;
 
 	// if the type is 'array', we need to evaluate the array width that was parsed earlier
@@ -25,12 +35,14 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			if (
 				get_expression_data_type(
 					alloc_data.get_array_length_expression(),
-					this->symbol_table,
+					this->symbols,
+					this->structs,
 					alloc_stmt.get_line_number()
 				).get_primary() == INT)
 			{
 				// pass the expression to our expression evaluator to get the array width
 				// todo: compile-time evaluation
+				// todo: set alloc_data::array_length
 			}
 			else {
 				throw CompilerException("An array width must be a positive integer", compiler_errors::TYPE_ERROR, alloc_stmt.get_line_number());
@@ -69,14 +81,21 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
-			// todo: allocate dynamically
-
+			// dynamic allocation
 			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+			
+			// add the symbol and move RSP further into the stack, by the width of a pointer
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
+			allocation_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
 
 			// if we have a const here, throw an exception -- constants may not be dynamic
 			if (alloc_data.get_qualities().is_const()) {
 				throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
+			}
+
+			// if we have static, that should also generate an error
+			if (alloc_data.get_qualities().is_static()) {
+				throw CompilerException("Use of 'static' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
 			}
 		}
 		else if (alloc_data.get_qualities().is_static()) {
@@ -89,14 +108,16 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			if (alloc_data.get_qualities().is_const()) {
 				// todo: static const memory
 			}
+			else {
+
+			}
 		}
 		else {
 			// must be automatic memory
 			// allocate memory on the stack
 
-			// construct the symbol and add it to the symbol table
+			// construct the symbol
 			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
-			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
@@ -104,10 +125,36 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
 
 				// make an assignment of 'initial_value' to 'allocated'
-				allocation_ss << this->handle_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
+				allocation_ss << this->handle_symbol_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
+
+				// mark the symbol as initialized
+				allocated.set_initialized();
 			}
 
-			// do not return yet in case we have any other code we wish to add later
+			// add it to the table
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
+
+			/*
+			
+			now, move RSP by the width of the type so that we can safely use the stack without overwriting our local variables
+			if we have an array or a struct, we need to calculate its width beyond just getting DataType::width
+			
+			*/
+			
+			size_t to_subtract = 0;
+
+			if (allocated.get_data_type().get_primary() == STRUCT && !allocated.get_data_type().get_qualities().is_dynamic()) {
+				struct_info &s = this->get_struct_info(allocated.get_data_type().get_struct_name(), alloc_stmt.get_line_number());
+				to_subtract = s.get_width();
+			}
+			else if (allocated.get_data_type().get_primary() == ARRAY && !allocated.get_data_type().get_qualities().is_dynamic()) {
+				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_width() + sin_widths::INT_WIDTH;
+			}
+			else {
+				to_subtract = allocated.get_data_type().get_width();
+			}
+
+			allocation_ss << "\t" << "sub rsp, " << to_subtract << std::endl;
 		}
 	}
 	else {

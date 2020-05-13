@@ -26,15 +26,16 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
 
     */
 
-    // use the unordered_map::find function
-    std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.find(name);
+	std::shared_ptr<symbol> to_return;
 
-    // if the symbol wasn't found, throw an exception
-    if (it == this->symbol_table.end()) {
-        throw SymbolNotFoundException(line);
-    } else {
-        return it->second;
-    }
+	try {
+		to_return = this->symbols.find(name);
+	}
+	catch (std::exception e) {
+		throw SymbolNotFoundException(line);
+	}
+
+	return to_return;
 }
 
 // we need to specify which classes can be used for our <typename T> since it's implemented in a separate file
@@ -67,12 +68,7 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 	}
 
 	// insert the symbol
-    bool ok = this->symbol_table.insert(
-        std::make_pair(
-            to_add.get_name(),
-            std::make_shared<T>(to_add)
-        )
-    ).second;
+	bool ok = this->symbols.insert(std::make_shared<T>(to_add));
 
     // throw an exception if the symbol could not be inserted
     if (!ok) {
@@ -104,12 +100,7 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
 		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
 	}
 
-	bool ok = this->struct_table.insert(
-		std::make_pair<>(
-			to_add.get_struct_name(),
-			to_add
-		)
-	).second;
+	bool ok = this->structs.insert(to_add);
 
 	if (!ok) {
 		throw DuplicateDefinitionException(line);
@@ -128,16 +119,13 @@ struct_info& compiler::get_struct_info(std::string struct_name, unsigned int lin
     @throws Throws an UndefinedException if the struct is not known
 
     */
+	
+	// check to see whether our struct is in the table first
+	if (!this->structs.contains(struct_name)) {
+		throw UndefinedException(line);
+	}
 
-    // look up our struct
-    std::unordered_map<std::string, struct_info>::iterator it = this->struct_table.find(struct_name);
-
-    // if found, return its data; else, throw an UndefinedException
-    if (it == this->struct_table.end()) {
-        throw UndefinedException(line);
-    } else {
-        return it->second;
-    }
+	return this->structs.find(struct_name);
 }
 
 std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature) {
@@ -292,23 +280,25 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
 
     // iterate over it and compile each statement in turn, adding it to the stringstream
     for (std::shared_ptr<Statement> s: ast.statements_list) {
+        // return the stack pointer to where the return address is kept before we actually return
+        if (s->get_statement_type() == RETURN_STATEMENT) {
+            // the location of the return address is simply the offset of the last parameter + a quadword
+            size_t r = signature->get_formal_parameters().empty() ? 0 : signature->get_formal_parameters()[signature->get_formal_parameters().size() - 1].get_offset();
+            r += sin_widths::PTR_WIDTH;
+
+            compile_ss << "\t" << "mov rsp, rbp" << std::endl;
+            compile_ss << "\t" << "sub rsp, " << r << std::endl;
+        }
+
+        // compile the statement
         compile_ss << this->compile_statement(s, signature).str();
     }
 
-	// todo: is there a more efficient way to handle this? maybe in blocked scopes we save a *copy* of the map? that might involve *huge* memory overhead (depending on the size of the user's program) that would be avoided with this method, though...
-
-	// delete all symbols from the current scope upon exiting -- both from this symbol table AND from the constant evaluation table
-	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbol_table.begin();
-	while (it != this->symbol_table.end()) {
-		if (it->second->get_scope_name() == this->current_scope_name && it->second->get_scope_level() == this->current_scope_level) {
-			it = this->symbol_table.erase(it);
-		}
-		else {
-			it++;
-		}
+	// when we leave a scope, remove local variables -- but NOT global variables
+	if (this->current_scope_name != "global") {
+		// todo: call leave_scope on the compile-time evaluator
+		this->symbols.leave_scope();
 	}
-	// todo: call compile_time_evaluator::remove_symbols_in_scope to remove symbols
-	// note the scope name and level are updated elsewhere
 
     return compile_ss;
 }
@@ -331,32 +321,37 @@ void compiler::generate_asm(std::string filename, Parser &p) {
     // catch parser exceptions here
     try {
         // create our abstract syntax tree
+		std::cout << "Parsing...";
         StatementBlock ast = p.create_ast();
+		std::cout << ". Done." << std::endl;
 
         // The code we are generating will go in the text segment -- writes to the data and bss sections will be done as needed in other functions
-        this->text_segment << this->compile_ast(ast).str();
+		std::cout << "Generating code...";
+		this->text_segment << this->compile_ast(ast).str();
+		std::cout << ". Done." << std::endl;
 
-        // now, we want to see if we have a function 'main' in the symbol table
+		std::cout << "Consolidating code...";
+        // now, we want to see if we have a function 'main' in the symbol table; if so, we need to set it up and call it
         try {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
             std::shared_ptr<symbol> main_function = this->lookup("main", 0);
+            function_symbol main_symbol = *dynamic_cast<function_symbol*>(main_function.get());
+            // todo: get actual command-line arguments, convert them into SIN data types
+            std::vector<std::shared_ptr<Expression>> cmd_args = {};
+            for (symbol s: main_symbol.get_formal_parameters()) {
+                if (s.get_data_type().get_primary() == INT) {
+                    cmd_args.push_back(
+                        std::make_shared<Literal>(Type::INT, "0")
+                    );
+                }
+            }
 
             // insert our wrapper for the program
             this->text_segment << "global _start" << std::endl;
             this->text_segment << "_start:" << std::endl;
 
-            // set up the stack frame
-            this->text_segment << "\t" << "push rbp" << std::endl;
-            this->text_segment << "\t" << "mov rbp, rsp" << std::endl;
-
-            // todo: set up program arguments for main?
-
-            // call main
-            this->text_segment << "\t" << "call main" << std::endl;
-
-            // restore old stack frame
-            this->text_segment << "\t" << "mov rsp, rbp" << std::endl;
-            this->text_segment << "\t" << "pop rbp" << std::endl;
+            // call the main function with SINCALL
+            this->text_segment << this->sincall(main_symbol, cmd_args, 0).str();
 
             // exit the program using the linux syscall
             this->text_segment << "\t" << "mov rbx, rax" << std::endl;
@@ -397,8 +392,14 @@ void compiler::generate_asm(std::string filename, Parser &p) {
         outfile << "section .bss" << std::endl;
         outfile << this->bss_segment.str() << std::endl;
 
+		// print a message when we are done
+		std::cout << ". Done." << std::endl;
+
         // close the outfile
         outfile.close();
+
+		// print a message saying compilation has finished
+		std::cout << "Compilation finished successfully." << std::endl;
     } catch (std::exception &e) {
         // todo: exception handling should be improved
         std::cout << "An error occurred during compilation:" << std::endl;

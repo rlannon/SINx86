@@ -20,7 +20,7 @@ const char* CompilerException::what() const noexcept {
 }
 
 CompilerException::CompilerException(const std::string& message, unsigned int code, unsigned int line) : message(message), code(code), line(line) {
-	this->message = "**** Error encountered in compilation; E" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
+	this->message = "**** Compiler error C" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
 
 IllegalOperationException::IllegalOperationException(unsigned int line):
@@ -265,7 +265,7 @@ const char* ParserException::what() const noexcept {
 }
 
 ParserException::ParserException(const std::string& message, const unsigned int& code, const unsigned int& line) : message_(message), code_(code), line_(line) {
-	message_ = "**** Error occurred when parsing file; E" + std::to_string(code_) + ": " + message_ + " (line " + std::to_string(line_) + ")";
+	message_ = "**** Compiler error E" + std::to_string(code_) + ": " + message_ + " (line " + std::to_string(line_) + ")";
 }
 
 InvalidTokenException::InvalidTokenException(
@@ -325,6 +325,26 @@ CallError::CallError(const unsigned int &line):
 UndefinedOperatorError::UndefinedOperatorError(std::string op, unsigned int line) :
 	CompilerException(
 		"The " + op + " operator is undefined for this data type",
+		line
+	)
+{
+	// super called
+}
+
+NonModifiableLValueException::NonModifiableLValueException(unsigned int line) :
+	CompilerException(
+		"Left-hand side of assignment must be a modifiable-lvalue",
+		compiler_errors::NON_MODIFIABLE_LVALUE_ERROR,
+		line
+	)
+{
+	// super called
+}
+
+ReferencedBeforeInitializationException::ReferencedBeforeInitializationException(std::string symbol_name, unsigned int line) :
+	CompilerException(
+		"Symbol '" + symbol_name + "' referenced before assignment",
+		compiler_errors::REFERENCED_BEFORE_ASSIGNMENT_ERROR,
 		line
 	)
 {

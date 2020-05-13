@@ -67,28 +67,39 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case ADDRESS_OF:	// todo: move implementation of pointer-related expressions into separate functions
         {
-			// todo: enable address-of with indexed expressions
 			AddressOf addr_exp = *dynamic_cast<AddressOf*>(to_evaluate.get());
-			std::shared_ptr<symbol> s = this->lookup(addr_exp.get_target().getValue(), line);
-			if (s->get_symbol_type() == SymbolType::VARIABLE) {
-				// how we get the address depends on where in memory the symbol lives
-				if (s->get_data_type().get_qualities().is_static()) {
-					// static data just uses the name
-					evaluation_ss << "\t" << "mov rax, " << s->get_name() << std::endl;
-				}
-				else if (s->get_data_type().get_qualities().is_dynamic()) {
-					// dynamic data uses [rbp - offset] because we want the heap address
-					evaluation_ss << "\t" << "mov rax, [rbp - " << s->get_stack_offset() << std::endl;
-				}
-				else {
-					// automatic memory uses rbp - offset
-					evaluation_ss << "\t" << "mov rax, rbp" << std::endl;
-					evaluation_ss << "\t" << "sub rax, " << s->get_stack_offset() << std::endl;
-				}
-			}
-			else {
-				throw InvalidSymbolException(line);
-			}
+			
+			// how we generate code for this depends on the type
+            if (addr_exp.get_target()->get_expression_type() == BINARY) {
+                // if we have a binary expression, it *must* be the dot operator; if so, just return what's in RBX after we evaluate it
+                Binary* target = dynamic_cast<Binary*>(addr_exp.get_target().get());
+                if (target->get_operator() != DOT) {
+                    throw CompilerException("Illegal binary operand in address-of expression", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
+                }
+
+                evaluation_ss << this->evaluate_binary(*target, line).str();
+                evaluation_ss << "mov rax, rbx" << std::endl;
+                this->reg_stack.peek().clear(RBX);  // now we can use RBX again
+            } else if (addr_exp.get_target()->get_expression_type() == LVALUE) {
+                LValue* target = dynamic_cast<LValue*>(addr_exp.get_target().get());
+                // look up the symbol; obtain the address based on its memory location
+                std::shared_ptr<symbol> s = this->lookup(target->getValue(), line);
+                if (s->get_data_type().get_qualities().is_static()) {
+                    evaluation_ss << "\t" << "mov rax, " << s->get_name() << std::endl;
+                } 
+                else {
+                    // first, get the stack address
+                    evaluation_ss << "\t" << "mov rax, rbp" << std::endl;
+                    evaluation_ss << "\t" << "sub rax, " << s->get_offset() << std::endl;
+
+                    // if the variable is dynamic or a string, dereference RAX
+                    if (s->get_data_type().get_qualities().is_dynamic() || s->get_data_type().get_primary() == STRING) {
+                        evaluation_ss << "\t" << "mov rax, [rax]" << std::endl;
+                    }
+                }
+            } else {
+                throw CompilerException("Illegal address-of argument", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
+            }
 
             break;
         }
@@ -99,10 +110,34 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case BINARY:
         {
-			// cast to Binary class and dispatch
+			// cast to Binary class and dispatch appropriately
 			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
-			evaluation_ss << this->evaluate_binary(bin_exp, line).str();
-            break;
+
+			// if we have a dot operator, use a separate function; it must be handled slightly differently than other binary expressions
+			if (bin_exp.get_operator() == exp_operator::DOT) {
+				// create the member_selection object from the expression so it can be evaluated
+				member_selection m = member_selection::create_member_selection(bin_exp, this->structs, this->symbols, line);
+
+				// before we evaluate it, check to see whether the struct was initialized; since individual members are not allocated, if *any* member is assigned, the symbol is considered initialized
+				if (!m.first().was_initialized())
+					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
+
+				// now, generate the code to get our data member
+				evaluation_ss << this->evaluate_member_selection(m, line).str();
+
+                // now, the address of our data is in RBX; dereference accordingly
+                if (can_pass_in_register(m.last().get_data_type())) {
+                    evaluation_ss << "\t" << "mov " << get_rax_name_variant(m.last().get_data_type(), line) << ", [rbx]" << std::endl;
+                } else {
+                    // if it can't pass in a register, move the pointer into RAX
+                    // todo: array and struct members
+                }
+			}
+			else {
+				evaluation_ss << this->evaluate_binary(bin_exp, line).str();
+			}
+
+			break;
         }
         case UNARY:
         {
@@ -243,8 +278,14 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
     std::stringstream eval_ss;
 
-    // get the symbol for the lvalue
+    // get the symbol for the lvalue; make sure it was initialized
     symbol &sym = *(this->lookup(to_evaluate.getValue(), line).get());
+	if (!sym.was_initialized())
+		throw ReferencedBeforeInitializationException(sym.get_name(), line);
+    
+    // check to see if it was freed; we can't know for sure, but if the compiler has it marked as freed, issue a warning that it may have been freed before the reference to it
+    if (sym.was_freed())
+        compiler_warning("Symbol '" + sym.get_name() + "' may have been freed", line);
 
     // it must be a variable symbol, not a function definition
     if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
@@ -290,7 +331,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     }
 
                     // get the dereferenced pointer in A
-                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
                     eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
 
                     // if we had to push a register, restore it
@@ -301,7 +342,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     // automatic memory
                     // get the stack offset; instruction should be something like
                     //      mov rax, [rbp - 4]
-                    eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
                 }
 
                 return eval_ss;
@@ -317,7 +358,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                 } else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory -- the address of the dynamic memory is on the stack, so we need the offset
                     // get address in A
-                    eval_ss << "\t" << "mov rax, [rbp - " << sym.get_stack_offset() << "]" << std::endl;
+                    eval_ss << "\t" << "mov rax, [rbp - " << sym.get_offset() << "]" << std::endl;
                 } else {
                     /*
 
@@ -330,7 +371,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
 
                     */
 
-                    eval_ss << "\t" << "mov rax, rbp - " << sym.get_stack_offset() << std::endl;
+                    eval_ss << "\t" << "mov rax, rbp - " << sym.get_offset() << std::endl;
                 }
             }
         } else {
@@ -360,8 +401,11 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     
     std::stringstream eval_ss;
 
-    // first, get the symbol for the array or string we are indexing
+    // first, get the symbol for the array or string we are indexing; make sure it was initialized
     symbol indexed_sym = *(this->lookup(to_evaluate.getValue(), line).get());
+	if (!indexed_sym.was_initialized())
+		throw ReferencedBeforeInitializationException(indexed_sym.get_name(), line);
+
 	DataType contained_type = *indexed_sym.get_data_type().get_full_subtype().get();
 	size_t full_array_width = indexed_sym.get_data_type().get_array_length() * contained_type.get_width() + 4;
 
@@ -408,12 +452,12 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 		// Dynamic arrays will use a pointer; their width may be variable
 
 		// first, get the length and perform the bounds check
-		eval_ss << "\t" << "mov rax, [rbp - " << indexed_sym.get_stack_offset() << "]" << std::endl;
+		eval_ss << "\t" << "mov rax, [rbp - " << indexed_sym.get_offset() << "]" << std::endl;
 		eval_ss << "\t" << "mov eax, [rax]" << std::endl;	// get the length of the array
 		eval_ss << "\t" << "cmp ecx, eax" << std::endl;	// compare EDX (element's index number) with EAX (number of elements in the array)
 		// todo: SIN runtime errors -- run an error routine if we are out of bounds
 		
-		eval_ss << "\t" << "mov rbx, [rbp - " << indexed_sym.get_stack_offset() << "]" << std::endl;
+		eval_ss << "\t" << "mov rbx, [rbp - " << indexed_sym.get_offset() << "]" << std::endl;
 		eval_ss << "\t" << "mov " << reg_name << ", [rbx + rcx*" << contained_type.get_width() << " + " << sin_widths::INT_WIDTH << "]" << std::endl;
     }
 	else {

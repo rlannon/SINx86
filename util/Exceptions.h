@@ -80,6 +80,18 @@ public:
 	explicit DuplicateDefinitionException(unsigned int line);
 };
 
+class NonModifiableLValueException : public CompilerException
+{
+public:
+	explicit NonModifiableLValueException(unsigned int line);
+};
+
+class ReferencedBeforeInitializationException : public CompilerException
+{
+public:
+	explicit ReferencedBeforeInitializationException(std::string symbol_name, unsigned int line);
+};
+
 class UndefinedException : public CompilerException
 {
 public:
