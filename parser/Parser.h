@@ -74,6 +74,9 @@ class Parser
 	symbol_qualities get_prefix_qualities(std::string grouping_symbol = "");
 	symbol_qualities get_postfix_qualities(std::string grouping_symbol="");		// symbol qualities can be placed after an allocation using the & operator
 
+	// A utility function to give a calling convention from symbol qualities
+	static calling_convention get_calling_convention(symbol_qualities sq, unsigned int line);
+
 	// Parsing statements -- each statement type will use its own function to return a statement of that type
 	std::shared_ptr<Statement> parse_statement(bool is_function_parameter = false);		// entry function to parse a statement
 

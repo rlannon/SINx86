@@ -76,7 +76,10 @@ enum SymbolQuality {
 	SIGNED,
 	UNSIGNED,
 	LONG,
-	SHORT
+	SHORT,
+	SINCALL_CONVENTION,
+	C64_CONVENTION,
+	WINDOWS_CONVENTION
 };
 
 
@@ -164,7 +167,6 @@ enum reg {
 enum calling_convention {
 	// Calling conventions for functions
 	SINCALL,
-	CDECL,
-	WIN_64,
-	X64
+	SYSTEM_V,
+	WIN_64
 };

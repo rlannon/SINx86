@@ -170,12 +170,13 @@ std::stringstream compiler::call_function(T call, unsigned int line, bool allow_
             // SIN calling convention
             call_ss << this->sincall(func_sym, call.get_args(), line).str(); // todo: return this function's result directly?
 		}
-		else if (func_sym.get_calling_convention() == calling_convention::CDECL) {
-			// cdecl calling convention
-			call_ss << this->ccall(func_sym, call.get_args(), line).str();
+		else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
+			// todo: System V
 		}
+        else if (func_sym.get_calling_convention() == calling_convention::WIN_64) {
+            // todo: Windows x86-64
+        }
 		else {
-            // todo: other calling conventions
             throw CompilerException("Other calling conventions not supported at this time", 0, line);
         }
 
@@ -279,29 +280,25 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     return sincall_ss;
 }
 
-std::stringstream compiler::ccall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line) {
-	/*
-	
-	ccall
-	Generates set-up and clean-up code for functions that are to be called with the cdecl convention
+std::stringstream compiler::system_v_call(function_symbol s, std::vector<shared_ptr<Expression>> args, unsigned int line)
+{
+    std::stringstream system_v_call_ss;
 
-	This function generates code for the cdecl convention. For more information, see 'doc/Interfacing with C'
+    // todo: System V ABI call
 
-	@param	s	The function symbol for which we are generating a call
-	@param	args	The arguments supplied to the call
-	@param	line	The line on which the call is located
-
-	@return	The stringstream containing the generated code
-
-	*/
-
-	std::stringstream cdecl_ss;
-
-	// todo: ccall / cdecl
-	// todo: should SIN, being a language targeting 64-bit systems, support the cdecl calling convention?
-
-	return cdecl_ss;
+    return system_v_call_ss;
 }
+
+std::stringstream compiler::win64_call(function_symbol s, std::vector<shared_ptr<Expression>> args, unsigned int line)
+{
+    std::stringstream win64_call_ss;
+
+    // todo: Windows 64 call
+
+    return win64_call_ss;
+}
+
+// Function returns
 
 std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol signature) {
     /*
@@ -328,8 +325,14 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
         // types are compatible; how the value gets returned (and how the callee gets cleaned up) depends on the function's calling convention
         if (signature.get_calling_convention() == SINCALL) {
             ret_ss << this->sincall_return(ret, return_type).str() << std::endl;
-        } else {
-            // todo: other calling conventions; for now, throw an exception
+        }
+        else if (signature.get_calling_convention() == SYSTEM_V) {
+            // todo: System V
+        }
+        else if (signature.get_calling_convention() == WIN_64) {
+            // todo: Windows 64
+        }
+        else {
             throw CompilerException("Calling conventions other than sincall are currently not supported", 0, ret.get_line_number());
         }
     } else {
