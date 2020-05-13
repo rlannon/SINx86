@@ -2,7 +2,11 @@
 
 ## Hidden Pointer Types
 
-SIN has three types--`string`, `array<T>`, and `struct`, that are so-called "hidden pointer types" because although they don't use pointers *syntactically*, under the hood, these types are implemented through the use of pointers to the data. Similarly, all data marked with the `dynamic` qualifier will use pointers to data in the heap even though pointers are not used in the syntax (but they *can* be, under certain circumstances). Here is an example:
+SIN allows for data that is referred to by the term "hidden pointer types" because although they don't use pointers *syntactically*, under the hood, these types are implemented through the use of pointers to the data. This includes the `string` type as well as all data marked with the `dynamic` qualifier. Such data will use pointers to data in the heap even though pointers are not used in the syntax (but they *can* be, under certain circumstances). 
+
+**NB:** Even though pointers are used with such data, they are, generally, not passed by reference.
+
+Here is an example:
 
     alloc string my_string: "hello, world!";
     alloc string second_string: my_string;
@@ -62,13 +66,14 @@ Strings may be marked as `dynamic`, and although this does not change where the 
 
 #### `struct`
 
-All user-defined struct types require their width to be known at compile time. This allows `array< T >` and `string` members in the same way any other scope would. When a struct includes these types, however, a few things must be kept in mind:
+Strucst do not use hidden pointers when passed in memory unless the `dynamic` keyword is applied. All user-defined struct types require their width to be known at compile time, requiring usage of `array< T >` and `string` members in the same way any other localized scope would. However, a note about the `struct` is included here because when a struct includes these types, a few things must be kept in mind:
 
-* if a struct has members which are marked as `dynamic`, they will not be automatically freed when the struct goes out of scope (they must be freed manually);
+* if a struct is marked as `dynamic`, `free` will **never** automatically be called on it, as is the case with all `dynamic` data;
+* if a struct has members which are marked as `dynamic`, it is also the case that they must be freed manually, as dynamic data is never freed automatically;
 * all members will be freed if `free` is invoked on the struct **without exception;**
-* if the user wishes to free specific members, invoking `free` on a specific struct member is allowed, and `free` may be called on the entire struct later as `free` will ignore any memory that has already been freed;
-* if a struct has hidden pointer members, they will be automatically `free`d when the struct goes out of scope
-* returning a pointer to a struct member is invalid *unless* said member is `dynamic` and `free` is not called on the struct object
+* if the user wishes to free specific members, invoking `free` on a specific struct member is allowed -- `free` is safer than C's `free()`, and will ignore any memory that has already been freed;
+* if a struct has hidden pointer members, they will be automatically `free`d when the struct goes out of scope, as do any hidden pointer members in any other scope;
+* returning a pointer to a struct member is invalid *unless* said member is `dynamic` and `free` is not called on the struct object **or** the struct as a whole is `dynamic` -- however, caution must be exercised here, as it could result in a memory leak.
 
 For example, the following code is valid:
 

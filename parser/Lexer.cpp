@@ -12,7 +12,7 @@ The implementation of the lexer
 
 // keywords is an alphabetized list of the keywords in SIN; it must be alphabetized in order to use the 'find' algorithm from the standard library
 // todo: change this to an unordered_set and use 'std::unordered_set::count' instead of 'std::algorithm::find'
-const std::vector<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "const", "constexpr", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sizeof", "static", "string", "struct", "unsigned", "void", "while", "xor" };
+const std::vector<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "const", "constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static", "string", "struct", "unsigned", "void", "while", "windows", "xor" };
 
 // Our regular expressions
 const std::string Lexer::punc_exp = R"([',:;\[\]\{\}\(\)])";	// expression for punctuation
