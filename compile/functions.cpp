@@ -280,7 +280,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     return sincall_ss;
 }
 
-std::stringstream compiler::system_v_call(function_symbol s, std::vector<shared_ptr<Expression>> args, unsigned int line)
+std::stringstream compiler::system_v_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line)
 {
     std::stringstream system_v_call_ss;
 
@@ -289,7 +289,7 @@ std::stringstream compiler::system_v_call(function_symbol s, std::vector<shared_
     return system_v_call_ss;
 }
 
-std::stringstream compiler::win64_call(function_symbol s, std::vector<shared_ptr<Expression>> args, unsigned int line)
+std::stringstream compiler::win64_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line)
 {
     std::stringstream win64_call_ss;
 
