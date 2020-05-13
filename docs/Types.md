@@ -21,10 +21,10 @@ Here is a table containing relevant type information:
 | `char` | 8 bits | A single ASCII character | location, variability | |
 | `ptr<T>` | 64 bits | A pointer to type `T` | location, variability | `T` is a fully-parsed type that is the pointer's 'subtype' |
 | `array<T>` | Variable | An array containing elements of type `T` | location, variability | Like pointers, arrays contain a fully-parsed subtype `T`. Further, SIN arrays contain the array's length. See the [documentation](Arrays.md) for more information |
-| `string` | Variable | A string of ASCII characters | location, variability | SIN-strings use a 32-bit integer for the width followed by the appropriate number of ASCII characters |
+| `string` | Variable | A string of ASCII characters | location, variability | SIN-strings use a 32-bit integer for the width followed by the appropriate number of ASCII characters. When strings are allocated, the program must allocate *at least* one extra byte and zero them out to allow the strings to be used with C (as C-strings are null-terminated) |
 | `struct` | Variable | A user-defined type, more or less equivalent to a struct in C | location, variability | See the [documentation](Structs.md) for more information on structs in SIN |
 
-You may note that `array`, `string`, and `struct` are of variable length. See the relevant [documentation](Hidden%20Pointer%20Types.md) for more information on how this works.
+You may note that `array`, `string`, and `struct` may be of variable length. See the relevant [documentation](Hidden%20Pointer%20Types.md) for more information on how this works.
 
 ### Subtypes
 

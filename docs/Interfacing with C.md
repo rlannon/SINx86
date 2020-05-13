@@ -17,7 +17,7 @@ C types transform to SIN types according to the following table. Note that curre
 | `char` | `char` | 8 bits | |
 | `bool` | `bool` | 8 bits | C booleans may only be used with the proper C header file |
 | Pointers | `ptr<T>` | 64 bits | A pointer to any type is transformed to a SIN `ptr` type appropriately |
-| `char[]` | `string` | Variable | C strings are null-terminated, so the string's length is always calculated when importing a string from C |
+| `char[]` and `const char*` | `string` | Variable | C strings are null-terminated, so the string's length must be calculated when importing a string from C. When calling a C function that takes a `string` as a parameter, the address of the first character in the SIN string will be supplied |
 | Other array types | `array<T>` | Variable | C arrays will utilize `array` except for `char[]`, which is transformed to `string`. Note that C arrays do not store the length, which can make it tricky to utilize them in SIN |
 
 ### Functions

@@ -118,21 +118,25 @@ The SIN calling convention also allows compilers to interface with C functions, 
 
 Such a declaration may look like:
 
-    decl int myInt(decl int a, decl int b) &cdecl;
+    decl int myInt(decl int a, decl int b) &c64;
 
-The SIN compiler will then know to generate code for calls to this function in accordance with the specified `_cdecl` calling convention.
+The SIN compiler will then know to generate code for calls to this function in accordance with the appropriate C calling convention. Note that since this compiler targets x86-64 systems, it will only use 64-bit calling conventions as described [here](https://en.wikipedia.org/wiki/X86_calling_conventions#x86-64_calling_conventions).
 
 In general these qualifiers default to the GCC ABIs used by Unix-like systems, but the `&windows` qualifier may be used to specify the user wishes to use the Microsoft convention instead. If you are worried the conventions may not be correct for your system, it is always a good idea to double-check your distribution to ensure these SIN features are compatible with your system.
 
 ### Calling Conventions
 
-#### `cdecl`
+#### `c64`
 
-If a function declaration/definition uses the `cdecl` qualifier, it alerts the compiler that the function will use the C `_cdecl` calling convention.
+If a function uses the `c64` qualifier, the function should follow the System V AMD x64 ABI (used by Unix-like systems).
 
-#### `cx64`
+#### `windows`
 
-If a function uses the `cx64` qualifier, the function should follow the System V AMD x64 ABI (used by Unix-like systems).
+As mentioned above, if a function uses the `windows` qualifier, the function should follow the Windows x86 calling convention.
+
+#### `sincall`
+
+By default, the `sincall` convention is used, though you may add it in for redundancy.
 
 ### C Types in SIN
 
