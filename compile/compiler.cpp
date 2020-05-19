@@ -68,7 +68,8 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 	}
 
 	// insert the symbol
-	bool ok = this->symbols.insert(std::make_shared<T>(to_add));
+    std::shared_ptr<T> s = std::make_shared<T>(to_add);
+	bool ok = this->symbols.insert(s);
 
     // throw an exception if the symbol could not be inserted
     if (!ok) {

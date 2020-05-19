@@ -271,7 +271,35 @@ lexeme Lexer::read_next() {
 				}
 			}
 		}
-		// if the next character is not '/', just treat it as an op_char
+		// if the next character is a star, we have a block comment
+		else if (this->peek() == '*') {
+			bool is_comment = true;
+
+			// continue ignoring characters while we are still in the comment
+			while (is_comment) {
+				this->next();
+				if (this->peek() == '*') {
+					this->next();
+					if (this->peek() == '/') {
+						this->next();
+						is_comment = false;
+
+						// read through any whitespace
+						this->read_while(&is_whitespace);
+
+						// get the next character; if we immediately have another comment, re-loop
+						ch = this->peek();
+						if (ch == '/') {
+							this->next();
+							if (this->peek() == '*') {
+								is_comment = true;
+							}
+						}
+					}
+				}
+			}
+		}
+		// else, just treat it as an op_char
 		else {
 			// use "unget" to move back one place so "peek" reveals a slash
 			this->stream->unget();
