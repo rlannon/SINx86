@@ -187,6 +187,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			// first, we need to cast and get the current block number (in case we have nested blocks)
 			IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
 			size_t current_scope_num = this->scope_block_num;
+			this->scope_block_num += 1; // increment the scope number now in case we have recursive conditionals
 			
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
@@ -199,7 +200,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
 			compile_ss << "\t" << "jmp sinl_ite_done_" << current_scope_num << std::endl;
 			compile_ss << "sinl_ite_else_" << current_scope_num << ":" << std::endl;
-
+            
 			// compile the branch, if one exists
 			if (ite->get_else_branch().get()) {
 				compile_ss << this->compile_statement(ite->get_else_branch(), signature).str();
@@ -207,7 +208,6 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
 			// clean-up
 			compile_ss << "sinl_ite_done_" << current_scope_num << ":" << std::endl;
-			this->scope_block_num += 1;
 			break;
 		}
 		case WHILE_LOOP:
