@@ -28,7 +28,7 @@ Copyright 2019 Riley Lannon
 
 class compiler {
     // The class containing our compiler
-
+	
     // todo: break code generation into multiple friend classes
 
     std::set<std::string> compiled_headers; // which headers have already been handled

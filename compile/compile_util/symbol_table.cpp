@@ -110,7 +110,7 @@ std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
 	return it->second;
 }
 
-void symbol_table::leave_scope()
+void symbol_table::leave_scope(std::string name, unsigned int level)
 {
 	/*
 	
@@ -124,11 +124,7 @@ void symbol_table::leave_scope()
 		// create a sentinel variable
 		bool done = false;
 
-		// scope information
-		std::string leaving_scope_name = this->locals.peek().scope_name;
-		unsigned int leaving_scope_level = this->locals.peek().scope_level;
-
-		while (!this->locals.empty() && this->locals.peek().scope_level == leaving_scope_level && this->locals.peek().scope_name == leaving_scope_name) {
+		while (!this->locals.empty() && this->locals.peek().scope_level == level && this->locals.peek().scope_name == name) {
 			// pop the last node and erase it
 			node to_erase = this->locals.pop_back();
 

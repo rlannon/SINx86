@@ -144,7 +144,8 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     stmt_type s_type = s->get_statement_type();
     switch (s_type) {
         case INCLUDE:
-            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"; this is to be accomplished through the use of std::set
+            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
+            // todo: this is to be accomplished through the use of std::set
             break;
         case DECLARATION:
         {
@@ -256,7 +257,24 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             break;
         case SCOPE_BLOCK:
         {
-            // todo: compile a scope block using "compile_ast"
+            /*
+
+            Scope blocks can be treated as individual statements in certain cases
+
+            */
+
+            ScopedBlock *block = dynamic_cast<ScopedBlock*>(s.get());
+            StatementBlock ast = block->get_statements();
+
+            // be sure to adjust scope levels
+            unsigned int old_scope_level = this->current_scope_level;
+            this->current_scope_level += 1;
+            
+            // compile the AST in the block
+            compile_ss << this->compile_ast(ast, signature).str();
+
+            // restore the scope level
+            this->current_scope_level = old_scope_level;
             break;
         }
         default:
@@ -300,10 +318,10 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
         compile_ss << this->compile_statement(s, signature).str();
     }
 
-	// when we leave a scope, remove local variables -- but NOT global variables
+	// when we leave a scope, remove local variables -- but NOT global variables (they must be retained for inclusions)
 	if (this->current_scope_name != "global") {
 		// todo: call leave_scope on the compile-time evaluator
-		this->symbols.leave_scope();
+		this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
 	}
 
     return compile_ss;
