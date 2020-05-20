@@ -194,7 +194,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			compile_ss << "\t" << "jz sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
-			compile_ss << this->compile_ast(*ite->get_if_branch().get()).str();
+			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
 			compile_ss << "\t" << "jmp sinl_ite_done_" << current_scope_num << std::endl;
@@ -202,7 +202,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
 			// compile the branch, if one exists
 			if (ite->get_else_branch().get()) {
-				compile_ss << this->compile_ast(*ite->get_else_branch().get()).str();
+				compile_ss << this->compile_statement(ite->get_else_branch(), signature).str();
 			}
 
 			// clean-up
@@ -218,7 +218,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
 
 			// ensure the function has a return value in all control paths
-			if (returns(*def_stmt->get_procedure().get())) {
+			if (general_utilities::returns(*def_stmt->get_procedure().get())) {
 				compile_ss << this->define_function(*def_stmt).str() << std::endl;
 			} else {
 				throw NoReturnException(s->get_line_number());
@@ -254,6 +254,11 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             */
 
             break;
+        case SCOPE_BLOCK:
+        {
+            // todo: compile a scope block using "compile_ast"
+            break;
+        }
         default:
             break;
     };

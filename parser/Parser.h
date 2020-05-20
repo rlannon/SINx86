@@ -30,6 +30,7 @@ Note that:
 
 #include "../util/Exceptions.h"	// ParserException
 #include "../util/DataType.h"	// type information
+#include "../util/general_utilities.h"
 
 class Parser
 {	

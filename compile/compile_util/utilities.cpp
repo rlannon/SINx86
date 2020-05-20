@@ -187,52 +187,6 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
     return type_information;
 }
 
-bool returns(StatementBlock &to_check) {
-	/*
-	
-	returns
-	Checks whether a given AST returns a value
-	
-	*/
-
-	if (to_check.has_return) {
-		return true;
-	} else {
-		// sentinel variable
-		bool to_return = true;
-
-		// iterate through statements to see if we have an if/else block; if so, check *those* for return values
-		std::vector<std::shared_ptr<Statement>>::iterator it = to_check.statements_list.begin();
-		while (it != to_check.statements_list.end() && to_return) {
-			std::shared_ptr<Statement> s = *it;
-
-			if (s->get_statement_type() == stmt_type::IF_THEN_ELSE) {
-				IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
-				StatementBlock &if_branch = *ite->get_if_branch().get();
-
-				// if we have an 'else' branch, we need to check both
-				if (ite->get_else_branch()) {
-					StatementBlock &else_branch = *ite->get_else_branch().get();
-
-					if (!returns(if_branch) || !returns(else_branch)) {
-						to_return = false;
-					}
-				}
-				else {
-					// otherwise, return false; if there is no else branch and there is no return statement in this block, then if the condition is false, we will not have a return value
-					to_return = false;
-				}
-			}
-
-			// increment the iterator
-			it++;
-		}
-
-		// return our value
-		return to_return;
-	}
-}
-
 bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
 	/*
 	

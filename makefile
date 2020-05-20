@@ -11,7 +11,7 @@ bin=bin/
 compiler_objs=allocation.o assign.o evaluate_expression.o operator_expressions.o functions.o function_symbol.o struct_info.o symbol.o
 compiler_util_objs=symbol_table.o struct_table.o member_selection.o constant_eval.o constant_eval_util.o const_symbol.o  register_usage.o utilities.o
 parser_objs=lexeme.o lexer.o type_deduction.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
-util_objs=datatype.o symbol_qualities.o exceptions.o binaryio.o
+util_objs=datatype.o symbol_qualities.o exceptions.o general_utilities.o binaryio.o
 build_objs=compiler.o parser.o $(compiler_objs) $(compiler_util_objs) $(parser_objs) $(util_objs)
 
 # source file dependencies
@@ -126,6 +126,9 @@ symbol_qualities.o: util/symbol_qualities.h util/symbol_qualities.cpp
 
 exceptions.o: util/Exceptions.h util/CompilerErrorCodes.h
 	$(cc) $(flags) -o exceptions.o -c util/Exceptions.cpp
+
+general_utilities.o: util/general_utilities.h
+	$(cc) $(flags) -o general_utilities.o -c util/general_utilities.cpp
 
 binaryio.o:
 	$(cc) $(flags) -o binaryio.o -c util/BinaryIO/BinaryIO.cpp
