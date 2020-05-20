@@ -29,11 +29,13 @@ Our various compiler utilities
 #include "../struct_info.h"
 #include "member_selection.h"
 
+#include "../../util/general_utilities.h"
+
 // todo: put these in their own namespace
 
 DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
 
-bool returns(StatementBlock &to_check);
+bool returns(StatementBlock to_check);
 
 bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
 

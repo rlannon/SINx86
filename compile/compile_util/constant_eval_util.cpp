@@ -62,7 +62,7 @@ const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string sc
 	return to_return;
 }
 
-void compile_time_evaluator::leave_scope()
+void compile_time_evaluator::leave_scope(std::string name, unsigned int level)
 {
 	/*
 
@@ -71,5 +71,5 @@ void compile_time_evaluator::leave_scope()
 
 	*/
 
-	this->constants->leave_scope();
+	this->constants->leave_scope(name, level);
 }

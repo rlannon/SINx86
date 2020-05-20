@@ -37,7 +37,7 @@ class compile_time_evaluator {
 
 	const_symbol lookup(std::string sym_name, std::string scope_name, unsigned int scope_level, unsigned int line) const;
 
-	void leave_scope();
+	void leave_scope(std::string name, unsigned int level);
 
 	static std::string evaluate_literal(Literal& exp);
 	std::string evaluate_lvalue(LValue& exp, std::string scope_name, unsigned int scope_level, unsigned int line);

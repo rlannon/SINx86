@@ -54,6 +54,14 @@ public:
 	~StatementBlock();
 };
 
+class ScopedBlock: public Statement
+{
+	StatementBlock statements;
+public:
+	StatementBlock get_statements();
+	ScopedBlock(StatementBlock statements);
+};
+
 class Include : public Statement
 {
 	std::string filename;
@@ -175,15 +183,15 @@ public:
 class IfThenElse : public Statement
 {
 	std::shared_ptr<Expression> condition;
-	std::shared_ptr<StatementBlock> if_branch;
-	std::shared_ptr<StatementBlock> else_branch;
+	std::shared_ptr<Statement> if_branch;	// branches may be single statements or scope blocks
+	std::shared_ptr<Statement> else_branch;
 public:
 	std::shared_ptr<Expression> get_condition();
-	std::shared_ptr<StatementBlock> get_if_branch();
-	std::shared_ptr<StatementBlock> get_else_branch();
+	std::shared_ptr<Statement> get_if_branch();
+	std::shared_ptr<Statement> get_else_branch();
 
-	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<StatementBlock> if_branch_ptr, std::shared_ptr<StatementBlock> else_branch_ptr);
-	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<StatementBlock> if_branch_ptr);
+	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr);
+	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr);
 	IfThenElse();
 };
 
