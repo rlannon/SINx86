@@ -14,6 +14,7 @@ The following keywords are those which can be used to begin statements.
 * `alloc` - allocates data of a given type
 * `free` - frees the given memory back to the environment
 * `let` - assignment keyword
+* `move` - move keyword
 
 ### Control Flow
 
@@ -47,6 +48,7 @@ The following keywords may *not* be used to begin a statement, but may be requir
 * `string` - a string type
 * `struct` - a user-defined struct type
 * `ptr` - a 64-bit pointer type
+* `ref` - a reference type
 * `array` - a homogeneous array of data
 
 #### Width and Sign
@@ -63,3 +65,9 @@ The following keywords may *not* be used to begin a statement, but may be requir
 * `static` - data that should be allocated at compile time
 * `dynamic` - data that should be allocated at runtime on the heap; may be, but does not have to be, variable-width; may not be `const`, but may be `final`
 * `constexpr` - specifies an expression may be evaluated at compile-time (uses only literals and `const` data)
+
+#### Attributes
+
+* `len` - the length (number of elements) of data
+* `size` - the size (number of bytes) of data
+* `var` - variablility

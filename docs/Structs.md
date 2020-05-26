@@ -2,14 +2,7 @@
 
 ## Structs
 
-SIN, like many programming languages, allows users to define their own types in order to expand the language's functionality. This may be done via structs, which are more or less equivalent to their C counterparts. Once defined, they may be allocated like any other data type. However, because SIN does not support operator overloading or member functions (as is the case in C), structs may only be directly assigned to with other structs of the same type, and any initialization functions must be written as regular functions, not methods. For example:
-
-    alloc some_struct s;
-    let s = 10; // illegal; '10' is not a struct type
-
-    alloc some_struct t;
-    @my_initialization($t, 10);  // not a method
-    let s = t;  // valid; s and t are both the same type
+SIN, like many programming languages, allows users to define their own types in order to expand the language's functionality. This may be done via structs, which are more or less equivalent to their C counterparts. Once defined, they may be allocated like any other data type. Although SIN is not object-oriented (and does not support inheritance or polymorphism), there is a benefit to allowing operator overloading for user-defined types as well as member functions.
 
 ### Defining Structs
 
@@ -68,3 +61,7 @@ So, that means that the offset of `m.x` from the example above is:
     ] = rpb - [26 - 10] = rbp - 16
 
 and sure enough, looking at the sample memory structure, `m.x` is located at `rbp - 16`.
+
+### Static Members
+
+Structs may contain static members, meaning they don't need to be accessed from any one particular object. If a specific object is referenced, they may use the dot operator as normal, like `b.c`. However, if the static member is accessed without a particular object reference, it may use the attribute operator -- e.g., `a:c`.

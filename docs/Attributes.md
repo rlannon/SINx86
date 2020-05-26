@@ -29,3 +29,15 @@ Note that these attributes may also be used on *any* value, including literal va
     alloc string s: 100:var;    // assigns "const"
 
 Note, though, that the compiler will issue a warning on lines 1 and 2 because we are assigning an `unsigned int` to a `signed int`, meaning we might get some data loss.
+
+## Other uses of the attribute operator
+
+The attribute operator may also be used to select `static` elements from a class without referencing a specific object. For example, if we have the following struct `point`:
+
+    def struct point {
+        alloc static int dimension: 3 &unsigned short;
+        alloc int x;
+        alloc int y;
+    }
+
+We could access `dimension` by saying `point:dimension` without referencing any specific object. We could also use an object with the dot operator as normal.
