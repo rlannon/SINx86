@@ -6,16 +6,16 @@ Arrays in SIN operate in a similar manner as in Java; the array's length is trac
 
 ### Allocating an array
 
-Whenever an array is allocated, the programmer must specify both the width _and_ the type contained within the array, in that order. The number of elements to be contained within the array must be known at compile time unless dynamic memory is utilized. This looks like:
+Whenever an array is allocated, the programmer must specify both the width and the type contained within the array, in that order (the type is `array< (N,) T >). The number of elements to be contained within the array must be known at compile time unless dynamic memory is utilized. This looks like:
 
     alloc array<3, int> my_array;
 
-This will allocate an array with 3 elements of type `int`. As mentioned, for dynamic arrays, the length need not be known at compile time. For example, the following:
+This will allocate an array with 3 elements of type `int`. As mentioned, for dynamic arrays, the length need not be known at compile time. For example, the following is completely valid:
 
     alloc int my_int: 10;
     alloc dynamic array<my_int, int>;
 
-is completely valid. The array will be allocated like all other dynamic memory, but the number of requested bytes will be equal to:
+The array will be allocated like all other dynamic memory, but the number of requested bytes will be at least:
 
     <number of elements> * <type width> + 4
 
@@ -36,6 +36,6 @@ Note that arrays may *not* contain other arrays, though they may contain *pointe
 Note that while arrays usually require the length, there are a few scenarios when it isn't:
 
 * the array is a subtype of `ptr`; if a length is given, it will be ignored by the compiler (the programmer shall be notified this is the behavior by the compiler in a compiler note)
-* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations. Note that if a length is not given, the array will not have elements and the runtime bounds checks will prevent the array from being accessed
+* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations. Note that if a length is not given, the array will have a size of 0 and the runtime bounds checks will prevent the array from being accessed (it must be reallocated)
 
 Finally, arrays are always structured with the 32-bit length followed immediately by the array's elements, starting at 0. Regardless of where they are allocated, the length is at the lowest memory address and the final element is at the highest.

@@ -24,7 +24,7 @@ Here is a table containing relevant type information:
 | `string` | Variable | A string of ASCII characters | location, variability | SIN-strings use a 32-bit integer for the width followed by the appropriate number of ASCII characters. When strings are allocated, the program must allocate *at least* one extra byte and zero them out to allow the strings to be used with C (as C-strings are null-terminated) |
 | `struct` | Variable | A user-defined type, more or less equivalent to a struct in C | location, variability | See the [documentation](Structs.md) for more information on structs in SIN |
 
-You may note that `array`, `string`, and `struct` may be of variable length. See the relevant [documentation](Hidden%20Pointer%20Types.md) for more information on how this works.
+You may note that [`array`](Arrays.md), [`string`](Reference%20Types.md), and [`struct`](Structs.md) may be of variable length. How this works changes based on the type; see the relevant documentation for more information.
 
 ### Subtypes
 
@@ -32,7 +32,20 @@ A few types in SIN require 'subtypes', meaning types that are contained by or po
 
 ### Typecasting
 
-Not only is SIN a strongly-typed language, it does not allow implicit type conversions. As a result, it is the responsibility of the programmer to cast expressions to the proper type. This means that, for example, the following code would work in C:
+Not only is SIN a strongly-typed language, it does not allow implicit type conversions. As a result, it is the responsibility of the programmer to cast expressions to the proper type. SIN uses Rust-style typecasting with the `as` keyword. All primitive types can be cast to most other primitive types, but some conversions require standard library functions. The following is a matrix of type conversions allowed using `as`:
+
+| Type | Cast to `bool` | to `int` | to `float` | to `string` | to `array< T >` |
+| ---- | -------------- | -------- | ---------- | ----------- | --------------- |
+| `bool` | | `false` is `0`, `true` is `1` | `false` is `0.0`, `true` is `1.0` | Expressed as `"false"` or `"true"` | |
+| `int` | 0 is `false`, all non-zero are `true` | | Equivalent whole floating-point number | | Expressed as string | |
+| `float` | 0 is `false`, all non-zero are `true` | Remove fractional portion | Expressed as string | |
+| `string` | Empty strings are `false`, non-empty strings are `true` (uses `string:len as bool`) | Must use standard library string parsing | Must use standard library string parsing | | Casts to `array<str:len, char>` |
+
+You may also specify widths and signs, and the compiler may issue a warning about potential data loss.
+
+**NB:** changing the base expressed when using `int as string` is not supported, but may be done with the standard library `to_string` function.
+
+As an example of when typecasting is necessary -- although the following code would work in C:
 
     int x = 10;
     if (x) {
@@ -49,6 +62,13 @@ its SIN counterpart would not:
 You would have to rewrite it as:
 
     alloc int x: 10;
-    if ( x != 0 ) {         // alternatively, one could use the function 'itob' to cast
+    if ( x != 0 ) {
+        @print("true");
+    }
+
+or, use typecasting:
+
+    alloc int x: 10;
+    if (x as bool) {
         @print("true");
     }
