@@ -438,10 +438,61 @@ std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
     return pop_ss;
 }
 
-std::stringstream copy_array(DataType array_type) {
+std::string get_address(symbol &s, reg r) {
+    /*
+
+    get_address
+    Gets the address of the given symbol in the specified register
+
+    */
+
+    std::string address_info = "";
+    std::string reg_name = register_usage::get_register_name(r);
+
+    // if it's static, we can just use the name
+    if (s.get_data_type().get_qualities().is_static()) {
+        address_info = "\tmov " + reg_name + ", " + s.get_name();
+    }
+    // otherwise, we need to look in the stack
+    else if (s.get_data_type().get_qualities().is_dynamic()) {
+        address_info = "\tmov " + reg_name + ", [rsp - " + std::to_string(s.get_offset()) + "]";
+    }
+    else {
+        address_info = "\tmov " + reg_name + ", rsp";
+        address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset());
+    }
+
+    return address_info;
+}
+
+std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
+    /*
+
+    copy_array
+    Calls the SRE function 'sinl_array_copy' to copy array from src to dest
+
+    The SRE parameters are:
+        ptr<array> src
+        ptr<array> dest
+    and the function uses the SINCALL calling convention
+
+    */
+
 	std::stringstream copy_ss;
+    
+    // push the registers that are in use (subroutine returns void, so we don't need to ignore A and B)
+    copy_ss << push_used_registers(regs).str();
 
-	// todo: write SRE function for array copies and call it here
+    copy_ss << get_address(src, reg::RSI) << std::endl;
+    copy_ss << get_address(dest, reg::RDI) << std::endl;
+    copy_ss << "\t" << "push rbp" << std::endl;
+    copy_ss << "\t" << "mov rbp, rsp" << std::endl;
+    copy_ss << "\tcall sinl_array_copy" << std::endl;
+    copy_ss << "\t" << "mov rsp, rbp" << std::endl;
+    copy_ss << "\t" << "pop rbp" << std::endl;
 
+    // restore registers
+    copy_ss << pop_used_registers(regs).str();
+    
 	return copy_ss;
 }

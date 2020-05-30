@@ -50,6 +50,9 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
 			assign_ss << this->handle_symbol_assignment(sym, assign_stmt.get_rvalue(), assign_stmt.get_line_number()).str();
 		}
 	}
+    else if (assign_stmt.get_lvalue()->get_expression_type() == INDEXED) {
+        // todo: indexed assignment
+    }
 	else if (assign_stmt.get_lvalue()->get_expression_type() == BINARY) {
 		// the only binary operator that produces a modifiable lvalue is the dot operator
 		Binary *binary = dynamic_cast<Binary*>(assign_stmt.get_lvalue().get());
@@ -192,7 +195,22 @@ std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_pt
             case STRING:
                 break;
             case ARRAY:
+            {
+                // an array *assignment* will perform an array copy using sinl_array_copy
+                // note this is NOT indexed array assignment -- that is to be handled elsewhere
+                if (value->get_expression_type() == LVALUE) {
+                    LValue *l = dynamic_cast<LValue*>(value.get());
+                    std::shared_ptr<symbol> source_sym = this->lookup(l->getValue(), line);
+                    handle_ss = copy_array(*source_sym.get(), sym, this->reg_stack.peek());
+                }
+                else if (value->get_expression_type() == LIST) {
+                    ListExpression *l = dynamic_cast<ListExpression*>(value.get());
+                    // todo: create list literals
+                    handle_ss << "; a list cast and call to sinl_array_copy will go here" << std::endl;
+                }
+
                 break;
+            }
             case STRUCT:
                 break;
             default:
