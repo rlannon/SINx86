@@ -97,7 +97,7 @@ class Declaration : public Statement
 public:
 	std::string get_name() const;
 
-	DataType get_type_information() const;
+	DataType& get_type_information();
 	bool is_function() const;
 	bool is_struct() const;
 
@@ -145,7 +145,7 @@ class Allocation : public Statement
 
 	std::shared_ptr<Expression> initial_value;	// todo: use the parser to expand allocations with initial values into two statements
 public:
-	DataType get_type_information();
+	DataType& get_type_information();
 	static std::string get_var_type_as_string(Type to_convert);
 	std::string get_name();
 

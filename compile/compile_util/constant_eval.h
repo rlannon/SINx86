@@ -48,6 +48,7 @@ public:
 
 	std::string evaluate_expression(std::shared_ptr<Expression> to_evaluate, std::string scope_name, unsigned int scope_level, unsigned int line);
 
+	compile_time_evaluator();
 	compile_time_evaluator(struct_table* structs);
 	~compile_time_evaluator();
 };

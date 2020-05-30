@@ -87,7 +87,7 @@ std::string Declaration::get_name() const {
 	return this->name;
 }
 
-DataType Declaration::get_type_information() const {
+DataType& Declaration::get_type_information() {
 	return this->type;
 }
 
@@ -135,7 +135,7 @@ Declaration(DataType(), "", nullptr, false, false, {}) {
 /*******************	ALLOCATION CLASS	********************/
 
 
-DataType Allocation::get_type_information() {
+DataType& Allocation::get_type_information() {
 	return this->type_information;
 }
 

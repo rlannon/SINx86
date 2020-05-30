@@ -460,6 +460,9 @@ compiler::compiler() {
     // initialize the scope
     this->current_scope_name = "global";
     this->current_scope_level = 0;
+
+    // initialize the compile-time evaluator
+    this->evaluator = compile_time_evaluator(&this->structs);
 }
 
 compiler::~compiler() {

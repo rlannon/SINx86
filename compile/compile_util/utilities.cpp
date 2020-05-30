@@ -378,8 +378,18 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
 
     */
 
-    stack_offset += allocation.get_type_information().get_width();
-    symbol to_return(allocation.get_name(), scope_name, scope_level, allocation.get_type_information(), stack_offset);
+    DataType &type_info = allocation.get_type_information();
+
+    // adjust the stack offset
+    if (type_info.get_primary() == ARRAY && !type_info.get_qualities().is_dynamic()) {
+        // non-dynamic array stack offsets have to account for the full array width
+        stack_offset += (type_info.get_full_subtype()->get_width() * type_info.get_array_length()) + sin_widths::INT_WIDTH;
+    }
+    else {
+        stack_offset += type_info.get_width();
+    }
+
+    symbol to_return(allocation.get_name(), scope_name, scope_level, type_info, stack_offset);
 
     return to_return;
 }
@@ -402,7 +412,7 @@ std::stringstream push_used_registers(register_usage regs, bool ignore_ab) {
         it != register_usage::all_regs.end();
         it++
     ) {
-        if ((*it != RAX && *it != RBX) || !ignore_ab) {
+        if (((*it != RAX && *it != RBX) || !ignore_ab) && regs.is_in_use(*it)) {
             push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
         }
     }
@@ -430,7 +440,7 @@ std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
         it != register_usage::all_regs.rend();
         it++
     ) {
-        if ((*it != RAX && *it != RBX) || !ignore_ab) {
+        if (((*it != RAX && *it != RBX) || !ignore_ab) && regs.is_in_use(*it)) {
             pop_ss << "\t" << "pop " << register_usage::get_register_name(*it) << std::endl;
         }
     }
@@ -455,11 +465,11 @@ std::string get_address(symbol &s, reg r) {
     }
     // otherwise, we need to look in the stack
     else if (s.get_data_type().get_qualities().is_dynamic()) {
-        address_info = "\tmov " + reg_name + ", [rsp - " + std::to_string(s.get_offset()) + "]";
+        address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]";
     }
     else {
-        address_info = "\tmov " + reg_name + ", rsp";
-        address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset());
+        address_info = "\tmov " + reg_name + ", rbp\n";
+        address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset()) + "\n";
     }
 
     return address_info;
