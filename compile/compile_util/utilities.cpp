@@ -495,9 +495,10 @@ std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
 
     copy_ss << get_address(src, reg::RSI) << std::endl;
     copy_ss << get_address(dest, reg::RDI) << std::endl;
+    copy_ss << "\t" << "mov ecx, " << src.get_data_type().get_full_subtype()->get_width() << std::endl;
     copy_ss << "\t" << "push rbp" << std::endl;
     copy_ss << "\t" << "mov rbp, rsp" << std::endl;
-    copy_ss << "\tcall sinl_array_copy" << std::endl;
+    copy_ss << "\t" << "call sinl_array_copy" << std::endl;
     copy_ss << "\t" << "mov rsp, rbp" << std::endl;
     copy_ss << "\t" << "pop rbp" << std::endl;
 

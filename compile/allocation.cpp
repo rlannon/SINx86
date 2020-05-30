@@ -161,6 +161,10 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			}
 			else if (allocated.get_data_type().get_primary() == ARRAY && !allocated.get_data_type().get_qualities().is_dynamic()) {
 				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+				
+				// write the array length onto the stack
+				allocation_ss << "\t" << "mov eax, " << allocated.get_data_type().get_array_length() << std::endl;
+				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], eax" << std::endl;
 			}
 			else {
 				to_subtract = allocated.get_data_type().get_width();
