@@ -131,6 +131,20 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// construct the symbol
 			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
 
+			// if the type is string, we need to call sinl_string_alloc
+			if (alloc_data.get_primary() == STRING) {
+				// todo: get string length instead of passing 0 in
+				allocation_ss << "\t" << "mov esi, 0" << std::endl;
+				allocation_ss << "\t" << "push rbp" << std::endl;
+				allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
+				allocation_ss << "\t" << "call sinl_string_alloc" << std::endl;
+				allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
+				allocation_ss << "\t" << "pop rbp" << std::endl;
+				
+				// save the location of the string
+				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
+			}
+
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
 				// get the initial value

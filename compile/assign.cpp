@@ -358,7 +358,8 @@ std::stringstream compiler::handle_string_assignment(symbol &sym, std::shared_pt
     Makes an assignment from one string value to another
 
     Copy memory from one dynamic location to another. The string will be resized if necessary. 
-    Since strings are _not_ references (as they are in Java, for example), a string assignment will _always_ copy the string contents between locations and never re-assign the pointer to the rvalue. If that behavior is desired, use pointers.
+    Since strings are _not_ references (as they are in Java, for example), a string assignment will _always_ copy the string contents between locations.
+    Note this function utilizes the SRE.
 
     @param  sym The symbol of the lvalue string
     @param  value   The string value to copy
@@ -369,7 +370,17 @@ std::stringstream compiler::handle_string_assignment(symbol &sym, std::shared_pt
 
     std::stringstream assign_ss;
 
-    // todo: string assignment
+    // pass the parameters in registers
+    // todo: get string address in RSI
+    assign_ss << "\t" << "mov rdi, rbp" << std::endl;
+    assign_ss << "\t" << "sub rdi, " << sym.get_offset() << std::endl;
+
+    // call the SRE string copy function
+    assign_ss << "\t" << "push rbp" << std::endl;
+    assign_ss << "\t" << "mov rbp, rsp" << std::endl;
+    assign_ss << "\t" << "call sinl_string_copy" << std::endl;
+    assign_ss << "\t" << "mov rsp, rbp" << std::endl;
+    assign_ss << "\t" << "pop rbp" << std::endl;
 
     return assign_ss;
 }

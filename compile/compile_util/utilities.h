@@ -57,3 +57,4 @@ std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false
 std::string get_address(symbol &s, reg r);
 
 std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs);
+std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs);

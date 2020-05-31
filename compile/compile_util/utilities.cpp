@@ -517,3 +517,34 @@ std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
     
 	return copy_ss;
 }
+
+std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
+    /*
+
+    copy_string
+    Calls the SRE function to copy one string to another
+
+    The SRE parameters are:
+        ptr<string> src
+        ptr<string> dest
+    It returns the address of the new destination string in RAX
+
+    */
+
+    std::stringstream copy_ss;
+
+    // preserve registers in use, ignoring RAX and RBX
+    copy_ss << push_used_registers(regs, true).str();
+
+    // get the pointers
+    copy_ss << get_address(src, RSI) << std::endl;
+    copy_ss << get_address(dest, RDI) << std::endl;
+    copy_ss << "\t" << "call sinl_string_copy" << std::endl;
+    copy_ss << get_address(dest, RBX) << std::endl;
+    copy_ss << "\t" << "mov [rbx], rax" << std::endl;
+
+    // restore registers
+    copy_ss << pop_used_registers(regs, true).str();
+
+    return copy_ss;
+}
