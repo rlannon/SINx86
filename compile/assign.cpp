@@ -193,6 +193,7 @@ std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_pt
 				break;
 			}
             case STRING:
+                handle_ss << this->handle_string_assignment(sym, value, line).str();
                 break;
             case ARRAY:
             {
@@ -371,7 +372,8 @@ std::stringstream compiler::handle_string_assignment(symbol &sym, std::shared_pt
     std::stringstream assign_ss;
 
     // pass the parameters in registers
-    // todo: get string address in RSI
+    assign_ss << this->evaluate_expression(value, line).str();
+    assign_ss << "\t" << "mov rsi, rax" << std::endl;
     assign_ss << "\t" << "mov rdi, rbp" << std::endl;
     assign_ss << "\t" << "sub rdi, " << sym.get_offset() << std::endl;
 

@@ -13,6 +13,8 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 // todo: create an expression evaluation class and give it access to compiler members?
 
+// todo: allow a 'reg' object to be supplied instead of giving all values in RAX
+
 std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line) {
     /*
 
@@ -244,7 +246,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         std::string name = "strc_" + std::to_string(this->strc_num);
 
         // actually reserve the data and enclose the string in backticks in case we have escaped characters
-        this->rodata_segment << name << " .dd " << to_evaluate.get_value().length() << " `" << to_evaluate.get_value() << "`" << std::endl;
+        this->rodata_segment << "\t" << name << "\t" << "dd " << to_evaluate.get_value().length() + 1 << ", `" << to_evaluate.get_value() << "`, 0" << std::endl;
         this->strc_num += 1;
 
         // now, load the a register with the address of the string

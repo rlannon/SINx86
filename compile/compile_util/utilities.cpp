@@ -349,7 +349,8 @@ function_symbol create_function_symbol(T def) {
 
     // construct the object
     function_symbol to_return(
-        def.get_name(),
+        //def.get_name(),
+        symbol_table::get_mangled_name(def.get_name()),
         def.get_type_information(),
         formal_parameters,
         def.get_calling_convention()
@@ -395,7 +396,8 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
     }
 
     symbol to_return(
-        allocation.get_name(),
+        //allocation.get_name(),
+        symbol_table::get_mangled_name(allocation.get_name()),
         scope_name,
         scope_level,
         type_info,
