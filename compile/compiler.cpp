@@ -62,10 +62,10 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
     */
 
 	// check for sinl_ prefix
-	size_t pos = to_add.get_name().find("sinl_");
-	if (pos != std::string::npos && pos == 0) {
-		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
-	}
+	// size_t pos = to_add.get_name().find("sinl_");
+	// if (pos != std::string::npos && pos == 0) {
+	// 	compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
+	// }
 
 	// insert the symbol
     std::shared_ptr<T> s = std::make_shared<T>(to_add);
@@ -371,14 +371,22 @@ void compiler::generate_asm(std::string filename, Parser &p) {
             }
 
             // insert our wrapper for the program
-            this->text_segment << "global _start" << std::endl;
-            this->text_segment << "_start:" << std::endl;
+            this->text_segment << "global main" << std::endl;
+            this->text_segment << "main:" << std::endl;
+
+            // call SRE init function (takes no parameters)
+            this->text_segment << "\t" << "mov rax, 0" << std::endl;
+            this->text_segment << "\t" << "call sre_init" << std::endl;
 
             // call the main function with SINCALL
             this->text_segment << this->sincall(main_symbol, cmd_args, 0).str();
 
-            // exit the program using the linux syscall
-            this->text_segment << "\t" << "mov rbx, rax" << std::endl;
+            // preserve the return value and call SRE cleanup function
+            this->text_segment << "\t" << "push rax" << std::endl;
+            this->text_segment << "\t" << "call sre_clean" << std::endl;
+
+            // restore main's return value and exit the program using the linux syscall
+            this->text_segment << "\t" << "pop rbx" << std::endl;
             this->text_segment << "\t" << "mov rax, 60" << std::endl;
             this->text_segment << "\t" << "int 0x80" << std::endl;
         } catch (SymbolNotFoundException &e) {

@@ -47,13 +47,29 @@ void symbol_table::erase(node to_erase) {
 
 	*/
 
-	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(to_erase.name);
+	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(
+		//symbol_table::get_mangled_name(to_erase.name)
+		to_erase.name
+	);
 	if (it == this->symbols.end()) {
 		throw std::exception();
 	}
 	else {
 		this->symbols.erase(it);
 	}
+}
+
+std::string symbol_table::get_mangled_name(std::string org) {
+	/*
+
+	get_mangled_name
+	Gets the mangled symbol name
+
+	SIN adds 'SIN_' to all symbol names
+
+	*/
+
+	return "SIN_" + org;
 }
 
 bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
@@ -67,7 +83,10 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	*/
 
 	std::pair<std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator, bool> returned = this->symbols.insert(
-		std::make_pair<>(to_insert->get_name(), to_insert)
+		std::make_pair<>(
+			//symbol_table::get_mangled_name(to_insert->get_name()),
+			to_insert->get_name(),
+			to_insert)
 	);	// should std::unordered_map::emplace be used instead of insert?
 
 	if (returned.second) {
@@ -90,7 +109,9 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 bool symbol_table::contains(std::string symbol_name)
 {
 	// returns whether the symbol with a given name is in the symbol table	
-	return (bool)this->symbols.count(symbol_name);
+	return (bool)this->symbols.count(
+		symbol_table::get_mangled_name(symbol_name)
+	);
 }
 
 std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
@@ -102,7 +123,9 @@ std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
 	
 	*/
 
-	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(to_find);
+	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(
+		symbol_table::get_mangled_name(to_find)
+	);
 	if (it == this->symbols.end()) {
 		throw std::exception();
 	}

@@ -348,7 +348,12 @@ function_symbol create_function_symbol(T def) {
     }
 
     // construct the object
-    function_symbol to_return(def.get_name(), def.get_type_information(), formal_parameters, def.get_calling_convention());
+    function_symbol to_return(
+        def.get_name(),
+        def.get_type_information(),
+        formal_parameters,
+        def.get_calling_convention()
+    );
 
     // finally, return the function symbol
     return to_return;
@@ -389,7 +394,12 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
         stack_offset += type_info.get_width();
     }
 
-    symbol to_return(allocation.get_name(), scope_name, scope_level, type_info, stack_offset);
+    symbol to_return(
+        allocation.get_name(),
+        scope_name,
+        scope_level,
+        type_info,
+        stack_offset);
 
     return to_return;
 }
