@@ -246,7 +246,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         std::string name = "strc_" + std::to_string(this->strc_num);
 
         // actually reserve the data and enclose the string in backticks in case we have escaped characters
-        this->rodata_segment << "\t" << name << "\t" << "dd " << to_evaluate.get_value().length() + 1 << ", `" << to_evaluate.get_value() << "`, 0" << std::endl;
+        this->rodata_segment << "\t" << name << "\t" << "dd " << to_evaluate.get_value().length() << ", `" << to_evaluate.get_value() << "`, 0" << std::endl;
         this->strc_num += 1;
 
         // now, load the a register with the address of the string
@@ -368,12 +368,18 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     so, instead of having something like:
                         mov rax, [rbp - 4]
                     which we would use for something like int or float, we want
-                        mov rax, rbp - 4
+                        mov rax, rbp
+                        sub rax, 4
                     which gives us the address of the data
 
                     */
 
-                    eval_ss << "\t" << "mov rax, rbp - " << sym.get_offset() << std::endl;
+                    if (sym.get_data_type().get_primary() == STRING) {
+                        eval_ss << "\t" << "mov rax, [rbp - " << sym.get_offset() << "]" << std::endl;
+                    } else {
+                        eval_ss << "\t" << "mov rax, rbp" << std::endl;
+                        eval_ss << "\t" << "sub rax, " << sym.get_offset() << std::endl;
+                    }
                 }
             }
         } else {

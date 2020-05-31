@@ -476,7 +476,7 @@ std::string get_address(symbol &s, reg r) {
         address_info = "\tmov " + reg_name + ", " + s.get_name();
     }
     // otherwise, we need to look in the stack
-    else if (s.get_data_type().get_qualities().is_dynamic()) {
+    else if (s.get_data_type().get_qualities().is_dynamic() || s.get_data_type().get_primary() == STRING) {
         address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]";
     }
     else {

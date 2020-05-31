@@ -372,10 +372,10 @@ std::stringstream compiler::handle_string_assignment(symbol &sym, std::shared_pt
     std::stringstream assign_ss;
 
     // pass the parameters in registers
+    // todo: strings whose references are not on the stack
     assign_ss << this->evaluate_expression(value, line).str();
     assign_ss << "\t" << "mov rsi, rax" << std::endl;
-    assign_ss << "\t" << "mov rdi, rbp" << std::endl;
-    assign_ss << "\t" << "sub rdi, " << sym.get_offset() << std::endl;
+    assign_ss << "\t" << "mov rdi, [rbp - " << sym.get_offset() << "]" << std::endl;
 
     // call the SRE string copy function
     assign_ss << "\t" << "push rbp" << std::endl;
@@ -383,6 +383,9 @@ std::stringstream compiler::handle_string_assignment(symbol &sym, std::shared_pt
     assign_ss << "\t" << "call sinl_string_copy" << std::endl;
     assign_ss << "\t" << "mov rsp, rbp" << std::endl;
     assign_ss << "\t" << "pop rbp" << std::endl;
+
+    // assign rax to the string (may have been reallocated)
+    assign_ss << "\t" << "mov [rbp - " << sym.get_offset() << "], rax" << std::endl;
 
     return assign_ss;
 }
