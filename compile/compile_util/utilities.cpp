@@ -283,9 +283,21 @@ struct_info define_struct(StructDefinition definition) {
         if (s->get_statement_type() == ALLOCATION) {
             // cast to Allocation and create a symbol
             Allocation *alloc = dynamic_cast<Allocation*>(s.get());
+
+            // first, ensure that the symbol's type is not this struct
+            if ((alloc->get_type_information().get_primary() == STRUCT) && (alloc->get_type_information().get_struct_name() == struct_name)) {
+                throw CompilerException(
+                    "A struct may not contain an instance of itself; use a pointer instead",
+                    compiler_errors::SELF_CONTAINMENT_ERROR,
+                    alloc->get_line_number()
+                );
+            }
+            // todo: once references are enabled, disallow those as well -- they can't be null, so that would cause infinite recursion, too
+
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
             
             // todo: allow default values (alloc-init syntax) in structs
+            // to do this, the function might have to be moved out of "utilities" and into "compiler"
 
             // add that symbol to our vector
             members.push_back(sym);

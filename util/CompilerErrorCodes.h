@@ -37,6 +37,8 @@ namespace compiler_errors {
 	const unsigned int UNDEFINED_OPERATOR_ERROR = 57;	// the operator used is undefined for the data type
     const unsigned int ILLEGAL_ADDRESS_OF_ARGUMENT = 61;    // the address-of operator may only be used with lvalues and member selection binary expressions
     
+    const unsigned int SELF_CONTAINMENT_ERROR = 71; // a struct may not contain an instance of itself
+
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
     const unsigned int UNDEFINED_ERROR = 101;
