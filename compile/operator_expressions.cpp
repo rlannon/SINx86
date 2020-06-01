@@ -246,7 +246,27 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					}
 					break;
 				case STRING:
-					// todo: string concatenation (passes pointer to string)
+					/*
+
+					string concatenation (passes pointer to string to SRE function)
+					
+					SRE routine parameters are:
+						RSI - ptr<string> left
+						RDI - ptr<string> right
+					Returns
+						ptr<string> - points to the location of the resultant string
+					
+					*/
+
+					eval_ss << "\t" << "mov rsi, rax" << std::endl;
+					eval_ss << "\t" << "mov rdi, rbx" << std::endl;
+
+					eval_ss << "\t" << "push rbp" << std::endl;
+					eval_ss << "\t" << "mov rbp, rsp" << std::endl;
+					eval_ss << "\t" << "call sinl_string_concat" << std::endl;
+					eval_ss << "\t" << "mov rsp, rbp" << std::endl;
+					eval_ss << "\t" << "pop rbp" << std::endl;
+
 					break;
 				default:
 					// if we have an invalid type, throw an exception
