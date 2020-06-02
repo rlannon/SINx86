@@ -39,6 +39,8 @@ bool returns(StatementBlock to_check);
 
 bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
 
+bool is_valid_cast(DataType &old_type, DataType &new_type);
+
 bool can_pass_in_register(DataType to_check);
 
 std::string get_rax_name_variant(DataType t, unsigned int line);

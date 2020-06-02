@@ -502,7 +502,7 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 
 std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt(nullptr);
 	this->next();	// go to the expression
 
 	// if the current token is a semicolon, return a Literal Void

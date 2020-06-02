@@ -362,7 +362,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 	else if (current_lex.type == KEYWORD || current_lex.type == IDENTIFIER) {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {
-			// if our symbol doesn't have signed or unsigned, set, it must be sigbed by default
+			// if our symbol doesn't have signed or unsigned, set, it must be signed by default
 			if (!qualities.is_signed() && !qualities.is_unsigned()) {
 				qualities.add_quality(SIGNED);
 			}
