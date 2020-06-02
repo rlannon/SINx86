@@ -159,6 +159,20 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             evaluation_ss = this->evaluate_sizeof(sizeof_exp, line);
             break;
         }
+        case CAST:
+        {
+            auto c = dynamic_cast<Cast*>(to_evaluate.get());
+            if (DataType::is_valid_type(c->get_new_type())) {
+                
+            }
+            else {
+                throw CompilerException(
+                    "Attempt to cast to invalid type",
+                    compiler_errors::INVALID_CAST_ERROR,
+                    line);
+            }
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
     }

@@ -220,6 +220,21 @@ bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
 	}
 }
 
+bool is_valid_cast(DataType &old_type, DataType &new_type) {
+    /*
+
+    is_valid_cast
+    Determines whether the attempted typecast (from 'old_type' to 'new_type') is valid
+
+    See docs/Typecasting.md for information on typecasting validity rules
+
+    */
+
+    if (old_type.get_primary() == STRING) {
+        return false;
+    }
+}
+
 bool can_pass_in_register(DataType to_check) {
     // Checks whether the given DataType can be passed in a register or if it must be passed on the stack
 
