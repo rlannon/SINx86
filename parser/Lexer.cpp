@@ -11,7 +11,10 @@ The implementation of the lexer
 #include "Lexer.h"
 
 // The list of language keywords
-const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "const", "constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static", "string", "struct", "unsigned", "void", "while", "windows", "xor" };
+const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "const", 
+"constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", 
+"let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static",
+"string", "struct", "unsigned", "void", "while", "windows", "xor" };
 
 // Our regular expressions
 const std::string Lexer::punc_exp = R"([',:;\[\]\{\}\(\)])";	// expression for punctuation

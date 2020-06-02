@@ -289,8 +289,8 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == "," || (next.value == "=" && omit_equals)) {
 		return left;
 	}
-	// Otherwise, if we have an op_char or the 'and' or 'or' keyword
-	else if (next.type == OPERATOR || next.value == "and" || next.value == "or") {
+	// Otherwise, if we have an op_char or the 'and', 'or', or 'xor'
+	else if (next.type == OPERATOR || next.value == "and" || next.value == "or" || next.value == "xor") {
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
 		if (next.value == "&") {
 			this->next();	// advance the iterator so we can see what comes after the ampersand
@@ -305,32 +305,42 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 				this->back();	// move the iterator back where it was
 			}
 		}
-
-		// get the next op_char's data
-		size_t his_prec = get_precedence(next.value, next.line_number);
-
-		// If the next operator is of a higher precedence than ours, we may need to parse a second binary expression first
-		if (his_prec > my_prec) {
-			this->next();	// go to the next character in our stream (the op_char)
-			this->next();	// go to the character after the op char
-
-			// Parse out the next expression
-			std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
-
-			// Create the binary expression
-			std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
-
-			// if the left and right sides are constants, the whole expression is a constant
-			if (left->is_const() && right->is_const())
-				binary->set_const();
-
-			// call maybe_binary again at the old prec level in case this expression is followed by one of a higher precedence
-			return this->maybe_binary(binary, my_prec, grouping_symbol, omit_equals);
+		
+		// if we have the 'as' keyword, we will immediately parse out a typecast expression with the left operand
+		if (next.value == "as") {
+			this->next();
+			this->next();	// skip ahead to the first lexeme of the data type
+			DataType new_type = this->get_type();
+			auto cast_exp = std::make_shared<Cast>(left, new_type);
+			return cast_exp;
 		}
+		// otherwise, parse the binary expression as usual
 		else {
-			return left;
-		}
+			// get the next op_char's data
+			size_t his_prec = get_precedence(next.value, next.line_number);
 
+			// If the next operator is of a higher precedence than ours, we may need to parse a second binary expression first
+			if (his_prec > my_prec) {
+				this->next();	// go to the next character in our stream (the op_char)
+				this->next();	// go to the character after the op char
+
+				// Parse out the next expression
+				std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+
+				// Create the binary expression
+				std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
+
+				// if the left and right sides are constants, the whole expression is a constant
+				if (left->is_const() && right->is_const())
+					binary->set_const();
+
+				// call maybe_binary again at the old prec level in case this expression is followed by one of a higher precedence
+				return this->maybe_binary(binary, my_prec, grouping_symbol, omit_equals);
+			}
+			else {
+				return left;
+			}
+		}
 	}
 	// There shouldn't be anything besides a semicolon, closing paren, or an op_char immediately following "left"
 	else {

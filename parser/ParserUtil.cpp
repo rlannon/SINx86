@@ -30,7 +30,8 @@ const std::unordered_map<std::string, exp_operator> Parser::op_strings({
 	{"and", AND},
 	{"or", OR},
 	{"xor", XOR},
-	{".", DOT}
+	{".", DOT},
+	{".", TYPECAST}
 });
 
 const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
@@ -53,6 +54,7 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{MULT, 20},
 	{DIV, 20},
 	{MODULO, 20},
+	{TYPECAST, 22},
 	{NOT, 23},
 	{BIT_NOT, 23},
 	{UNARY_PLUS, 24},

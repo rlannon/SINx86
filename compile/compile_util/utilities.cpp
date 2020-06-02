@@ -179,6 +179,16 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             type_information.set_primary(INT);
             type_information.add_qualities(std::vector<SymbolQuality>{CONSTANT, UNSIGNED});
             break;
+        case CAST:
+        {
+            Cast *c = dynamic_cast<Cast*>(to_eval.get());
+            if (DataType::is_valid_type(c->get_new_type())) {
+                type_information = c->get_new_type();
+            }
+            else {
+                throw CompilerException("Attempt to cast to invalid type", compiler_errors::INVALID_CAST_ERROR, line);
+            }
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
             break;
