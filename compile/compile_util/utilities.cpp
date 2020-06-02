@@ -231,7 +231,7 @@ bool is_valid_cast(DataType &old_type, DataType &new_type) {
 
     */
 
-    return (
+    return !(
         old_type.get_primary() == STRING || 
         old_type.get_primary() == ARRAY || 
         new_type.get_primary() == STRING ||
