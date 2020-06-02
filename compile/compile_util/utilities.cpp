@@ -188,6 +188,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             else {
                 throw CompilerException("Attempt to cast to invalid type", compiler_errors::INVALID_CAST_ERROR, line);
             }
+            break;
         }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
@@ -230,9 +231,36 @@ bool is_valid_cast(DataType &old_type, DataType &new_type) {
 
     */
 
-    if (old_type.get_primary() == STRING) {
-        return false;
+    return (
+        old_type.get_primary() == STRING || 
+        old_type.get_primary() == ARRAY || 
+        new_type.get_primary() == STRING ||
+        new_type.get_primary() == ARRAY
+    );
+}
+
+std::stringstream cast(DataType &old_type, DataType &new_type) {
+    /*
+
+    cast
+    Casts the data in RAX/XMM0 to the supplied type, returning the data in RAX.
+
+    */
+
+    std::stringstream cast_ss;
+
+    if (new_type.get_primary() == BOOL) {
+        if (old_type.get_primary() == FLOAT) {
+            // move the truncated value into rax
+            std::string instruction = (old_type.get_qualities().is_long()) ? "cmpsd" : "cmpss";
+        }
+        
+        // any *non-zero* value is true
+        cast_ss << "\t" << "cmp rax" << ", 0x00" << std::endl;
+        cast_ss << "\t" << "setne al" << std::endl;
     }
+
+    return cast_ss;
 }
 
 bool can_pass_in_register(DataType to_check) {

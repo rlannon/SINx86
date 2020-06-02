@@ -289,8 +289,8 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == "," || (next.value == "=" && omit_equals)) {
 		return left;
 	}
-	// Otherwise, if we have an op_char or the 'and', 'or', or 'xor'
-	else if (next.type == OPERATOR || next.value == "and" || next.value == "or" || next.value == "xor") {
+	// Otherwise, if we have an op_char or the 'and', 'or', 'xor', or 'as'
+	else if (next.type == OPERATOR || next.value == "and" || next.value == "or" || next.value == "xor" || next.value == "as") {
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
 		if (next.value == "&") {
 			this->next();	// advance the iterator so we can see what comes after the ampersand
