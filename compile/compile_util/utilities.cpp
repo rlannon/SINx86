@@ -235,11 +235,13 @@ bool is_valid_cast(DataType &old_type, DataType &new_type) {
         old_type.get_primary() == STRING || 
         old_type.get_primary() == ARRAY || 
         new_type.get_primary() == STRING ||
-        new_type.get_primary() == ARRAY
+        new_type.get_primary() == ARRAY ||
+        old_type.get_primary() == PTR ||
+        new_type.get_primary() == PTR
     );
 }
 
-std::stringstream cast(DataType &old_type, DataType &new_type) {
+std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line) {
     /*
 
     cast
@@ -251,13 +253,68 @@ std::stringstream cast(DataType &old_type, DataType &new_type) {
 
     if (new_type.get_primary() == BOOL) {
         if (old_type.get_primary() == FLOAT) {
-            // move the truncated value into rax
+            // use the SSE comparison functions
             std::string instruction = (old_type.get_qualities().is_long()) ? "cmpsd" : "cmpss";
         }
-        
-        // any *non-zero* value is true
-        cast_ss << "\t" << "cmp rax" << ", 0x00" << std::endl;
+        else {
+            // any *non-zero* value is true
+            cast_ss << "\t" << "cmp rax" << ", 0x00" << std::endl;
+        }
         cast_ss << "\t" << "setne al" << std::endl;
+    }
+    else if (new_type.get_primary() == INT) {
+        if (old_type.get_primary() == FLOAT) {
+            // for float conversions, we *should* issue a warning
+            if (old_type.get_width() > new_type.get_width()) {
+                compiler_warning("Attempting to convert floating-point type to a smaller integral type", line);
+            }
+
+            // perform the cast with the SSE conversion functions
+            if (old_type.get_qualities().is_long()) {
+                cast_ss << "\t" << "cvttsd2si rax, xmm0" << std::endl;
+            }
+            else {
+                cast_ss << "\t" << "cvttss2si eax, xmm0" << std::endl;
+            }
+        }
+        else {
+            if (old_type.get_width() == sin_widths::BOOL_WIDTH) {
+                cast_ss << "\t" << "cmp al, 0" << std::endl;
+                cast_ss << "\t" << "setne al" << std::endl;
+                cast_ss << "\t" << "movzx rax, al" << std::endl;
+            }
+            else {
+                cast_ss << std::endl;
+            }
+        }
+    }
+    else if (new_type.get_primary() == FLOAT) {
+        if (old_type.get_primary() == FLOAT) {
+            if (old_type.get_width() < new_type.get_width()) {
+                // old < new; convert scalar single to scalar double
+                cast_ss << "\t" << "cvtsstsd xmm0, xmm0" << std::endl;
+            }
+            else if (old_type.get_width() > new_type.get_width()) {
+                // old > new; convert scalar double to scalar single
+                cast_ss << "\t" << "cvtsd2ss xmm0, xmm0" << std::endl;
+            }
+            else {
+                // don't do anything if they're the same type; issue a note (not a warning)
+                compiler_note("Typecast from type to itself has no effect", line);
+            }
+        }
+        else {
+            std::string reg_name = get_rax_name_variant(old_type, line);
+            if (old_type.get_primary() == BOOL) {
+                cast_ss << "\t" << "cmp al, 0" << std::endl;
+                cast_ss << "\t" << "setne al" << std::endl;
+                cast_ss << "\t" << "movzx rax, al" << std::endl;
+            }
+            
+            // use convert signed integer to scalar single/double
+            std::string instruction = (new_type.get_qualities().is_long()) ? "cvtsi2sd" : "cvtsi2ss";
+            cast_ss << "\t" << instruction << " xmm0, " << reg_name << std::endl;
+        }
     }
 
     return cast_ss;

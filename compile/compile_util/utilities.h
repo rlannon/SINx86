@@ -41,7 +41,7 @@ bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
 
 bool is_valid_cast(DataType &old_type, DataType &new_type);
 
-std::stringstream cast(DataType &old_type, DataType &new_type);
+std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line);
 
 bool can_pass_in_register(DataType to_check);
 

@@ -35,3 +35,5 @@ Casts may also be done to change or specify the width of a type, though decreasi
     let x = x & y;  // generates compiler warning about differing data widths
 
     alloc unsigned int z: x & y as unsigned int;    // no warning generated here
+
+If there is a sign change between the two types, the data is not reinterpreted; it is copied bit-for-bit between each type. If this behavior is not desired, the `as` keyword should not be used. Since SIN types are fixed-width (like Rust, unlike C), the new representation is predictable. If the type is being moved to a larger one, it is always zero-extended.

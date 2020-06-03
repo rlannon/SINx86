@@ -172,6 +172,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
                     evaluation_ss << this->evaluate_expression(c->get_exp(), line).str();
 
                     // now, use the utility function to actually cast the type
+                    evaluation_ss << cast(old_type, c->get_new_type(), line).str();
                 }
                 else {
                     throw CompilerException(
