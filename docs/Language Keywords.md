@@ -13,8 +13,8 @@ The following keywords are those which can be used to begin statements.
 * `def` - defines a block of code to be associated with a [function](Functions.md) or [struct](Structs.md)
 * `alloc` - allocates data of a given type
 * `free` - frees the given memory back to the environment
-* `let` - assignment keyword
-* `move` - move keyword
+* `let` - assignment keyword; always copies data
+* `move` - move keyword; copies references when possible, otherwise performs a copy
 
 ### Control Flow
 
@@ -33,10 +33,13 @@ The following keywords may *not* be used to begin a statement, but may be requir
 
 ### Operators
 
+Note that all *logical* operators use keywords while the bitwise operators use symbols.
+
 * `and` - logical and
 * `or` - logical or
 * `xor` - logical exclusive-or
 * `not` - logical not
+* `as` - typecast operator (operates like in Rust)
 
 ### Data Types
 
@@ -48,7 +51,7 @@ The following keywords may *not* be used to begin a statement, but may be requir
 * `string` - a string type
 * `struct` - a user-defined struct type
 * `ptr` - a 64-bit pointer type
-* `ref` - a reference type
+* `ref` - a 64-bit reference type
 * `array` - a homogeneous array of data
 
 #### Width and Sign
