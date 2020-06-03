@@ -12,60 +12,8 @@ This document is to serve as a reference for the built-in runtime environment. N
 
 ## The Memory Allocation Management System (MAM)
 
-In SIN, memory management is typically done with the `alloc` and `free` keywords in combination with location specifiers like `dynamic`. Unlike C, these are done with *keywords* instead of library functions. However, this means that some library support is still required, even though it is not visible to the programmer. Rather, it is done automatically by SIN's memory management system, called the Memory Allocation Manager, or MAM.
+Perhaps the most important piece of the SRE is the Memory Allocation Manager (MAM). In SIN, memory management is typically done with the `alloc` keyword (and possibly `free`, although use of `free` is inadvisable) in combination with location specifiers like `dynamic`. Unlike C, all memory allocation is done with *keywords* instead of library functions. However, this means that some library support is still required, even though it is not visible to the programmer. Rather, it is done automatically by SIN's memory management system, called the Memory Allocation Manager, or MAM.
+
+The MAM implements a garbage collector for the language by using reference counting on all dynamically-allocated resources. Every time a new reference or pointer references a dynamic object, the MAM increments its reference count; every time that pointer is reassigned, or the variable goes out of scope, the reference count is decremented. Once a resource's reference count hits zero, it becomes inaccessible, and the MAM automatically deletes it.
 
 For more information on the MAM, see [this document](Memory%20Allocation%20Manager.md).
-
-## The SRE
-
-The SRE is divided into a series of modules, divided up by the role they serve in the library. All functions in the SRE are prefixed with `sinl_` to indicate they are a SIN language function.
-
-Note that all subroutines in the SRE utilize the `sincall` calling convention, though some features of this convention are available in the assembly that are not available in SIN (such as secondary return values).
-
-### The `memory` module
-
-The `memory` module contains all of the necessary subroutines for SIN's automatic memory management (such as the `dynamic` and `free` keywords).
-
-#### `sinl_malloc`
-
-`sinl_malloc` implements the `dynamic` keyword. It attempts to allocate a specific amount of memory for the user and returns a pointer to it. This is implemented through the use of C's `malloc()` (or `calloc()`).
-
-This subroutine takes the following parameters:
-
-* `len` - A 32-bit integer containing the desired length, in bytes, for the allocated memory
-
-The following values are returned from the subroutine:
-
-| Register | Description | Notes |
-| -------- | ----------- | ----- |
-| `rax` | The address of the allocated memory | `null` if the allocation failed |
-| `rbx` | The number of bytes actually allocated | Secondary return value |
-
-#### `sinl_free`
-
-`sinl_free` implements the `free` keyword. This decrements the reference count of the resource at the specified location, freeing it if the count reaches zero. This is ultimately uses the C function `free()` to free the memory.
-
-This subroutine takes the following parameters:
-
-* `addr` - The address of the memory to be freed
-
-When the subroutine returns, `rax` will contain a boolean value indicating whether the free was successful (1) or not (0). Note, however, that if the free operation is unsuccessful, it is likely that a system fault will be triggered and execution will be terminated.
-
-### The `string` module
-
-The SRE has a few functions that are utilized by the compiler to handle various string operations. Without this module, use of the `string` data type would not be possible.
-
-#### `sinl_str_cpy`
-
-`sinl_str_cpy` implements the `let` keyword for strings. The subroutine copies the data (including the length word) from one area of memory to another.
-
-This subroutine takes the following parameters:
-
-* `src` - A pointer to the source string
-* `dest` - A pointer to the destination string
-
-The function returns no value.
-
-#### `sinl_str_concat`
-
-`sinl_str_concat` implements string concatenation (operator `+`) through a combination of arithmetic, data copies, and the `sinl_buffer` allocated to each program.

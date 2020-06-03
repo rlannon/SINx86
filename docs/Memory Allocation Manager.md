@@ -14,7 +14,7 @@ When working with dynamic memory, a lot can go wrong, and so SIN abstracts a lot
 
 ### Use in the release of resources
 
-The main purpose of the MAM is to serve as a form of garbage collection, using a reference counter on all heap resources. This allows the programmer to use `dynamic` without worrying about invoking `free` on that resource. Although this is still allowed, programmers are encouraged to just let the MAM do everything and clean up the heap once resources become inaccessible. Using `free` will yield a warning stating as much.
+The main purpose of the MAM is to serve as a form of garbage collection, using a reference counter on all heap resources. This allows the programmer to use `dynamic` without worrying about invoking `free` on that resource. Although this is still allowed, programmers are encouraged to just let the MAM do everything and clean up the heap once resources become inaccessible. Using `free` is disouraged for this reason (though not illegal), and using it will yield a warning stating as much.
 
 Further, the MAM prevents the programmer from trying to free a resource that has already been acquired with `malloc()`, or that has already been freed. In SIN, unlike C, `free` may be invoked on any non-static memory (invoking `free` on a static member will generate a compiler error, and if invoked on a pointer to static memory, will have no effect), though it will only *actually* release memory back to the OS if it was allocated dynamically (stack-allocated memory, for example, will simply be unusable after a call to `free`, but will not allow reallocation of that stack space until the scope is left). A typical call to free would be something like:
 
@@ -54,9 +54,9 @@ Note that using `free`, while safe from *certain* runtime errors, is discouraged
     free a;
     // 'r' is now a dangling reference; it refers to memory that was freed
 
-In order to avoid segmentation violations, the MAM is actually allowed to *ignore* manual `free` calls for this purpose. If the number of references to the memory we are freeing is greater than 1, the MAM can simply ignore the request to free it. While the compiler will consider the variable to be inaccessible, all references that exist will still be valid at runtime.
+In order to avoid segmentation violations (or any erratic behavior that comes from reading deallocated memory), the MAM is actually allowed to simply *ignore* manual `free` calls. If the number of references to the memory we are freeing is greater than 1, the MAM can simply ignore the request to free it. While the compiler will consider the variable to be inaccessible, all references that exist will still be valid until the resource becomes inaccessible.
 
-Further, note that once free is used in a branch, *all* subsequent accesses of that data will be considered illegal at compile-time *whether or not the resource was actually freed in that branch.* The compiler considers that data to be unsafe to use, and so will forbid access (**NB:* if the access is made through a pointer or reference, the compiler won't know). For example:
+Further, note that once free is used in a branch, *all* subsequent accesses of that data will be considered illegal at compile-time *whether or not the resource was actually freed in that branch.* The compiler considers that data to be unsafe to use because it *might have* been freed, and so will forbid resource access (**NB:** if the access is made through a pointer or reference, the compiler won't know). For example:
 
     alloc dynamic int d: 5;
     if (a * 2 >= 10) {
@@ -66,3 +66,5 @@ Further, note that once free is used in a branch, *all* subsequent accesses of t
     }
 
     @print(a as string);    // illegal; 'a' may have been freed
+
+When the MAM is allowed to handle freeing resources, this problem goes away.
