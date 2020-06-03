@@ -266,7 +266,7 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
         if (old_type.get_primary() == FLOAT) {
             // for float conversions, we *should* issue a warning
             if (old_type.get_width() > new_type.get_width()) {
-                compiler_warning("Attempting to convert floating-point type to a smaller integral type", line);
+                compiler_warning("Attempting to convert floating-point type to a smaller integral type; potential loss of data", line);
             }
 
             // perform the cast with the SSE conversion functions
