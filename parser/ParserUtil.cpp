@@ -488,33 +488,27 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 
 	symbol_qualities qualities;	// create our qualities vector; initialize to an empty vector
 
-	// a keyword should follow the '&'
-	if (this->peek().type == KEYWORD) {
-		// continue parsing our SymbolQualities until we hit a semicolon, at which point we will trigger the 'done' flag
-		bool done = false;
-		while (this->peek().type == KEYWORD && !done) {
-			lexeme quality_token = this->next();	// get the token for the quality
-			SymbolQuality quality = this->get_quality(quality_token);	// use our 'get_quality' function to get the SymbolQuality based on the token
+	// continue parsing our SymbolQualities until we hit a semicolon, at which point we will trigger the 'done' flag
+	bool done = false;
+	while (this->peek().type == KEYWORD && !done) {
+		lexeme quality_token = this->next();	// get the token for the quality
+		SymbolQuality quality = this->get_quality(quality_token);	// use our 'get_quality' function to get the SymbolQuality based on the token
 
-			// try adding our qualities, throw an error if there is a conflict
-			try {
-				qualities.add_quality(quality);
-			} catch (CompilerException &e) {
-				throw QualityConflictException(quality_token.value, quality_token.line_number);
-			}
-
-			// the quality must be followed by either another quality, a semicolon, or a closing grouping symbol
-			if (this->peek().value == ";" || this->peek().value == closing_symbol) {
-				done = true;
-			}
-			// there's an error if the next token is not a keyword and also not a semicolon
-			else if (this->peek().type != KEYWORD) {
-				throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
-			}
+		// try adding our qualities, throw an error if there is a conflict
+		try {
+			qualities.add_quality(quality);
+		} catch (CompilerException &e) {
+			throw QualityConflictException(quality_token.value, quality_token.line_number);
 		}
-	}
-	else {
-		throw ParserException("Expected symbol quality following '&'", 0, this->current_token().line_number);
+
+		// the quality must be followed by either another quality, a semicolon, a closing grouping symbol, or a curly brace
+		if (this->peek().value == ";" || this->peek().value == closing_symbol || this->peek().value == "{") {
+			done = true;
+		}
+		// there's an error if the next token is not a keyword and also not a semicolon
+		else if (this->peek().type != KEYWORD) {
+			throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
+		}
 	}
 
 	return qualities;
@@ -543,4 +537,31 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 	}
 
 	return to_return;
+}
+
+calling_convention Parser::get_calling_convention(symbol_qualities sq, unsigned int line) {
+	// Given a 'symbolqualities' object, gets the calling convention
+
+	calling_convention c = SINCALL;
+
+	// ensure we only specified one convention (although sincall is the default convention, this quality shows whether the user specified it)
+	if (
+		(sq.is_c64() && sq.is_sincall()) ||
+		(sq.is_sincall() && sq.is_windows())
+	) {
+		throw CompilerException("Only one calling convention may be specified", compiler_errors::ILLEGAL_QUALITY_ERROR, line);
+	} else {
+		// it defaults to sincall, so we only need to test against the others
+		if (sq.is_c64() && sq.is_windows())
+			c = calling_convention::WIN_64;
+		else if (sq.is_c64())
+			c = calling_convention::SYSTEM_V;
+		else if (sq.is_windows())	// if 'windows' is used by itself, generate an error -- it must occur with 'c64'
+			throw CompilerException(
+				"Use of the 'windows' keyword must also use the 'c64' keyword if it is to specify a calling convention",
+				compiler_errors::ILLEGAL_QUALITY_ERROR,
+				line);
+	}
+
+	return c;
 }

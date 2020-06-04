@@ -18,7 +18,10 @@ const std::unordered_map<std::string, SymbolQuality> symbol_qualities::quality_s
 	{ "long", LONG },
 	{ "short", SHORT },
 	{ "signed", SIGNED },
-	{ "unsigned", UNSIGNED }
+	{ "unsigned", UNSIGNED },
+	{ "sincall", SINCALL_CONVENTION },
+	{ "c64", C64_CONVENTION },
+	{ "windows", WINDOWS_CONVENTION }
 };
 
 bool symbol_qualities::is_long()
@@ -61,6 +64,21 @@ bool symbol_qualities::is_unsigned()
 	return unsigned_q;
 }
 
+bool symbol_qualities::is_sincall()
+{
+	return sincall_con;
+}
+
+bool symbol_qualities::is_c64()
+{
+	return c64_con;
+}
+
+bool symbol_qualities::is_windows()
+{
+	return windows_con;
+}
+
 /* void SymbolQualities::add_qualities(std::vector<SymbolQuality> to_add)
 {
 	// simply populate the vector; since we are adding, we don't really care about the original values
@@ -87,6 +105,9 @@ void symbol_qualities::add_qualities(symbol_qualities to_add) {
 	if (to_add.is_short()) this->add_quality(SHORT);
 	if (to_add.is_signed()) this->add_quality(SIGNED);
 	if (to_add.is_unsigned()) this->add_quality(UNSIGNED);
+	if (to_add.is_sincall()) this->add_quality(SINCALL_CONVENTION);
+	if (to_add.is_c64()) this->add_quality(C64_CONVENTION);
+	if (to_add.is_windows()) this->add_quality(WINDOWS_CONVENTION);
 }
 
 void symbol_qualities::add_quality(SymbolQuality to_add)
@@ -120,6 +141,20 @@ void symbol_qualities::add_quality(SymbolQuality to_add)
 		long_q = false;
 		short_q = true;
 	}
+	else if (to_add == SINCALL_CONVENTION) {
+		sincall_con = true;
+		c64_con = false;
+		windows_con = false;
+	}
+	else if (to_add == C64_CONVENTION) {
+		sincall_con = false;
+		c64_con = true;
+		windows_con = false;
+	}
+	else if (to_add == WINDOWS_CONVENTION) {
+		sincall_con = false;
+		windows_con = true;
+	}
 	else {
 		// invalid quality; throw an exception
 		throw CompilerException("Quality conflict");	// todo: proper exception type
@@ -135,6 +170,9 @@ symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities)
 	dynamic_q = false;
 	signed_q = false;
 	unsigned_q = false;
+	sincall_con = false;
+	c64_con = false;
+	windows_con = false;
 
 	// then, populate according to the vector
 	for (std::vector<SymbolQuality>::iterator it = qualities.begin(); it != qualities.end(); it++)
@@ -162,6 +200,17 @@ symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities)
 		else if (*it == UNSIGNED)
 		{
 			unsigned_q = true;
+		}
+		else if (*it == SINCALL_CONVENTION)
+		{
+			sincall_con = true;
+		}
+		else if (*it == C64_CONVENTION)
+		{
+			c64_con = true;
+		}
+		else if (*it == WINDOWS_CONVENTION) {
+			windows_con = true;
 		}
 		else {
 			continue;
@@ -210,6 +259,9 @@ symbol_qualities::symbol_qualities()
 	unsigned_q = false;
 	long_q = false;
 	short_q = false;
+	sincall_con = false;
+	c64_con = false;
+	windows_con = false;
 }
 
 symbol_qualities::~symbol_qualities()

@@ -124,21 +124,21 @@ Such a declaration may look like:
 
 The SIN compiler will then know to generate code for calls to this function in accordance with the appropriate C calling convention. Note that since this compiler targets x86-64 systems, it will only use 64-bit calling conventions as described [here](https://en.wikipedia.org/wiki/X86_calling_conventions#x86-64_calling_conventions).
 
-In general these qualifiers default to the GCC ABIs used by Unix-like systems, but the `&windows` qualifier may be used to specify the user wishes to use the Microsoft convention instead. If you are worried the conventions may not be correct for your system, it is always a good idea to double-check your distribution to ensure these SIN features are compatible with your system.
+In general these qualifiers default to the GCC ABIs used by Unix-like systems, but the `&windows` qualifier may be used to specify the user wishes to use the Microsoft convention instead. If you are worried the conventions may not be correct for your system, it is always a good idea to double-check your C compiler to ensure these SIN features are compatible with your system.
 
 ### Calling Conventions
 
-#### `c64`
+#### System V ABI (Unix-like systems)
 
-If a function uses the `c64` qualifier, the function should follow the System V AMD x64 ABI (used by Unix-like systems).
+If a function uses the `c64` qualifier by itself, the function should follow the System V AMD x64 ABI (used by Unix-like systems).
 
-#### `windows`
+#### Windows
 
-As mentioned above, if a function uses the `windows` qualifier, the function should follow the Windows x86 calling convention.
+If a function uses the `windows` qualifier *in conjunction with* the `c64` qualifier, it will utilize the Windows 64-bit calling convention.
 
-#### `sincall`
+#### SINCALL
 
-By default, the `sincall` convention is used, though you may add it in for redundancy.
+By default, the `sincall` convention is used, though you may add it in for redundancy. If the `sincall` keyword is used, use of the other calling convention specifications will generate an error.
 
 ### C Types in SIN
 

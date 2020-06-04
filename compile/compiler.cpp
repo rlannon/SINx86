@@ -129,7 +129,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
         Compiles a single statement to x86, dispatching appropriately
 
-     */
+    */
 
     std::stringstream compile_ss;
 
@@ -207,18 +207,26 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			break;
 		}
 		case WHILE_LOOP:
-            // todo: while
+            // todo: while loops
             break;
         case FUNCTION_DEFINITION:
         {
             FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
 
 			// ensure the function has a return value in all control paths
-			if (general_utilities::returns(*def_stmt->get_procedure().get())) {
-				compile_ss << this->define_function(*def_stmt).str() << std::endl;
-			} else {
-				throw NoReturnException(s->get_line_number());
-			}
+			if (returns(*def_stmt->get_procedure().get())) {
+            if (def_stmt->get_calling_convention() == SINCALL) {
+                compile_ss << this->define_function(*def_stmt).str() << std::endl;
+            } else {
+                throw CompilerException(
+                    "Currently, defining non-sincall functions is not supported",
+                    compiler_errors::CALLING_CONVENTION_ERROR,
+                    def_stmt->get_line_number()
+                );
+            }
+        } else {
+				    throw NoReturnException(s->get_line_number());
+			  }
             break;
         }
         case STRUCT_DEFINITION:
