@@ -259,7 +259,7 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
         }
         else {
             // any *non-zero* value is true
-            cast_ss << "\t" << "cmp rax" << ", 0x00" << std::endl;
+            cast_ss << "\t" << "cmp rax, 0x00" << std::endl;
         }
         cast_ss << "\t" << "setne al" << std::endl;
     }
@@ -289,8 +289,7 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
                 cast_ss << "\t" << "movzx rax, al" << std::endl;
             }
             else {
-                compiler_note("Cast appears to have no effect", line);
-                cast_ss << std::endl;
+                compiler_note("Typecast appears to have no effect", line);
             }
         }
     }
@@ -306,18 +305,27 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
             }
             else {
                 // don't do anything if they're the same type; issue a note (not a warning)
-                compiler_note("Typecast from type to itself has no effect", line);
+                compiler_note("Typecast appears to have no effect", line);
             }
         }
         else {
             std::string reg_name = get_rax_name_variant(old_type, line);
+
+            // extend the boolean value to RAX
             if (old_type.get_primary() == BOOL) {
                 cast_ss << "\t" << "cmp al, 0" << std::endl;
                 cast_ss << "\t" << "setne al" << std::endl;
                 cast_ss << "\t" << "movzx rax, al" << std::endl;
             }
+            else if (old_type.get_primary() == INT && old_type.get_width() > new_type.get_width()) {
+                compiler_warning(
+                    "Potential data loss when converting integer to floating-point number of smaller width",
+                    compiler_errors::WIDTH_MISMATCH,
+                    line
+                );
+            }
             
-            // use convert signed integer to scalar single/double
+            // now that the value is in RAX, use convert signed integer to scalar single/double
             std::string instruction = (new_type.get_qualities().is_long()) ? "cvtsi2sd" : "cvtsi2ss";
             cast_ss << "\t" << instruction << " xmm0, " << reg_name << std::endl;
         }
@@ -327,6 +335,7 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
     }
     else {
         // invalid cast
+        throw InvalidTypecastException(line);
     }
 
     return cast_ss;

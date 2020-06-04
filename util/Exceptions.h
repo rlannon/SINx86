@@ -218,6 +218,12 @@ public:
 	explicit ConstAllocationException(unsigned int line);
 };
 
+class InvalidTypecastException : public CompilerException
+{
+public:
+	explicit InvalidTypecastException(unsigned int line);
+}
+
 // todo: allow warning and note codes?
 
 // sometimes, we want to print an error message, but we don't need to stop compilation

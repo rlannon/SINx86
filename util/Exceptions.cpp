@@ -241,6 +241,16 @@ ConstAllocationException::ConstAllocationException(unsigned int line) :
 	// super called
 }
 
+InvalidTypecastException::InvalidTypecastException(unsigned int line) :
+	CompilerException(
+		"Illegal typecast",
+		compiler_errors::INVALID_CAST_ERROR,
+		line
+	)
+{
+		// super called
+}
+
 
 // Warnings and notes
 
