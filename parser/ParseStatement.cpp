@@ -27,8 +27,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 	lexeme current_lex = this->current_token();
 
 	// create a shared_ptr to the statement we are going to parse so that we can return it when we are done
-	std::shared_ptr<Statement> stmt;
-	// set the statement's line number
+	std::shared_ptr<Statement> stmt = nullptr;
 
 	// first, we will check to see if we need any keyword parsing
 	if (current_lex.type == KEYWORD) {
@@ -37,7 +36,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 		// parse an "include" directive
 		if (current_lex.value == "include") {
-			return this->parse_include(current_lex);
+			stmt = this->parse_include(current_lex);
 		}
 		else {
 			// as soon as we hit a statement that is not an include statement, we are no longer allowed to use them (they must go at the top of the file)
@@ -96,7 +95,6 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 						stmt = std::make_shared<InlineAssembly>(asm_architecture, asm_code.str());
 						stmt->set_line_number(current_lex.line_number);	// sets the line number for errors to the ASM block start; any ASM errors will be made known in the assembler
-						return stmt;
 					}
 				}
 				else {
@@ -128,7 +126,6 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 					LValue to_free(current_lex.value, "var");
 					stmt = std::make_shared<FreeMemory>(to_free);
-					return stmt;
 				}
 				else {
 					throw MissingSemicolonError(current_lex.line_number);
@@ -140,35 +137,35 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		}
 		// parse a declaration
 		else if (current_lex.value == "decl") {
-			return this->parse_declaration(current_lex, is_function_parameter);
+			stmt = this->parse_declaration(current_lex, is_function_parameter);
 		}
 		// parse an ITE
 		else if (current_lex.value == "if") {
-			return this->parse_ite(current_lex);
+			stmt = this->parse_ite(current_lex);
 		}
 		// pare an allocation
 		else if (current_lex.value == "alloc") {
-			return this->parse_allocation(current_lex);
+			stmt = this->parse_allocation(current_lex);
 		}
 		// Parse an assignment
 		else if (current_lex.value == "let") {
-			return this->parse_assignment(current_lex);
+			stmt = this->parse_assignment(current_lex);
 		}
 		// Parse a return statement
 		else if (current_lex.value == "return") {
-			return this->parse_return(current_lex);
+			stmt = this->parse_return(current_lex);
 		}
 		// Parse a 'while' loop
 		else if (current_lex.value == "while") {
-			return this->parse_while(current_lex);
+			stmt = this->parse_while(current_lex);
 		}
 		// Parse a definition -- could be function or struct, call the delegator
 		else if (current_lex.value == "def") {
-			return this->parse_definition(current_lex);
+			stmt = this->parse_definition(current_lex);
 		}
 		else if (current_lex.value == "pass") {
 			this->next();
-			return std::make_shared<Statement>(STATEMENT_GENERAL, current_lex.line_number);	// an explicit pass will, essentially, be ignored by the compiler; it does nothing
+			stmt = std::make_shared<Statement>(STATEMENT_GENERAL, current_lex.line_number);	// an explicit pass will, essentially, be ignored by the compiler; it does nothing
 		}
 		// if none of the keywords were valid, throw an error
 		else {
@@ -176,21 +173,31 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		}
 
 	}
-
 	// if it's not a keyword, check to see if we need to parse a function call
 	else if (current_lex.type == OPERATOR) {	// "@" is an op_char, but we may update the lexer to make it a "control_char"
 		if (current_lex.value == "@") {
-			return this->parse_function_call(current_lex);
+			stmt = this->parse_function_call(current_lex);
 		}
 		else {
 			throw ParserException("Lexeme '" + current_lex.value + "' is not a valid beginning to a statement", 000, current_lex.line_number);
 		}
 	}
+	// otherwise, we might have a scoped block statement
+	else if (current_lex.value == "{") {
+		// eat the curly brace
+		this->next();
+		StatementBlock scope_ast = this->create_ast();
+		this->next();	// eat the closing curly brace
+		// NB: scope blocks never need semicolons
+
+		// create the statement
+		stmt = std::make_shared<ScopedBlock>(scope_ast);
+	}
 
 	// if it is a curly brace, advance the character and return a nullptr; the compiler will skip this
 	else if (current_lex.value == "}") {
 		this->next();
-		return std::make_shared<Statement>(STATEMENT_GENERAL, current_lex.line_number);
+		stmt = std::make_shared<Statement>(STATEMENT_GENERAL, current_lex.line_number);
 	}
 
 	// otherwise, if the lexeme is not a valid beginning to a statement, abort
@@ -198,7 +205,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		throw ParserException("Lexeme '" + current_lex.value + "' is not a valid beginning to a statement", 000, current_lex.line_number);
 	}
 
-	return nullptr;
+	return stmt;
 }
 
 std::shared_ptr<Statement> Parser::parse_include(lexeme current_lex)
@@ -336,7 +343,7 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 
 std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt = nullptr;
 
 	// Get the next lexeme
 	lexeme next = this->next();
@@ -344,69 +351,52 @@ std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 	// Check to see if condition is enclosed in parens
 	if (next.value == "(") {
 		// get the condition
+		this->next();
 		std::shared_ptr<Expression> condition = this->parse_expression();
-		// Initialize the if_block
-		StatementBlock if_branch;
-		StatementBlock else_branch;
-		// Check to make sure a curly brace follows the condition
-		next = this->peek();
-		if (next.value == "{") {
+
+		if (this->peek().value == ")")
 			this->next();
-			this->next();	// skip ahead to the first character of the statementblock
-			if_branch = this->create_ast();
+		else
+			throw CompilerException("Expected ')' in conditional", compiler_errors::MISSING_GROUPING_SYMBOL_ERROR, this->current_token().line_number);
+		
+		// Initialize the if_block
+		std::shared_ptr<Statement> if_branch;
+		std::shared_ptr<Statement> else_branch;
+		
+		// create the branch
+		this->next();	// skip ahead to the first character of the statement
+		if_branch = this->parse_statement();
 
-			// if we have an empty 'if' clause, we will be on the curly brace; only skip the curly brace if the branch isn't empty
-			if (if_branch.statements_list.size() > 0) {
-				// skip the closing curly brace
-				this->next();
-			}
-			else {
-				compiler_warning("Empty statement block in if condition", this->current_token().line_number);
-			}
+		// if there was a single statement, ensure there was a semicolon
+		if (this->peek().value == ";")
+			this->next();
+		else if (this->current_token().value != "}")
+			throw MissingSemicolonError(this->current_token().line_number);
 
-			// Check for an else clause
-			if (!this->is_at_end() && this->peek().value == "else") {
-				// if we have an else clause
-				this->next();
-				next = this->peek();
-				// Again, check for curlies
-				if (next.value == "{") {
-					this->next();
-					this->next();	// skip ahead to the first character of the statementblock
-					else_branch = this->create_ast();
+		// Check for an else clause
+		if (!this->is_at_end() && this->peek().value == "else") {
+			// if we have an else clause
+			this->next();	// skip the keyword
+			this->next();	// skip ahead to the first token in the statment
 
-					// if the 'else' clause is empty, the current token will be the curly brace, so we don't need to eat it if the statement list wasn't empty
-					if (else_branch.statements_list.size() > 0) {
-						this->next();	// skip the closing curly brace
-					}
-					else {
-						compiler_warning("Empty statement block in else condition", this->current_token().line_number);
-					}
+			// parse the statement
+			else_branch = this->parse_statement();
 
-					stmt = std::make_shared<IfThenElse>(condition, std::make_shared<StatementBlock>(if_branch), std::make_shared<StatementBlock>(else_branch));
-					stmt->set_line_number(current_lex.line_number);
-					return stmt;
-				}
-				else {
-					throw ParserException("Expected '{' after 'else' in conditional", 331, current_lex.line_number);
-				}
-			}
-			else {
-				// if we do not have an else clause, we will return the if clause alone here
-				stmt = std::make_shared<IfThenElse>(condition, std::make_shared<StatementBlock>(if_branch));
-				stmt->set_line_number(current_lex.line_number);
-				return stmt;
-			}
+			// construct the statement and return it
+			stmt = std::make_shared<IfThenElse>(condition, if_branch, else_branch);
 		}
-		// If our condition is not followed by an opening curly
 		else {
-			throw ParserException("Expected '{' after condition in conditional", 331, current_lex.line_number);
+			// if we do not have an else clause, we will return the if clause alone here
+			stmt = std::make_shared<IfThenElse>(condition, if_branch);
+			stmt->set_line_number(current_lex.line_number);
 		}
 	}
 	// If condition is not enclosed in parens
 	else {
 		throw ParserException("Condition must be enclosed in parens", 331, current_lex.line_number);
 	}
+
+	return stmt;
 }
 
 std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
@@ -512,7 +502,7 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 
 std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt(nullptr);
 	this->next();	// go to the expression
 
 	// if the current token is a semicolon, return a Literal Void
@@ -562,7 +552,7 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 
 			// so that we don't get errors if we have an empty statement block
 			if (this->peek().value == "}") {
-				compiler_warning("Empty statement block in while loop", this->current_token().line_number);
+				compiler_warning("Empty statement block in while loop", compiler_errors::EMPTY_SCOPE_BLOCK, this->current_token().line_number);
 				this->next();
 			}
 			else {

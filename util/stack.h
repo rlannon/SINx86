@@ -20,7 +20,7 @@ class stack
 public:
 	void push_back(T const& elem);
 	T pop_back();
-	T peek() const;
+	T& peek();
 
 	bool empty() const;
 
@@ -50,7 +50,7 @@ inline T stack<T>::pop_back()
 }
 
 template <typename T>
-inline T stack<T>::peek() const
+inline T& stack<T>::peek()
 {
 	if (this->data.size() == 0)
 	{
@@ -58,7 +58,7 @@ inline T stack<T>::peek() const
 	}
 	else
 	{
-		return data.back();
+		return data[data.size() - 1];
 	}
 }
 

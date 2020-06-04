@@ -170,3 +170,14 @@ public:
 	SizeOf(DataType to_check);
 	SizeOf();
 };
+
+// typecasting expressions
+class Cast : public Expression
+{
+	std::shared_ptr<Expression> to_cast;	// any expression can by typecast
+	DataType new_type;	// the new type for the expression
+public:
+	std::shared_ptr<Expression> get_exp();
+	DataType &get_new_type();
+	Cast(std::shared_ptr<Expression> to_cast, DataType new_type);
+};

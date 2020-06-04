@@ -11,7 +11,10 @@ The implementation of the lexer
 #include "Lexer.h"
 
 // The list of language keywords
-const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "const", "constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static", "string", "struct", "unsigned", "void", "while", "windows", "xor" };
+const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "const", 
+"constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", 
+"let", "long", "not", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static",
+"string", "struct", "unsigned", "void", "while", "windows", "xor" };
 
 // Our regular expressions
 const std::string Lexer::punc_exp = R"([',:;\[\]\{\}\(\)])";	// expression for punctuation
@@ -271,7 +274,35 @@ lexeme Lexer::read_next() {
 				}
 			}
 		}
-		// if the next character is not '/', just treat it as an op_char
+		// if the next character is a star, we have a block comment
+		else if (this->peek() == '*') {
+			bool is_comment = true;
+
+			// continue ignoring characters while we are still in the comment
+			while (is_comment) {
+				this->next();
+				if (this->peek() == '*') {
+					this->next();
+					if (this->peek() == '/') {
+						this->next();
+						is_comment = false;
+
+						// read through any whitespace
+						this->read_while(&is_whitespace);
+
+						// get the next character; if we immediately have another comment, re-loop
+						ch = this->peek();
+						if (ch == '/') {
+							this->next();
+							if (this->peek() == '*') {
+								is_comment = true;
+							}
+						}
+					}
+				}
+			}
+		}
+		// else, just treat it as an op_char
 		else {
 			// use "unget" to move back one place so "peek" reveals a slash
 			this->stream->unget();

@@ -179,58 +179,23 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             type_information.set_primary(INT);
             type_information.add_qualities(std::vector<SymbolQuality>{CONSTANT, UNSIGNED});
             break;
+        case CAST:
+        {
+            Cast *c = dynamic_cast<Cast*>(to_eval.get());
+            if (DataType::is_valid_type(c->get_new_type())) {
+                type_information = c->get_new_type();
+            }
+            else {
+                throw CompilerException("Attempt to cast to invalid type", compiler_errors::INVALID_CAST_ERROR, line);
+            }
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
             break;
     };
 
     return type_information;
-}
-
-bool returns(StatementBlock &to_check) {
-	/*
-	
-	returns
-	Checks whether a given AST returns a value
-	
-	*/
-
-	if (to_check.has_return) {
-		return true;
-	} else {
-		// sentinel variable
-		bool to_return = true;
-
-		// iterate through statements to see if we have an if/else block; if so, check *those* for return values
-		std::vector<std::shared_ptr<Statement>>::iterator it = to_check.statements_list.begin();
-		while (it != to_check.statements_list.end() && to_return) {
-			std::shared_ptr<Statement> s = *it;
-
-			if (s->get_statement_type() == stmt_type::IF_THEN_ELSE) {
-				IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
-				StatementBlock &if_branch = *ite->get_if_branch().get();
-
-				// if we have an 'else' branch, we need to check both
-				if (ite->get_else_branch()) {
-					StatementBlock &else_branch = *ite->get_else_branch().get();
-
-					if (!returns(if_branch) || !returns(else_branch)) {
-						to_return = false;
-					}
-				}
-				else {
-					// otherwise, return false; if there is no else branch and there is no return statement in this block, then if the condition is false, we will not have a return value
-					to_return = false;
-				}
-			}
-
-			// increment the iterator
-			it++;
-		}
-
-		// return our value
-		return to_return;
-	}
 }
 
 bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
@@ -254,6 +219,126 @@ bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
 	else {
 		return !(right.is_const() || right.is_final());	// the right-hand argument cannot be demoted
 	}
+}
+
+bool is_valid_cast(DataType &old_type, DataType &new_type) {
+    /*
+
+    is_valid_cast
+    Determines whether the attempted typecast (from 'old_type' to 'new_type') is valid
+
+    See docs/Typecasting.md for information on typecasting validity rules
+
+    */
+
+    return !(
+        old_type.get_primary() == STRING || 
+        old_type.get_primary() == ARRAY || 
+        new_type.get_primary() == STRING ||
+        new_type.get_primary() == ARRAY ||
+        old_type.get_primary() == PTR ||
+        new_type.get_primary() == PTR ||
+        (old_type.get_primary() == CHAR && new_type.get_primary() != INT)
+    );
+}
+
+std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line) {
+    /*
+
+    cast
+    Casts the data in RAX/XMM0 to the supplied type, returning the data in RAX/XMM0, depending on the return type.
+
+    */
+
+    std::stringstream cast_ss;
+
+    if (new_type.get_primary() == BOOL) {
+        if (old_type.get_primary() == FLOAT) {
+            // use the SSE comparison functions
+            std::string instruction = (old_type.get_qualities().is_long()) ? "cmpsd" : "cmpss";
+        }
+        else {
+            // any *non-zero* value is true
+            cast_ss << "\t" << "cmp rax, 0x00" << std::endl;
+        }
+        cast_ss << "\t" << "setne al" << std::endl;
+    }
+    else if (new_type.get_primary() == INT) {
+        if (old_type.get_primary() == FLOAT) {
+            // for float conversions, we *should* issue a warning
+            if (old_type.get_width() > new_type.get_width()) {
+                compiler_warning(
+                    "Attempting to convert floating-point type to a smaller integral type; potential loss of data",
+                    compiler_errors::WIDTH_MISMATCH,
+                    line
+                );
+            }
+
+            // perform the cast with the SSE conversion functions
+            if (old_type.get_qualities().is_long()) {
+                cast_ss << "\t" << "cvttsd2si rax, xmm0" << std::endl;
+            }
+            else {
+                cast_ss << "\t" << "cvttss2si eax, xmm0" << std::endl;
+            }
+        }
+        else {
+            if (old_type.get_width() == sin_widths::BOOL_WIDTH) {
+                cast_ss << "\t" << "cmp al, 0" << std::endl;
+                cast_ss << "\t" << "setne al" << std::endl;
+                cast_ss << "\t" << "movzx rax, al" << std::endl;
+            }
+            else {
+                compiler_note("Typecast appears to have no effect", line);
+            }
+        }
+    }
+    else if (new_type.get_primary() == FLOAT) {
+        if (old_type.get_primary() == FLOAT) {
+            if (old_type.get_width() < new_type.get_width()) {
+                // old < new; convert scalar single to scalar double
+                cast_ss << "\t" << "cvtsstsd xmm0, xmm0" << std::endl;
+            }
+            else if (old_type.get_width() > new_type.get_width()) {
+                // old > new; convert scalar double to scalar single
+                cast_ss << "\t" << "cvtsd2ss xmm0, xmm0" << std::endl;
+            }
+            else {
+                // don't do anything if they're the same type; issue a note (not a warning)
+                compiler_note("Typecast appears to have no effect", line);
+            }
+        }
+        else {
+            std::string reg_name = get_rax_name_variant(old_type, line);
+
+            // extend the boolean value to RAX
+            if (old_type.get_primary() == BOOL) {
+                cast_ss << "\t" << "cmp al, 0" << std::endl;
+                cast_ss << "\t" << "setne al" << std::endl;
+                cast_ss << "\t" << "movzx rax, al" << std::endl;
+            }
+            else if (old_type.get_primary() == INT && old_type.get_width() > new_type.get_width()) {
+                compiler_warning(
+                    "Potential data loss when converting integer to floating-point number of smaller width",
+                    compiler_errors::WIDTH_MISMATCH,
+                    line
+                );
+            }
+            
+            // now that the value is in RAX, use convert signed integer to scalar single/double
+            std::string instruction = (new_type.get_qualities().is_long()) ? "cvtsi2sd" : "cvtsi2ss";
+            cast_ss << "\t" << instruction << " xmm0, " << reg_name << std::endl;
+        }
+    }
+    else if (new_type.get_primary() == CHAR && old_type.get_primary() == INT) {
+        // only integer types may be cast to char
+    }
+    else {
+        // invalid cast
+        throw InvalidTypecastException(line);
+    }
+
+    return cast_ss;
 }
 
 bool can_pass_in_register(DataType to_check) {
@@ -329,9 +414,21 @@ struct_info define_struct(StructDefinition definition) {
         if (s->get_statement_type() == ALLOCATION) {
             // cast to Allocation and create a symbol
             Allocation *alloc = dynamic_cast<Allocation*>(s.get());
+
+            // first, ensure that the symbol's type is not this struct
+            if ((alloc->get_type_information().get_primary() == STRUCT) && (alloc->get_type_information().get_struct_name() == struct_name)) {
+                throw CompilerException(
+                    "A struct may not contain an instance of itself; use a pointer instead",
+                    compiler_errors::SELF_CONTAINMENT_ERROR,
+                    alloc->get_line_number()
+                );
+            }
+            // todo: once references are enabled, disallow those as well -- they can't be null, so that would cause infinite recursion, too
+
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
             
             // todo: allow default values (alloc-init syntax) in structs
+            // to do this, the function might have to be moved out of "utilities" and into "compiler"
 
             // add that symbol to our vector
             members.push_back(sym);
@@ -394,7 +491,13 @@ function_symbol create_function_symbol(T def) {
     }
 
     // construct the object
-    function_symbol to_return(def.get_name(), def.get_type_information(), formal_parameters, def.get_calling_convention());
+    function_symbol to_return(
+        //def.get_name(),
+        symbol_table::get_mangled_name(def.get_name()),
+        def.get_type_information(),
+        formal_parameters,
+        def.get_calling_convention()
+    );
 
     // finally, return the function symbol
     return to_return;
@@ -424,8 +527,24 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
 
     */
 
-    stack_offset += allocation.get_type_information().get_width();
-    symbol to_return(allocation.get_name(), scope_name, scope_level, allocation.get_type_information(), stack_offset);
+    DataType &type_info = allocation.get_type_information();
+
+    // adjust the stack offset
+    if (type_info.get_primary() == ARRAY && !type_info.get_qualities().is_dynamic()) {
+        // non-dynamic array stack offsets have to account for the full array width
+        stack_offset += (type_info.get_full_subtype()->get_width() * type_info.get_array_length()) + sin_widths::INT_WIDTH;
+    }
+    else {
+        stack_offset += type_info.get_width();
+    }
+
+    symbol to_return(
+        //allocation.get_name(),
+        symbol_table::get_mangled_name(allocation.get_name()),
+        scope_name,
+        scope_level,
+        type_info,
+        stack_offset);
 
     return to_return;
 }
@@ -448,7 +567,7 @@ std::stringstream push_used_registers(register_usage regs, bool ignore_ab) {
         it != register_usage::all_regs.end();
         it++
     ) {
-        if ((*it != RAX && *it != RBX) || !ignore_ab) {
+        if (((*it != RAX && *it != RBX) || !ignore_ab) && regs.is_in_use(*it)) {
             push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
         }
     }
@@ -476,7 +595,7 @@ std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
         it != register_usage::all_regs.rend();
         it++
     ) {
-        if ((*it != RAX && *it != RBX) || !ignore_ab) {
+        if (((*it != RAX && *it != RBX) || !ignore_ab) && regs.is_in_use(*it)) {
             pop_ss << "\t" << "pop " << register_usage::get_register_name(*it) << std::endl;
         }
     }
@@ -484,10 +603,93 @@ std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
     return pop_ss;
 }
 
-std::stringstream copy_array(DataType array_type) {
+std::string get_address(symbol &s, reg r) {
+    /*
+
+    get_address
+    Gets the address of the given symbol in the specified register
+
+    */
+
+    std::string address_info = "";
+    std::string reg_name = register_usage::get_register_name(r);
+
+    // if it's static, we can just use the name
+    if (s.get_data_type().get_qualities().is_static()) {
+        address_info = "\tmov " + reg_name + ", " + s.get_name();
+    }
+    // otherwise, we need to look in the stack
+    else if (s.get_data_type().get_qualities().is_dynamic() || s.get_data_type().get_primary() == STRING) {
+        address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]";
+    }
+    else {
+        address_info = "\tmov " + reg_name + ", rbp\n";
+        address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset()) + "\n";
+    }
+
+    return address_info;
+}
+
+std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
+    /*
+
+    copy_array
+    Calls the SRE function 'sinl_array_copy' to copy array from src to dest
+
+    The SRE parameters are:
+        ptr<array> src
+        ptr<array> dest
+    and the function uses the SINCALL calling convention
+
+    */
+
 	std::stringstream copy_ss;
+    
+    // push the registers that are in use (subroutine returns void, so we don't need to ignore A and B)
+    copy_ss << push_used_registers(regs).str();
 
-	// todo: write SRE function for array copies and call it here
+    copy_ss << get_address(src, reg::RSI) << std::endl;
+    copy_ss << get_address(dest, reg::RDI) << std::endl;
+    copy_ss << "\t" << "mov ecx, " << src.get_data_type().get_full_subtype()->get_width() << std::endl;
+    copy_ss << "\t" << "push rbp" << std::endl;
+    copy_ss << "\t" << "mov rbp, rsp" << std::endl;
+    copy_ss << "\t" << "call sinl_array_copy" << std::endl;
+    copy_ss << "\t" << "mov rsp, rbp" << std::endl;
+    copy_ss << "\t" << "pop rbp" << std::endl;
 
+    // restore registers
+    copy_ss << pop_used_registers(regs).str();
+    
 	return copy_ss;
+}
+
+std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
+    /*
+
+    copy_string
+    Calls the SRE function to copy one string to another
+
+    The SRE parameters are:
+        ptr<string> src
+        ptr<string> dest
+    It returns the address of the new destination string in RAX
+
+    */
+
+    std::stringstream copy_ss;
+
+    // preserve registers in use, ignoring RAX and RBX
+    copy_ss << push_used_registers(regs, true).str();
+
+    // get the pointers
+    copy_ss << get_address(src, RSI) << std::endl;
+    copy_ss << get_address(dest, RDI) << std::endl;
+    copy_ss << "\t" << "call sinl_string_copy" << std::endl;
+    copy_ss << get_address(dest, RBX) << std::endl;
+    copy_ss << "\t" << "mov [rbx], rax" << std::endl;
+
+    // restore registers
+    copy_ss << pop_used_registers(regs, true).str();
+
+    return copy_ss;
 }

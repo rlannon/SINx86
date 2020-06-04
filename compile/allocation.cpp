@@ -25,8 +25,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 	// todo: advance rsp so that we may safely push data to the stack even when we are allocating local data
     
-	DataType alloc_data = alloc_stmt.get_type_information();
-    std::stringstream allocation_ss;
+	std::stringstream allocation_ss;
+
+	DataType &alloc_data = alloc_stmt.get_type_information();
+
+	// todo: array length needs to be determined for _all_ arrays
+	// where it can be determined at compile-time, this space must be reserved on the stack
+	// where this is not possible, evaluate the expression and pass it to sinl_array_alloc
 
 	// if the type is 'array', we need to evaluate the array width that was parsed earlier
 	if (alloc_data.get_primary() == ARRAY) {
@@ -43,6 +48,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// pass the expression to our expression evaluator to get the array width
 				// todo: compile-time evaluation
 				// todo: set alloc_data::array_length
+				alloc_data.set_array_length(stoul(
+					this->evaluator.evaluate_expression(
+						alloc_data.get_array_length_expression(),
+						this->current_scope_name,
+						this->current_scope_level,
+						alloc_stmt.get_line_number()
+					)));
 			}
 			else {
 				throw CompilerException("An array width must be a positive integer", compiler_errors::TYPE_ERROR, alloc_stmt.get_line_number());
@@ -119,6 +131,20 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// construct the symbol
 			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
 
+			// if the type is string, we need to call sinl_string_alloc
+			if (alloc_data.get_primary() == STRING) {
+				// todo: get string length instead of passing 0 in
+				allocation_ss << "\t" << "mov esi, 0" << std::endl;
+				allocation_ss << "\t" << "push rbp" << std::endl;
+				allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
+				allocation_ss << "\t" << "call sinl_string_alloc" << std::endl;
+				allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
+				allocation_ss << "\t" << "pop rbp" << std::endl;
+				
+				// save the location of the string
+				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
+			}
+
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
 				// get the initial value
@@ -148,7 +174,11 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				to_subtract = s.get_width();
 			}
 			else if (allocated.get_data_type().get_primary() == ARRAY && !allocated.get_data_type().get_qualities().is_dynamic()) {
-				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_width() + sin_widths::INT_WIDTH;
+				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+				
+				// write the array length onto the stack
+				allocation_ss << "\t" << "mov eax, " << allocated.get_data_type().get_array_length() << std::endl;
+				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], eax" << std::endl;
 			}
 			else {
 				to_subtract = allocated.get_data_type().get_width();

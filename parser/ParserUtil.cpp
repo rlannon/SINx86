@@ -30,6 +30,8 @@ const std::unordered_map<std::string, exp_operator> Parser::op_strings({
 	{"and", AND},
 	{"or", OR},
 	{"xor", XOR},
+	{"not", NOT},
+	{"as", TYPECAST},
 	{".", DOT}
 });
 
@@ -53,8 +55,9 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{MULT, 20},
 	{DIV, 20},
 	{MODULO, 20},
-	{NOT, 23},
-	{BIT_NOT, 23},
+	{TYPECAST, 24},
+	{NOT, 24},	// 'not' is a unary operator, so it has high priority
+	{BIT_NOT, 24},
 	{UNARY_PLUS, 24},
 	{UNARY_MINUS, 24},
 	{DOT, 25}
@@ -268,28 +271,14 @@ const bool Parser::has_return(StatementBlock to_test)
 			if (last_statement->get_statement_type() == IF_THEN_ELSE) {
 				IfThenElse* ite = dynamic_cast<IfThenElse*>(last_statement);
 
-				// the branches may be null pointers; we have to be careful here so we can't just pass *ite->get_else_branch().get() in directly
-				StatementBlock* if_branch = ite->get_if_branch().get();
-				StatementBlock* else_branch = ite->get_else_branch().get();
-
-				bool if_has_return = has_return(*if_branch);
-				bool else_has_return = false;
-
-				if (else_branch == nullptr) {
-					else_has_return = true;
-				}
-				else {
-					else_has_return = has_return(*else_branch);
-				}
+				bool returns = general_utilities::ite_returns(ite);
 
 				// if both branches return a value, we are golden
-				if (if_has_return && else_has_return) {
-					return true;
+				if (!returns) {
+					throw NoReturnException(last_statement->get_line_number());
 				}
-				else {
-					compiler_warning("Not all control paths return a value", last_statement->get_line_number());
-					return if_has_return;
-				}
+				
+				return returns;
 			}
 			else if (last_statement->get_statement_type() == WHILE_LOOP) {
 				WhileLoop* while_loop = dynamic_cast<WhileLoop*>(last_statement);
@@ -374,7 +363,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 	else if (current_lex.type == KEYWORD || current_lex.type == IDENTIFIER) {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {
-			// if our symbol doesn't have signed or unsigned, set, it must be sigbed by default
+			// if our symbol doesn't have signed or unsigned, set, it must be signed by default
 			if (!qualities.is_signed() && !qualities.is_unsigned()) {
 				qualities.add_quality(SIGNED);
 			}

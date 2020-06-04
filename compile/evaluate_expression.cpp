@@ -13,6 +13,8 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 // todo: create an expression evaluation class and give it access to compiler members?
 
+// todo: allow a 'reg' object to be supplied instead of giving all values in RAX
+
 std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line) {
     /*
 
@@ -157,6 +159,30 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             evaluation_ss = this->evaluate_sizeof(sizeof_exp, line);
             break;
         }
+        case CAST:
+        {
+            auto c = dynamic_cast<Cast*>(to_evaluate.get());
+
+            // ensure the type to which we are casting is valid
+            if (DataType::is_valid_type(c->get_new_type())) {
+                // check to make sure the typecast itself is valid (follows the rules)
+                DataType old_type = get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
+                if (is_valid_cast(old_type, c->get_new_type())) {
+                    // to perform the typecast, we must first evaluate the expression to be casted
+                    evaluation_ss << this->evaluate_expression(c->get_exp(), line).str();
+
+                    // now, use the utility function to actually cast the type
+                    evaluation_ss << cast(old_type, c->get_new_type(), line).str();
+                }
+                else {
+                    throw InvalidTypecastException(line);
+                }
+            }
+            else {
+                throw TypeException(line);
+            }
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
     }
@@ -244,7 +270,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         std::string name = "strc_" + std::to_string(this->strc_num);
 
         // actually reserve the data and enclose the string in backticks in case we have escaped characters
-        this->rodata_segment << name << " .dd " << to_evaluate.get_value().length() << " `" << to_evaluate.get_value() << "`" << std::endl;
+        this->rodata_segment << "\t" << name << "\t" << "dd " << to_evaluate.get_value().length() << ", `" << to_evaluate.get_value() << "`, 0" << std::endl;
         this->strc_num += 1;
 
         // now, load the a register with the address of the string
@@ -285,7 +311,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
     
     // check to see if it was freed; we can't know for sure, but if the compiler has it marked as freed, issue a warning that it may have been freed before the reference to it
     if (sym.was_freed())
-        compiler_warning("Symbol '" + sym.get_name() + "' may have been freed", line);
+        compiler_warning("Symbol '" + sym.get_name() + "' may have been freed", compiler_errors::DATA_FREED, line);
 
     // it must be a variable symbol, not a function definition
     if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
@@ -366,12 +392,18 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     so, instead of having something like:
                         mov rax, [rbp - 4]
                     which we would use for something like int or float, we want
-                        mov rax, rbp - 4
+                        mov rax, rbp
+                        sub rax, 4
                     which gives us the address of the data
 
                     */
 
-                    eval_ss << "\t" << "mov rax, rbp - " << sym.get_offset() << std::endl;
+                    if (sym.get_data_type().get_primary() == STRING) {
+                        eval_ss << "\t" << "mov rax, [rbp - " << sym.get_offset() << "]" << std::endl;
+                    } else {
+                        eval_ss << "\t" << "mov rax, rbp" << std::endl;
+                        eval_ss << "\t" << "sub rax, " << sym.get_offset() << std::endl;
+                    }
                 }
             }
         } else {

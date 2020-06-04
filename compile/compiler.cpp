@@ -62,13 +62,14 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
     */
 
 	// check for sinl_ prefix
-	size_t pos = to_add.get_name().find("sinl_");
-	if (pos != std::string::npos && pos == 0) {
-		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
-	}
+	// size_t pos = to_add.get_name().find("sinl_");
+	// if (pos != std::string::npos && pos == 0) {
+	// 	compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
+	// }
 
 	// insert the symbol
-	bool ok = this->symbols.insert(std::make_shared<T>(to_add));
+    std::shared_ptr<T> s = std::make_shared<T>(to_add);
+	bool ok = this->symbols.insert(s);
 
     // throw an exception if the symbol could not be inserted
     if (!ok) {
@@ -94,11 +95,6 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
 	*/
 
 	// todo: can this function and add_symbol utilize templates to be combined into one function?
-
-	size_t pos = to_add.get_struct_name().find("sinl_");
-	if (pos != std::string::npos && pos == 0) {
-		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
-	}
 
 	bool ok = this->structs.insert(to_add);
 
@@ -143,7 +139,8 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     stmt_type s_type = s->get_statement_type();
     switch (s_type) {
         case INCLUDE:
-            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"; this is to be accomplished through the use of std::set
+            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
+            // todo: this is to be accomplished through the use of std::set
             break;
         case DECLARATION:
         {
@@ -186,6 +183,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			// first, we need to cast and get the current block number (in case we have nested blocks)
 			IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
 			size_t current_scope_num = this->scope_block_num;
+			this->scope_block_num += 1; // increment the scope number now in case we have recursive conditionals
 			
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
@@ -193,20 +191,19 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			compile_ss << "\t" << "jz sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
-			compile_ss << this->compile_ast(*ite->get_if_branch().get()).str();
+			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
 			compile_ss << "\t" << "jmp sinl_ite_done_" << current_scope_num << std::endl;
 			compile_ss << "sinl_ite_else_" << current_scope_num << ":" << std::endl;
-
+            
 			// compile the branch, if one exists
 			if (ite->get_else_branch().get()) {
-				compile_ss << this->compile_ast(*ite->get_else_branch().get()).str();
+				compile_ss << this->compile_statement(ite->get_else_branch(), signature).str();
 			}
 
 			// clean-up
 			compile_ss << "sinl_ite_done_" << current_scope_num << ":" << std::endl;
-			this->scope_block_num += 1;
 			break;
 		}
 		case WHILE_LOOP:
@@ -218,18 +215,18 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
 			// ensure the function has a return value in all control paths
 			if (returns(*def_stmt->get_procedure().get())) {
-                if (def_stmt->get_calling_convention() == SINCALL) {
-				    compile_ss << this->define_function(*def_stmt).str() << std::endl;
-                } else {
-                    throw CompilerException(
-                        "Currently, defining non-sincall functions is not supported",
-                        compiler_errors::CALLING_CONVENTION_ERROR,
-                        def_stmt->get_line_number()
-                    );
-                }
+            if (def_stmt->get_calling_convention() == SINCALL) {
+                compile_ss << this->define_function(*def_stmt).str() << std::endl;
             } else {
-				throw NoReturnException(s->get_line_number());
-			}
+                throw CompilerException(
+                    "Currently, defining non-sincall functions is not supported",
+                    compiler_errors::CALLING_CONVENTION_ERROR,
+                    def_stmt->get_line_number()
+                );
+            }
+        } else {
+				    throw NoReturnException(s->get_line_number());
+			  }
             break;
         }
         case STRUCT_DEFINITION:
@@ -261,6 +258,28 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             */
 
             break;
+        case SCOPE_BLOCK:
+        {
+            /*
+
+            Scope blocks can be treated as individual statements in certain cases
+
+            */
+
+            ScopedBlock *block = dynamic_cast<ScopedBlock*>(s.get());
+            StatementBlock ast = block->get_statements();
+
+            // be sure to adjust scope levels
+            unsigned int old_scope_level = this->current_scope_level;
+            this->current_scope_level += 1;
+            
+            // compile the AST in the block
+            compile_ss << this->compile_ast(ast, signature).str();
+
+            // restore the scope level
+            this->current_scope_level = old_scope_level;
+            break;
+        }
         default:
             break;
     };
@@ -302,10 +321,10 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
         compile_ss << this->compile_statement(s, signature).str();
     }
 
-	// when we leave a scope, remove local variables -- but NOT global variables
+	// when we leave a scope, remove local variables -- but NOT global variables (they must be retained for inclusions)
 	if (this->current_scope_name != "global") {
 		// todo: call leave_scope on the compile-time evaluator
-		this->symbols.leave_scope();
+		this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
 	}
 
     return compile_ss;
@@ -355,19 +374,26 @@ void compiler::generate_asm(std::string filename, Parser &p) {
             }
 
             // insert our wrapper for the program
-            this->text_segment << "global _start" << std::endl;
-            this->text_segment << "_start:" << std::endl;
+            this->text_segment << "global main" << std::endl;
+            this->text_segment << "main:" << std::endl;
+
+            // call SRE init function (takes no parameters)
+            this->text_segment << "\t" << "mov rax, 0" << std::endl;
+            this->text_segment << "\t" << "call sre_init" << std::endl;
 
             // call the main function with SINCALL
             this->text_segment << this->sincall(main_symbol, cmd_args, 0).str();
 
-            // exit the program using the linux syscall
-            this->text_segment << "\t" << "mov rbx, rax" << std::endl;
-            this->text_segment << "\t" << "mov rax, 0x01" << std::endl;
-            this->text_segment << "\t" << "int 0x80" << std::endl;
+            // preserve the return value and call SRE cleanup function
+            this->text_segment << "\t" << "push rax" << std::endl;
+            this->text_segment << "\t" << "call sre_clean" << std::endl;
+
+            // restore main's return value and return
+            this->text_segment << "\t" << "pop rax" << std::endl;
+            this->text_segment << "\t" << "ret" << std::endl;
         } catch (SymbolNotFoundException &e) {
             // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
-            compiler_warning("Note: no entry point found in file", 0);
+            compiler_note("No entry point found in file", 0);
         }
 
         // remove the extension from the file name
@@ -444,6 +470,9 @@ compiler::compiler() {
     // initialize the scope
     this->current_scope_name = "global";
     this->current_scope_level = 0;
+
+    // initialize the compile-time evaluator
+    this->evaluator = compile_time_evaluator(&this->structs);
 }
 
 compiler::~compiler() {

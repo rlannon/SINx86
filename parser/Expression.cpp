@@ -281,3 +281,17 @@ Indexed::Indexed()
 {
 	this->expression_type = INDEXED;
 }
+
+std::shared_ptr<Expression> Cast::get_exp() {
+	return this->to_cast;
+}
+
+DataType& Cast::get_new_type() {
+	return this->new_type;
+}
+
+Cast::Cast(std::shared_ptr<Expression> to_cast, DataType new_type) {
+	this->expression_type = CAST;
+	this->to_cast = to_cast;
+	this->new_type = new_type;
+}

@@ -53,6 +53,16 @@ StatementBlock::StatementBlock() {
 StatementBlock::~StatementBlock() {
 }
 
+/*	Scoped Block	*/
+
+StatementBlock ScopedBlock::get_statements() {
+	return this->statements;
+}
+
+ScopedBlock::ScopedBlock(StatementBlock statements) {
+	this->statement_type = SCOPE_BLOCK;
+	this->statements = statements;
+}
 
 
 /*******************		INCLUDE CLASS		********************/
@@ -77,7 +87,7 @@ std::string Declaration::get_name() const {
 	return this->name;
 }
 
-DataType Declaration::get_type_information() const {
+DataType& Declaration::get_type_information() {
 	return this->type;
 }
 
@@ -125,7 +135,7 @@ Declaration(DataType(), "", nullptr, false, false, {}) {
 /*******************	ALLOCATION CLASS	********************/
 
 
-DataType Allocation::get_type_information() {
+DataType& Allocation::get_type_information() {
 	return this->type_information;
 }
 
@@ -227,22 +237,22 @@ std::shared_ptr<Expression> IfThenElse::get_condition() {
 	return this->condition;
 }
 
-std::shared_ptr<StatementBlock> IfThenElse::get_if_branch() {
+std::shared_ptr<Statement> IfThenElse::get_if_branch() {
 	return this->if_branch;
 }
 
-std::shared_ptr<StatementBlock> IfThenElse::get_else_branch() {
+std::shared_ptr<Statement> IfThenElse::get_else_branch() {
 	return this->else_branch;
 }
 
-IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<StatementBlock> if_branch_ptr, std::shared_ptr<StatementBlock> else_branch_ptr) {
+IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr) {
 	IfThenElse::statement_type = IF_THEN_ELSE;
 	IfThenElse::condition = condition_ptr;
 	IfThenElse::if_branch = if_branch_ptr;
 	IfThenElse::else_branch = else_branch_ptr;
 }
 
-IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<StatementBlock> if_branch_ptr) {
+IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr) {
 	IfThenElse::statement_type = IF_THEN_ELSE;
 	IfThenElse::condition = condition_ptr;
 	IfThenElse::if_branch = if_branch_ptr;

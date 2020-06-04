@@ -78,7 +78,10 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 			*/
 
 			if (unary_type.get_qualities().is_unsigned()) {
-				compiler_warning("Note: unary minus on unsigned data may result in data loss because the compiler will not modify the data's width", line);
+				compiler_warning(
+					"Note: unary minus on unsigned data may result in data loss because the compiler will not modify the data's width",
+					compiler_errors::POTENTIAL_DATA_LOSS,
+					line);
 			}
 
 			// the expression is in RAX; check the width to get which register size to use
@@ -192,13 +195,25 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		size_t data_width = left_type.get_width();
 		bool is_signed = left_type.get_qualities().is_signed() || right_type.get_qualities().is_signed();
 
+		// issue a warning for signed/unsigned mismatch if applicable
+		if (left_type.get_qualities().is_signed() != left_type.get_qualities().is_signed())
+			compiler_warning("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
+		
+		// also issue a warning if the types are different widths
+		if (left_type.get_width() != right_type.get_width())
+			compiler_warning("Width mismatch", compiler_errors::WIDTH_MISMATCH, line);
+
 		// ensure the types are compatible before proceeding with evaluation
 		if (left_type.is_compatible(right_type)) {
+
+			// todo: ensure 16-byte stack alignment; this would allow us to use movdqa instead (and fit the System V ABI)
 
 			// evaluate the left-hand side
 			eval_ss << this->evaluate_expression(to_evaluate.get_left(), line).str();
 			if (left_type.get_primary() == FLOAT) {
-				// todo: preserve xmm0
+				// "push" xmm0 ('push xmm0' is not allowed)
+				eval_ss << "\t" << "sub rsp, 16" << std::endl;
+				eval_ss << "\t" << "movdqu dqword [rsp], xmm0" << std::endl;
 			}
 			else {
 				eval_ss << "\t" << "push rax" << std::endl;	// x64 only lets us push 64-bit registers
@@ -207,11 +222,14 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 
 			// evaluate the right-hand side
 			eval_ss << this->evaluate_expression(to_evaluate.get_right(), line).str();
+
 			if (right_type.get_primary() == FLOAT) {
 				// this depends on the data width; note that floating-point values must always convert to double if a double is used
 				eval_ss << "\t" << ((right_type.get_width() == sin_widths::DOUBLE_WIDTH) ? "movsd" : "movss") << " xmm1, xmm0" << std::endl;
 
-				// todo: restore xmm0 and the stack pointer
+				// "pop" xmm0 (as 'pop xmm0' is not allowed)
+				eval_ss << "\t" << "movdqu xmm0, dqword [rsp]" << std::endl;
+				eval_ss << "\t" << "add rsp, 16" << std::endl;
 
 				// if the left type is single-precision, but right type is double, we need to convert it to double (if assigning to float, may result in loss of data); this is not considered an 'implicit conversion' by the compiler because both are floating-point types, and requisite width conversions are allowed
 				if (left_type.get_width() != right_type.get_width()) {
@@ -235,6 +253,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				case INT:
 				case PTR:	// pointer arithmetic with + and - is allowed in SIN
 					eval_ss << "\t" << "add rax, rbx" << std::endl;
+					// todo: account for sign differences between types, overflow
 					break;
 				case FLOAT:
 					// single- and double-precision floats use different SSE instructions
@@ -246,7 +265,27 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					}
 					break;
 				case STRING:
-					// todo: string concatenation (passes pointer to string)
+					/*
+
+					string concatenation (passes pointer to string to SRE function)
+					
+					SRE routine parameters are:
+						RSI - ptr<string> left
+						RDI - ptr<string> right
+					Returns
+						ptr<string> - points to the location of the resultant string
+					
+					*/
+
+					eval_ss << "\t" << "mov rsi, rax" << std::endl;
+					eval_ss << "\t" << "mov rdi, rbx" << std::endl;
+
+					eval_ss << "\t" << "push rbp" << std::endl;
+					eval_ss << "\t" << "mov rbp, rsp" << std::endl;
+					eval_ss << "\t" << "call sinl_string_concat" << std::endl;
+					eval_ss << "\t" << "mov rsp, rbp" << std::endl;
+					eval_ss << "\t" << "pop rbp" << std::endl;
+
 					break;
 				default:
 					// if we have an invalid type, throw an exception
@@ -260,6 +299,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				case INT:
 				case PTR:
 					eval_ss << "\t" << "sub rax, rbx" << std::endl;
+					// todo: account for sign differences between types, overflow
 					break;
 				case FLOAT:
 					// single- and double-precision floats use different SSE instructions
@@ -346,11 +386,6 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			else if (to_evaluate.get_operator() == exp_operator::BIT_AND)
 			{
 				if (primary == INT) {
-					// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
-					if (left_type.get_width() != right_type.get_width()) {
-						compiler_warning("Operands in bitwise operation are different widths", line);
-					}
-
 					eval_ss << "\t" << "and rax, rbx" << std::endl;
 				}
 				else if (primary == FLOAT) {
@@ -364,11 +399,6 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			{
 				// same procedure as bitwise-and
 				if (primary == INT) {
-					// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
-					if (left_type.get_width() != right_type.get_width()) {
-						compiler_warning("Operands in bitwise operation are different widths", line);
-					}
-
 					eval_ss << "\t" << "or rax, rbx" << std::endl;
 				}
 				else if (primary == FLOAT) {
@@ -382,11 +412,6 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			{
 				// bitwise xor
 				if (primary == INT) {
-					// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
-					if (left_type.get_width() != right_type.get_width()) {
-						compiler_warning("Operands in bitwise operation are different widths", line);
-					}
-
 					eval_ss << "\t" << "xor rax, rbx" << std::endl;
 				}
 				else if (left_type.get_primary() == FLOAT) {
@@ -449,14 +474,41 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 
 				*/
 
-				// write the comparison
-				eval_ss << "\t" << "cmp rax, rbx" << std::endl;
+				// to determine whether the comparison requires unsigned operation
+				bool requires_unsigned = false;
 
+				// how we compare is dependent on the type
+				if (left_type.get_primary() == STRING) {
+					// strings can only compare with = and != operators
+					if (to_evaluate.get_operator() == EQUAL || to_evaluate.get_operator() == NOT_EQUAL) {
+						// use the cmpsb function
+						eval_ss << "\t" << "mov rsi, rax" << std::endl;
+						eval_ss << "\t" << "mov rdi, rbx" << std::endl;
+						eval_ss << "\t" << "mov ecx, [rsi]" << std::endl;
+						eval_ss << "\t" << "add ecx, 4" << std::endl;	// include the length information in the comparison
+						eval_ss << "\t" << "repe cmpsb" << std::endl;	// this will set EFLAGS appropriately
+					}
+					else {
+						throw CompilerException("Illegal equivalency operator on string type", compiler_errors::UNDEFINED_OPERATOR_ERROR, line);
+					}
+				}
+				else if (left_type.get_primary() == FLOAT) {
+					// todo: equivalency operators with floating-point numbers
+					requires_unsigned = true;
+				} else {
+					// if we have two unsigned variables, use unsigned comparison
+					requires_unsigned = left_type.get_qualities().is_unsigned() && right_type.get_qualities().is_unsigned();
+					
+					// write the comparison
+					eval_ss << "\t" << "cmp rax, rbx" << std::endl;
+				}
+				
 				// a variable to hold our instruction mnemonic
 				std::string instruction = "";
 
 				// todo: we could write a simple utility function to get a string for the equality based on an operator (e.g., turning EQUAL into 'e' or LESS OR EQUAL to 'le'), assuming we need to use it more than once
-
+				// todo: use seta/setb/setna/setnb/setae/setbe for unsigned comparisons (both operands unsigned)
+				
 				// now, switch to determine which branching instruction we need
 				switch (to_evaluate.get_operator()) {
 				case exp_operator::EQUAL:

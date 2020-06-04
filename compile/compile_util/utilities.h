@@ -29,13 +29,19 @@ Our various compiler utilities
 #include "../struct_info.h"
 #include "member_selection.h"
 
+#include "../../util/general_utilities.h"
+
 // todo: put these in their own namespace
 
 DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
 
-bool returns(StatementBlock &to_check);
+bool returns(StatementBlock to_check);
 
 bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
+
+bool is_valid_cast(DataType &old_type, DataType &new_type);
+
+std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line);
 
 bool can_pass_in_register(DataType to_check);
 
@@ -52,4 +58,7 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
 std::stringstream push_used_registers(register_usage regs, bool ignore_ab = false);
 std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false);
 
-std::stringstream copy_array(DataType array_type);
+std::string get_address(symbol &s, reg r);
+
+std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs);
+std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs);
