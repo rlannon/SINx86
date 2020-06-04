@@ -5,6 +5,9 @@
 samples/*
 *.s
 
+# also ignore SIN build file
+build
+
 # Ignore object files and executables
 *.o
 sinx86

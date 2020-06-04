@@ -195,10 +195,14 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		// ensure the types are compatible before proceeding with evaluation
 		if (left_type.is_compatible(right_type)) {
 
+			// todo: ensure stack alignment; this would allow us to use movdqa instead (and fit the System V ABI)
+
 			// evaluate the left-hand side
 			eval_ss << this->evaluate_expression(to_evaluate.get_left(), line).str();
 			if (left_type.get_primary() == FLOAT) {
-				// todo: preserve xmm0
+				// "push" xmm0 ('push xmm0' is not allowed)
+				eval_ss << "\t" << "sub rsp, 16" << std::endl;
+				eval_ss << "\t" << "movdqu dqword [rsp], xmm0" << std::endl;
 			}
 			else {
 				eval_ss << "\t" << "push rax" << std::endl;	// x64 only lets us push 64-bit registers
@@ -207,11 +211,14 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 
 			// evaluate the right-hand side
 			eval_ss << this->evaluate_expression(to_evaluate.get_right(), line).str();
+
 			if (right_type.get_primary() == FLOAT) {
 				// this depends on the data width; note that floating-point values must always convert to double if a double is used
 				eval_ss << "\t" << ((right_type.get_width() == sin_widths::DOUBLE_WIDTH) ? "movsd" : "movss") << " xmm1, xmm0" << std::endl;
 
-				// todo: restore xmm0 and the stack pointer
+				// "pop" xmm0 (as 'pop xmm0' is not allowed)
+				eval_ss << "\t" << "movdqu xmm0, dqword [rsp]" << std::endl;
+				eval_ss << "\t" << "add rsp, 16" << std::endl;
 
 				// if the left type is single-precision, but right type is double, we need to convert it to double (if assigning to float, may result in loss of data); this is not considered an 'implicit conversion' by the compiler because both are floating-point types, and requisite width conversions are allowed
 				if (left_type.get_width() != right_type.get_width()) {
@@ -246,7 +253,27 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					}
 					break;
 				case STRING:
-					// todo: string concatenation (passes pointer to string)
+					/*
+
+					string concatenation (passes pointer to string to SRE function)
+					
+					SRE routine parameters are:
+						RSI - ptr<string> left
+						RDI - ptr<string> right
+					Returns
+						ptr<string> - points to the location of the resultant string
+					
+					*/
+
+					eval_ss << "\t" << "mov rsi, rax" << std::endl;
+					eval_ss << "\t" << "mov rdi, rbx" << std::endl;
+
+					eval_ss << "\t" << "push rbp" << std::endl;
+					eval_ss << "\t" << "mov rbp, rsp" << std::endl;
+					eval_ss << "\t" << "call sinl_string_concat" << std::endl;
+					eval_ss << "\t" << "mov rsp, rbp" << std::endl;
+					eval_ss << "\t" << "pop rbp" << std::endl;
+
 					break;
 				default:
 					// if we have an invalid type, throw an exception

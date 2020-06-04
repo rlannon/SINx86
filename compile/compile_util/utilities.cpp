@@ -283,9 +283,21 @@ struct_info define_struct(StructDefinition definition) {
         if (s->get_statement_type() == ALLOCATION) {
             // cast to Allocation and create a symbol
             Allocation *alloc = dynamic_cast<Allocation*>(s.get());
+
+            // first, ensure that the symbol's type is not this struct
+            if ((alloc->get_type_information().get_primary() == STRUCT) && (alloc->get_type_information().get_struct_name() == struct_name)) {
+                throw CompilerException(
+                    "A struct may not contain an instance of itself; use a pointer instead",
+                    compiler_errors::SELF_CONTAINMENT_ERROR,
+                    alloc->get_line_number()
+                );
+            }
+            // todo: once references are enabled, disallow those as well -- they can't be null, so that would cause infinite recursion, too
+
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
             
             // todo: allow default values (alloc-init syntax) in structs
+            // to do this, the function might have to be moved out of "utilities" and into "compiler"
 
             // add that symbol to our vector
             members.push_back(sym);
@@ -349,7 +361,8 @@ function_symbol create_function_symbol(T def) {
 
     // construct the object
     function_symbol to_return(
-        def.get_name(),
+        //def.get_name(),
+        symbol_table::get_mangled_name(def.get_name()),
         def.get_type_information(),
         formal_parameters,
         def.get_calling_convention()
@@ -395,7 +408,8 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
     }
 
     symbol to_return(
-        allocation.get_name(),
+        //allocation.get_name(),
+        symbol_table::get_mangled_name(allocation.get_name()),
         scope_name,
         scope_level,
         type_info,
@@ -474,7 +488,7 @@ std::string get_address(symbol &s, reg r) {
         address_info = "\tmov " + reg_name + ", " + s.get_name();
     }
     // otherwise, we need to look in the stack
-    else if (s.get_data_type().get_qualities().is_dynamic()) {
+    else if (s.get_data_type().get_qualities().is_dynamic() || s.get_data_type().get_primary() == STRING) {
         address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]";
     }
     else {
@@ -516,4 +530,35 @@ std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
     copy_ss << pop_used_registers(regs).str();
     
 	return copy_ss;
+}
+
+std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
+    /*
+
+    copy_string
+    Calls the SRE function to copy one string to another
+
+    The SRE parameters are:
+        ptr<string> src
+        ptr<string> dest
+    It returns the address of the new destination string in RAX
+
+    */
+
+    std::stringstream copy_ss;
+
+    // preserve registers in use, ignoring RAX and RBX
+    copy_ss << push_used_registers(regs, true).str();
+
+    // get the pointers
+    copy_ss << get_address(src, RSI) << std::endl;
+    copy_ss << get_address(dest, RDI) << std::endl;
+    copy_ss << "\t" << "call sinl_string_copy" << std::endl;
+    copy_ss << get_address(dest, RBX) << std::endl;
+    copy_ss << "\t" << "mov [rbx], rax" << std::endl;
+
+    // restore registers
+    copy_ss << pop_used_registers(regs, true).str();
+
+    return copy_ss;
 }

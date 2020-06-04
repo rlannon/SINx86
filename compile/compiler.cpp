@@ -385,10 +385,9 @@ void compiler::generate_asm(std::string filename, Parser &p) {
             this->text_segment << "\t" << "push rax" << std::endl;
             this->text_segment << "\t" << "call sre_clean" << std::endl;
 
-            // restore main's return value and exit the program using the linux syscall
-            this->text_segment << "\t" << "pop rbx" << std::endl;
-            this->text_segment << "\t" << "mov rax, 60" << std::endl;
-            this->text_segment << "\t" << "int 0x80" << std::endl;
+            // restore main's return value and return
+            this->text_segment << "\t" << "pop rax" << std::endl;
+            this->text_segment << "\t" << "ret" << std::endl;
         } catch (SymbolNotFoundException &e) {
             // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
             compiler_warning("Note: no entry point found in file", 0);
