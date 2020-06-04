@@ -237,7 +237,8 @@ bool is_valid_cast(DataType &old_type, DataType &new_type) {
         new_type.get_primary() == STRING ||
         new_type.get_primary() == ARRAY ||
         old_type.get_primary() == PTR ||
-        new_type.get_primary() == PTR
+        new_type.get_primary() == PTR ||
+        (old_type.get_primary() == CHAR && new_type.get_primary() != INT)
     );
 }
 
@@ -245,7 +246,7 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
     /*
 
     cast
-    Casts the data in RAX/XMM0 to the supplied type, returning the data in RAX.
+    Casts the data in RAX/XMM0 to the supplied type, returning the data in RAX/XMM0, depending on the return type.
 
     */
 
@@ -266,7 +267,11 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
         if (old_type.get_primary() == FLOAT) {
             // for float conversions, we *should* issue a warning
             if (old_type.get_width() > new_type.get_width()) {
-                compiler_warning("Attempting to convert floating-point type to a smaller integral type; potential loss of data", line);
+                compiler_warning(
+                    "Attempting to convert floating-point type to a smaller integral type; potential loss of data",
+                    compiler_errors::WIDTH_MISMATCH,
+                    line
+                );
             }
 
             // perform the cast with the SSE conversion functions
@@ -284,6 +289,7 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
                 cast_ss << "\t" << "movzx rax, al" << std::endl;
             }
             else {
+                compiler_note("Cast appears to have no effect", line);
                 cast_ss << std::endl;
             }
         }
@@ -315,6 +321,12 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
             std::string instruction = (new_type.get_qualities().is_long()) ? "cvtsi2sd" : "cvtsi2ss";
             cast_ss << "\t" << instruction << " xmm0, " << reg_name << std::endl;
         }
+    }
+    else if (new_type.get_primary() == CHAR && old_type.get_primary() == INT) {
+        // only integer types may be cast to char
+    }
+    else {
+        // invalid cast
     }
 
     return cast_ss;

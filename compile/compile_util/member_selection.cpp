@@ -103,7 +103,11 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 
 	// issue a warning if the first member is marked as freed (we can't know for sure -- it may not be freed in the scope we are looking in, so issue a warning, not an error)
 	if (m.first().was_freed()) {
-		compiler_warning("Symbol '" + m.first().get_name() + "' may have been freed", line);
+		compiler_warning(
+			"Symbol '" + m.first().get_name() + "' may have been freed",
+			compiler_errors::DATA_FREED,
+			line
+		);
 	}
 
 	return m;

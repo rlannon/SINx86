@@ -42,6 +42,8 @@ namespace compiler_errors {
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
     const unsigned int UNDEFINED_ERROR = 101;
+    const unsigned int DATA_FREED = 105;
+    const unsigned int EMPTY_SCOPE_BLOCK = 111;
     const unsigned int SIGNATURE_ERROR = 120;
     const unsigned int OUT_OF_SCOPE_ERROR = 150;
     const unsigned int DECLARATION_ERROR = 160;
@@ -60,6 +62,9 @@ namespace compiler_errors {
     const unsigned int QUALITY_CONFLICT_ERROR = 230;
     const unsigned int ILLEGAL_QUALITY_ERROR = 231;
 	const unsigned int VARIABILITY_ERROR = 232;
+    const unsigned int SIGNED_UNSIGNED_MISMATCH = 241;
+    const unsigned int WIDTH_MISMATCH = 242;
+    const unsigned int POTENTIAL_DATA_LOSS = 243;
 
     // Internal errors
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;

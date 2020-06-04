@@ -220,7 +220,7 @@ void DataType::add_quality(SymbolQuality to_add) {
 	// generate a compiler warning if the primary type doesn't support the quality (has no effect)
 	if (this->primary == PTR || this->primary == BOOL || this->primary == ARRAY || this->primary == STRING || this->primary == RAW) {
 		if (to_add == LONG || to_add == SHORT || to_add == SIGNED || to_add == UNSIGNED) {
-			compiler_warning("Width and sign qualifiers have no effect for this type; as such, this quality will be ignored");
+			compiler_note("Width and sign qualifiers have no effect for this type; as such, this quality will be ignored");
 		}
 	}
 

@@ -78,7 +78,10 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 			*/
 
 			if (unary_type.get_qualities().is_unsigned()) {
-				compiler_warning("Note: unary minus on unsigned data may result in data loss because the compiler will not modify the data's width", line);
+				compiler_warning(
+					"Note: unary minus on unsigned data may result in data loss because the compiler will not modify the data's width",
+					compiler_errors::POTENTIAL_DATA_LOSS,
+					line);
 			}
 
 			// the expression is in RAX; check the width to get which register size to use
@@ -192,10 +195,18 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		size_t data_width = left_type.get_width();
 		bool is_signed = left_type.get_qualities().is_signed() || right_type.get_qualities().is_signed();
 
+		// issue a warning for signed/unsigned mismatch if applicable
+		if (left_type.get_qualities().is_signed() != left_type.get_qualities().is_signed())
+			compiler_warning("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
+		
+		// also issue a warning if the types are different widths
+		if (left_type.get_width() != right_type.get_width())
+			compiler_warning("Width mismatch", compiler_errors::WIDTH_MISMATCH, line);
+
 		// ensure the types are compatible before proceeding with evaluation
 		if (left_type.is_compatible(right_type)) {
 
-			// todo: ensure stack alignment; this would allow us to use movdqa instead (and fit the System V ABI)
+			// todo: ensure 16-byte stack alignment; this would allow us to use movdqa instead (and fit the System V ABI)
 
 			// evaluate the left-hand side
 			eval_ss << this->evaluate_expression(to_evaluate.get_left(), line).str();
@@ -242,6 +253,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				case INT:
 				case PTR:	// pointer arithmetic with + and - is allowed in SIN
 					eval_ss << "\t" << "add rax, rbx" << std::endl;
+					// todo: account for sign differences between types, overflow
 					break;
 				case FLOAT:
 					// single- and double-precision floats use different SSE instructions
@@ -287,6 +299,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				case INT:
 				case PTR:
 					eval_ss << "\t" << "sub rax, rbx" << std::endl;
+					// todo: account for sign differences between types, overflow
 					break;
 				case FLOAT:
 					// single- and double-precision floats use different SSE instructions
@@ -373,11 +386,6 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			else if (to_evaluate.get_operator() == exp_operator::BIT_AND)
 			{
 				if (primary == INT) {
-					// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
-					if (left_type.get_width() != right_type.get_width()) {
-						compiler_warning("Operands in bitwise operation are different widths", line);
-					}
-
 					eval_ss << "\t" << "and rax, rbx" << std::endl;
 				}
 				else if (primary == FLOAT) {
@@ -391,11 +399,6 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			{
 				// same procedure as bitwise-and
 				if (primary == INT) {
-					// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
-					if (left_type.get_width() != right_type.get_width()) {
-						compiler_warning("Operands in bitwise operation are different widths", line);
-					}
-
 					eval_ss << "\t" << "or rax, rbx" << std::endl;
 				}
 				else if (primary == FLOAT) {
@@ -409,11 +412,6 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			{
 				// bitwise xor
 				if (primary == INT) {
-					// doesn't matter whether we have signed or unsigned data, but we should issue a warning for types of differing widths
-					if (left_type.get_width() != right_type.get_width()) {
-						compiler_warning("Operands in bitwise operation are different widths", line);
-					}
-
 					eval_ss << "\t" << "xor rax, rbx" << std::endl;
 				}
 				else if (left_type.get_primary() == FLOAT) {

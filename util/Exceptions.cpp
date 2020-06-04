@@ -244,8 +244,8 @@ ConstAllocationException::ConstAllocationException(unsigned int line) :
 
 // Warnings and notes
 
-void compiler_warning(std::string message, unsigned int line_number) {
-	std::cout << "**** Compiler Warning: " << message << " (line " << line_number << ")" << std::endl;
+void compiler_warning(std::string message, unsigned int code, unsigned int line_number) {
+	std::cout << "**** Compiler Warning W" << code << ": " << message << " (at or near line " << line_number << ")" << std::endl;
 }
 
 void compiler_note(std::string message, unsigned int line_number) {
