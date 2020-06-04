@@ -133,6 +133,12 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				throw ParserException("Syntax error; expected '<'", 0, current_lex.line_number);
 			}
 		}
+		else if (current_lex.value == "not") {
+			// the logical not operator
+			this->next();
+			auto negated = this->parse_expression(get_precedence(NOT, current_lex.line_number));
+			left = std::make_shared<Unary>(negated, NOT);
+		}
 		else {
 			throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
 		}
@@ -289,8 +295,8 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == "," || (next.value == "=" && omit_equals)) {
 		return left;
 	}
-	// Otherwise, if we have an op_char or the 'and' or 'or' keyword
-	else if (next.type == OPERATOR || next.value == "and" || next.value == "or") {
+	// Otherwise, if we have an op_char or the 'and', 'or', 'xor', or 'as'
+	else if (next.type == OPERATOR || next.value == "and" || next.value == "or" || next.value == "xor" || next.value == "as") {
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
 		if (next.value == "&") {
 			this->next();	// advance the iterator so we can see what comes after the ampersand
@@ -305,7 +311,8 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 				this->back();	// move the iterator back where it was
 			}
 		}
-
+		
+		// parse the binary expression as usual
 		// get the next op_char's data
 		size_t his_prec = get_precedence(next.value, next.line_number);
 
@@ -313,24 +320,31 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 		if (his_prec > my_prec) {
 			this->next();	// go to the next character in our stream (the op_char)
 			this->next();	// go to the character after the op char
+			
+			// if we have the 'as' keyword, we will immediately parse out a typecast expression with the left operand
+			if (next.value == "as") {
+				DataType new_type = this->get_type();
+				auto cast_exp = std::make_shared<Cast>(left, new_type);
+				return this->maybe_binary(cast_exp, my_prec, grouping_symbol, omit_equals);
+			}
+			else {
+				// Parse out the next expression
+				std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
-			// Parse out the next expression
-			std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+				// Create the binary expression
+				std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
 
-			// Create the binary expression
-			std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
+				// if the left and right sides are constants, the whole expression is a constant
+				if (left->is_const() && right->is_const())
+					binary->set_const();
 
-			// if the left and right sides are constants, the whole expression is a constant
-			if (left->is_const() && right->is_const())
-				binary->set_const();
-
-			// call maybe_binary again at the old prec level in case this expression is followed by one of a higher precedence
-			return this->maybe_binary(binary, my_prec, grouping_symbol, omit_equals);
+				// call maybe_binary again at the old prec level in case this expression is part of a higher precedence one
+				return this->maybe_binary(binary, my_prec, grouping_symbol, omit_equals);
+			}
 		}
 		else {
 			return left;
 		}
-
 	}
 	// There shouldn't be anything besides a semicolon, closing paren, or an op_char immediately following "left"
 	else {

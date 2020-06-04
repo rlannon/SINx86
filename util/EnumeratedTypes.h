@@ -56,7 +56,8 @@ enum exp_type {
 	BINARY,
 	UNARY,
 	VALUE_RETURNING_CALL,
-	SIZE_OF
+	SIZE_OF,
+	CAST
 };
 
 enum SymbolType {
@@ -107,6 +108,7 @@ enum exp_operator {
 	DOT,	// the . operator
 	ARROW,	// the -> operator
 	ADDRESS,	// todo: remove
+	TYPECAST,	// the 'as' operator
 	NO_OP
 };
 

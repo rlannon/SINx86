@@ -96,11 +96,6 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
 
 	// todo: can this function and add_symbol utilize templates to be combined into one function?
 
-	size_t pos = to_add.get_struct_name().find("sinl_");
-	if (pos != std::string::npos && pos == 0) {
-		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
-	}
-
 	bool ok = this->structs.insert(to_add);
 
 	if (!ok) {
@@ -390,7 +385,7 @@ void compiler::generate_asm(std::string filename, Parser &p) {
             this->text_segment << "\t" << "ret" << std::endl;
         } catch (SymbolNotFoundException &e) {
             // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
-            compiler_warning("Note: no entry point found in file", 0);
+            compiler_note("No entry point found in file", 0);
         }
 
         // remove the extension from the file name

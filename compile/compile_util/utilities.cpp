@@ -179,6 +179,17 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             type_information.set_primary(INT);
             type_information.add_qualities(std::vector<SymbolQuality>{CONSTANT, UNSIGNED});
             break;
+        case CAST:
+        {
+            Cast *c = dynamic_cast<Cast*>(to_eval.get());
+            if (DataType::is_valid_type(c->get_new_type())) {
+                type_information = c->get_new_type();
+            }
+            else {
+                throw CompilerException("Attempt to cast to invalid type", compiler_errors::INVALID_CAST_ERROR, line);
+            }
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
             break;
@@ -208,6 +219,126 @@ bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
 	else {
 		return !(right.is_const() || right.is_final());	// the right-hand argument cannot be demoted
 	}
+}
+
+bool is_valid_cast(DataType &old_type, DataType &new_type) {
+    /*
+
+    is_valid_cast
+    Determines whether the attempted typecast (from 'old_type' to 'new_type') is valid
+
+    See docs/Typecasting.md for information on typecasting validity rules
+
+    */
+
+    return !(
+        old_type.get_primary() == STRING || 
+        old_type.get_primary() == ARRAY || 
+        new_type.get_primary() == STRING ||
+        new_type.get_primary() == ARRAY ||
+        old_type.get_primary() == PTR ||
+        new_type.get_primary() == PTR ||
+        (old_type.get_primary() == CHAR && new_type.get_primary() != INT)
+    );
+}
+
+std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line) {
+    /*
+
+    cast
+    Casts the data in RAX/XMM0 to the supplied type, returning the data in RAX/XMM0, depending on the return type.
+
+    */
+
+    std::stringstream cast_ss;
+
+    if (new_type.get_primary() == BOOL) {
+        if (old_type.get_primary() == FLOAT) {
+            // use the SSE comparison functions
+            std::string instruction = (old_type.get_qualities().is_long()) ? "cmpsd" : "cmpss";
+        }
+        else {
+            // any *non-zero* value is true
+            cast_ss << "\t" << "cmp rax, 0x00" << std::endl;
+        }
+        cast_ss << "\t" << "setne al" << std::endl;
+    }
+    else if (new_type.get_primary() == INT) {
+        if (old_type.get_primary() == FLOAT) {
+            // for float conversions, we *should* issue a warning
+            if (old_type.get_width() > new_type.get_width()) {
+                compiler_warning(
+                    "Attempting to convert floating-point type to a smaller integral type; potential loss of data",
+                    compiler_errors::WIDTH_MISMATCH,
+                    line
+                );
+            }
+
+            // perform the cast with the SSE conversion functions
+            if (old_type.get_qualities().is_long()) {
+                cast_ss << "\t" << "cvttsd2si rax, xmm0" << std::endl;
+            }
+            else {
+                cast_ss << "\t" << "cvttss2si eax, xmm0" << std::endl;
+            }
+        }
+        else {
+            if (old_type.get_width() == sin_widths::BOOL_WIDTH) {
+                cast_ss << "\t" << "cmp al, 0" << std::endl;
+                cast_ss << "\t" << "setne al" << std::endl;
+                cast_ss << "\t" << "movzx rax, al" << std::endl;
+            }
+            else {
+                compiler_note("Typecast appears to have no effect", line);
+            }
+        }
+    }
+    else if (new_type.get_primary() == FLOAT) {
+        if (old_type.get_primary() == FLOAT) {
+            if (old_type.get_width() < new_type.get_width()) {
+                // old < new; convert scalar single to scalar double
+                cast_ss << "\t" << "cvtsstsd xmm0, xmm0" << std::endl;
+            }
+            else if (old_type.get_width() > new_type.get_width()) {
+                // old > new; convert scalar double to scalar single
+                cast_ss << "\t" << "cvtsd2ss xmm0, xmm0" << std::endl;
+            }
+            else {
+                // don't do anything if they're the same type; issue a note (not a warning)
+                compiler_note("Typecast appears to have no effect", line);
+            }
+        }
+        else {
+            std::string reg_name = get_rax_name_variant(old_type, line);
+
+            // extend the boolean value to RAX
+            if (old_type.get_primary() == BOOL) {
+                cast_ss << "\t" << "cmp al, 0" << std::endl;
+                cast_ss << "\t" << "setne al" << std::endl;
+                cast_ss << "\t" << "movzx rax, al" << std::endl;
+            }
+            else if (old_type.get_primary() == INT && old_type.get_width() > new_type.get_width()) {
+                compiler_warning(
+                    "Potential data loss when converting integer to floating-point number of smaller width",
+                    compiler_errors::WIDTH_MISMATCH,
+                    line
+                );
+            }
+            
+            // now that the value is in RAX, use convert signed integer to scalar single/double
+            std::string instruction = (new_type.get_qualities().is_long()) ? "cvtsi2sd" : "cvtsi2ss";
+            cast_ss << "\t" << instruction << " xmm0, " << reg_name << std::endl;
+        }
+    }
+    else if (new_type.get_primary() == CHAR && old_type.get_primary() == INT) {
+        // only integer types may be cast to char
+    }
+    else {
+        // invalid cast
+        throw InvalidTypecastException(line);
+    }
+
+    return cast_ss;
 }
 
 bool can_pass_in_register(DataType to_check) {

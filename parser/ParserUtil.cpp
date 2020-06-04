@@ -30,6 +30,8 @@ const std::unordered_map<std::string, exp_operator> Parser::op_strings({
 	{"and", AND},
 	{"or", OR},
 	{"xor", XOR},
+	{"not", NOT},
+	{"as", TYPECAST},
 	{".", DOT}
 });
 
@@ -53,8 +55,9 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{MULT, 20},
 	{DIV, 20},
 	{MODULO, 20},
-	{NOT, 23},
-	{BIT_NOT, 23},
+	{TYPECAST, 24},
+	{NOT, 24},	// 'not' is a unary operator, so it has high priority
+	{BIT_NOT, 24},
 	{UNARY_PLUS, 24},
 	{UNARY_MINUS, 24},
 	{DOT, 25}
@@ -360,7 +363,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 	else if (current_lex.type == KEYWORD || current_lex.type == IDENTIFIER) {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {
-			// if our symbol doesn't have signed or unsigned, set, it must be sigbed by default
+			// if our symbol doesn't have signed or unsigned, set, it must be signed by default
 			if (!qualities.is_signed() && !qualities.is_unsigned()) {
 				qualities.add_quality(SIGNED);
 			}

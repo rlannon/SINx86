@@ -502,7 +502,7 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 
 std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt(nullptr);
 	this->next();	// go to the expression
 
 	// if the current token is a semicolon, return a Literal Void
@@ -552,7 +552,7 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 
 			// so that we don't get errors if we have an empty statement block
 			if (this->peek().value == "}") {
-				compiler_warning("Empty statement block in while loop", this->current_token().line_number);
+				compiler_warning("Empty statement block in while loop", compiler_errors::EMPTY_SCOPE_BLOCK, this->current_token().line_number);
 				this->next();
 			}
 			else {

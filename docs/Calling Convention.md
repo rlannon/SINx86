@@ -2,7 +2,9 @@
 
 ## SIN Calling Convention
 
-The SIN calling convention is modeled after the x64 calling conventions for Windows and Linux, specifically `_cdecl`. However, the calling conventions differ slightly. Note that in SIN, the calling convention is declared in the function definition, _not_ in the call itself, as the convention affects how function bodies are generated.
+The SIN calling convention is modeled after the x64 calling conventions for Windows and Linux, specifically `_cdecl`. However, the calling conventions differ slightly.
+
+Note that in SIN, the calling convention is declared in the function definition, _not_ in the call itself, as the convention affects how function bodies are generated.
 
 The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike `_cdecl`, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers `RSI, RDI, RCX, RDX, R8, R9`, while floating-point types will be pushed in registers `XMM0 - XMM5`. `RAX` and `RBX` are never preserved by the caller nor the callee; they are considered volatile.
 
