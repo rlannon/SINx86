@@ -76,3 +76,14 @@ bool general_utilities::ite_returns(IfThenElse *to_check) {
 
     return if_returns && else_returns;
 }
+
+bool general_utilities::is_bitwise(exp_operator op) {
+    /*
+
+    is_bitwise
+    Returns whether the operator is bitwise or not
+
+    */
+
+    return (op == BIT_AND || op == BIT_OR || op == BIT_XOR || op == BIT_NOT);
+}

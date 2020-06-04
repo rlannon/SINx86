@@ -64,7 +64,7 @@ StatementBlock Parser::create_ast() {
 
 
 Parser::Parser(Lexer& lexer) {
-	std::cout << "Lexing...";
+	std::cout << "Lexing..." << std::endl;
 	while (!lexer.eof() && !lexer.exit_flag_is_set()) {
 		lexeme token = lexer.read_next();
 
@@ -76,7 +76,6 @@ Parser::Parser(Lexer& lexer) {
 			continue;
 		}
 	}
-	std::cout << ". Done." << std::endl;
 
 	Parser::quit = false;
 	Parser::can_use_include_statement = true;	// include statements must be first in the file

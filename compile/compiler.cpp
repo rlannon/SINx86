@@ -348,16 +348,14 @@ void compiler::generate_asm(std::string filename, Parser &p) {
     // catch parser exceptions here
     try {
         // create our abstract syntax tree
-		std::cout << "Parsing...";
+		std::cout << "Parsing..." << std::endl;
         StatementBlock ast = p.create_ast();
-		std::cout << ". Done." << std::endl;
 
         // The code we are generating will go in the text segment -- writes to the data and bss sections will be done as needed in other functions
-		std::cout << "Generating code...";
+		std::cout << "Generating code..." << std::endl;
 		this->text_segment << this->compile_ast(ast).str();
-		std::cout << ". Done." << std::endl;
 
-		std::cout << "Consolidating code...";
+		std::cout << "Consolidating code..." << std::endl;
         // now, we want to see if we have a function 'main' in the symbol table; if so, we need to set it up and call it
         try {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
@@ -427,7 +425,7 @@ void compiler::generate_asm(std::string filename, Parser &p) {
         outfile << this->bss_segment.str() << std::endl;
 
 		// print a message when we are done
-		std::cout << ". Done." << std::endl;
+		std::cout << "Done." << std::endl;
 
         // close the outfile
         outfile.close();

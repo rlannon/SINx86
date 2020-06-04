@@ -199,9 +199,14 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 		if (left_type.get_qualities().is_signed() != left_type.get_qualities().is_signed())
 			compiler_warning("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
 		
-		// also issue a warning if the types are different widths
-		if (left_type.get_width() != right_type.get_width())
-			compiler_warning("Width mismatch", compiler_errors::WIDTH_MISMATCH, line);
+		// also issue a warning if the types are different widths and the operator is bitwise
+		// width differences aren't a big deal for some operators, but they *do* make a difference for bitwise ones
+		if (
+			(left_type.get_width() != right_type.get_width()) &&
+			general_utilities::is_bitwise(to_evaluate.get_operator())
+		) {
+			compiler_warning("Width mismatch in bitwise operation", compiler_errors::WIDTH_MISMATCH, line);
+		}
 
 		// ensure the types are compatible before proceeding with evaluation
 		if (left_type.is_compatible(right_type)) {
