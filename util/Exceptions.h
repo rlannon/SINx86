@@ -222,7 +222,7 @@ class InvalidTypecastException : public CompilerException
 {
 public:
 	explicit InvalidTypecastException(unsigned int line);
-}
+};
 
 // todo: allow warning and note codes?
 
