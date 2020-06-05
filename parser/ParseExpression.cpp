@@ -144,8 +144,12 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			left = std::make_shared<KeywordExpression>(current_lex.value);
 		}
 		else {
-			// todo: try to parse a type -- if that doesn't work, then throw an exception
-			throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
+			try {
+				auto t = this->get_type(grouping_symbol);
+				left = std::make_shared<KeywordExpression>(t);
+			} catch (ParserException& e) {
+				throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
+			}
 		}
 		// todo: enable type-level attributes as well as value-level (e.g., 'int:size') to replace 'sizeof'
 	}
@@ -326,7 +330,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 		if (his_prec > my_prec) {
 			this->next();	// go to the next character in our stream (the op_char)
 			this->next();	// go to the character after the op char
-			
+
 			// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
 			auto right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
