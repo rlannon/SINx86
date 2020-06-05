@@ -13,12 +13,14 @@ The implementation of the lexer
 // The list of language keywords
 const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "const", 
 "constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", 
-"let", "long", "not", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static",
-"string", "struct", "unsigned", "void", "while", "windows", "xor" };
+"len", "let", "long", "not", "null", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "size", 
+"sizeof", "static", "string", "struct", "unsigned", "var", "void", "while", "windows", "xor" };
 
 // Our regular expressions
-const std::string Lexer::punc_exp = R"([',:;\[\]\{\}\(\)])";	// expression for punctuation
-const std::string Lexer::op_exp = "(\\->)|[\\.\\+\\-\\*/%=\\&\\|\\^<>\\$\\?!@#]";	// expression for operations
+const std::string Lexer::punc_exp = R"([',;\[\]\{\}\(\)])";	// expression for punctuation
+const std::string Lexer::op_exp = R"(
+	(\->)|[\.\+\-\*/%=\&\|\^<>\$\?!@#:]|(\+=|)|(\-=)|(\*=)|(/=)|(%=)|(&=)|(\|=)|(\^=)
+	)";	// expression for operations
 const std::string Lexer::id_exp = "[_0-9a-zA-Z]";	// expression for interior id letters
 const std::string Lexer::bool_exp = "[(true)|(false)]";
 
@@ -171,12 +173,7 @@ bool Lexer::is_op_char(char ch) {
 }
 
 bool Lexer::is_boolean(std::string candidate) {
-	if (candidate == "true" || candidate == "false") {
-		return true;
-	}
-	else {
-		return false;
-	}
+	return (candidate == "true" || candidate == "false");
 }
 
 bool Lexer::is_keyword(std::string candidate) {
