@@ -187,7 +187,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
-			compile_ss << this->evaluate_expression(ite->get_condition(), ite->get_line_number()).str() << std::endl;
+			compile_ss << this->evaluate_expression(ite->get_condition(), ite->get_line_number()).str();
 			compile_ss << "\t" << "jz sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
@@ -207,8 +207,24 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			break;
 		}
 		case WHILE_LOOP:
-            // todo: while loops
+        {
+            WhileLoop *while_stmt = dynamic_cast<WhileLoop*>(s.get());
+            
+            // create a loop heading, evaluate the condition
+            auto current_block_num = this->scope_block_num;
+            this->scope_block_num += 1;
+
+            compile_ss << "sinl_while_" << current_block_num << ":" << std::endl;
+            compile_ss << this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number()).str();
+            compile_ss << "\t" << "jz sinl_while_done_" << current_block_num << std::endl;
+
+            // compile the loop body
+            compile_ss << this->compile_statement(while_stmt->get_branch(), signature).str();
+            compile_ss << "\t" << "jmp sinl_while_" << current_block_num << std::endl;
+
+            compile_ss << "sinl_while_done_" << current_block_num << ":" << std::endl;
             break;
+        }
         case FUNCTION_DEFINITION:
         {
             FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
@@ -253,7 +269,8 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             'free' may be used with either automatic or dynamic memory -- it may not be used with const or static
             however, it has very little effect on automatic memory; it just marks the memory as freed, preventing any future writes to it
 
-			'free' is also safe in that it will not trigger a fault if you call 'free' on the same data twice (though if the compiler sees this may happen, then it will generate a warning)
+			'free' is also safe in that it will not trigger a fault if you call 'free' on the same data twice
+            (though if the compiler sees this happen, then it will generate a warning)
 
             */
 
@@ -353,6 +370,10 @@ void compiler::generate_asm(std::string filename, Parser &p) {
 
         // The code we are generating will go in the text segment -- writes to the data and bss sections will be done as needed in other functions
 		std::cout << "Generating code..." << std::endl;
+        this->text_segment << "%ifndef _SRE_INCLUDE_" << std::endl;
+        this->text_segment << "%define _SRE_INCLUDE_" << std::endl;
+        this->text_segment << "%include \"../SRE/src/asm/asm_include.s\"" << std::endl; // todo: better linkage to SRE
+        this->text_segment << "%endif" << std::endl;
 		this->text_segment << this->compile_ast(ast).str();
 
 		std::cout << "Consolidating code..." << std::endl;

@@ -190,6 +190,19 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             }
             break;
         }
+        case ATTRIBUTE:
+        {
+            auto attr = dynamic_cast<AttributeSelection*>(to_eval.get());
+            // todo: should attributes always return integers?
+            type_information.set_primary(INT);
+            type_information.add_qualities(
+                std::vector<SymbolQuality>{
+                    CONSTANT,
+                    UNSIGNED
+                }
+            );
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
             break;

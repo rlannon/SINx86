@@ -198,12 +198,12 @@ public:
 class WhileLoop : public Statement
 {
 	std::shared_ptr<Expression> condition;
-	std::shared_ptr<StatementBlock> branch;
+	std::shared_ptr<Statement> branch;
 public:
 	std::shared_ptr<Expression> get_condition();
-	std::shared_ptr<StatementBlock> get_branch();
+	std::shared_ptr<Statement> get_branch();
 
-	WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<StatementBlock> branch);
+	WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch);
 	WhileLoop();
 };
 
