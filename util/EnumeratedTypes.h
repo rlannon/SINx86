@@ -108,10 +108,16 @@ enum exp_operator {
 	BIT_OR,		// same goes with BIT_OR
 	BIT_XOR,	// same with BIT_XOR
 	BIT_NOT,	// same with BIT_NOT
+	LEFT_SHIFT,
+	RIGHT_SHIFT,
 	DOT,	// the . operator
 	ARROW,	// the -> operator
-	ADDRESS,	// todo: remove
+	ADDRESS,		// $
+	DEREFERENCE,	// *
 	TYPECAST,	// the 'as' operator
+	ATTRIBUTE_SELECTION,	// :
+	CONTROL_TRANSFER,	// @, used in function calls
+	SCOPE_RESOLUTION,	//	::
 	NO_OP
 };
 
