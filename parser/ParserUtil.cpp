@@ -35,13 +35,19 @@ const std::unordered_map<std::string, exp_operator> Parser::op_strings({
 	{"|", BIT_OR},
 	{"^", BIT_XOR},
 	{"~", BIT_NOT},
+	{">>", RIGHT_SHIFT},
+	{"<<", LEFT_SHIFT},
 	{"and", AND},
 	{"or", OR},
 	{"xor", XOR},
 	{"not", NOT},
 	{"as", TYPECAST},
+	{"$", ADDRESS},
+	{"*", DEREFERENCE},
+	{":", ATTRIBUTE_SELECTION},
 	{".", DOT},
-	{":", ATTRIBUTE_SELECTION}
+	{"@", CONTROL_TRANSFER},
+	{"::", SCOPE_RESOLUTION}
 });
 
 const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
@@ -57,28 +63,33 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{OR, 2},
 	{AND, 2},
 	{XOR, 2},
+	{BIT_AND, 3},
+	{BIT_OR, 3},
+	{BIT_XOR, 3},
 	{LESS, 7},
 	{GREATER, 7},
 	{LESS_OR_EQUAL, 7},
 	{GREATER_OR_EQUAL, 7},
 	{EQUAL, 7},	// not the direct assignment operator -- all assignment operators have a precedence of 1
 	{NOT_EQUAL, 7},
-	{BIT_AND, 8},
-	{BIT_OR, 8},
-	{BIT_XOR, 8},
+	{LEFT_SHIFT, 8},
+	{RIGHT_SHIFT, 8},
 	{PLUS, 10},
 	{MINUS, 10},
-	{exp_operator::ADDRESS, 15},	// todo: remove this operator
-	{MULT, 20},
-	{DIV, 20},
-	{MODULO, 20},
-	{NOT, 24},	// 'not' is a unary operator, so it has high priority
-	{BIT_NOT, 24},
-	{UNARY_PLUS, 24},
-	{UNARY_MINUS, 24},
-	{TYPECAST, 25},
-	{ATTRIBUTE_SELECTION, 25},
-	{DOT, 25}
+	{MULT, 15},
+	{DIV, 15},
+	{MODULO, 15},
+	{TYPECAST, 20},
+	{NOT, 20},	// 'not' is a unary operator, so it has high priority
+	{BIT_NOT, 20},
+	{UNARY_PLUS, 20},
+	{UNARY_MINUS, 20},
+	{ADDRESS, 20},
+	{DEREFERENCE, 20},
+	{ATTRIBUTE_SELECTION, 23},
+	{CONTROL_TRANSFER, 25},
+	{DOT, 25},
+	{SCOPE_RESOLUTION, 30}
 });
 
 const exp_operator Parser::translate_operator(std::string op_string) {
