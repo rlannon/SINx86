@@ -18,7 +18,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	lexeme current_lex = this->current_token();
 
 	// Create a pointer to our first value
-	std::shared_ptr<Expression> left;
+	std::shared_ptr<Expression> left(nullptr);
 	bool is_const = false;
 
 	// first, check to see if we have the 'constexpr' keyword
@@ -139,9 +139,19 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			auto negated = this->parse_expression(get_precedence(NOT, current_lex.line_number));
 			left = std::make_shared<Unary>(negated, NOT);
 		}
-		else {
-			throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
+		else if (AttributeSelection::is_attribute(current_lex.value)) {
+			// if we have an attribute, parse out a keyword expression
+			left = std::make_shared<KeywordExpression>(current_lex.value);
 		}
+		else {
+			try {
+				auto t = this->get_type(grouping_symbol);
+				left = std::make_shared<KeywordExpression>(t);
+			} catch (ParserException& e) {
+				throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
+			}
+		}
+		// todo: enable type-level attributes as well as value-level (e.g., 'int:size') to replace 'sizeof'
 	}
 	// if we have an op_char to begin an expression, parse it (could be a pointer or a function call)
 	else if (current_lex.type == OPERATOR) {
@@ -320,27 +330,37 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 		if (his_prec > my_prec) {
 			this->next();	// go to the next character in our stream (the op_char)
 			this->next();	// go to the character after the op char
+
+			// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
+			auto right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+
+			// Create the binary expression
+			auto binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
+
+			// if the left and right sides are constants, the whole expression is a constant
+			if (left->is_const() && right->is_const())
+				binary->set_const();
 			
-			// if we have the 'as' keyword, we will immediately parse out a typecast expression with the left operand
-			if (next.value == "as") {
-				DataType new_type = this->get_type();
-				auto cast_exp = std::make_shared<Cast>(left, new_type);
-				return this->maybe_binary(cast_exp, my_prec, grouping_symbol, omit_equals);
+			// now, call maybe_binary based on the binary type (transform the statement)
+			std::shared_ptr<Expression> to_check = binary;
+			if (binary->get_operator() == ATTRIBUTE_SELECTION) {
+				to_check = std::make_shared<AttributeSelection>(binary);
 			}
-			else {
-				// Parse out the next expression
-				std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
-
-				// Create the binary expression
-				std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
-
-				// if the left and right sides are constants, the whole expression is a constant
-				if (left->is_const() && right->is_const())
-					binary->set_const();
-
-				// call maybe_binary again at the old prec level in case this expression is part of a higher precedence one
-				return this->maybe_binary(binary, my_prec, grouping_symbol, omit_equals);
+			else if (binary->get_operator() == TYPECAST) {
+				to_check = std::make_shared<Cast>(binary);
 			}
+
+			// ensure we still have a valid expression
+			if (to_check->get_expression_type() == EXPRESSION_GENERAL) {
+				throw CompilerException(
+					"Illegal expression",
+					compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+					next.line_number
+				);
+			}
+			
+			// call maybe_binary again at the old prec level in case this expression is part of a higher precedence one
+			return this->maybe_binary(to_check, my_prec, grouping_symbol, omit_equals);
 		}
 		else {
 			return left;

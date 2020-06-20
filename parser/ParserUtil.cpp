@@ -11,7 +11,15 @@ Contains the implementations of various utility functions for the parser.
 #include "Parser.h"
 
 const std::unordered_map<std::string, exp_operator> Parser::op_strings({
-	{"->", ARROW},
+	{"->", MOVE_ASSIGN},
+	{"+=", PLUS_EQUAL},
+	{"-=", MINUS_EQUAL},
+	{"*=", MULT_EQUAL},
+	{"/=", DIV_EQUAL},
+	{"%=", MOD_EQUAL},
+	{"&=", AND_EQUAL},
+	{"|=", OR_EQUAL},
+	{"^=", XOR_EQUAL},
 	{"+", PLUS},
 	{"-", MINUS},
 	{"*", MULT},
@@ -43,7 +51,15 @@ const std::unordered_map<std::string, exp_operator> Parser::op_strings({
 });
 
 const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
-	{ARROW, 1},	// used for direct assignment, like the assignment operator '='
+	{MOVE_ASSIGN, 1},	// there is also a move assignment operator 
+	{PLUS_EQUAL, 1},
+	{MINUS_EQUAL, 1},
+	{MULT_EQUAL, 1},
+	{DIV_EQUAL, 1},
+	{MOD_EQUAL, 1},
+	{AND_EQUAL, 1},
+	{OR_EQUAL, 1},
+	{XOR_EQUAL, 1},
 	{OR, 2},
 	{AND, 2},
 	{XOR, 2},

@@ -126,6 +126,97 @@ LValue::LValue() {
 }
 
 
+// Attribute Selection
+
+std::shared_ptr<Expression> AttributeSelection::get_selected() {
+	return this->selected;
+}
+
+attribute AttributeSelection::get_attribute() {
+	return this->attrib;
+}
+
+DataType &AttributeSelection::get_data_type() {
+	return this->t;
+}
+
+AttributeSelection::AttributeSelection(std::shared_ptr<Expression> selected, std::string attribute_name):
+	selected(selected)
+{
+	this->expression_type = ATTRIBUTE;
+	this->attrib = to_attribute(attribute_name);
+
+	// set the type
+	this->t = 
+	DataType(
+		INT,
+		NONE,
+		symbol_qualities(
+			false,
+			false,
+			false,
+			false,
+			true
+		)
+	);
+
+	// all attributes are final; they are not necessarily known at compile time, but they are not directly modifiable
+	this->t.get_qualities().add_quality(FINAL);
+}
+
+AttributeSelection::AttributeSelection(std::shared_ptr<Binary> to_deconstruct)
+{
+	// Construct an 'AttributeSelection' object from a Binary expression
+	
+	// as long as we have a valid binary expression, continue
+	if (to_deconstruct->get_right()->get_expression_type() == KEYWORD_EXP) {	
+		this->expression_type = ATTRIBUTE;
+		this->selected = to_deconstruct->get_left();
+		auto right = dynamic_cast<KeywordExpression*>(to_deconstruct->get_right().get());
+		this->attrib = to_attribute(right->get_keyword());
+	}
+	else {
+		this->expression_type = EXPRESSION_GENERAL;
+		this->selected = nullptr;
+	}
+
+	// set the attribute data type -- always returns 'int &unsigned final'
+	this->t = DataType(
+		INT,
+		NONE,
+		symbol_qualities(
+			false,
+			false,
+			false,
+			false,
+			true
+		)
+	);
+	
+	// all attributes are final; they are not necessarily known at compile time, but they are not directly modifiable
+	this->t.get_qualities().add_quality(FINAL);
+}
+
+attribute AttributeSelection::to_attribute(std::string to_convert) {
+    if (to_convert == "len") {
+        return LENGTH;
+    }
+    else if (to_convert == "size") {
+        return SIZE;
+    }
+    else if (to_convert == "var") {
+        return VARIABILITY;
+    }
+    else {
+        return NO_ATTRIBUTE;
+    }
+}
+
+bool AttributeSelection::is_attribute(std::string a) {
+	return to_attribute(a) != NO_ATTRIBUTE;
+}
+
+
 // Lists
 
 std::vector<std::shared_ptr<Expression>> ListExpression::get_list()
@@ -147,6 +238,27 @@ ListExpression::~ListExpression() {
 
 }
 
+// Keyword Expressions -- necessary for some expressions
+
+std::string KeywordExpression::get_keyword() {
+	return this->keyword;
+}
+
+DataType &KeywordExpression::get_type() {
+	return this->t;
+}
+
+KeywordExpression::KeywordExpression(std::string keyword):
+	keyword(keyword)
+{
+	this->expression_type = KEYWORD_EXP;
+}
+
+KeywordExpression::KeywordExpression(DataType t):
+	KeywordExpression("")
+{
+	this->t = t;
+}
 
 // Pointers
 
@@ -294,4 +406,17 @@ Cast::Cast(std::shared_ptr<Expression> to_cast, DataType new_type) {
 	this->expression_type = CAST;
 	this->to_cast = to_cast;
 	this->new_type = new_type;
+}
+
+Cast::Cast(std::shared_ptr<Binary> b) {
+	if (b->get_operator() == TYPECAST && b->get_right()->get_expression_type() == KEYWORD_EXP) {
+		auto* kw = dynamic_cast<KeywordExpression*>(b->get_right().get());
+		this->expression_type = CAST;
+		this->to_cast = b->get_left();
+		this->new_type = kw->get_type();
+	}
+	else {
+		this->expression_type = EXPRESSION_GENERAL;
+		this->to_cast = nullptr;
+	}
 }
