@@ -12,15 +12,17 @@ The following keywords are those which can be used to begin statements.
 
 * `def` - defines a block of code to be associated with a [function](Functions.md) or [struct](Structs.md)
 * `alloc` - allocates data of a given type
+* `construct` - constructs a struct type _(Note: this feature has not yet been implemented)_
 * `free` - frees the given memory back to the environment
 * `let` - assignment keyword; always copies data
-* `move` - move keyword; copies references when possible, otherwise performs a copy
+* `move` - move keyword; copies references when possible, otherwise performs a copy _(Note: this feature has not yet been implemented.)_
 
 ### Control Flow
 
 * `if` - defines a condition that, if true, will result in the following statement or scoped block to be executed
 * `else` - declares a block to be executed if the condition is not true
 * `while` - defines a condition that, while true, will cause the execution of the following statement or scoped block
+* `for` - defines a loop to iterate a specified number of times _(Note: this feature has not yet been implemented)_
 
 ### Miscellaneous
 
@@ -51,7 +53,7 @@ Note that all *logical* operators use keywords while the bitwise operators use s
 * `string` - a string type
 * `struct` - a user-defined struct type
 * `ptr` - a 64-bit pointer type
-* `ref` - a 64-bit reference type
+* `ref` - a 64-bit reference type _(not yet implemented)_
 * `array` - a homogeneous array of data
 
 #### Width and Sign

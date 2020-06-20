@@ -1,6 +1,6 @@
 # SIN Documentation
 
-## Structs
+## Structs_
 
 SIN, like many programming languages, allows users to define their own types in order to expand the language's functionality. This may be done via structs, which are more or less equivalent to their C counterparts. Once defined, they may be allocated like any other data type. Although SIN is not object-oriented (and does not support inheritance or polymorphism), there is a benefit to allowing operator overloading for user-defined types as well as member functions.
 
@@ -65,3 +65,40 @@ and sure enough, looking at the sample memory structure, `m.x` is located at `rb
 ### Static Members
 
 Structs may contain static members, meaning they don't need to be accessed from any one particular object. If a specific object is referenced, they may use the dot operator as normal, like `b.c`. However, if the static member is accessed without a particular object reference, it may use the attribute operator -- e.g., `a:c`.
+
+## Construction
+
+_Note: this section describes a future addition to the language, one which is not currently present or in development within the compiler._
+
+An important aspect of structures is that they are constructed when they are initialized, similar to languages like Rust or C++. The syntax for construction is similar to that of Rust, except that the `construct` keyword is used to specify construction. For example, assuming we have some struct `point`:
+
+    alloc point p: construct point {
+        x: 0,
+        y: 0,
+        z: 0,
+    };
+
+_(Note that the `point` in the construct expression is not strictly necessary when using alloc-init syntax, as the type is already known)_
+
+However, this keyword may be used in three distinct scenarios:
+
+* Initialization with alloc-init syntax
+* Struct replacement (whole struct assignment)
+* Anonymous struct creation
+
+The above example used alloc-init syntax. If a struct contains references, this will still work because a new struct is created that replaces the old one. For example, this code is valid:
+
+    alloc int x: 10;
+    alloc int y: 10;
+    def struct m {
+        alloc ref<int> r;
+    }
+
+    alloc m m1: construct {
+        r: $x;
+    };
+    let m1 = construct point {
+        r: $y;
+    };
+
+Typically, references are immutable, but in this instance, the entire struct `m1` is deleted and replaced with a new object. This means that we aren't really altering its references, we are replacing them.
