@@ -82,7 +82,12 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	
 	*/
 
-	std::pair<std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator, bool> returned = this->symbols.insert(
+	// we have to make sure the symbol table doesn't include copies of data with names unmangled
+	if (this->contains(to_insert->get_name())) {
+		throw std::exception();
+	}
+
+	auto returned = this->symbols.insert(
 		std::make_pair<>(
 			//symbol_table::get_mangled_name(to_insert->get_name()),
 			to_insert->get_name(),
@@ -97,21 +102,29 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 				to_insert->get_scope_level()
 			)
 		);
-		return true;
 	}
 	else {
 		// todo: specialize exceptions thrown here
 		throw std::exception();
-		return false;
 	}
+
+	return returned.second;
 }
 
 bool symbol_table::contains(std::string symbol_name)
 {
-	// returns whether the symbol with a given name is in the symbol table	
-	return (bool)this->symbols.count(
+	// returns whether the symbol with a given name is in the symbol table
+	// if it can't find it with the name mangled, it will try finding the unmangled version
+	bool in_table = false;	
+	if ((bool)this->symbols.count(
 		symbol_table::get_mangled_name(symbol_name)
-	);
+	)) {
+		in_table = true;
+	}
+	else {
+		in_table = (bool)this->symbols.count(symbol_name);
+	}
+	return in_table;
 }
 
 std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
@@ -120,14 +133,19 @@ std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
 	
 	find
 	Returns an iterator to the desired symbol
+
+	If it can't find the symbol with the name mangled, it tries to find the unmangled version
 	
 	*/
 
-	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(
+	auto it = this->symbols.find(
 		symbol_table::get_mangled_name(to_find)
 	);
 	if (it == this->symbols.end()) {
-		throw std::exception();
+		it = this->symbols.find(to_find);
+
+		if (it == this->symbols.end())
+			throw std::exception();
 	}
 
 	return it->second;
