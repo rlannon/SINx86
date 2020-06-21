@@ -147,35 +147,7 @@ ListExpression::~ListExpression() {
 
 }
 
-
-// Pointers
-
-std::shared_ptr<Expression> AddressOf::get_target() {
-	return this->target;
-}
-
-AddressOf::AddressOf(std::shared_ptr<Expression> target) : target(target) {
-	AddressOf::expression_type = ADDRESS_OF;
-}
-
-AddressOf::AddressOf() {
-	AddressOf::expression_type = ADDRESS_OF;
-}
-
-
-std::shared_ptr<Expression> Dereferenced::get_contained_expression() {
-	return this->contained_expression;
-}
-
-Dereferenced::Dereferenced(std::shared_ptr<Expression> ptr) : contained_expression(ptr) {
-	this->expression_type = DEREFERENCED;
-}
-
-Dereferenced::Dereferenced() {
-	Dereferenced::expression_type = DEREFERENCED;
-}
-
-
+// Operator expressions
 
 std::shared_ptr<Expression> Binary::get_left() {
 	return this->left_exp;

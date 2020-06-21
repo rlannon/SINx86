@@ -65,13 +65,11 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 		// add the symbol to our list
 		m.append(*left_sym);
 	}
-	else if (exp.get_left()->get_expression_type() == DEREFERENCED) {
-		Dereferenced* left = dynamic_cast<Dereferenced*>(exp.get_left().get());
-		// todo: handle this such that pointers to pointers, etc, are dereferenced correctly
-	}
 	else {
 		throw CompilerException("Invalid expression in left-hand position of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
+
+	// note a unary expression should never appear on the left hand side, as they all have lower precedences than the dot operator
 
 	// get the struct_info object for the last struct in the chain; this is where we look up the next symbol
 	if (!structs.contains(m.last().get_data_type().get_struct_name())) {
@@ -94,8 +92,8 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 			throw SymbolNotFoundException(line);
 		}
 	}
-	else if (exp.get_right()->get_expression_type() == DEREFERENCED) {
-		throw CompilerException("Dereferenced expressions are not allowed on the right-hand side of a member selection expression (e.g., a.*b); proper syntax is *a.b", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+	else if (exp.get_right()->get_expression_type() == UNARY) {
+		throw CompilerException("Unary expressions are not allowed on the right-hand side of a member selection expression (e.g., a.*b or a.-b); proper syntax is *a.b and -a.b, respectively", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 	else {
 		throw CompilerException("Invalid expression type on right-hand side of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);

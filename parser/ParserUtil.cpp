@@ -578,3 +578,37 @@ calling_convention Parser::get_calling_convention(symbol_qualities sq, unsigned 
 
 	return c;
 }
+
+const exp_operator Parser::get_unary_operator(std::string s) {
+	/*
+
+	Gets an exp_operator from a string; if it is not a valid unary operator, returns NO_OP
+
+	*/
+
+	exp_operator op;
+
+	if (s == "+") {
+		op = UNARY_PLUS;
+	}
+	else if (s == "-") {
+		op = UNARY_MINUS;
+	}
+	else if (s == "$") {
+		op = ADDRESS;
+	}
+	else if (s == "*") {
+		op = DEREFERENCE;
+	}
+	else if (s == "not") {
+		op = NOT;
+	}
+	else if (s == "~") {
+		op = BIT_NOT;
+	}
+	else {
+		op = NO_OP;
+	}
+	
+	return op;
+}

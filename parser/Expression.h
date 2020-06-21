@@ -91,28 +91,6 @@ public:
 	Indexed();
 };
 
-// Address Of -- the address of a variable
-class AddressOf : public Expression
-{
-	std::shared_ptr<Expression> target;
-public:
-	std::shared_ptr<Expression> get_target();
-
-	AddressOf(std::shared_ptr<Expression> target);
-	AddressOf();
-};
-
-// Dereferenced -- the value of a dereferenced ptr
-class Dereferenced : public Expression
-{
-	std::shared_ptr<Expression> contained_expression;	// the Expression that this Dereferenced expression is dereferencing
-public:
-	std::shared_ptr<Expression> get_contained_expression();
-
-	Dereferenced(std::shared_ptr<Expression> ptr);
-	Dereferenced();
-};
-
 class Binary : public Expression
 {
 	exp_operator op;	// +, -, etc.

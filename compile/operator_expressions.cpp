@@ -33,13 +33,13 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 
 	// switch to our operator -- only three unary operators are allowed (that don't have special expression types, such as dereferencing or address-of), but only unary minus and unary not have any effect
 	switch (to_evaluate.get_operator()) {
-	case exp_operator::PLUS:
+	case exp_operator::UNARY_PLUS:
 	{
 		// does nothing but is allowed; generates a note stating as such
 		compiler_note("Note the unary plus operator has no effect", line);
 		break;
 	}
-	case exp_operator::MINUS:
+	case exp_operator::UNARY_MINUS:
 	{
 		// the unary minus operator may only be used on integral and floating-point types
 		// this flips the sign on floats and performs two's complement on integers
@@ -132,6 +132,17 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 		else {
 			throw UnaryTypeNotSupportedError(line);
 		}
+	}
+	case exp_operator::ADDRESS:
+	{
+		// an address-of expression has its own function
+		eval_ss << this->get_address(to_evaluate, line).str();
+		break;
+	}
+	case exp_operator::DEREFERENCE:
+	{
+		// todo: dereferencing
+		break;
 	}
 	default:
 		throw IllegalUnaryOperatorError(line);

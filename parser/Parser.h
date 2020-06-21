@@ -65,6 +65,7 @@ class Parser
 	static std::string get_closing_grouping_symbol(std::string beginning_symbol);
 	static bool is_opening_grouping_symbol(std::string to_test);
 	static const bool has_return(StatementBlock to_test);
+	static const exp_operator get_unary_operator(std::string s);	// located in ParserUtil.cpp
 
 	// get the appropriate SymbolQuality member from the lexeme containing it
 	static SymbolQuality get_quality(lexeme quality_token);
@@ -103,7 +104,6 @@ class Parser
 	Note we also have a 'not_binary' flag here; if the expression is indexed, we may not want to have a binary expression parsed
 	*/
 	std::shared_ptr<Expression> parse_expression(size_t prec=0, std::string grouping_symbol = "(", bool not_binary = false, bool omit_equals = false);
-	std::shared_ptr<Expression> create_dereference_object();
 	std::shared_ptr<Expression> maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol = "(", bool omit_equals = false);	// check to see if we need to fashion a binary expression
 public:
 	// our entry function

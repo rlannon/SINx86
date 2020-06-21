@@ -77,24 +77,6 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             type_information = sub_data_type;
             break;
         }
-        case ADDRESS_OF:
-		{
-			// get the pointer
-			AddressOf *addr_of = dynamic_cast<AddressOf*>(to_eval.get());
-
-			// todo: properly implement address-of parsing and evaluation
-
-			break;
-		}
-        case DEREFERENCED:
-        {
-            // get the type of the dereferenced pointer
-            Dereferenced *deref = dynamic_cast<Dereferenced*>(to_eval.get());
-            
-            // Dereferenced expressions contain a pointer to another expression; get its type
-            type_information = get_expression_data_type(deref->get_contained_expression(), symbols, structs, line);
-            break;
-        }
         case BINARY:
         {
             // get the type of a binary expression
@@ -154,6 +136,14 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 
             // Unary expressions contain an expression inside of them; call this function recursively using said expression as a parameter
             type_information = get_expression_data_type(u->get_operand(), symbols, structs, line);
+
+            // if the operator is ADDRESS, we need to wrap the type information in a pointer
+            if (u->get_operator() == ADDRESS) {
+                auto full_subtype = std::make_shared<DataType>(type_information);
+                type_information = DataType(PTR);
+                type_information.set_subtype(full_subtype);
+            }
+
             break;
         }
         case VALUE_RETURNING_CALL:
