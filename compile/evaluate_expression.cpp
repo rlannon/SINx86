@@ -140,6 +140,83 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             }
             break;
         }
+        case ATTRIBUTE:
+        {
+            auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
+            auto t = attr->get_data_type();
+
+            // we have a limited number of attributes
+            if (attr->get_attribute() == LENGTH) {
+                /*
+
+                length attribute
+                Returns the number of elements in a collection.
+                
+                For string and array types, it is the first doubleword at the data
+                For struct types, it is the number of fields -- known at compile-time
+
+                For all other types, returns 1
+
+                */
+
+                if (t.get_primary() == ARRAY || t.get_primary() == STRING) {
+                    // First, evaluate the selected expression
+                    evaluation_ss << this->evaluate_expression(attr->get_selected(), line).str();
+                    evaluation_ss << "\t" << "mov eax, [rax]" << std::endl;
+                }
+                else if (t.get_primary() == STRUCT) {
+                    auto s = this->get_struct_info(t.get_struct_name(), line);
+                    evaluation_ss << "\t" << "mov eax, 1" << std::endl; // todo: we need a get_fields method
+                }
+                else {
+                    evaluation_ss << "\t" << "mov eax, 1" << std::endl;
+                }
+            }
+            else if (attr->get_attribute() == SIZE) {
+                /*
+                
+                size attribute
+                Returns the number of bytes occupied by the data.
+
+                Roughly equivalent to sizeof< T >, except it can return the sizes of variable-width types
+                
+                */
+
+                if (t.get_primary() == STRUCT) {
+                    auto s = this->get_struct_info(t.get_struct_name(), line);
+                    evaluation_ss << "\t" << "mov eax, " << s.get_width() << std::endl;
+                }
+                else if (t.get_primary() == ARRAY || t.get_primary() == STRING) {
+                    evaluation_ss << this->evaluate_expression(attr->get_selected(), line).str();
+                    evaluation_ss << "\t" << "mov eax, [rax]" << std::endl;
+
+                    // strings have a type width of 1, if it's an array we need to get the width
+                    size_t type_width = 1;
+                    if (t.get_primary() == ARRAY) {
+                        type_width = t.get_full_subtype()->get_width();
+                    }
+
+                    evaluation_ss << "\t" << "mov rbx, " << type_width << std::endl;
+                    evaluation_ss << "\t" << "mul rbx" << std::endl;
+                }
+                else {
+                    evaluation_ss << "\t" << "mov eax, " << t.get_width() << std::endl;
+                }
+            }
+            else if (attr->get_attribute() == VARIABILITY) {
+                // todo: variability
+                throw CompilerException("Not yet implemented", compiler_errors::UNKNOWN_ATTRIBUTE, line);
+            }
+            else {
+                throw CompilerException(
+                    "Invalid attribute",
+                    compiler_errors::UNKNOWN_ATTRIBUTE,
+                    line
+                );
+            }
+
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
     }

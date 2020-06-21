@@ -42,37 +42,20 @@ bool general_utilities::returns(StatementBlock to_check) {
 	}
 }
 
+bool general_utilities::returns(std::shared_ptr<Statement> to_check) {
+    if (to_check->get_statement_type() == SCOPE_BLOCK) {
+        ScopedBlock *block = dynamic_cast<ScopedBlock*>(to_check.get());
+        return returns(block->get_statements());
+    }
+    else {
+        return to_check->get_statement_type() == RETURN_STATEMENT;
+    }
+}
+
 bool general_utilities::ite_returns(IfThenElse *to_check) {
     // both must be true for it to return true
-    bool if_returns;
-    bool else_returns;
-    
-    // check the 'if' branch
-    if (to_check->get_if_branch()->get_statement_type() == SCOPE_BLOCK) {
-        ScopedBlock *if_branch = dynamic_cast<ScopedBlock*>(to_check->get_if_branch().get());
-        if_returns = returns(if_branch->get_statements());
-    }
-    else if (to_check->get_if_branch()->get_statement_type() == RETURN_STATEMENT) {
-        if_returns = true;
-    }
-    else {
-        if_returns = false;
-    }
-
-    // check the else branch
-    if (to_check->get_else_branch()) {
-        if (to_check->get_else_branch()->get_statement_type() == SCOPE_BLOCK) {
-            ScopedBlock* else_branch = dynamic_cast<ScopedBlock*>(to_check->get_else_branch().get());
-            else_returns = returns(else_branch->get_statements());
-        }
-        else if (to_check->get_else_branch()->get_statement_type() == RETURN_STATEMENT) {
-            else_returns = true;
-        }
-    }
-    else {
-        // otherwise, return false; if there is no else branch and there is no return statement in this block, then if the condition is false, we will not have a return value
-        else_returns = false;
-    }
+    bool if_returns = returns(to_check->get_if_branch());
+    bool else_returns = returns(to_check->get_else_branch());
 
     return if_returns && else_returns;
 }

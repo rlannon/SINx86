@@ -543,43 +543,41 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 	// A while loop is very similar to an ITE in how we parse it; the only difference is we don't need to check for an "else" branch
 	std::shared_ptr<Expression> condition;	// create the object for our condition
 	StatementBlock branch;	// and for the loop body
+	lexeme next = this->next();
 
-	if (this->peek().value == "(") {
+	if (next.value == "(") {
+		// get condition
 		this->next();
 		condition = this->parse_expression();
-		if (this->peek().value == "{") {
+		
+		if (this->peek().value == ")")
 			this->next();
-
-			// so that we don't get errors if we have an empty statement block
-			if (this->peek().value == "}") {
-				compiler_warning("Empty statement block in while loop", compiler_errors::EMPTY_SCOPE_BLOCK, this->current_token().line_number);
-				this->next();
-			}
-			else {
-				this->next();	// skip opening curly
-				branch = this->create_ast();
-
-				// If we are not at the end, go to the next token
-				if (!(this->is_at_end())) {
-					this->next();
-				}
-			}
-
-			// Make a pointer to our branch
-			std::shared_ptr<StatementBlock> loop_body = std::make_shared<StatementBlock>(branch);
-
-			// create our object, set the line number, and return it
-			stmt = std::make_shared<WhileLoop>(condition, loop_body);
-			stmt->set_line_number(current_lex.line_number);
-			return stmt;
+		else
+		{
+			throw CompilerException("Expected parentheses around conditional", compiler_errors::MISSING_GROUPING_SYMBOL_ERROR, this->current_token().line_number);
 		}
-		else {
-			throw ParserException("Loop body must be enclosed in curly braces", 331, current_lex.line_number);
-		}
+
+		// initialize the branch
+		std::shared_ptr<Statement> branch;
+
+		// create the branch
+		this->next();
+		branch = this->parse_statement();
+
+		// if there was a single statement, ensure there was a semicolon
+		if (this->peek().value == ";")
+			this->next();
+		else if (this->current_token().value != "}")
+			throw MissingSemicolonError(this->current_token().line_number);
+		
+		stmt = std::make_shared<WhileLoop>(condition, branch);
+		stmt->set_line_number(current_lex.line_number);
 	}
 	else {
 		throw ParserException("Expected a condition", 331, current_lex.line_number);
 	}
+
+	return stmt;
 }
 
 std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)

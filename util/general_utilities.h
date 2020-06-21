@@ -13,6 +13,7 @@ Contains some general compiler utilities
 
 namespace general_utilities {
     bool returns(StatementBlock to_check);
+    bool returns(std::shared_ptr<Statement> to_check);
     bool ite_returns(IfThenElse *to_check);
     bool is_bitwise(exp_operator op);
 }

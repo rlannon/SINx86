@@ -272,12 +272,12 @@ std::shared_ptr<Expression> WhileLoop::get_condition()
 	return WhileLoop::condition;
 }
 
-std::shared_ptr<StatementBlock> WhileLoop::get_branch()
+std::shared_ptr<Statement> WhileLoop::get_branch()
 {
 	return WhileLoop::branch;
 }
 
-WhileLoop::WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<StatementBlock> branch) : condition(condition), branch(branch) {
+WhileLoop::WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch) : condition(condition), branch(branch) {
 	WhileLoop::statement_type = WHILE_LOOP;
 }
 

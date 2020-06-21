@@ -313,7 +313,7 @@ const bool Parser::has_return(StatementBlock to_test)
 				WhileLoop* while_loop = dynamic_cast<WhileLoop*>(last_statement);
 
 				// while loops are a little simpler, we can simply pass in the branch for the while loop
-				return has_return(*while_loop->get_branch().get());
+				return general_utilities::returns(while_loop->get_branch());
 			}
 			else {
 				return false;
