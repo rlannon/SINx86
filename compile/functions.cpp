@@ -110,8 +110,8 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // note: we don't need to account for parameters passed in registers as these will be located *above* the return address
 
     // since we will be using the 'call' instruction, we must increase our stack offset by the width of a pointer so that we don't overwrite the return address
+    // we don't need to adjust RSP manually, though, as that was done by the "call" instruction
     this->max_offset += sin_widths::PTR_WIDTH;
-    definition_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
 
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
     procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));

@@ -106,6 +106,19 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			
 			// add the symbol and move RSP further into the stack, by the width of a pointer
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
+
+			// allocate dynamic memory with a call to sre_request_resource
+			allocation_ss << "\t" << "pushfq" << std::endl;
+			allocation_ss << "\t" << "push rbp" << std::endl;
+			allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
+			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
+			allocation_ss << "\t" << "call sre_request_resource" << std::endl;
+			allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
+			allocation_ss << "\t" << "pop rbp" << std::endl;
+			allocation_ss << "\t" << "popfq" << std::endl;
+
+			// store the returned address in the space allocated for the resource
+			allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			allocation_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
 
 			// if we have a const here, throw an exception -- constants may not be dynamic
