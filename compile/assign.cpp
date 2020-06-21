@@ -64,9 +64,15 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
 			throw NonModifiableLValueException(assign_stmt.get_line_number());
 		}
 	}
-	else if (assign_stmt.get_lvalue()->get_expression_type() == DEREFERENCED) {
-		Dereferenced *deref = dynamic_cast<Dereferenced*>(assign_stmt.get_lvalue().get());
-		// todo: handle assignment to dereferenced pointer
+	else if (assign_stmt.get_lvalue()->get_expression_type() == UNARY) {
+        // the only unary operator that produces a modifiable lvalue is the dereference operator
+        auto unary = dynamic_cast<Unary*>(assign_stmt.get_lvalue().get());
+        if (unary->get_operator() == DEREFERENCE) {
+    		// todo: handle assignment to dereferenced pointer
+        }
+        else {
+            throw NonModifiableLValueException(assign_stmt.get_line_number());
+        }
 	}
 	else {
 		// no other expression types return modifiable-lvalues

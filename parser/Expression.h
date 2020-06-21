@@ -91,7 +91,6 @@ public:
 	Indexed();
 };
 
-// todo: add a 'KeywordExpression' type?
 class KeywordExpression: public Expression
 {
 	DataType t;
@@ -112,17 +111,6 @@ public:
 
 	AddressOf(std::shared_ptr<Expression> target);
 	AddressOf();
-};
-
-// Dereferenced -- the value of a dereferenced ptr
-class Dereferenced : public Expression
-{
-	std::shared_ptr<Expression> contained_expression;	// the Expression that this Dereferenced expression is dereferencing
-public:
-	std::shared_ptr<Expression> get_contained_expression();
-
-	Dereferenced(std::shared_ptr<Expression> ptr);
-	Dereferenced();
 };
 
 class Binary : public Expression

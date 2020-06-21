@@ -31,7 +31,8 @@ void compiler::handle_declaration(Declaration decl_stmt) {
         // todo: add struct to struct table with the caveat that it's an incomplete type
     } else {
         // add a symbol
-        symbol sym = generate_symbol(decl_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+        // note: pass 0 as the data width because declared data doesn't occupy stack space
+        symbol sym = generate_symbol(decl_stmt, 0, this->current_scope_name, this->current_scope_level, this->max_offset);
         this->add_symbol(sym, decl_stmt.get_line_number());
     }
 }
@@ -110,7 +111,8 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // since we will be using the 'call' instruction, we must increase our stack offset by the width of a pointer so that we don't overwrite the return address
     this->max_offset += sin_widths::PTR_WIDTH;
-    
+    definition_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
+
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
     procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
 

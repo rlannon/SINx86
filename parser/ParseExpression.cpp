@@ -4,11 +4,7 @@ SIN Toolchain
 ParseExpression.cpp
 Copyright 2019 Riley Lannon
 
-Contains the implementations of the functions to parse expressions, including:
-	- std::shared_ptr<Expression> parse_expression(size_t prec=0, std::string grouping_symbol = "(", bool not_binary = false);
-	- std::shared_ptr<Expression> create_dereference_object();
-	- LValue getDereferencedLValue(Dereferenced to_eval);
-	- std::shared_ptr<Expression> maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol = "(");
+Contains the implementations of the functions to parse expressions.
 
 */
 
@@ -183,44 +179,25 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				throw MissingIdentifierError(current_lex.line_number);
 			}
 		}
-		// check to see if we have the address-of operator
-		else if (current_lex.value == "$") {
-			// if we have a $ character, it HAS TO be the address-of operator
-			// current lexeme is the $, so get the variable for which we need the address
-			lexeme next_lexeme = this->next();
-			left = this->parse_expression(get_precedence(exp_operator::ADDRESS));
-			// todo: ensure address-of expressions parse correctly
-		}
-		// check to see if we have a pointer dereference operator
-		else if (current_lex.value == "*") {
-			left = this->create_dereference_object();
-		}
-		// check to see if we have a unary operator
-		else if ((current_lex.value == "+") || (current_lex.value == "-") || (current_lex.value == "!") || (current_lex.value == "~")) {
-			// get the precedence of the unary operator
-			size_t precedence;
-			if (current_lex.value == "+") precedence = Parser::get_precedence(UNARY_PLUS);
-			else if (current_lex.value == "-") precedence = Parser::get_precedence(UNARY_MINUS);
-			else if (current_lex.value == "!") precedence = Parser::get_precedence(NOT);
-			else precedence = Parser::get_precedence(BIT_NOT);
-
-			// advance the token pointer and parse the expression
-			this->next();
-			std::shared_ptr<Expression> operand = this->parse_expression(precedence);	// parse an expression at the precedence level of our unary operator
-
-			// todo: simplify this a little
-			// now that we have the operand, create the expression
-			if (current_lex.value == "+") {
-				left = std::make_shared<Unary>(operand, PLUS);
-			}
-			else if (current_lex.value == "-") {
-				left = std::make_shared<Unary>(operand, MINUS);
-			}
-			else if (current_lex.value == "!") {
-				left = std::make_shared<Unary>(operand, NOT);
+		// if it's not a function, it must be a unary expression
+		else {
+			exp_operator unary_op = Parser::get_unary_operator(current_lex.value);
+			if (unary_op == NO_OP) {
+				// throw exception -- invalid unary op
+				throw CompilerException(
+					"'" + current_lex.value + "' is not a valid unary operator",
+					compiler_errors::OPERATOR_TYPE_ERROR,
+					current_lex.line_number
+				);
 			}
 			else {
-				left = std::make_shared<Unary>(operand, BIT_NOT);
+				// get the precedence of the unary operator
+				size_t precedence = Parser::get_precedence(unary_op);
+
+				// advance the token pointer and parse the expression
+				this->next();
+				std::shared_ptr<Expression> operand = this->parse_expression(precedence);	// parse an expression at the precedence level of our unary operator
+				left = std::make_shared<Unary>(operand, unary_op);
 			}
 		}
 	}
@@ -258,24 +235,6 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
 		}
 	}
-}
-
-
-// Create a Dereferenced object when we dereference a pointer
-std::shared_ptr<Expression> Parser::create_dereference_object() {
-	/*
-	
-	create_dereference_object
-	Parses out a 'Dereferenced' expression
-
-	Although the asterisk can be either the multiplication operator or the dereference operator, it is impossible for the parser to get them confused because they appear in completely different contexts.
-	This function creates a dereferenced expression by parsing the expression that is contained within it
-	
-	*/
-
-	this->next();
-	Dereferenced deref(this->parse_expression());
-	return std::make_shared<Dereferenced>(deref);
 }
 
 std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol, bool omit_equals) {

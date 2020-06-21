@@ -77,24 +77,6 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             type_information = sub_data_type;
             break;
         }
-        case ADDRESS_OF:
-		{
-			// get the pointer
-			AddressOf *addr_of = dynamic_cast<AddressOf*>(to_eval.get());
-
-			// todo: properly implement address-of parsing and evaluation
-
-			break;
-		}
-        case DEREFERENCED:
-        {
-            // get the type of the dereferenced pointer
-            Dereferenced *deref = dynamic_cast<Dereferenced*>(to_eval.get());
-            
-            // Dereferenced expressions contain a pointer to another expression; get its type
-            type_information = get_expression_data_type(deref->get_contained_expression(), symbols, structs, line);
-            break;
-        }
         case BINARY:
         {
             // get the type of a binary expression
@@ -154,6 +136,18 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 
             // Unary expressions contain an expression inside of them; call this function recursively using said expression as a parameter
             type_information = get_expression_data_type(u->get_operand(), symbols, structs, line);
+
+            // if the operator is ADDRESS, we need to wrap the type information in a pointer
+            if (u->get_operator() == ADDRESS) {
+                auto full_subtype = std::make_shared<DataType>(type_information);
+                type_information = DataType(PTR);
+                type_information.set_subtype(full_subtype);
+            }
+            // if the operator is DEREFERENCE, we need to *remove* the pointer type
+            else if (u->get_operator() == DEREFERENCE) {
+                type_information = *type_information.get_full_subtype();
+            }
+
             break;
         }
         case VALUE_RETURNING_CALL:
@@ -447,10 +441,10 @@ struct_info define_struct(StructDefinition definition) {
 
 // Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
-template function_symbol create_function_symbol(FunctionDefinition);
-template function_symbol create_function_symbol(Declaration);
+template function_symbol create_function_symbol(FunctionDefinition, bool=false);
+template function_symbol create_function_symbol(Declaration, bool=false);
 template <typename T>
-function_symbol create_function_symbol(T def) {
+function_symbol create_function_symbol(T def, bool mangle) {
     /*
 
     create_function_symbol
@@ -478,10 +472,11 @@ function_symbol create_function_symbol(T def) {
         // cast to the appropriate symbol type
         if (param->get_statement_type() == DECLARATION) {
             Declaration *param_decl = dynamic_cast<Declaration*>(param.get());
-            param_sym = generate_symbol(*param_decl, scope_name, scope_level, stack_offset);
+            param_sym = generate_symbol(*param_decl, param_decl->get_type_information().get_width(), scope_name, scope_level, stack_offset);
         } else if (param->get_statement_type() == ALLOCATION) {
             Allocation *param_alloc = dynamic_cast<Allocation*>(param.get());
-            param_sym = generate_symbol(*param_alloc, scope_name, scope_level, stack_offset);
+            DataType t = param_alloc->get_type_information();
+            param_sym = generate_symbol(*param_alloc, t.get_width(), scope_name, scope_level, stack_offset);
         } else {
             // todo: remove? these errors should be caught by the parser
             throw CompilerException("Invalid statement type in function signature", compiler_errors::ILLEGAL_OPERATION_ERROR, def.get_line_number());
@@ -491,9 +486,10 @@ function_symbol create_function_symbol(T def) {
     }
 
     // construct the object
+    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name()) : def.get_name();
     function_symbol to_return(
         //def.get_name(),
-        symbol_table::get_mangled_name(def.get_name()),
+        name,
         def.get_type_information(),
         formal_parameters,
         def.get_calling_convention()
@@ -503,10 +499,10 @@ function_symbol create_function_symbol(T def) {
     return to_return;
 }
 
-template symbol generate_symbol(Declaration&, std::string, unsigned int, size_t&);
-template symbol generate_symbol(Allocation&, std::string, unsigned int, size_t&);
+template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&, bool);
+template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&, bool);
 template <typename T>
-symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope_level, size_t &stack_offset) {
+symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool mangle) {
     /*
 
     generate_symbol
@@ -519,6 +515,7 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
     For example, when an integer is allocated as the first item in a function, its offset will be rbp-4
 
     @param  allocation  A Declaration or Allocation statement
+    @param  data_width  The size of the data, in bytes, that should be taken up on the stack
     @param  scope_name  The name of the scope where the symbol is located
     @param  scope_level The scope level of the symbol
     @param  stack_offset    The stack offset (in bytes) of the symbol from the stack frame base
@@ -529,18 +526,11 @@ symbol generate_symbol(T &allocation, std::string scope_name, unsigned int scope
 
     DataType &type_info = allocation.get_type_information();
 
-    // adjust the stack offset
-    if (type_info.get_primary() == ARRAY && !type_info.get_qualities().is_dynamic()) {
-        // non-dynamic array stack offsets have to account for the full array width
-        stack_offset += (type_info.get_full_subtype()->get_width() * type_info.get_array_length()) + sin_widths::INT_WIDTH;
-    }
-    else {
-        stack_offset += type_info.get_width();
-    }
+    stack_offset += data_width;
 
+    std::string name = mangle ? symbol_table::get_mangled_name(allocation.get_name()) : allocation.get_name();
     symbol to_return(
-        //allocation.get_name(),
-        symbol_table::get_mangled_name(allocation.get_name()),
+        name,
         scope_name,
         scope_level,
         type_info,

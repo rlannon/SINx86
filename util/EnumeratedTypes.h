@@ -51,8 +51,6 @@ enum exp_type {
 	LVALUE,		// any named data
 	LIST,	// initializer-lists, mostly; syntax is { ... , ... }
 	INDEXED,
-	ADDRESS_OF,
-	DEREFERENCED,
 	BINARY,
 	UNARY,
 	VALUE_RETURNING_CALL,

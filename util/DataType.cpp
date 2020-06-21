@@ -201,6 +201,10 @@ void DataType::set_subtype(DataType new_subtype) {
 	this->subtype = std::make_shared<DataType>(new_subtype);
 }
 
+void DataType::set_subtype(std::shared_ptr<DataType> new_subtype) {
+	this->subtype = new_subtype;
+}
+
 void DataType::set_array_length(size_t new_length) {
 	this->array_length = new_length;
 }
