@@ -42,6 +42,7 @@ namespace compiler_errors {
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
     const unsigned int UNDEFINED_ERROR = 101;
+    const unsigned int UNKNOWN_ATTRIBUTE = 103;
     const unsigned int DATA_FREED = 105;
     const unsigned int EMPTY_SCOPE_BLOCK = 111;
     const unsigned int SIGNATURE_ERROR = 120;

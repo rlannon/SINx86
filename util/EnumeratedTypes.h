@@ -55,7 +55,16 @@ enum exp_type {
 	UNARY,
 	VALUE_RETURNING_CALL,
 	SIZE_OF,
-	CAST
+	CAST,
+	ATTRIBUTE,
+	KEYWORD_EXP
+};
+
+enum attribute {
+	NO_ATTRIBUTE,
+	LENGTH,
+	SIZE,
+	VARIABILITY
 };
 
 enum SymbolType {
@@ -85,6 +94,16 @@ enum SymbolQuality {
 
 enum exp_operator {
 	// So that we have a clear list of operators
+	COPY_ASSIGN,	// the = operator
+	MOVE_ASSIGN,	// the -> operator
+	PLUS_EQUAL,	// +=
+	MINUS_EQUAL,	// -=
+	MULT_EQUAL,	// *=
+	DIV_EQUAL,	// /=
+	MOD_EQUAL,	// %=
+	AND_EQUAL,	// &=
+	OR_EQUAL,	// |=
+	XOR_EQUAL,	// ^=
 	PLUS,
 	MINUS,
 	UNARY_PLUS,
