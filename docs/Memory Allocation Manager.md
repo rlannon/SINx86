@@ -54,9 +54,9 @@ Note that using `free`, while safe from *certain* runtime errors, is discouraged
     free a;
     // 'r' is now a dangling reference; it refers to memory that was freed
 
-In order to avoid segmentation violations (or any erratic behavior that comes from reading deallocated memory), the MAM is actually allowed to simply *ignore* manual `free` calls. If the number of references to the memory we are freeing is greater than 1, the MAM can simply ignore the request to free it. While the compiler will consider the variable to be inaccessible, all references that exist will still be valid until the resource becomes inaccessible.
+In order to avoid segmentation violations (or any erratic behavior that comes from reading deallocated memory), the MAM is actually allowed to simply *ignore* manual `free` calls in some cases. If the number of references to the memory we are freeing is greater than 1, the MAM can simply ignore the request to free it. While the compiler will consider the variable to be inaccessible, all references that exist will still be valid until the resource becomes truly inaccessible. However, use of `free` will not always be ignored due to the possibility of the presence of reference cycles; any resource with a reference count of 1 will be freed when invoked.
 
-Further, note that once free is used in a branch, *all* subsequent accesses of that data will be considered illegal at compile-time *whether or not the resource was actually freed in that branch.* The compiler considers that data to be unsafe to use because it *might have* been freed, and so will forbid resource access (**NB:** if the access is made through a pointer or reference, the compiler won't know). For example:
+Further, note that once `free` is used in a branch, *all* subsequent accesses of that data will be considered illegal at compile-time *whether or not the resource was actually freed in that branch.* The compiler considers that data to be unsafe to use because it *might have* been freed, and so will forbid resource access (**NB:** if the access is made through a pointer or reference, the compiler won't know as it will never attempt to analyze what is being referenced). For example:
 
     alloc dynamic int d: 5;
     if (a * 2 >= 10) {
@@ -68,3 +68,37 @@ Further, note that once free is used in a branch, *all* subsequent accesses of t
     @print(a as string);    // illegal; 'a' may have been freed
 
 When the MAM is allowed to handle freeing resources, this problem goes away.
+
+### Reference Cycles
+
+Consider the following:
+
+    decl struct B;
+    def struct A {
+        alloc ptr<B> b;
+    }
+
+    def struct B {
+        alloc ptr<A> a;
+    }
+
+    def int main() {
+        alloc A a &dynamic;
+        alloc B b &dynamic;
+        let a.b = $b;
+        let b.a = $a;
+        return 0;
+    }
+
+When the `return` statement is hit, both `a` and `b` have a reference count of 2; 1 each for their named values and another each for the pointers in the other struct. In this case, a reference cycle can be easily dealt with due to the way the compiler handles freeing `struct` types -- it invokes `free` on all members first. This means:
+
+* `a` gets freed:
+  * `free` is invoked on `a.b`, decreasing `b`'s RC to 1
+  * Named struct `a` was dynamically allocated, so it is freed as well, decreasing `a`'s RC to 1
+* `b` gets freed:
+  * `free` is invoked on `b.a`, decreasing `a`'s RC to 0, resulting in its deallocation
+  * Named struct `b` was dynamically allocated, so it is freed as well, decreasing `b`'s RC to 0, resulting in its deallocation
+
+However, one should not *rely* on the MAM, at least in its current version, to find and break such reference cycles; this is why `free` is still allowed, and sometimes necessary.
+
+_Note: a future version of the compiler/MAM may utilize a more complex reference counting/garbage collection algorithm that can break reference cycles; for the time being, however, memory may need to be freed manually in such cycles._
