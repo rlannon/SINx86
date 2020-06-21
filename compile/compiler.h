@@ -107,7 +107,6 @@ class compiler {
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_member_selection(member_selection &m, unsigned int line);
 	std::stringstream get_address(Unary &u, unsigned int line);
-	std::stringstream do_dereference(Unary &u, unsigned int line);
 public:
     // the compiler's entry function
     void generate_asm(std::string filename, Parser &p);

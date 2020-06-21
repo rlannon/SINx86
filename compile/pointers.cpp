@@ -53,17 +53,3 @@ std::stringstream compiler::get_address(Unary &u, unsigned int line) {
 
     return addr_ss;
 }
-
-std::stringstream compiler::do_dereference(Unary &u, unsigned int line) {
-    /*
-
-    Dereferences the expression contained within the unary
-
-    */
-
-    std::stringstream deref_ss;
-
-    // todo: actually do the dereferencing
-
-    return deref_ss;
-}

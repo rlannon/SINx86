@@ -28,8 +28,9 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	// We need to know the data type in order to evaluate the expression properly
 	DataType unary_type = get_expression_data_type(to_evaluate.get_operand(), this->symbols, this->structs, line);
 
-	// first, evaluate the expression we are modifying
-	eval_ss << this->evaluate_expression(to_evaluate.get_operand(), line).str();
+	// first, evaluate the expression we are modifying *unless* it is an ADDRESS operation
+	if (to_evaluate.get_operator() != ADDRESS)
+		eval_ss << this->evaluate_expression(to_evaluate.get_operand(), line).str();
 
 	// switch to our operator -- only three unary operators are allowed (that don't have special expression types, such as dereferencing or address-of), but only unary minus and unary not have any effect
 	switch (to_evaluate.get_operator()) {
@@ -141,7 +142,10 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	}
 	case exp_operator::DEREFERENCE:
 	{
-		// todo: dereferencing
+		// the address is already in RAX, so we just need to dereference (according to the type width)
+		DataType pointed_to_type = *unary_type.get_full_subtype();	// we need to know what type the pointer points to in order to get the correct register
+		std::string rax_name = get_rax_name_variant(pointed_to_type, line);
+		eval_ss << "\t" << "mov " << rax_name << ", [rax]" << std::endl;
 		break;
 	}
 	default:

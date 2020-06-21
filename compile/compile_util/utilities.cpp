@@ -143,6 +143,10 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
                 type_information = DataType(PTR);
                 type_information.set_subtype(full_subtype);
             }
+            // if the operator is DEREFERENCE, we need to *remove* the pointer type
+            else if (u->get_operator() == DEREFERENCE) {
+                type_information = *type_information.get_full_subtype();
+            }
 
             break;
         }
