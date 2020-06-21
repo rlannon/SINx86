@@ -6,11 +6,11 @@ Being a C-style language, and being heavily inspired by C++ and Python, the synt
 
 Like other C-style languages, and being an imperative language, a SIN program is comprised of a series of *statements*, each containing any number of *expressions*.
 
-## Statements
+### Statements
 
 Statements in SIN must begin with either a [statement keyword](Language%20Keywords.md) or the `@` operator to call a `void`-returning function. Note only `void`-returning functions may be appear as standalone statements; value-returning functions are considered to be expressions, and so it is illegal for them to stand alone.
 
-### Scope Blocks
+#### Scope Blocks
 
 One type of statement that is utilized in function definitions, while loops, and if-else statements is the scope block. Like C, such blocks use curly braces (`{` and `}`) to indicate some code that is grouped together and allows for variables local to it. Take the following examples -- they generate equivalent source code:
 
@@ -34,7 +34,7 @@ Although they generate the same code, they will be interpreted by the parser a l
     if (x = 10)
         let y = x;
         let x = 30;     // not part of the if block
-    else                // stand-alone 'else', as parsing 'if' was completed
+    else                // ERR: unexpected keyword 'else'
         let y = 0;
         let x = 0;      // not part of the else block
 
@@ -42,28 +42,30 @@ We will ultimately have two errors, one syntactic and one logical. The syntax er
 
 Also make note that in SIN, unlike C, Python, etc., the equality operator `=` and the assignment operator `=` are the same -- in other C-style languages, the assignment operator is `=` while equality is `==`, which causes confusion among new programmers. Since SIN always uses `let` and `move` for assignment, the need for the double-equals was eliminated.
 
-## Expressions
+### Expressions
 
 Like other C-style languages, statements in SIN rely on various types of *expressions.* The available expression types are:
 
-* Value-returning function calls
-* Unary expressions
-* Binary expressions
-* Symbols
-* Literals
+* _Value-returning function calls:_ A function call that returns a value to be used as an expression, such as in the statement `let x = @my_func();`
+* _Unary expressions:_ Expressions like `-3` or `$x`, which use a unary operator
+* _Binary expressions:_ Expressions using a binary operator, like `1 + 2 * 3`
+* _Symbols:_ Any symbol that must be resolved to a value somewhere in memory, such as in the statement `let x = y`, where `y` is the symbol expression
+* _Literals:_ Every type has literal values; `int` has expressions like `1234`, `float` has ones like `3.14159`, and `string` has `"hello, world!"`
+* _Keyword expressions:_ Keyword expressions are limited in their use and are typically used with the binary member selection operator; for example, `int:size` is a binary expression with keyword expressions on the left and right sides
 
-## Operators and Precedence
+### Operators and Precedence
 
-### Operators
+Operator precedence in SIN closely follows operator precedence in C and Python -- and, actually, those languages were used to determine SIN operator precedence. For information on the operators in the language, see the [appropriate relevant page](Operators.md).
 
-Operator precedence in SIN closely follows operator precedence in C and Python -- and, actually, those languages were used to determine SIN operator precedence.
+## Scopes
 
-The following operators are defined in SIN (in descending order of precedence):
+Like C, SIN programs are divided into a series of _scopes;_ these can be in loops, functions, or even stand alone. Scopes allow for localized data that gets destroyed when the scope is exited. For example:
 
-| Precedence | Operator | Associativity | Defined Types | Purpose |
-| ---------- | -------- | ------------- | ------------- | ------- |
-| 25 | Dot (`.`) | Left-to-Right | `struct` | Member selection on `struct` types |
-| 25 | Attribute (`:`) | Left-to-Right | Any | Attribute selection |
-| 24 | Typecast (`as`) | Left-to-Right | Any numeric; `bool`, `char` | Casts one type to another |
-| 24 | Unary minus (`-`) | Right-to-Left | Any numeric | Opposite (negative) of the given rvalue |
-| 24 | Unary plus (`+`) | Right-to-Left | Any numeric | Does nothing, but available to contrast the unary minus |
+    {
+        alloc int x;
+        {
+            let x = 30; // updates to variable in higher scope is OK; these values are maintained
+            alloc int y;
+        }
+        let y = 30; // ERR: symbol 'y' doesn't exist, as it was declared in a lower scope
+    }
