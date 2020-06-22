@@ -259,7 +259,10 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         */
         
         if (type.get_width() == sin_widths::SHORT_WIDTH) {
-            eval_ss << "\t" << "mov eax, " << to_evaluate.get_value() << std::endl;
+            // note that we want the unused high bytes to be zero in case this value gets stored at a 32-bit location
+            // we can't just load the 32-bit register though, as this would mess with signed values
+            eval_ss << "\t" << "mov ax, " << to_evaluate.get_value() << std::endl;
+            eval_ss << "\t" << "movzx eax, ax" << std::endl;    // so we use movzx to accomplish this
         } else if (type.get_width() == sin_widths::INT_WIDTH) {
             eval_ss << "\t" << "mov eax, " << to_evaluate.get_value() << std::endl;
         } else if (type.get_width() == sin_widths::DOUBLE_WIDTH) {
