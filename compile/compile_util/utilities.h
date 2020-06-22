@@ -62,3 +62,5 @@ std::string get_address(symbol &s, reg r);
 
 std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs);
 std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs);
+
+std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int level, bool is_function);

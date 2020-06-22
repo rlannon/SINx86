@@ -696,3 +696,35 @@ std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
 
     return copy_ss;
 }
+
+std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int level, bool is_function) {
+    /*
+
+    decrement_rc
+    Decrements the RC of all local variables
+
+    @param  is_function If we are in a function, we need to free data that's below the scope level as well
+
+    */
+
+    std::stringstream dec_ss;
+
+    // get the local variables that need to be freed
+    std::vector<symbol> v = t.get_symbols_to_free(scope, level, is_function);
+    if (!v.empty()) {
+        // set up the stack frame
+        dec_ss << "\t" << "pushfq" << std::endl;
+        dec_ss << "\t" << "push rbp" << std::endl;
+        dec_ss << "\t" << "mov rbp, rsp" << std::endl;
+        for (symbol& s: v) {
+            dec_ss << "\t" << "mov rdi, [rbp - " << s.get_offset() << "]" << std::endl;
+            dec_ss << "\t" << "call sre_free" << std::endl;
+        }
+        // restore the stack frame
+        dec_ss << "\t" << "mov rsp, rbp" << std::endl;
+        dec_ss << "\t" << "pop rbp" << std::endl;
+        dec_ss << "\t" << "popfq" << std::endl;
+    }
+
+    return dec_ss;
+}

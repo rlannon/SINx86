@@ -341,6 +341,9 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
         throw ReturnMismatchException(ret.get_line_number());
     }
 
+    // decrement the rc of all pointers and dynamic memory
+    ret_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, true).str();
+
     // now that the calling convention's return responsibilities have been dealt with, we can return; move the offset back by one qword, as ret pops the return address from the stack
     ret_ss << "\t" << "ret" << std::endl;
     this->max_offset -= 8;

@@ -151,12 +151,49 @@ std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
 	return it->second;
 }
 
+std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned int level, bool is_function) {
+	/*
+
+	get_symbols_to_free
+	Gets a list of symbols that need to have their references decremented before the scope is left
+	
+	Gets local variables that satisfy the following conditions:
+		* is marked as dynamic
+		* is a pointer
+		* is a reference
+	If we are in a function, we need to
+
+	*/
+
+	std::vector<symbol> v;
+	stack<node> l = this->locals;
+	while (
+		!l.empty() && 
+		(is_function ? 
+			(l.peek().scope_level <= level) :
+			(l.peek().scope_level == level)	&& 
+		l.peek().scope_name == name)
+	) {
+		symbol s = *this->find(l.pop_back().name);
+		if (
+			s.get_data_type().get_primary() == PTR ||
+			s.get_data_type().get_qualities().is_dynamic()
+		) {
+			v.push_back(s);
+		}
+	}
+
+	return v;
+}
+
 void symbol_table::leave_scope(std::string name, unsigned int level)
 {
 	/*
 	
 	leave_scope
 	Leaves the current scope, deleting all variables local to that scope
+
+	Any data that should be freed by the GC should be returned in a vector
 	
 	*/
 	

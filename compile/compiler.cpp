@@ -293,6 +293,9 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             // compile the AST in the block
             compile_ss << this->compile_ast(ast, signature).str();
 
+            // free local data
+            compile_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, false).str();
+            
             // restore the scope level
             this->current_scope_level = old_scope_level;
             break;
@@ -334,9 +337,12 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
             compile_ss << "\t" << "sub rsp, " << r << std::endl;
         }
 
-        // compile the statement
+        // compile the return statement
+        // note that 'return' will handle symbol freeing as it needs to happen after the return expression evaluation
         compile_ss << this->compile_statement(s, signature).str();
     }
+    
+    // todo: free data for non-function scope blocks
 
 	// when we leave a scope, remove local variables -- but NOT global variables (they must be retained for inclusions)
 	if (this->current_scope_name != "global") {
