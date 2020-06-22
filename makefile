@@ -1,143 +1,33 @@
-# makefile
-# build the SIN compile
-
+SRC_DIR=.
+PARSER_DIR=./parser
+OBJ_DIR=./bin
+SRC_FILES=$(wildcard $(SRC_DIR)/parser/*.cpp $(SRC_DIR)/util/*.cpp $(SRC_DIR)/compile/*.cpp $(SRC_DIR)/compile/compile_util/*.cpp)
+OBJ_FILES=$(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(SRC_FILES)))
 cc=g++
-cpp_version=c++17
-flags=-std=$(cpp_version) -g
+cppversion=c++17
+cppflags=-std=$(cppversion) -g
 target=sinx86
-bin=bin/
-
-# object file dependencies
-compiler_objs=allocation.o assign.o evaluate_expression.o pointers.o operator_expressions.o functions.o function_symbol.o struct_info.o symbol.o
-compiler_util_objs=symbol_table.o struct_table.o member_selection.o constant_eval.o constant_eval_util.o const_symbol.o  register_usage.o utilities.o
-parser_objs=lexeme.o lexer.o type_deduction.o parseexpression.o parsestatement.o parse_definition.o parserutil.o statement.o expression.o
-util_objs=datatype.o symbol_qualities.o exceptions.o general_utilities.o binaryio.o
-build_objs=compiler.o parser.o $(compiler_objs) $(compiler_util_objs) $(parser_objs) $(util_objs)
-
-# source file dependencies
-compiler_dependencies=compile/*
-parser_dependencies=parser/*
-util_dependencies=util/*
-all_dependencies=$(parser_dependencies) $(util_dependencies)
-
-# todo: simplify builds, dependencies, etc.
 
 default: $(target)
 
-# Build the whole program
-
-$(target): $(build_objs)
-	@echo "Building target..."
+$(target): $(OBJ_FILES)
+	@echo Finishing build...
 	$(cc) $(flags) -o $@ main.cpp $^
-	@echo "Build successful!"
+	@echo Done.
 
-# Build the compiler
-compiler.o: $(compiler_objs) $(compiler_util_objs) $(parser_objs) $(util_objs) $(parser_dependencies) $(compiler_dependencies)
-	$(cc) $(flags) -o compiler.o -c compile/compiler.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/parser/%.cpp
+	$(cc) $(flags) -c -o $@ $<
 
-allocation.o: compile/allocation.cpp compile/compiler.h
-	$(cc) $(flags) -o allocation.o -c compile/allocation.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/util/%.cpp
+	$(cc) $(flags) -c -o $@ $<
 
-assign.o: compile/assign.cpp compile/compiler.h
-	$(cc) $(flags) -o assign.o -c compile/assign.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/compile/%.cpp
+	$(cc) $(flags) -c -o $@ $<
 
-evaluate_expression.o: compile/evaluate_expression.cpp compile/compiler.h
-	$(cc) $(flags) -o evaluate_expression.o -c compile/evaluate_expression.cpp
+$(OBJ_DIR)/%.o: $(SRC_DIR)/compile/compile_util/%.cpp
+	$(cc) $(flags) -c -o $@ $<
 
-pointers.o: compile/pointers.cpp compile/compiler.h
-	$(cc) $(flags) -o pointers.o -c compile/pointers.cpp
-
-operator_expressions.o: compile/compiler.h
-	$(cc) $(flags) -o operator_expressions.o -c compile/operator_expressions.cpp
-
-functions.o: compile/compiler.h compile/functions.cpp function_symbol.o
-	$(cc) $(flags) -o functions.o -c compile/functions.cpp
-
-function_symbol.o: compile/symbol.cpp compile/function_symbol.cpp compile/symbol.h compile/function_symbol.h symbol.o register_usage.o
-	$(cc) $(flags) -o function_symbol.o -c compile/function_symbol.cpp
-
-struct_info.o: compile/struct_info.h compile/struct_info.h symbol.o exceptions.o
-	$(cc) $(flags) -o struct_info.o -c compile/struct_info.cpp
-
-symbol.o: compile/symbol.cpp compile/symbol.h
-	$(cc) $(flags) -o symbol.o -c compile/symbol.cpp
-
-# compiler utilities
-symbol_table.o: compile/compile_util/symbol_table.h
-	$(cc) $(flags) -o symbol_table.o -c compile/compile_util/symbol_table.cpp
-
-struct_table.o: compile/compile_util/struct_table.h
-	$(cc) $(flags) -o struct_table.o -c compile/compile_util/struct_table.cpp
-
-member_selection.o: compile/compile_util/member_selection.h
-	$(cc) $(flags) -o member_selection.o -c compile/compile_util/member_selection.cpp
-
-const_symbol.o: compile/compile_util/const_symbol.h
-	$(cc) $(flags) -o const_symbol.o -c compile/compile_util/const_symbol.cpp
-
-constant_eval.o: constant_eval_util.o compile/compile_util/constant_eval.h utilities.o
-	$(cc) $(flags) -o constant_eval.o -c compile/compile_util/constant_eval.cpp
-
-constant_eval_util.o: compile/compile_util/constant_eval.h
-	$(cc) $(flags) -o constant_eval_util.o -c compile/compile_util/constant_eval_util.cpp
-
-register_usage.o: compile/compile_util/register_usage.cpp compile/compile_util/register_usage.h
-	$(cc) $(flags) -o register_usage.o -c compile/compile_util/register_usage.cpp
-
-utilities.o: compile/compile_util/utilities.h
-	$(cc) $(flags) -o utilities.o -c compile/compile_util/utilities.cpp
-
-# Build the parser
-
-parser.o: $(parser_objs) $(util_objs) $(parser_dependencies)
-	$(cc) $(flags) -o parser.o -c parser/Parser.cpp
-
-parseexpression.o: type_deduction.o expression.o datatype.o exceptions.o
-	$(cc) $(flags) -o parseexpression.o -c parser/ParseExpression.cpp
-
-parserutil.o: type_deduction.o statement.o expression.o datatype.o exceptions.o
-	$(cc) $(flags) -o parserutil.o -c parser/ParserUtil.cpp
-
-parsestatement.o: type_deduction.o statement.o expression.o datatype.o exceptions.o parse_definition.o
-	$(cc) $(flags) -o parsestatement.o -c parser/ParseStatement.cpp
-
-parse_definition.o: statement.o expression.o parser/parse_definition.cpp
-	$(cc) $(flags) -o parse_definition.o -c parser/parse_definition.cpp
-
-statement.o: expression.o datatype.o
-	$(cc) $(flags) -o statement.o -c parser/Statement.cpp
-
-expression.o: datatype.o
-	$(cc) $(flags) -o expression.o -c parser/Expression.cpp
-
-type_deduction.o: util/EnumeratedTypes.h parser/type_deduction.h parser/type_deduction.cpp
-	$(cc) $(flags) -o type_deduction.o -c parser/type_deduction.cpp
-
-lexer.o: parser/Lexer.h parser/Lexer.cpp lexeme.o
-	$(cc) $(flags) -o lexer.o -c parser/Lexer.cpp
-
-lexeme.o: parser/lexeme.h parser/lexeme.cpp
-	$(cc) $(flags) -o lexeme.o -c parser/lexeme.cpp
-
-# Utilities
-
-datatype.o: util/DataType.h util/EnumeratedTypes.h util/data_widths.h symbol_qualities.o
-	$(cc) $(flags) -o datatype.o -c util/DataType.cpp
-
-symbol_qualities.o: util/symbol_qualities.h util/symbol_qualities.cpp
-	$(cc) $(flags) -o symbol_qualities.o -c util/symbol_qualities.cpp
-
-exceptions.o: util/Exceptions.h util/CompilerErrorCodes.h
-	$(cc) $(flags) -o exceptions.o -c util/Exceptions.cpp
-
-general_utilities.o: util/general_utilities.h
-	$(cc) $(flags) -o general_utilities.o -c util/general_utilities.cpp
-
-binaryio.o:
-	$(cc) $(flags) -o binaryio.o -c util/BinaryIO/BinaryIO.cpp
-
-# cleanup
 clean:
-	rm *.o
+	rm bin/*.o
 
 .PHONY: $(target) clean

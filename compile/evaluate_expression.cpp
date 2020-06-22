@@ -259,7 +259,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         */
         
         if (type.get_width() == sin_widths::SHORT_WIDTH) {
-            eval_ss << "\t" << "movzx ax, " << to_evaluate.get_value() << std::endl;
+            eval_ss << "\t" << "mov eax, " << to_evaluate.get_value() << std::endl;
         } else if (type.get_width() == sin_widths::INT_WIDTH) {
             eval_ss << "\t" << "mov eax, " << to_evaluate.get_value() << std::endl;
         } else if (type.get_width() == sin_widths::DOUBLE_WIDTH) {
