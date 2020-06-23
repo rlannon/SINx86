@@ -5,7 +5,7 @@ SRC_FILES=$(wildcard $(SRC_DIR)/parser/*.cpp $(SRC_DIR)/util/*.cpp $(SRC_DIR)/co
 OBJ_FILES=$(patsubst %.cpp, $(OBJ_DIR)/%.o, $(notdir $(SRC_FILES)))
 cc=g++
 cppversion=c++17
-cppflags=-std=$(cppversion) -g
+flags=-std=$(cppversion) -g
 target=sinx86
 
 default: $(target)
