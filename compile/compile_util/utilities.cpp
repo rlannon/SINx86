@@ -717,7 +717,10 @@ std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int 
         dec_ss << "\t" << "push rbp" << std::endl;
         dec_ss << "\t" << "mov rbp, rsp" << std::endl;
         for (symbol& s: v) {
-            dec_ss << "\t" << "mov rdi, [rbp - " << s.get_offset() << "]" << std::endl;
+            // we need to move the old base pointer into rbx and subtract the offset from that
+            dec_ss << "\t" << "mov rbx, [rsp]" << std::endl;
+            dec_ss << "\t" << "sub rbx, " << s.get_offset() << std::endl;
+            dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
             dec_ss << "\t" << "call sre_free" << std::endl;
         }
         // restore the stack frame
@@ -781,10 +784,10 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
         get_addr << "\t" << "sub rdi, " << s.get_offset() << std::endl;
     }
 
+    gen << "\t" << get_addr.str();
     gen << "\t" << "pushfq" << std::endl;
     gen << "\t" << "push rbp" << std::endl;
     gen << "\t" << "mov rbp, rsp" << std::endl;
-    gen << "\t" << get_addr.str();
     gen << "\t" << "mov rsp, rbp" << std::endl;
     gen << "\t" << "pop rbp" << std::endl;
     gen << "\t" << "popfq" << std::endl;

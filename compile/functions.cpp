@@ -341,10 +341,18 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
         throw ReturnMismatchException(ret.get_line_number());
     }
 
-    // decrement the rc of all pointers and dynamic memory
-    ret_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, true).str();
-
-    // now that the calling convention's return responsibilities have been dealt with, we can return; move the offset back by one qword, as ret pops the return address from the stack
+    ret_ss << "\t" << "mov rsp, rbp" << std::endl;
+    
+    // adjust the offset by one pointer width + the offset of the final parameter
+    // rsp needs to be where it was when we pushed the function return value
+    ret_ss << "\t" << "sub rsp, " << 
+        sin_widths::PTR_WIDTH + 
+        (signature.get_formal_parameters().empty() ?
+            0 : 
+            signature.get_formal_parameters()[signature.get_formal_parameters().size() - 1].get_offset())
+        << std::endl;
+    
+    // now that the calling convention's return responsibilities have been dealt with, we can return
     ret_ss << "\t" << "ret" << std::endl;
     this->max_offset -= 8;
     return ret_ss;
@@ -365,5 +373,11 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
 
 	std::stringstream sincall_ss;
 	sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
+    sincall_ss << "\t" << "push rax" << std::endl;
+
+    // decrement the rc of all pointers and dynamic memory
+    sincall_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, true).str();
+    sincall_ss << "\t" << "pop rax" << std::endl;
+
     return sincall_ss;
 }

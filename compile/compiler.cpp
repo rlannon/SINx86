@@ -327,18 +327,6 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
 
     // iterate over it and compile each statement in turn, adding it to the stringstream
     for (std::shared_ptr<Statement> s: ast.statements_list) {
-        // return the stack pointer to where the return address is kept before we actually return
-        if (s->get_statement_type() == RETURN_STATEMENT) {
-            // the location of the return address is simply the offset of the last parameter + a quadword
-            size_t r = signature->get_formal_parameters().empty() ? 0 : signature->get_formal_parameters()[signature->get_formal_parameters().size() - 1].get_offset();
-            r += sin_widths::PTR_WIDTH;
-
-            compile_ss << "\t" << "mov rsp, rbp" << std::endl;
-            compile_ss << "\t" << "sub rsp, " << r << std::endl;
-        }
-
-        // compile the return statement
-        // note that 'return' will handle symbol freeing as it needs to happen after the return expression evaluation
         compile_ss << this->compile_statement(s, signature).str();
     }
     
