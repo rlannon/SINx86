@@ -47,18 +47,28 @@ function_symbol::function_symbol(std::string function_name, DataType return_type
     if (this->formal_parameters.size() > 0) {
         // this->arg_regs will hold the registers used by this signature
 
-        size_t stack_offset = 0;  // the current stack offset 
-
-        // todo: this routine will be different for each of our 
+		// note that this is a little backwards -- we count the offset from rbp *into* the stack, so positive offsets in asm will be negative here
+        int stack_offset = -general_utilities::BASE_PARAMETER_OFFSET;  // the current stack offset 
+		
+		// get the total stack offset for paramters by iterating through
+		for (auto it = this->formal_parameters.begin(); it != this->formal_parameters.end(); it++) {
+			stack_offset -= it->get_data_type().get_width();
+		}
 
         // act based on calling convention
 		if (call_con == calling_convention::SINCALL) {
 			// determine the register for each of our formal parameters
 			bool can_pass_in_reg = true;	// once we have one argument passed on the stack, all subsequent arguments will be
 			for (symbol &sym : this->formal_parameters) {
+				// the offset for this symbol will be the total stack offset we calculated + the width of this object		
+				size_t obj_width = sym.get_data_type().get_width();
+				stack_offset += obj_width;
+				sym.set_offset(stack_offset);
+				
 				// which register is used (or whether a register is used at all) depends on the primary type of the symbol
 				Type primary_type = sym.get_data_type().get_primary();
-
+				
+				// assign the register, if possible
 				if (can_pass_in_reg && (primary_type != ARRAY && primary_type != STRUCT && primary_type != STRING)) {
 					// pass in the primary type; the get_available_register function will be able to handle it
 					reg to_use = NO_REGISTER;

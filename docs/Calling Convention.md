@@ -4,18 +4,14 @@
 
 The SIN calling convention is modeled after the x64 calling conventions for Windows and Linux, specifically `_cdecl`. However, the calling conventions differ slightly.
 
-Note that in SIN, the calling convention is declared in the function definition, _not_ in the call itself, as the convention affects how function bodies are generated.
+Note that in SIN, the calling convention is always declared in the function definition and _never_ in the call itself, as the convention affects how function bodies are generated.
 
-The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike `_cdecl`, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers `RSI, RDI, RCX, RDX, R8, R9`, while floating-point types will be pushed in registers `XMM0 - XMM5`. `RAX` and `RBX` are never preserved by the caller nor the callee; they are considered volatile.
+The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike `_cdecl`, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers `RSI, RDI, RCX, RDX, R8, R9`, while floating-point types will be pushed in registers `XMM0 - XMM5`. `RAX` and `RBX` are never preserved by the caller nor the callee automatically; they are considered volatile.
 
 Typically, this will end up looking something like:
 
     caller:
         ; function signature 'decl int callee(decl int a, decl int b, decl int c, decl int d, decl int e &long)'
-
-        push rflags ; preserve the status
-        push rbp   ; preserve old call frame
-        mov rbp, rsp    ; the new base is the current stack pointer
 
         ; pass arguments (call is '@callee(10, 20, 30, 40, 50)' )
         mov esi, 10
@@ -24,7 +20,11 @@ Typically, this will end up looking something like:
         mov edx, 40
         mov r8, 50  ; we can pass all of these in registers
 
-        sub rsp, 24 ; we need to reserve space for these as local variables above the return address
+        sub rsp, 20 ; we need to reserve space for these as local variables above where we set up the frame
+
+        pushfq  ; preserve the status
+        push rbp   ; preserve old call frame
+        mov rbp, rsp    ; the new base is the current stack pointer
 
         call callee ; call the function
 
@@ -33,6 +33,7 @@ Typically, this will end up looking something like:
         mov rsp, rbp    ; restore the old stack frame
         pop rsp
         pop rflags  ; restore the flags
+        add rsp, 20 ; move rsp back to where it was before the call
 
         ; move the returned value into some variable from the higher scope
         mov [rbp - 16], eax
@@ -41,16 +42,22 @@ Note, then, that the return address will be located somewhere in the stack below
 
 |   Offset  |   Data    |
 | --------- | --------- |
-| 0 | `rbp` |
-| -4 | `a:int` |
-| -8 | `b:int` |
-| -12 | `c:int` |
-| -16 | `d:int` |
-| -24 | `e:long int` |
-| -32 | return address |
-| -40 | local `long int` |
+| +36 | `int a` |
+| +32 | `int b` |
+| +28 | `int c` |
+| +24 | `int d` |
+| +16 | `long int e` |
+| +8 | `rflags` |
+| +0 | `rbp` |
+| -8 | return address |
 
-This means that before the function returns, it has to be sure to move the stack pointer back to `rbp - 32`, which can be obtained simply by looking at the offset of the last parameter and adding the width of a pointer -- in this case, it will give us an offset of `24 + 8`, yielding a return location at`[rbp - 32]`
+This means that before the function returns, it has to be sure to move the stack pointer back to `rbp - 8`, as that is the location of the return address.
+
+This calling convention therefore means that all parameters will always be located at a location _above_ `rbp`. Specifically, they will be located at:
+
+    rbp + 16 + offset
+
+to account for the width of the old base pointer, the width of `rflags`, and then the offset where it lies within the stack. This means the last parameter will have an offset of 0, while the last will have an offset of the sum of every offset that comes after it. This also means that we must subtract every time from `rsp` the sum of the widths of all of the parameters.
 
 Now, we will look more in-depth at the rules for calling functions and returning values, as how values are passed and return depends on their data type.
 

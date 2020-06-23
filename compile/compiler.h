@@ -30,7 +30,7 @@ Copyright 2019 Riley Lannon
 
 class compiler {
     // The class containing our compiler
-
+	
     // todo: break code generation into multiple friend classes
 
 	compile_time_evaluator evaluator;	// the compile-time constant evaluator

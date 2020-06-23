@@ -11,6 +11,7 @@ Contains the declaration of the function_symbol class
 
 #include "symbol.h"
 #include "compile_util/register_usage.h"
+#include "../util/general_utilities.h"
 
 class function_symbol: public symbol {
     /*

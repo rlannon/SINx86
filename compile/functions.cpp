@@ -64,7 +64,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     unsigned int previous_scope_level = this->current_scope_level;
     size_t previous_max_offset = this->max_offset;
 
-    // todo: should be package this together in an object and use a stack to keep track of it? that might make things a little cleaner
+    // todo:
 
     // update the scope information
     this->current_scope_name = definition.get_name();
@@ -74,10 +74,11 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // construct the symbol for the function -- everything is offloaded to the utility
     function_symbol func_sym = create_function_symbol(definition);
 
-    // now, update the stack offset to account for all parameters
-    if (!func_sym.get_formal_parameters().empty()) {
-        this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
-    }
+    // todo: delete -- no longer relevant due to calling convention updates
+    // // now, update the stack offset to account for all parameters
+    // if (!func_sym.get_formal_parameters().empty()) {
+    //     this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
+    // }
 
     // add the symbol to the table
     this->add_symbol(func_sym, definition.get_line_number());
@@ -96,11 +97,12 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
         }
     }
 
-    // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
-    if (!func_sym.get_formal_parameters().empty()) {
-        const symbol &last_sym = func_sym.get_formal_parameters().back(); 
-        this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
-    }
+    // todo: delete - no longer relevant due to calling convention updates
+    // // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
+    // if (!func_sym.get_formal_parameters().empty()) {
+    //     const symbol &last_sym = func_sym.get_formal_parameters().back(); 
+    //     this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
+    // }
 
     // get the register_usage object from func_sym and push that
     this->reg_stack.push_back(func_sym.get_arg_regs());
@@ -343,14 +345,8 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
 
     ret_ss << "\t" << "mov rsp, rbp" << std::endl;
     
-    // adjust the offset by one pointer width + the offset of the final parameter
-    // rsp needs to be where it was when we pushed the function return value
-    ret_ss << "\t" << "sub rsp, " << 
-        sin_widths::PTR_WIDTH + 
-        (signature.get_formal_parameters().empty() ?
-            0 : 
-            signature.get_formal_parameters()[signature.get_formal_parameters().size() - 1].get_offset())
-        << std::endl;
+    // adjust the offset by one pointer width, as rsp needs to be where it was when we pushed the function return value
+    ret_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
     
     // now that the calling convention's return responsibilities have been dealt with, we can return
     ret_ss << "\t" << "ret" << std::endl;
