@@ -36,8 +36,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 	// if the type is 'array', we need to evaluate the array width that was parsed earlier
 	if (alloc_data.get_primary() == ARRAY) {
-		// if it's a constant, evaluate it
-		if (alloc_data.get_array_length_expression()->is_const()) {
+		// if we have an array length expression, and it's a constant, evaluate it
+		if (alloc_data.get_array_length_expression() != nullptr && alloc_data.get_array_length_expression()->is_const()) {
 			if (
 				get_expression_data_type(
 					alloc_data.get_array_length_expression(),

@@ -723,7 +723,14 @@ std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int 
         for (symbol& s: v) {
             // we need to move the old base pointer into rbx and subtract the offset from that
             dec_ss << "\t" << "mov rbx, [rsp]" << std::endl;
-            dec_ss << "\t" << "sub rbx, " << s.get_offset() << std::endl;
+
+            // if we have a negative number, add it instead
+            if (s.get_offset() < 0) {
+                dec_ss << "\t" << "add rbx, " << -s.get_offset() << std::endl;
+            }
+            else {
+                dec_ss << "\t" << "sub rbx, " << s.get_offset() << std::endl;
+            }
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
             dec_ss << "\t" << "call sre_free" << std::endl;
         }
@@ -785,7 +792,13 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
     }
     else {
         get_addr << "\t" << "mov rdi, rbp" << std::endl;
-        get_addr << "\t" << "sub rdi, " << s.get_offset() << std::endl;
+
+        if (s.get_offset() < 0) {
+            get_addr << "\t" << "add rdi, " << -s.get_offset() << std::endl;
+        }
+        else {
+            get_addr << "\t" << "sub rdi, " << s.get_offset() << std::endl;
+        }
     }
 
     gen << "\t" << get_addr.str();
