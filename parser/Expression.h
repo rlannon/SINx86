@@ -91,6 +91,17 @@ public:
 	Indexed();
 };
 
+class KeywordExpression: public Expression
+{
+	DataType t;
+	std::string keyword;
+public:
+	std::string get_keyword();
+	DataType &get_type();
+	KeywordExpression(std::string keyword);
+	KeywordExpression(DataType t);
+};
+
 // Address Of -- the address of a variable
 class AddressOf : public Expression
 {
@@ -100,17 +111,6 @@ public:
 
 	AddressOf(std::shared_ptr<Expression> target);
 	AddressOf();
-};
-
-// Dereferenced -- the value of a dereferenced ptr
-class Dereferenced : public Expression
-{
-	std::shared_ptr<Expression> contained_expression;	// the Expression that this Dereferenced expression is dereferencing
-public:
-	std::shared_ptr<Expression> get_contained_expression();
-
-	Dereferenced(std::shared_ptr<Expression> ptr);
-	Dereferenced();
 };
 
 class Binary : public Expression
@@ -169,4 +169,33 @@ public:
 
 	SizeOf(DataType to_check);
 	SizeOf();
+};
+
+// typecasting expressions
+class Cast : public Expression
+{
+	std::shared_ptr<Expression> to_cast;	// any expression can by typecast
+	DataType new_type;	// the new type for the expression
+public:
+	std::shared_ptr<Expression> get_exp();
+	DataType &get_new_type();
+	Cast(std::shared_ptr<Expression> to_cast, DataType new_type);
+	Cast(std::shared_ptr<Binary> b);
+};
+
+// Attribute selection
+class AttributeSelection : public Expression
+{
+	std::shared_ptr<Expression> selected;
+	attribute attrib;
+	DataType t;
+public:
+	static attribute to_attribute(std::string to_convert);
+	static bool is_attribute(std::string a);
+
+	std::shared_ptr<Expression> get_selected();
+	attribute get_attribute();
+	DataType &get_data_type();
+	AttributeSelection(std::shared_ptr<Expression> selected, std::string attribute_name);
+	AttributeSelection(std::shared_ptr<Binary> to_deconstruct);
 };

@@ -15,7 +15,6 @@ The class for compiler symbols
 #include <unordered_map>
 
 #include "../util/DataType.h"   // For all information about types
-#include "compile_util/register_usage.h"
 
 class symbol {
     /*
@@ -25,8 +24,9 @@ class symbol {
     */
     
 	// these are not necessary for child classes and so should remain private to 'symbol'
-    unsigned int offset;  // the offset, in bytes, from the stack frame base or from the struct base, depending on what the symbol is used for
+    int offset;  // the offset, in bytes, from the stack frame base or from the struct base, depending on what the symbol is used for
     reg current_reg;    // current register holding the symbol
+    bool is_parameter;  // whether the symbol is a function parameter
 protected:
     SymbolType symbol_type;
 
@@ -39,18 +39,23 @@ protected:
     bool initialized;   // whether the data was initialized
     bool freed; // whether the memory has been allocated or freed
 public:
+    // to update our offset
+    void set_offset(int new_offset);    // must be public -- cannot be protected because it will be accessed through a pointer
+    
     // our getters
     SymbolType get_symbol_type() const;
 
     reg get_register() const;
     void set_register(reg to_set);
 
+    void set_as_parameter();
+
     std::string get_name() const;
     std::string get_scope_name() const;
     unsigned int get_scope_level() const;
 
     DataType get_data_type() const;
-    unsigned int get_offset() const;
+    int get_offset() const;
 
     // note these won't have any effect on functions (as functions are not allocated in SIN)
     bool was_initialized() const;

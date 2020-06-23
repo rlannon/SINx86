@@ -27,6 +27,13 @@ class symbol_qualities
 	bool unsigned_q;
 	bool long_q;
 	bool short_q;
+	bool extern_q;
+
+	// function qualities -- for calling conventions, unused by other data
+	// todo: create additional, inherited class 'function_symbol_qualities' to use with functions?
+	bool sincall_con;
+	bool c64_con;
+	bool windows_con;
 public:
 	static const std::unordered_map<std::string, SymbolQuality> quality_strings;
 
@@ -38,13 +45,19 @@ public:
 	bool is_unsigned();
 	bool is_long();
 	bool is_short();
+	bool is_extern();
+
+	// function-specific qualities
+	bool is_sincall();
+	bool is_c64();
+	bool is_windows();
 
 	// void add_qualities(std::vector<SymbolQuality> to_add);
 	void add_qualities(symbol_qualities to_add);
     void add_quality(SymbolQuality to_add);
 
 	symbol_qualities(std::vector<SymbolQuality> qualities);
-	symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long = false, bool is_short = false);
+	symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long = false, bool is_short = false, bool is_extern = false);
 	symbol_qualities();
 	~symbol_qualities();
 };

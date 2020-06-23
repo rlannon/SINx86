@@ -4,11 +4,7 @@ SIN Toolchain
 ParseExpression.cpp
 Copyright 2019 Riley Lannon
 
-Contains the implementations of the functions to parse expressions, including:
-	- std::shared_ptr<Expression> parse_expression(size_t prec=0, std::string grouping_symbol = "(", bool not_binary = false);
-	- std::shared_ptr<Expression> create_dereference_object();
-	- LValue getDereferencedLValue(Dereferenced to_eval);
-	- std::shared_ptr<Expression> maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol = "(");
+Contains the implementations of the functions to parse expressions.
 
 */
 
@@ -18,7 +14,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	lexeme current_lex = this->current_token();
 
 	// Create a pointer to our first value
-	std::shared_ptr<Expression> left;
+	std::shared_ptr<Expression> left(nullptr);
 	bool is_const = false;
 
 	// first, check to see if we have the 'constexpr' keyword
@@ -133,9 +129,25 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				throw ParserException("Syntax error; expected '<'", 0, current_lex.line_number);
 			}
 		}
-		else {
-			throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
+		else if (current_lex.value == "not") {
+			// the logical not operator
+			this->next();
+			auto negated = this->parse_expression(get_precedence(NOT, current_lex.line_number));
+			left = std::make_shared<Unary>(negated, NOT);
 		}
+		else if (AttributeSelection::is_attribute(current_lex.value)) {
+			// if we have an attribute, parse out a keyword expression
+			left = std::make_shared<KeywordExpression>(current_lex.value);
+		}
+		else {
+			try {
+				auto t = this->get_type(grouping_symbol);
+				left = std::make_shared<KeywordExpression>(t);
+			} catch (ParserException& e) {
+				throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
+			}
+		}
+		// todo: enable type-level attributes as well as value-level (e.g., 'int:size') to replace 'sizeof'
 	}
 	// if we have an op_char to begin an expression, parse it (could be a pointer or a function call)
 	else if (current_lex.type == OPERATOR) {
@@ -167,44 +179,25 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				throw MissingIdentifierError(current_lex.line_number);
 			}
 		}
-		// check to see if we have the address-of operator
-		else if (current_lex.value == "$") {
-			// if we have a $ character, it HAS TO be the address-of operator
-			// current lexeme is the $, so get the variable for which we need the address
-			lexeme next_lexeme = this->next();
-			left = this->parse_expression(get_precedence(exp_operator::ADDRESS));
-			// todo: ensure address-of expressions parse correctly
-		}
-		// check to see if we have a pointer dereference operator
-		else if (current_lex.value == "*") {
-			left = this->create_dereference_object();
-		}
-		// check to see if we have a unary operator
-		else if ((current_lex.value == "+") || (current_lex.value == "-") || (current_lex.value == "!") || (current_lex.value == "~")) {
-			// get the precedence of the unary operator
-			size_t precedence;
-			if (current_lex.value == "+") precedence = Parser::get_precedence(UNARY_PLUS);
-			else if (current_lex.value == "-") precedence = Parser::get_precedence(UNARY_MINUS);
-			else if (current_lex.value == "!") precedence = Parser::get_precedence(NOT);
-			else precedence = Parser::get_precedence(BIT_NOT);
-
-			// advance the token pointer and parse the expression
-			this->next();
-			std::shared_ptr<Expression> operand = this->parse_expression(precedence);	// parse an expression at the precedence level of our unary operator
-
-			// todo: simplify this a little
-			// now that we have the operand, create the expression
-			if (current_lex.value == "+") {
-				left = std::make_shared<Unary>(operand, PLUS);
-			}
-			else if (current_lex.value == "-") {
-				left = std::make_shared<Unary>(operand, MINUS);
-			}
-			else if (current_lex.value == "!") {
-				left = std::make_shared<Unary>(operand, NOT);
+		// if it's not a function, it must be a unary expression
+		else {
+			exp_operator unary_op = Parser::get_unary_operator(current_lex.value);
+			if (unary_op == NO_OP) {
+				// throw exception -- invalid unary op
+				throw CompilerException(
+					"'" + current_lex.value + "' is not a valid unary operator",
+					compiler_errors::OPERATOR_TYPE_ERROR,
+					current_lex.line_number
+				);
 			}
 			else {
-				left = std::make_shared<Unary>(operand, BIT_NOT);
+				// get the precedence of the unary operator
+				size_t precedence = Parser::get_precedence(unary_op);
+
+				// advance the token pointer and parse the expression
+				this->next();
+				std::shared_ptr<Expression> operand = this->parse_expression(precedence);	// parse an expression at the precedence level of our unary operator
+				left = std::make_shared<Unary>(operand, unary_op);
 			}
 		}
 	}
@@ -244,24 +237,6 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	}
 }
 
-
-// Create a Dereferenced object when we dereference a pointer
-std::shared_ptr<Expression> Parser::create_dereference_object() {
-	/*
-	
-	create_dereference_object
-	Parses out a 'Dereferenced' expression
-
-	Although the asterisk can be either the multiplication operator or the dereference operator, it is impossible for the parser to get them confused because they appear in completely different contexts.
-	This function creates a dereferenced expression by parsing the expression that is contained within it
-	
-	*/
-
-	this->next();
-	Dereferenced deref(this->parse_expression());
-	return std::make_shared<Dereferenced>(deref);
-}
-
 std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol, bool omit_equals) {
 	/*
 
@@ -289,8 +264,8 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == "," || (next.value == "=" && omit_equals)) {
 		return left;
 	}
-	// Otherwise, if we have an op_char or the 'and' or 'or' keyword
-	else if (next.type == OPERATOR || next.value == "and" || next.value == "or") {
+	// Otherwise, if we have an op_char or the 'and', 'or', 'xor', or 'as'
+	else if (next.type == OPERATOR || next.value == "and" || next.value == "or" || next.value == "xor" || next.value == "as") {
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
 		if (next.value == "&") {
 			this->next();	// advance the iterator so we can see what comes after the ampersand
@@ -305,7 +280,8 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 				this->back();	// move the iterator back where it was
 			}
 		}
-
+		
+		// parse the binary expression as usual
 		// get the next op_char's data
 		size_t his_prec = get_precedence(next.value, next.line_number);
 
@@ -314,23 +290,40 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 			this->next();	// go to the next character in our stream (the op_char)
 			this->next();	// go to the character after the op char
 
-			// Parse out the next expression
-			std::shared_ptr<Expression> right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+			// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
+			auto right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
 			// Create the binary expression
-			std::shared_ptr<Binary> binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
+			auto binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
 
 			// if the left and right sides are constants, the whole expression is a constant
 			if (left->is_const() && right->is_const())
 				binary->set_const();
+			
+			// now, call maybe_binary based on the binary type (transform the statement)
+			std::shared_ptr<Expression> to_check = binary;
+			if (binary->get_operator() == ATTRIBUTE_SELECTION) {
+				to_check = std::make_shared<AttributeSelection>(binary);
+			}
+			else if (binary->get_operator() == TYPECAST) {
+				to_check = std::make_shared<Cast>(binary);
+			}
 
-			// call maybe_binary again at the old prec level in case this expression is followed by one of a higher precedence
-			return this->maybe_binary(binary, my_prec, grouping_symbol, omit_equals);
+			// ensure we still have a valid expression
+			if (to_check->get_expression_type() == EXPRESSION_GENERAL) {
+				throw CompilerException(
+					"Illegal expression",
+					compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+					next.line_number
+				);
+			}
+			
+			// call maybe_binary again at the old prec level in case this expression is part of a higher precedence one
+			return this->maybe_binary(to_check, my_prec, grouping_symbol, omit_equals);
 		}
 		else {
 			return left;
 		}
-
 	}
 	// There shouldn't be anything besides a semicolon, closing paren, or an op_char immediately following "left"
 	else {

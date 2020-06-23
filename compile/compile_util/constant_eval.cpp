@@ -157,6 +157,11 @@ compile_time_evaluator::compile_time_evaluator(struct_table* structs)
 	this->structs = structs;
 }
 
+compile_time_evaluator::compile_time_evaluator() {
+	this->constants = nullptr;
+	this->structs = nullptr;
+}
+
 compile_time_evaluator::~compile_time_evaluator()
 {
 }

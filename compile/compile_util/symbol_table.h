@@ -41,12 +41,15 @@ class symbol_table {
 	void erase(node to_erase);
 public:
 	// public member functions
+	static std::string get_mangled_name(std::string org);
+	
 	bool insert(std::shared_ptr<symbol> to_insert);
 
 	bool contains(std::string symbol_name);
-	std::shared_ptr<symbol> & find(std::string to_find);
+	std::shared_ptr<symbol>& find(std::string to_find);
 	
-	void leave_scope();
+	std::vector<symbol> get_symbols_to_free(std::string name, unsigned int level, bool is_function);
+	void leave_scope(std::string name, unsigned int level);
 
 	// constructor, destructor
 	symbol_table();

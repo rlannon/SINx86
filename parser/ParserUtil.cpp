@@ -11,7 +11,15 @@ Contains the implementations of various utility functions for the parser.
 #include "Parser.h"
 
 const std::unordered_map<std::string, exp_operator> Parser::op_strings({
-	{"->", ARROW},
+	{"->", MOVE_ASSIGN},
+	{"+=", PLUS_EQUAL},
+	{"-=", MINUS_EQUAL},
+	{"*=", MULT_EQUAL},
+	{"/=", DIV_EQUAL},
+	{"%=", MOD_EQUAL},
+	{"&=", AND_EQUAL},
+	{"|=", OR_EQUAL},
+	{"^=", XOR_EQUAL},
 	{"+", PLUS},
 	{"-", MINUS},
 	{"*", MULT},
@@ -27,37 +35,61 @@ const std::unordered_map<std::string, exp_operator> Parser::op_strings({
 	{"|", BIT_OR},
 	{"^", BIT_XOR},
 	{"~", BIT_NOT},
+	{">>", RIGHT_SHIFT},
+	{"<<", LEFT_SHIFT},
 	{"and", AND},
 	{"or", OR},
 	{"xor", XOR},
-	{".", DOT}
+	{"not", NOT},
+	{"as", TYPECAST},
+	{"$", ADDRESS},
+	{"*", DEREFERENCE},
+	{":", ATTRIBUTE_SELECTION},
+	{".", DOT},
+	{"@", CONTROL_TRANSFER},
+	{"::", SCOPE_RESOLUTION}
 });
 
 const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
-	{ARROW, 1},	// used for direct assignment, like the assignment operator '='
+	{MOVE_ASSIGN, 1},	// there is also a move assignment operator 
+	{PLUS_EQUAL, 1},
+	{MINUS_EQUAL, 1},
+	{MULT_EQUAL, 1},
+	{DIV_EQUAL, 1},
+	{MOD_EQUAL, 1},
+	{AND_EQUAL, 1},
+	{OR_EQUAL, 1},
+	{XOR_EQUAL, 1},
 	{OR, 2},
 	{AND, 2},
 	{XOR, 2},
+	{BIT_AND, 3},
+	{BIT_OR, 3},
+	{BIT_XOR, 3},
 	{LESS, 7},
 	{GREATER, 7},
 	{LESS_OR_EQUAL, 7},
 	{GREATER_OR_EQUAL, 7},
 	{EQUAL, 7},	// not the direct assignment operator -- all assignment operators have a precedence of 1
 	{NOT_EQUAL, 7},
-	{BIT_AND, 8},
-	{BIT_OR, 8},
-	{BIT_XOR, 8},
+	{LEFT_SHIFT, 8},
+	{RIGHT_SHIFT, 8},
 	{PLUS, 10},
 	{MINUS, 10},
-	{exp_operator::ADDRESS, 15},	// todo: remove this operator
-	{MULT, 20},
-	{DIV, 20},
-	{MODULO, 20},
-	{NOT, 23},
-	{BIT_NOT, 23},
-	{UNARY_PLUS, 24},
-	{UNARY_MINUS, 24},
-	{DOT, 25}
+	{MULT, 15},
+	{DIV, 15},
+	{MODULO, 15},
+	{TYPECAST, 20},
+	{NOT, 20},	// 'not' is a unary operator, so it has high priority
+	{BIT_NOT, 20},
+	{UNARY_PLUS, 20},
+	{UNARY_MINUS, 20},
+	{ADDRESS, 20},
+	{DEREFERENCE, 20},
+	{ATTRIBUTE_SELECTION, 23},
+	{CONTROL_TRANSFER, 25},
+	{DOT, 25},
+	{SCOPE_RESOLUTION, 30}
 });
 
 const exp_operator Parser::translate_operator(std::string op_string) {
@@ -268,34 +300,20 @@ const bool Parser::has_return(StatementBlock to_test)
 			if (last_statement->get_statement_type() == IF_THEN_ELSE) {
 				IfThenElse* ite = dynamic_cast<IfThenElse*>(last_statement);
 
-				// the branches may be null pointers; we have to be careful here so we can't just pass *ite->get_else_branch().get() in directly
-				StatementBlock* if_branch = ite->get_if_branch().get();
-				StatementBlock* else_branch = ite->get_else_branch().get();
-
-				bool if_has_return = has_return(*if_branch);
-				bool else_has_return = false;
-
-				if (else_branch == nullptr) {
-					else_has_return = true;
-				}
-				else {
-					else_has_return = has_return(*else_branch);
-				}
+				bool returns = general_utilities::ite_returns(ite);
 
 				// if both branches return a value, we are golden
-				if (if_has_return && else_has_return) {
-					return true;
+				if (!returns) {
+					throw NoReturnException(last_statement->get_line_number());
 				}
-				else {
-					compiler_warning("Not all control paths return a value", last_statement->get_line_number());
-					return if_has_return;
-				}
+				
+				return returns;
 			}
 			else if (last_statement->get_statement_type() == WHILE_LOOP) {
 				WhileLoop* while_loop = dynamic_cast<WhileLoop*>(last_statement);
 
 				// while loops are a little simpler, we can simply pass in the branch for the while loop
-				return has_return(*while_loop->get_branch().get());
+				return general_utilities::returns(while_loop->get_branch());
 			}
 			else {
 				return false;
@@ -374,7 +392,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 	else if (current_lex.type == KEYWORD || current_lex.type == IDENTIFIER) {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {
-			// if our symbol doesn't have signed or unsigned, set, it must be sigbed by default
+			// if our symbol doesn't have signed or unsigned, set, it must be signed by default
 			if (!qualities.is_signed() && !qualities.is_unsigned()) {
 				qualities.add_quality(SIGNED);
 			}
@@ -499,33 +517,27 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 
 	symbol_qualities qualities;	// create our qualities vector; initialize to an empty vector
 
-	// a keyword should follow the '&'
-	if (this->peek().type == KEYWORD) {
-		// continue parsing our SymbolQualities until we hit a semicolon, at which point we will trigger the 'done' flag
-		bool done = false;
-		while (this->peek().type == KEYWORD && !done) {
-			lexeme quality_token = this->next();	// get the token for the quality
-			SymbolQuality quality = this->get_quality(quality_token);	// use our 'get_quality' function to get the SymbolQuality based on the token
+	// continue parsing our SymbolQualities until we hit a semicolon, at which point we will trigger the 'done' flag
+	bool done = false;
+	while (this->peek().type == KEYWORD && !done) {
+		lexeme quality_token = this->next();	// get the token for the quality
+		SymbolQuality quality = this->get_quality(quality_token);	// use our 'get_quality' function to get the SymbolQuality based on the token
 
-			// try adding our qualities, throw an error if there is a conflict
-			try {
-				qualities.add_quality(quality);
-			} catch (CompilerException &e) {
-				throw QualityConflictException(quality_token.value, quality_token.line_number);
-			}
-
-			// the quality must be followed by either another quality, a semicolon, or a closing grouping symbol
-			if (this->peek().value == ";" || this->peek().value == closing_symbol) {
-				done = true;
-			}
-			// there's an error if the next token is not a keyword and also not a semicolon
-			else if (this->peek().type != KEYWORD) {
-				throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
-			}
+		// try adding our qualities, throw an error if there is a conflict
+		try {
+			qualities.add_quality(quality);
+		} catch (CompilerException &e) {
+			throw QualityConflictException(quality_token.value, quality_token.line_number);
 		}
-	}
-	else {
-		throw ParserException("Expected symbol quality following '&'", 0, this->current_token().line_number);
+
+		// the quality must be followed by either another quality, a semicolon, a closing grouping symbol, or a curly brace
+		if (this->peek().value == ";" || this->peek().value == closing_symbol || this->peek().value == "{") {
+			done = true;
+		}
+		// there's an error if the next token is not a keyword and also not a semicolon
+		else if (this->peek().type != KEYWORD) {
+			throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
+		}
 	}
 
 	return qualities;
@@ -540,7 +552,7 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 	// ensure the token is a kwd
 	if (quality_token.type == KEYWORD) {
 		// Use the unordered_map to find the quality
-		std::unordered_map<std::string, SymbolQuality>::const_iterator it = symbol_qualities::quality_strings.find(quality_token.value);
+		auto it = symbol_qualities::quality_strings.find(quality_token.value);
 		
 		if (it == symbol_qualities::quality_strings.end()) {
 			throw ParserException("Invalid qualifier", 0, quality_token.line_number);
@@ -554,4 +566,65 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 	}
 
 	return to_return;
+}
+
+calling_convention Parser::get_calling_convention(symbol_qualities sq, unsigned int line) {
+	// Given a 'symbolqualities' object, gets the calling convention
+
+	calling_convention c = SINCALL;
+
+	// ensure we only specified one convention (although sincall is the default convention, this quality shows whether the user specified it)
+	if (
+		(sq.is_c64() && sq.is_sincall()) ||
+		(sq.is_sincall() && sq.is_windows())
+	) {
+		throw CompilerException("Only one calling convention may be specified", compiler_errors::ILLEGAL_QUALITY_ERROR, line);
+	} else {
+		// it defaults to sincall, so we only need to test against the others
+		if (sq.is_c64() && sq.is_windows())
+			c = calling_convention::WIN_64;
+		else if (sq.is_c64())
+			c = calling_convention::SYSTEM_V;
+		else if (sq.is_windows())	// if 'windows' is used by itself, generate an error -- it must occur with 'c64'
+			throw CompilerException(
+				"Use of the 'windows' keyword must also use the 'c64' keyword if it is to specify a calling convention",
+				compiler_errors::ILLEGAL_QUALITY_ERROR,
+				line);
+	}
+
+	return c;
+}
+
+const exp_operator Parser::get_unary_operator(std::string s) {
+	/*
+
+	Gets an exp_operator from a string; if it is not a valid unary operator, returns NO_OP
+
+	*/
+
+	exp_operator op;
+
+	if (s == "+") {
+		op = UNARY_PLUS;
+	}
+	else if (s == "-") {
+		op = UNARY_MINUS;
+	}
+	else if (s == "$") {
+		op = ADDRESS;
+	}
+	else if (s == "*") {
+		op = DEREFERENCE;
+	}
+	else if (s == "not") {
+		op = NOT;
+	}
+	else if (s == "~") {
+		op = BIT_NOT;
+	}
+	else {
+		op = NO_OP;
+	}
+	
+	return op;
 }

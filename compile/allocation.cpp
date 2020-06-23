@@ -23,10 +23,16 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 	*/
 
-	// todo: advance rsp so that we may safely push data to the stack even when we are allocating local data
-    
-	DataType alloc_data = alloc_stmt.get_type_information();
-    std::stringstream allocation_ss;
+	// todo: use 'extern' quality and pass it to generate_symbol
+
+	std::stringstream allocation_ss;
+
+	DataType &alloc_data = alloc_stmt.get_type_information();
+	size_t data_width = alloc_data.get_width();
+
+	// todo: array length needs to be determined for _all_ arrays
+	// where it can be determined at compile-time, this space must be reserved on the stack
+	// where this is not possible, evaluate the expression and pass it to sinl_array_alloc
 
 	// if the type is 'array', we need to evaluate the array width that was parsed earlier
 	if (alloc_data.get_primary() == ARRAY) {
@@ -43,6 +49,14 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// pass the expression to our expression evaluator to get the array width
 				// todo: compile-time evaluation
 				// todo: set alloc_data::array_length
+				alloc_data.set_array_length(stoul(
+					this->evaluator.evaluate_expression(
+						alloc_data.get_array_length_expression(),
+						this->current_scope_name,
+						this->current_scope_level,
+						alloc_stmt.get_line_number()
+					)));
+				data_width = alloc_data.get_array_length() * alloc_data.get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
 			}
 			else {
 				throw CompilerException("An array width must be a positive integer", compiler_errors::TYPE_ERROR, alloc_stmt.get_line_number());
@@ -52,6 +66,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// if the length is not constant, check to see if we have a dynamic array; if not, then it's not legal
 			if (alloc_data.get_qualities().is_dynamic()) {
 				alloc_data.set_array_length(0);
+				data_width = sin_widths::PTR_WIDTH;
 			}
 			else {
 				throw CompilerException(
@@ -61,6 +76,10 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				);
 			}
 		}
+	}
+	else if (alloc_data.get_primary() == STRUCT) {
+		struct_info &info = this->get_struct_info(alloc_data.get_struct_name(), alloc_stmt.get_line_number());
+		data_width = info.get_width();
 	}
 
 	// allocate the variable if our type was valid
@@ -82,10 +101,24 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
 			// dynamic allocation
-			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+			data_width = sin_widths::PTR_WIDTH;
+			symbol allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
 			
 			// add the symbol and move RSP further into the stack, by the width of a pointer
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
+
+			// allocate dynamic memory with a call to sre_request_resource
+			allocation_ss << "\t" << "pushfq" << std::endl;
+			allocation_ss << "\t" << "push rbp" << std::endl;
+			allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
+			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
+			allocation_ss << "\t" << "call sre_request_resource" << std::endl;
+			allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
+			allocation_ss << "\t" << "pop rbp" << std::endl;
+			allocation_ss << "\t" << "popfq" << std::endl;
+
+			// store the returned address in the space allocated for the resource
+			allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			allocation_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
 
 			// if we have a const here, throw an exception -- constants may not be dynamic
@@ -100,8 +133,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		}
 		else if (alloc_data.get_qualities().is_static()) {
 			// todo: allocate static memory
-			
-			symbol allocated = generate_symbol(alloc_stmt, "global", 0, this->max_offset);
+			data_width = 0;	// takes up no space on the stack
+			symbol allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// static const variables can go in the .rodata segment, so check to see if it is also const
@@ -109,7 +142,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// todo: static const memory
 			}
 			else {
-
+				// todo: static, non-const memory
 			}
 		}
 		else {
@@ -117,7 +150,21 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// allocate memory on the stack
 
 			// construct the symbol
-			symbol allocated = generate_symbol(alloc_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+			symbol allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
+
+			// if the type is string, we need to call sinl_string_alloc
+			if (alloc_data.get_primary() == STRING) {
+				// todo: get string length instead of passing 0 in
+				allocation_ss << "\t" << "mov esi, 0" << std::endl;
+				allocation_ss << "\t" << "push rbp" << std::endl;
+				allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
+				allocation_ss << "\t" << "call sinl_string_alloc" << std::endl;
+				allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
+				allocation_ss << "\t" << "pop rbp" << std::endl;
+				
+				// save the location of the string
+				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
+			}
 
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
@@ -148,7 +195,11 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				to_subtract = s.get_width();
 			}
 			else if (allocated.get_data_type().get_primary() == ARRAY && !allocated.get_data_type().get_qualities().is_dynamic()) {
-				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_width() + sin_widths::INT_WIDTH;
+				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+				
+				// write the array length onto the stack
+				allocation_ss << "\t" << "mov eax, " << allocated.get_data_type().get_array_length() << std::endl;
+				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], eax" << std::endl;
 			}
 			else {
 				to_subtract = allocated.get_data_type().get_width();

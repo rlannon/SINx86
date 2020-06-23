@@ -18,7 +18,11 @@ const std::unordered_map<std::string, SymbolQuality> symbol_qualities::quality_s
 	{ "long", LONG },
 	{ "short", SHORT },
 	{ "signed", SIGNED },
-	{ "unsigned", UNSIGNED }
+	{ "unsigned", UNSIGNED },
+	{ "sincall", SINCALL_CONVENTION },
+	{ "c64", C64_CONVENTION },
+	{ "windows", WINDOWS_CONVENTION },
+	{ "extern", EXTERN }
 };
 
 bool symbol_qualities::is_long()
@@ -61,18 +65,25 @@ bool symbol_qualities::is_unsigned()
 	return unsigned_q;
 }
 
-/* void SymbolQualities::add_qualities(std::vector<SymbolQuality> to_add)
+bool symbol_qualities::is_extern()
 {
-	// simply populate the vector; since we are adding, we don't really care about the original values
-	for (std::vector<SymbolQuality>::iterator it = to_add.begin(); it != to_add.end(); it++)
-	{
-		try {
-			this->add_quality(*it);
-		} catch (CompilerException &e) {
-			throw *it;
-		}
-	}
-} */
+	return extern_q;
+}
+
+bool symbol_qualities::is_sincall()
+{
+	return sincall_con;
+}
+
+bool symbol_qualities::is_c64()
+{
+	return c64_con;
+}
+
+bool symbol_qualities::is_windows()
+{
+	return windows_con;
+}
 
 void symbol_qualities::add_qualities(symbol_qualities to_add) {
 	// combines two SymbolQualities objects
@@ -87,6 +98,10 @@ void symbol_qualities::add_qualities(symbol_qualities to_add) {
 	if (to_add.is_short()) this->add_quality(SHORT);
 	if (to_add.is_signed()) this->add_quality(SIGNED);
 	if (to_add.is_unsigned()) this->add_quality(UNSIGNED);
+	if (to_add.is_sincall()) this->add_quality(SINCALL_CONVENTION);
+	if (to_add.is_c64()) this->add_quality(C64_CONVENTION);
+	if (to_add.is_windows()) this->add_quality(WINDOWS_CONVENTION);
+	if (to_add.is_extern()) this->add_quality(EXTERN);
 }
 
 void symbol_qualities::add_quality(SymbolQuality to_add)
@@ -120,6 +135,23 @@ void symbol_qualities::add_quality(SymbolQuality to_add)
 		long_q = false;
 		short_q = true;
 	}
+	else if (to_add == SINCALL_CONVENTION) {
+		sincall_con = true;
+		c64_con = false;
+		windows_con = false;
+	}
+	else if (to_add == C64_CONVENTION) {
+		sincall_con = false;
+		c64_con = true;
+		windows_con = false;
+	}
+	else if (to_add == WINDOWS_CONVENTION) {
+		sincall_con = false;
+		windows_con = true;
+	}
+	else if (to_add == EXTERN) {
+		extern_q = true;
+	}
 	else {
 		// invalid quality; throw an exception
 		throw CompilerException("Quality conflict");	// todo: proper exception type
@@ -135,6 +167,12 @@ symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities)
 	dynamic_q = false;
 	signed_q = false;
 	unsigned_q = false;
+	sincall_con = false;
+	c64_con = false;
+	windows_con = false;
+	extern_q = false;
+
+	// todo: there must be a better way of doing this
 
 	// then, populate according to the vector
 	for (std::vector<SymbolQuality>::iterator it = qualities.begin(); it != qualities.end(); it++)
@@ -163,39 +201,54 @@ symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities)
 		{
 			unsigned_q = true;
 		}
+		else if (*it == SINCALL_CONVENTION)
+		{
+			sincall_con = true;
+		}
+		else if (*it == C64_CONVENTION)
+		{
+			c64_con = true;
+		}
+		else if (*it == WINDOWS_CONVENTION) {
+			windows_con = true;
+		}
+		else if (*it == EXTERN) {
+			extern_q = true;
+		}
 		else {
 			continue;
 		}
 	}
 }
 
-symbol_qualities::symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long, bool is_short) :
+symbol_qualities::symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long, bool is_short, bool is_extern) :
 	const_q(is_const),
 	static_q(is_static),
 	dynamic_q(is_dynamic),
 	signed_q(is_signed),
 	unsigned_q(is_unsigned),
 	long_q(is_long),
-	short_q(is_short)
+	short_q(is_short),
+	extern_q(is_extern)
 {
 	// unsigned always wins out over signed
-	if (symbol_qualities::unsigned_q) {
-		symbol_qualities::signed_q = false;
+	if (this->unsigned_q) {
+		this->signed_q = false;
 	}
 
-	// const will always win out over static and dynamic
-	if (symbol_qualities::const_q) {
-		symbol_qualities::static_q, symbol_qualities::dynamic_q = false;
+	// const will always win out over dynamic (can be 'static const')
+	if (this->const_q) {
+		this->dynamic_q = false;
 	}
 
 	// if both long and short are set, generate a warning
-	if (symbol_qualities::long_q && symbol_qualities::short_q) {
+	if (this->long_q && this->short_q) {
 		// todo: warning
 		std::cerr << "Warning: 'long' and 'short' both used as qualifiers; this amounts to a regular integer" << std::endl;
 
 		// delete both qualities
-		symbol_qualities::long_q = false;
-		symbol_qualities::short_q = false;
+		this->long_q = false;
+		this->short_q = false;
 	}
 }
 
@@ -210,6 +263,10 @@ symbol_qualities::symbol_qualities()
 	unsigned_q = false;
 	long_q = false;
 	short_q = false;
+	sincall_con = false;
+	c64_con = false;
+	windows_con = false;
+	extern_q = false;
 }
 
 symbol_qualities::~symbol_qualities()

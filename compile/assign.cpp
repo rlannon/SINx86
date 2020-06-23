@@ -50,6 +50,9 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
 			assign_ss << this->handle_symbol_assignment(sym, assign_stmt.get_rvalue(), assign_stmt.get_line_number()).str();
 		}
 	}
+    else if (assign_stmt.get_lvalue()->get_expression_type() == INDEXED) {
+        // todo: indexed assignment
+    }
 	else if (assign_stmt.get_lvalue()->get_expression_type() == BINARY) {
 		// the only binary operator that produces a modifiable lvalue is the dot operator
 		Binary *binary = dynamic_cast<Binary*>(assign_stmt.get_lvalue().get());
@@ -61,9 +64,15 @@ std::stringstream compiler::assign(Assignment assign_stmt) {
 			throw NonModifiableLValueException(assign_stmt.get_line_number());
 		}
 	}
-	else if (assign_stmt.get_lvalue()->get_expression_type() == DEREFERENCED) {
-		Dereferenced *deref = dynamic_cast<Dereferenced*>(assign_stmt.get_lvalue().get());
-		// todo: handle assignment to dereferenced pointer
+	else if (assign_stmt.get_lvalue()->get_expression_type() == UNARY) {
+        // the only unary operator that produces a modifiable lvalue is the dereference operator
+        auto unary = dynamic_cast<Unary*>(assign_stmt.get_lvalue().get());
+        if (unary->get_operator() == DEREFERENCE) {
+    		// todo: handle assignment to dereferenced pointer
+        }
+        else {
+            throw NonModifiableLValueException(assign_stmt.get_line_number());
+        }
 	}
 	else {
 		// no other expression types return modifiable-lvalues
@@ -179,7 +188,7 @@ std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_pt
 				std::shared_ptr<DataType> right_type = get_expression_data_type(value, this->symbols, this->structs, line).get_full_subtype();
 
 				if (is_valid_type_promotion(left_type->get_qualities(), right_type->get_qualities())) {
-					// pointers are really just integers, so we can
+					// pointers are really just integers, so we can use the integer function
 					handle_ss = handle_int_assignment(sym, value, line);
 				}
 				else {
@@ -190,9 +199,25 @@ std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_pt
 				break;
 			}
             case STRING:
+                handle_ss << this->handle_string_assignment(sym, value, line).str();
                 break;
             case ARRAY:
+            {
+                // an array *assignment* will perform an array copy using sinl_array_copy
+                // note this is NOT indexed array assignment -- that is to be handled elsewhere
+                if (value->get_expression_type() == LVALUE) {
+                    LValue *l = dynamic_cast<LValue*>(value.get());
+                    std::shared_ptr<symbol> source_sym = this->lookup(l->getValue(), line);
+                    handle_ss = copy_array(*source_sym.get(), sym, this->reg_stack.peek());
+                }
+                else if (value->get_expression_type() == LIST) {
+                    ListExpression *l = dynamic_cast<ListExpression*>(value.get());
+                    // todo: create list literals
+                    handle_ss << "; a list cast and call to sinl_array_copy will go here" << std::endl;
+                }
+
                 break;
+            }
             case STRUCT:
                 break;
             default:
@@ -214,7 +239,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
     handle_int_assignment
     Makes an assignment of the value given to the symbol
 
-    @param  symbol  The symbol containing the lvalue
+    @param  symbol  The symbol containing the lvalue to which we are assigning
     @param  value   The rvalue
     @return A stringstream containing the generated code
 
@@ -227,7 +252,18 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
 
     // Generate the code to evaluate the expression; it should go into the a register (rax, eax, ax, or al depending on the data width)
     assign_ss << this->evaluate_expression(value, line).str();
-    std::string src = (sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? "rax" : (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")); // get our source register based on the symbol's width
+
+    // get our source register based on the symbol's width
+    std::string src = (
+        sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? 
+        "rax" : 
+        (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")
+    );
+
+    // we need to make sure we decrement the reference currently at the destination before assigning
+    if (sym.get_data_type().get_primary() == PTR) {
+        assign_ss << call_sre_free(sym).str();
+    }
 
     // how the variable is allocated will determine how we make the assignment
     if (sym.get_data_type().get_qualities().is_static()) {
@@ -267,6 +303,19 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
         simply use the stack offset of the symbol in the assignment, subtracting from rbp
         */
         assign_ss << "\t" << "mov [rbp - " << std::dec << sym.get_offset() << "], " << src << std::endl;
+    }
+
+    // if the data to which we are assigning is a pointer, we need to add a reference to the source
+    // this will mean rax contains the address, we can just move it into rdi
+    if (sym.get_data_type().get_primary() == PTR) {
+        assign_ss << "\t" << "pushfq" << std::endl;
+        assign_ss << "\t" << "push rbp" << std::endl;
+        assign_ss << "\t" << "mov rbp, rsp" << std::endl;
+        assign_ss << "\t" << "mov rdi, rax" << std::endl;
+        assign_ss << "\t" << "call sre_add_ref" << std::endl;
+        assign_ss << "\t" << "mov rsp, rbp" << std::endl;
+        assign_ss << "\t" << "pop rbp" << std::endl;
+        assign_ss << "\t" << "popfq" << std::endl;
     }
 
     // return our generated code
@@ -340,7 +389,8 @@ std::stringstream compiler::handle_string_assignment(symbol &sym, std::shared_pt
     Makes an assignment from one string value to another
 
     Copy memory from one dynamic location to another. The string will be resized if necessary. 
-    Since strings are _not_ references (as they are in Java, for example), a string assignment will _always_ copy the string contents between locations and never re-assign the pointer to the rvalue. If that behavior is desired, use pointers.
+    Since strings are _not_ references (as they are in Java, for example), a string assignment will _always_ copy the string contents between locations.
+    Note this function utilizes the SRE.
 
     @param  sym The symbol of the lvalue string
     @param  value   The string value to copy
@@ -351,7 +401,21 @@ std::stringstream compiler::handle_string_assignment(symbol &sym, std::shared_pt
 
     std::stringstream assign_ss;
 
-    // todo: string assignment
+    // pass the parameters in registers
+    // todo: strings whose references are not on the stack
+    assign_ss << this->evaluate_expression(value, line).str();
+    assign_ss << "\t" << "mov rsi, rax" << std::endl;
+    assign_ss << "\t" << "mov rdi, [rbp - " << sym.get_offset() << "]" << std::endl;
+
+    // call the SRE string copy function
+    assign_ss << "\t" << "push rbp" << std::endl;
+    assign_ss << "\t" << "mov rbp, rsp" << std::endl;
+    assign_ss << "\t" << "call sinl_string_copy" << std::endl;
+    assign_ss << "\t" << "mov rsp, rbp" << std::endl;
+    assign_ss << "\t" << "pop rbp" << std::endl;
+
+    // assign rax to the string (may have been reallocated)
+    assign_ss << "\t" << "mov [rbp - " << sym.get_offset() << "], rax" << std::endl;
 
     return assign_ss;
 }

@@ -24,6 +24,11 @@ void symbol::set_register(reg to_set) {
     this->current_reg = to_set;
 }
 
+void symbol::set_as_parameter() {
+	// sets the symbol as being a parameter
+	this->is_parameter = true;
+}
+
 std::string symbol::get_name() const {
 	// get the symbol name
 	return this->name;
@@ -45,9 +50,14 @@ DataType symbol::get_data_type() const {
 	return this->type;
 }
 
-unsigned int symbol::get_offset() const {
+int symbol::get_offset() const {
 	// get the symbol's offset from the stack frame base
 	return this->offset;
+}
+
+void symbol::set_offset(int new_offset) {
+	// sets the new offset
+	this->offset = new_offset;
 }
 
 bool symbol::was_initialized() const {
@@ -81,6 +91,7 @@ symbol::symbol(std::string name, std::string scope_name, unsigned int scope_leve
     this->symbol_type = VARIABLE;
     this->freed = false;    // symbols should start as allocated
 	this->initialized = false;
+	this->is_parameter = false;
 }
 
 symbol::symbol(): symbol("", "", 0, DataType(), 0) {

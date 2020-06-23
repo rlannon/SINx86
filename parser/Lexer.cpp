@@ -10,13 +10,17 @@ The implementation of the lexer
 
 #include "Lexer.h"
 
-// keywords is an alphabetized list of the keywords in SIN; it must be alphabetized in order to use the 'find' algorithm from the standard library
-// todo: change this to an unordered_set and use 'std::unordered_set::count' instead of 'std::algorithm::find'
-const std::vector<std::string> Lexer::keywords{ "alloc", "and", "array", "asm", "bool", "const", "constexpr", "c64", "decl", "def", "dynamic", "else", "final", "float", "free", "if", "include", "int", "let", "long", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "sizeof", "static", "string", "struct", "unsigned", "void", "while", "windows", "xor" };
+// The list of language keywords
+const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "const", 
+"constexpr", "c64", "decl", "def", "dynamic", "else", "extern", "final", "float", "free", "if", "include", "int", 
+"len", "let", "long", "not", "null", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "size", 
+"sizeof", "static", "string", "struct", "unsigned", "var", "void", "while", "windows", "xor" };
 
 // Our regular expressions
-const std::string Lexer::punc_exp = R"([',:;\[\]\{\}\(\)])";	// expression for punctuation
-const std::string Lexer::op_exp = "(\\->)|[\\.\\+\\-\\*/%=\\&\\|\\^<>\\$\\?!@#]";	// expression for operations
+const std::string Lexer::punc_exp = R"([',;\[\]\{\}\(\)])";	// expression for punctuation
+const std::string Lexer::op_exp = R"(
+	(\->)|[\.\+\-\*/%=\&\|\^<>\$\?!@#:]|(\+=|)|(\-=)|(\*=)|(/=)|(%=)|(&=)|(\|=)|(\^=)
+	)";	// expression for operations
 const std::string Lexer::id_exp = "[_0-9a-zA-Z]";	// expression for interior id letters
 const std::string Lexer::bool_exp = "[(true)|(false)]";
 
@@ -25,12 +29,7 @@ const std::string Lexer::bool_exp = "[(true)|(false)]";
 
 bool Lexer::eof() {
 	char eof_test = this->stream->peek();
-	if (eof_test == EOF) {
-		return true;
-	}
-	else {
-		return false;
-	}
+	return eof_test == EOF;
 }
 
 char Lexer::peek() {
@@ -174,21 +173,11 @@ bool Lexer::is_op_char(char ch) {
 }
 
 bool Lexer::is_boolean(std::string candidate) {
-	if (candidate == "true" || candidate == "false") {
-		return true;
-	}
-	else {
-		return false;
-	}
+	return (candidate == "true" || candidate == "false");
 }
 
 bool Lexer::is_keyword(std::string candidate) {
-	if (std::binary_search(keywords.begin(), keywords.end(), candidate)) {
-		return true;
-	}
-	else {
-		return false;
-	}
+	return (bool)keywords.count(candidate);
 }
 
 /*
@@ -282,7 +271,35 @@ lexeme Lexer::read_next() {
 				}
 			}
 		}
-		// if the next character is not '/', just treat it as an op_char
+		// if the next character is a star, we have a block comment
+		else if (this->peek() == '*') {
+			bool is_comment = true;
+
+			// continue ignoring characters while we are still in the comment
+			while (is_comment) {
+				this->next();
+				if (this->peek() == '*') {
+					this->next();
+					if (this->peek() == '/') {
+						this->next();
+						is_comment = false;
+
+						// read through any whitespace
+						this->read_while(&is_whitespace);
+
+						// get the next character; if we immediately have another comment, re-loop
+						ch = this->peek();
+						if (ch == '/') {
+							this->next();
+							if (this->peek() == '*') {
+								is_comment = true;
+							}
+						}
+					}
+				}
+			}
+		}
+		// else, just treat it as an op_char
 		else {
 			// use "unget" to move back one place so "peek" reveals a slash
 			this->stream->unget();
@@ -291,7 +308,7 @@ lexeme Lexer::read_next() {
 	}
 
 	// If ch is not the end of the file and it is also not null
-	if (ch != EOF && ch != NULL) {
+	if (ch != EOF && ch != '\0') {
 		// test our various data types
 		if (ch == '"') {
 			type = lexeme_type::STRING_LEX;
@@ -356,7 +373,7 @@ lexeme Lexer::read_next() {
 
 	}
 	// the following circumstances will return a lexeme of no type with the value of NULL, EOF, or nothing; all will say it occurred on line 0
-	else if (ch == NULL) {	// if there is a NULL character
+	else if (ch == '\0') {	// if there is a NULL character
 		std::cout << ch << "   (NULL)" << std::endl;
 		std::cout << "ch == NULL; done." << std::endl;
 		this->exit_flag = true;

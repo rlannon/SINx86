@@ -62,13 +62,14 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
     */
 
 	// check for sinl_ prefix
-	size_t pos = to_add.get_name().find("sinl_");
-	if (pos != std::string::npos && pos == 0) {
-		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
-	}
+	// size_t pos = to_add.get_name().find("sinl_");
+	// if (pos != std::string::npos && pos == 0) {
+	// 	compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
+	// }
 
 	// insert the symbol
-	bool ok = this->symbols.insert(std::make_shared<T>(to_add));
+    std::shared_ptr<T> s = std::make_shared<T>(to_add);
+	bool ok = this->symbols.insert(s);
 
     // throw an exception if the symbol could not be inserted
     if (!ok) {
@@ -94,11 +95,6 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
 	*/
 
 	// todo: can this function and add_symbol utilize templates to be combined into one function?
-
-	size_t pos = to_add.get_struct_name().find("sinl_");
-	if (pos != std::string::npos && pos == 0) {
-		compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
-	}
 
 	bool ok = this->structs.insert(to_add);
 
@@ -133,7 +129,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
         Compiles a single statement to x86, dispatching appropriately
 
-     */
+    */
 
     std::stringstream compile_ss;
 
@@ -143,7 +139,8 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     stmt_type s_type = s->get_statement_type();
     switch (s_type) {
         case INCLUDE:
-            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"; this is to be accomplished through the use of std::set
+            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
+            // todo: this is to be accomplished through the use of std::set
             break;
         case DECLARATION:
         {
@@ -186,42 +183,66 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			// first, we need to cast and get the current block number (in case we have nested blocks)
 			IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
 			size_t current_scope_num = this->scope_block_num;
+			this->scope_block_num += 1; // increment the scope number now in case we have recursive conditionals
 			
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
-			compile_ss << this->evaluate_expression(ite->get_condition(), ite->get_line_number()).str() << std::endl;
+			compile_ss << this->evaluate_expression(ite->get_condition(), ite->get_line_number()).str();
 			compile_ss << "\t" << "jz sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
-			compile_ss << this->compile_ast(*ite->get_if_branch().get()).str();
+			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
 			compile_ss << "\t" << "jmp sinl_ite_done_" << current_scope_num << std::endl;
 			compile_ss << "sinl_ite_else_" << current_scope_num << ":" << std::endl;
-
+            
 			// compile the branch, if one exists
 			if (ite->get_else_branch().get()) {
-				compile_ss << this->compile_ast(*ite->get_else_branch().get()).str();
+				compile_ss << this->compile_statement(ite->get_else_branch(), signature).str();
 			}
 
 			// clean-up
 			compile_ss << "sinl_ite_done_" << current_scope_num << ":" << std::endl;
-			this->scope_block_num += 1;
 			break;
 		}
 		case WHILE_LOOP:
-            // todo: while
+        {
+            WhileLoop *while_stmt = dynamic_cast<WhileLoop*>(s.get());
+            
+            // create a loop heading, evaluate the condition
+            auto current_block_num = this->scope_block_num;
+            this->scope_block_num += 1;
+
+            compile_ss << "sinl_while_" << current_block_num << ":" << std::endl;
+            compile_ss << this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number()).str();
+            compile_ss << "\t" << "jz sinl_while_done_" << current_block_num << std::endl;
+
+            // compile the loop body
+            compile_ss << this->compile_statement(while_stmt->get_branch(), signature).str();
+            compile_ss << "\t" << "jmp sinl_while_" << current_block_num << std::endl;
+
+            compile_ss << "sinl_while_done_" << current_block_num << ":" << std::endl;
             break;
+        }
         case FUNCTION_DEFINITION:
         {
             FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
 
 			// ensure the function has a return value in all control paths
-			if (returns(*def_stmt->get_procedure().get())) {
-				compile_ss << this->define_function(*def_stmt).str() << std::endl;
-			} else {
-				throw NoReturnException(s->get_line_number());
-			}
+			if (general_utilities::returns(*def_stmt->get_procedure().get())) {
+                if (def_stmt->get_calling_convention() == SINCALL) {
+                    compile_ss << this->define_function(*def_stmt).str() << std::endl;
+                } else {
+                    throw CompilerException(
+                        "Currently, defining non-sincall functions is not supported",
+                        compiler_errors::CALLING_CONVENTION_ERROR,
+                        def_stmt->get_line_number()
+                    );
+                }
+            } else {
+                throw NoReturnException(s->get_line_number());
+            }
             break;
         }
         case STRUCT_DEFINITION:
@@ -248,11 +269,37 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             'free' may be used with either automatic or dynamic memory -- it may not be used with const or static
             however, it has very little effect on automatic memory; it just marks the memory as freed, preventing any future writes to it
 
-			'free' is also safe in that it will not trigger a fault if you call 'free' on the same data twice (though if the compiler sees this may happen, then it will generate a warning)
+			'free' is also safe in that it will not trigger a fault if you call 'free' on the same data twice
+            (though if the compiler sees this happen, then it will generate a warning)
 
             */
 
             break;
+        case SCOPE_BLOCK:
+        {
+            /*
+
+            Scope blocks can be treated as individual statements in certain cases
+
+            */
+
+            ScopedBlock *block = dynamic_cast<ScopedBlock*>(s.get());
+            StatementBlock ast = block->get_statements();
+
+            // be sure to adjust scope levels
+            unsigned int old_scope_level = this->current_scope_level;
+            this->current_scope_level += 1;
+            
+            // compile the AST in the block
+            compile_ss << this->compile_ast(ast, signature).str();
+
+            // free local data
+            compile_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, false).str();
+            
+            // restore the scope level
+            this->current_scope_level = old_scope_level;
+            break;
+        }
         default:
             break;
     };
@@ -280,24 +327,15 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
 
     // iterate over it and compile each statement in turn, adding it to the stringstream
     for (std::shared_ptr<Statement> s: ast.statements_list) {
-        // return the stack pointer to where the return address is kept before we actually return
-        if (s->get_statement_type() == RETURN_STATEMENT) {
-            // the location of the return address is simply the offset of the last parameter + a quadword
-            size_t r = signature->get_formal_parameters().empty() ? 0 : signature->get_formal_parameters()[signature->get_formal_parameters().size() - 1].get_offset();
-            r += sin_widths::PTR_WIDTH;
-
-            compile_ss << "\t" << "mov rsp, rbp" << std::endl;
-            compile_ss << "\t" << "sub rsp, " << r << std::endl;
-        }
-
-        // compile the statement
         compile_ss << this->compile_statement(s, signature).str();
     }
+    
+    // todo: free data for non-function scope blocks
 
-	// when we leave a scope, remove local variables -- but NOT global variables
+	// when we leave a scope, remove local variables -- but NOT global variables (they must be retained for inclusions)
 	if (this->current_scope_name != "global") {
 		// todo: call leave_scope on the compile-time evaluator
-		this->symbols.leave_scope();
+		this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
 	}
 
     return compile_ss;
@@ -321,16 +359,18 @@ void compiler::generate_asm(std::string filename, Parser &p) {
     // catch parser exceptions here
     try {
         // create our abstract syntax tree
-		std::cout << "Parsing...";
+		std::cout << "Parsing..." << std::endl;
         StatementBlock ast = p.create_ast();
-		std::cout << ". Done." << std::endl;
 
         // The code we are generating will go in the text segment -- writes to the data and bss sections will be done as needed in other functions
-		std::cout << "Generating code...";
+		std::cout << "Generating code..." << std::endl;
+        this->text_segment << "%ifndef _SRE_INCLUDE_" << std::endl;
+        this->text_segment << "%define _SRE_INCLUDE_" << std::endl;
+        this->text_segment << "%include \"../SRE/src/asm/asm_include.s\"" << std::endl; // todo: better linkage to SRE
+        this->text_segment << "%endif" << std::endl;
 		this->text_segment << this->compile_ast(ast).str();
-		std::cout << ". Done." << std::endl;
 
-		std::cout << "Consolidating code...";
+		std::cout << "Consolidating code..." << std::endl;
         // now, we want to see if we have a function 'main' in the symbol table; if so, we need to set it up and call it
         try {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
@@ -347,19 +387,26 @@ void compiler::generate_asm(std::string filename, Parser &p) {
             }
 
             // insert our wrapper for the program
-            this->text_segment << "global _start" << std::endl;
-            this->text_segment << "_start:" << std::endl;
+            this->text_segment << "global main" << std::endl;
+            this->text_segment << "main:" << std::endl;
+
+            // call SRE init function (takes no parameters)
+            this->text_segment << "\t" << "mov rax, 0" << std::endl;
+            this->text_segment << "\t" << "call sre_init" << std::endl;
 
             // call the main function with SINCALL
             this->text_segment << this->sincall(main_symbol, cmd_args, 0).str();
 
-            // exit the program using the linux syscall
-            this->text_segment << "\t" << "mov rbx, rax" << std::endl;
-            this->text_segment << "\t" << "mov rax, 0x01" << std::endl;
-            this->text_segment << "\t" << "int 0x80" << std::endl;
+            // preserve the return value and call SRE cleanup function
+            this->text_segment << "\t" << "push rax" << std::endl;
+            this->text_segment << "\t" << "call sre_clean" << std::endl;
+
+            // restore main's return value and return
+            this->text_segment << "\t" << "pop rax" << std::endl;
+            this->text_segment << "\t" << "ret" << std::endl;
         } catch (SymbolNotFoundException &e) {
             // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
-            compiler_warning("Note: no entry point found in file", 0);
+            compiler_note("No entry point found in file", 0);
         }
 
         // remove the extension from the file name
@@ -393,7 +440,7 @@ void compiler::generate_asm(std::string filename, Parser &p) {
         outfile << this->bss_segment.str() << std::endl;
 
 		// print a message when we are done
-		std::cout << ". Done." << std::endl;
+		std::cout << "Done." << std::endl;
 
         // close the outfile
         outfile.close();
@@ -436,6 +483,9 @@ compiler::compiler() {
     // initialize the scope
     this->current_scope_name = "global";
     this->current_scope_level = 0;
+
+    // initialize the compile-time evaluator
+    this->evaluator = compile_time_evaluator(&this->structs);
 }
 
 compiler::~compiler() {

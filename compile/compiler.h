@@ -26,10 +26,14 @@ Copyright 2019 Riley Lannon
 #include "compile_util/struct_table.h"
 #include "../util/stack.h"  // the stack data structure
 
+#include "compile_util/constant_eval.h"
+
 class compiler {
     // The class containing our compiler
-
+	
     // todo: break code generation into multiple friend classes
+
+	compile_time_evaluator evaluator;	// the compile-time constant evaluator
 
     std::set<std::string> compiled_headers; // which headers have already been handled
 
@@ -86,7 +90,10 @@ class compiler {
 
 	template<typename T> std::stringstream call_function(T to_call, unsigned int line, bool allow_void = true);
 	std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
-	std::stringstream ccall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
+	std::stringstream system_v_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
+	std::stringstream win64_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
+
+	// returns
 	std::stringstream handle_return(ReturnStatement ret, function_symbol signature);
 	std::stringstream sincall_return(ReturnStatement &ret, DataType return_type);
 
@@ -99,6 +106,7 @@ class compiler {
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_member_selection(member_selection &m, unsigned int line);
+	std::stringstream get_address(Unary &u, unsigned int line);
 public:
     // the compiler's entry function
     void generate_asm(std::string filename, Parser &p);

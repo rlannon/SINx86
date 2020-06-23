@@ -13,6 +13,8 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 // todo: create an expression evaluation class and give it access to compiler members?
 
+// todo: allow a 'reg' object to be supplied instead of giving all values in RAX
+
 std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line) {
     /*
 
@@ -65,49 +67,6 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 			// todo: evaluate list expressions (using pointers)
             break;
         }
-        case ADDRESS_OF:	// todo: move implementation of pointer-related expressions into separate functions
-        {
-			AddressOf addr_exp = *dynamic_cast<AddressOf*>(to_evaluate.get());
-			
-			// how we generate code for this depends on the type
-            if (addr_exp.get_target()->get_expression_type() == BINARY) {
-                // if we have a binary expression, it *must* be the dot operator; if so, just return what's in RBX after we evaluate it
-                Binary* target = dynamic_cast<Binary*>(addr_exp.get_target().get());
-                if (target->get_operator() != DOT) {
-                    throw CompilerException("Illegal binary operand in address-of expression", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
-                }
-
-                evaluation_ss << this->evaluate_binary(*target, line).str();
-                evaluation_ss << "mov rax, rbx" << std::endl;
-                this->reg_stack.peek().clear(RBX);  // now we can use RBX again
-            } else if (addr_exp.get_target()->get_expression_type() == LVALUE) {
-                LValue* target = dynamic_cast<LValue*>(addr_exp.get_target().get());
-                // look up the symbol; obtain the address based on its memory location
-                std::shared_ptr<symbol> s = this->lookup(target->getValue(), line);
-                if (s->get_data_type().get_qualities().is_static()) {
-                    evaluation_ss << "\t" << "mov rax, " << s->get_name() << std::endl;
-                } 
-                else {
-                    // first, get the stack address
-                    evaluation_ss << "\t" << "mov rax, rbp" << std::endl;
-                    evaluation_ss << "\t" << "sub rax, " << s->get_offset() << std::endl;
-
-                    // if the variable is dynamic or a string, dereference RAX
-                    if (s->get_data_type().get_qualities().is_dynamic() || s->get_data_type().get_primary() == STRING) {
-                        evaluation_ss << "\t" << "mov rax, [rax]" << std::endl;
-                    }
-                }
-            } else {
-                throw CompilerException("Illegal address-of argument", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
-            }
-
-            break;
-        }
-        case DEREFERENCED:
-        {
-			// todo: evaluate dereferenced expressions
-            break;
-        }
         case BINARY:
         {
 			// cast to Binary class and dispatch appropriately
@@ -157,6 +116,107 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             evaluation_ss = this->evaluate_sizeof(sizeof_exp, line);
             break;
         }
+        case CAST:
+        {
+            auto c = dynamic_cast<Cast*>(to_evaluate.get());
+
+            // ensure the type to which we are casting is valid
+            if (DataType::is_valid_type(c->get_new_type())) {
+                // check to make sure the typecast itself is valid (follows the rules)
+                DataType old_type = get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
+                if (is_valid_cast(old_type, c->get_new_type())) {
+                    // to perform the typecast, we must first evaluate the expression to be casted
+                    evaluation_ss << this->evaluate_expression(c->get_exp(), line).str();
+
+                    // now, use the utility function to actually cast the type
+                    evaluation_ss << cast(old_type, c->get_new_type(), line).str();
+                }
+                else {
+                    throw InvalidTypecastException(line);
+                }
+            }
+            else {
+                throw TypeException(line);
+            }
+            break;
+        }
+        case ATTRIBUTE:
+        {
+            auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
+            auto t = attr->get_data_type();
+
+            // we have a limited number of attributes
+            if (attr->get_attribute() == LENGTH) {
+                /*
+
+                length attribute
+                Returns the number of elements in a collection.
+                
+                For string and array types, it is the first doubleword at the data
+                For struct types, it is the number of fields -- known at compile-time
+
+                For all other types, returns 1
+
+                */
+
+                if (t.get_primary() == ARRAY || t.get_primary() == STRING) {
+                    // First, evaluate the selected expression
+                    evaluation_ss << this->evaluate_expression(attr->get_selected(), line).str();
+                    evaluation_ss << "\t" << "mov eax, [rax]" << std::endl;
+                }
+                else if (t.get_primary() == STRUCT) {
+                    auto s = this->get_struct_info(t.get_struct_name(), line);
+                    evaluation_ss << "\t" << "mov eax, 1" << std::endl; // todo: we need a get_fields method
+                }
+                else {
+                    evaluation_ss << "\t" << "mov eax, 1" << std::endl;
+                }
+            }
+            else if (attr->get_attribute() == SIZE) {
+                /*
+                
+                size attribute
+                Returns the number of bytes occupied by the data.
+
+                Roughly equivalent to sizeof< T >, except it can return the sizes of variable-width types
+                
+                */
+
+                if (t.get_primary() == STRUCT) {
+                    auto s = this->get_struct_info(t.get_struct_name(), line);
+                    evaluation_ss << "\t" << "mov eax, " << s.get_width() << std::endl;
+                }
+                else if (t.get_primary() == ARRAY || t.get_primary() == STRING) {
+                    evaluation_ss << this->evaluate_expression(attr->get_selected(), line).str();
+                    evaluation_ss << "\t" << "mov eax, [rax]" << std::endl;
+
+                    // strings have a type width of 1, if it's an array we need to get the width
+                    size_t type_width = 1;
+                    if (t.get_primary() == ARRAY) {
+                        type_width = t.get_full_subtype()->get_width();
+                    }
+
+                    evaluation_ss << "\t" << "mov rbx, " << type_width << std::endl;
+                    evaluation_ss << "\t" << "mul rbx" << std::endl;
+                }
+                else {
+                    evaluation_ss << "\t" << "mov eax, " << t.get_width() << std::endl;
+                }
+            }
+            else if (attr->get_attribute() == VARIABILITY) {
+                // todo: variability
+                throw CompilerException("Not yet implemented", compiler_errors::UNKNOWN_ATTRIBUTE, line);
+            }
+            else {
+                throw CompilerException(
+                    "Invalid attribute",
+                    compiler_errors::UNKNOWN_ATTRIBUTE,
+                    line
+                );
+            }
+
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
     }
@@ -199,7 +259,10 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         */
         
         if (type.get_width() == sin_widths::SHORT_WIDTH) {
+            // note that we want the unused high bytes to be zero in case this value gets stored at a 32-bit location
+            // we can't just load the 32-bit register though, as this would mess with signed values
             eval_ss << "\t" << "mov ax, " << to_evaluate.get_value() << std::endl;
+            eval_ss << "\t" << "movzx eax, ax" << std::endl;    // so we use movzx to accomplish this
         } else if (type.get_width() == sin_widths::INT_WIDTH) {
             eval_ss << "\t" << "mov eax, " << to_evaluate.get_value() << std::endl;
         } else if (type.get_width() == sin_widths::DOUBLE_WIDTH) {
@@ -244,7 +307,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         std::string name = "strc_" + std::to_string(this->strc_num);
 
         // actually reserve the data and enclose the string in backticks in case we have escaped characters
-        this->rodata_segment << name << " .dd " << to_evaluate.get_value().length() << " `" << to_evaluate.get_value() << "`" << std::endl;
+        this->rodata_segment << "\t" << name << "\t" << "dd " << to_evaluate.get_value().length() << ", `" << to_evaluate.get_value() << "`, 0" << std::endl;
         this->strc_num += 1;
 
         // now, load the a register with the address of the string
@@ -285,7 +348,7 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
     
     // check to see if it was freed; we can't know for sure, but if the compiler has it marked as freed, issue a warning that it may have been freed before the reference to it
     if (sym.was_freed())
-        compiler_warning("Symbol '" + sym.get_name() + "' may have been freed", line);
+        compiler_warning("Symbol '" + sym.get_name() + "' may have been freed", compiler_errors::DATA_FREED, line);
 
     // it must be a variable symbol, not a function definition
     if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
@@ -366,12 +429,18 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     so, instead of having something like:
                         mov rax, [rbp - 4]
                     which we would use for something like int or float, we want
-                        mov rax, rbp - 4
+                        mov rax, rbp
+                        sub rax, 4
                     which gives us the address of the data
 
                     */
 
-                    eval_ss << "\t" << "mov rax, rbp - " << sym.get_offset() << std::endl;
+                    if (sym.get_data_type().get_primary() == STRING) {
+                        eval_ss << "\t" << "mov rax, [rbp - " << sym.get_offset() << "]" << std::endl;
+                    } else {
+                        eval_ss << "\t" << "mov rax, rbp" << std::endl;
+                        eval_ss << "\t" << "sub rax, " << sym.get_offset() << std::endl;
+                    }
                 }
             }
         } else {

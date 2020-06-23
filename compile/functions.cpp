@@ -31,7 +31,8 @@ void compiler::handle_declaration(Declaration decl_stmt) {
         // todo: add struct to struct table with the caveat that it's an incomplete type
     } else {
         // add a symbol
-        symbol sym = generate_symbol(decl_stmt, this->current_scope_name, this->current_scope_level, this->max_offset);
+        // note: pass 0 as the data width because declared data doesn't occupy stack space
+        symbol sym = generate_symbol(decl_stmt, 0, this->current_scope_name, this->current_scope_level, this->max_offset);
         this->add_symbol(sym, decl_stmt.get_line_number());
     }
 }
@@ -63,7 +64,8 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     unsigned int previous_scope_level = this->current_scope_level;
     size_t previous_max_offset = this->max_offset;
 
-    // todo: should be package this together in an object and use a stack to keep track of it? that might make things a little cleaner
+    // todo: sub from rsp the width of the formal parameters
+    // todo: ensure stack-passed parameters get written to the proper location
 
     // update the scope information
     this->current_scope_name = definition.get_name();
@@ -73,10 +75,11 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // construct the symbol for the function -- everything is offloaded to the utility
     function_symbol func_sym = create_function_symbol(definition);
 
-    // now, update the stack offset to account for all parameters
-    if (!func_sym.get_formal_parameters().empty()) {
-        this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
-    }
+    // todo: delete -- no longer relevant due to calling convention updates
+    // // now, update the stack offset to account for all parameters
+    // if (!func_sym.get_formal_parameters().empty()) {
+    //     this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
+    // }
 
     // add the symbol to the table
     this->add_symbol(func_sym, definition.get_line_number());
@@ -95,11 +98,12 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
         }
     }
 
-    // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
-    if (!func_sym.get_formal_parameters().empty()) {
-        const symbol &last_sym = func_sym.get_formal_parameters().back(); 
-        this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
-    }
+    // todo: delete - no longer relevant due to calling convention updates
+    // // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
+    // if (!func_sym.get_formal_parameters().empty()) {
+    //     const symbol &last_sym = func_sym.get_formal_parameters().back(); 
+    //     this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
+    // }
 
     // get the register_usage object from func_sym and push that
     this->reg_stack.push_back(func_sym.get_arg_regs());
@@ -109,8 +113,9 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // note: we don't need to account for parameters passed in registers as these will be located *above* the return address
 
     // since we will be using the 'call' instruction, we must increase our stack offset by the width of a pointer so that we don't overwrite the return address
+    // we don't need to adjust RSP manually, though, as that was done by the "call" instruction
     this->max_offset += sin_widths::PTR_WIDTH;
-    
+
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
     procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
 
@@ -170,12 +175,13 @@ std::stringstream compiler::call_function(T call, unsigned int line, bool allow_
             // SIN calling convention
             call_ss << this->sincall(func_sym, call.get_args(), line).str(); // todo: return this function's result directly?
 		}
-		else if (func_sym.get_calling_convention() == calling_convention::CDECL) {
-			// cdecl calling convention
-			call_ss << this->ccall(func_sym, call.get_args(), line).str();
+		else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
+			// todo: System V
 		}
+        else if (func_sym.get_calling_convention() == calling_convention::WIN_64) {
+            // todo: Windows x86-64
+        }
 		else {
-            // todo: other calling conventions
             throw CompilerException("Other calling conventions not supported at this time", 0, line);
         }
 
@@ -209,21 +215,27 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     std::stringstream register_preservation_ss; // for preserving registers used for argument passing
     std::stringstream sincall_ss;
 
+    // todo: if registers need to be preserved, that should be done here
+
     // get the formal parameters so we don't need to call a function every time
     std::vector<symbol> &formal_parameters = s.get_formal_parameters();
 
     // ensure the number of arguments provided is less than or equal to the number expected
     if (args.size() <= s.get_formal_parameters().size()) {
-        // preserve the processor status
-        sincall_ss << "\t" << "pushfq" << std::endl;
-        // now, preserve our stack frame
-        sincall_ss << "\t" << "push rbp" << std::endl;
-        sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
+        // get the width of arguments so we can calculate the offsets
+        unsigned int total_offset = 0;
+        for (symbol& s: formal_parameters) {
+            total_offset += s.get_data_type().get_width();
+        }
+
+        // we only need to subtract from rsp if the adjustment is non-zero
+        // do this now so that pushing values to the stack in evaluate_expression() doesn't overwrite parameters
+        if (total_offset != 0) {
+            sincall_ss << "\t" << "sub rsp, " << total_offset << std::endl;
+        }
 
         // iterate over our arguments, ensure the types match and that we have an appropriate number
-        size_t to_reserve = 0;  // the amount of space we need to reserve on the stack for parameters
-        bool adjusted_rsp = false;  // make sure we adjust RSP before we push stack arguments
-        size_t rsp_offset_adjust = 0;
+        unsigned int rsp_offset_adjust = 0;
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
             std::shared_ptr<Expression> arg = args[i];
@@ -232,33 +244,46 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             // first, ensure the types match
             DataType arg_type = get_expression_data_type(arg, this->symbols, this->structs, line);
             if (arg_type.is_compatible(param.get_data_type())) {
-                // before we evaluate the expression, adjust the stack offset if we need to push this argument and we haven't already adjusted it
-                if (param.get_register() == NO_REGISTER && !adjusted_rsp && rsp_offset_adjust != 0) {
-                    sincall_ss << "\t" << "sub rsp, " << rsp_offset_adjust << std::endl;
-                    adjusted_rsp = true;
-                }
-
                 // evaluate the expression and pass it in the appropriate manner
                 sincall_ss << this->evaluate_expression(arg, line).str();
+                std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
 
                 // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
                 // if the symbol has a register, pass it there; else, push it
                 if (param.get_register() == NO_REGISTER) {
-                    // todo: pass data on stack
+                    // use [rsp + (offset - BASE_PARAMETER_OFFSET)] because we haven't used pushfq or push rbp yet
+                    // however, the stack pointer is still below where we want to write the data
+                    // if the data needs to be copied in, we must handle it a little different
+                    if (param.get_data_type().get_primary() == ARRAY) {
+                        // todo: perform array copy
+                        // todo: semantics for passing arrays into functions
+                    }
+                    else if (param.get_data_type().get_primary() == STRING) {
+                        // todo: perform string copy
+                    }
+                    else if (param.get_data_type().get_primary() == STRUCT) {
+                        // todo: struct assignment
+                    }
+                    else {
+                        sincall_ss << "mov [rsp + " << param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
+                    }
                 } else {
-                    sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << get_rax_name_variant(param.get_data_type(), line) << std::endl;
-                    rsp_offset_adjust += param.get_data_type().get_width(); // add the width to the RSP offset adjustment
+                    sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << reg_name << std::endl;
                 }
+
+                // now, modify the rsp offset adjustment -- must be done for all arguments as they all live above the new stack frame
+                rsp_offset_adjust += param.get_data_type().get_width();
             } else {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
             }
         }
 
-        // adjust the offset if we ended with a register parameter
-        if (!formal_parameters.empty() && formal_parameters[formal_parameters.size() - 1].get_register() != NO_REGISTER) {
-            sincall_ss << "\t" << "sub rsp, " << rsp_offset_adjust << std::endl;
-        }
+        // preserve the processor status
+        sincall_ss << "\t" << "pushfq" << std::endl;
+        // now, preserve our stack frame
+        sincall_ss << "\t" << "push rbp" << std::endl;
+        sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
 
         // next, call the function
         sincall_ss << "\t" << "call " << s.get_name() << std::endl;
@@ -270,6 +295,13 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         sincall_ss << "\t" << "pop rbp" << std::endl;
         // and restore the processor status
         sincall_ss << "\t" << "popfq" << std::endl;
+
+        // if we had to adjust rsp, move it back
+        if (total_offset != 0) {
+            sincall_ss << "\t" << "add rsp, " << total_offset << std::endl;
+        }
+
+        // todo: if registers were preserved, restore them here
     } else {
         // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature
         throw FunctionSignatureException(line);
@@ -279,29 +311,25 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     return sincall_ss;
 }
 
-std::stringstream compiler::ccall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line) {
-	/*
-	
-	ccall
-	Generates set-up and clean-up code for functions that are to be called with the cdecl convention
+std::stringstream compiler::system_v_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line)
+{
+    std::stringstream system_v_call_ss;
 
-	This function generates code for the cdecl convention. For more information, see 'doc/Interfacing with C'
+    // todo: System V ABI call
 
-	@param	s	The function symbol for which we are generating a call
-	@param	args	The arguments supplied to the call
-	@param	line	The line on which the call is located
-
-	@return	The stringstream containing the generated code
-
-	*/
-
-	std::stringstream cdecl_ss;
-
-	// todo: ccall / cdecl
-	// todo: should SIN, being a language targeting 64-bit systems, support the cdecl calling convention?
-
-	return cdecl_ss;
+    return system_v_call_ss;
 }
+
+std::stringstream compiler::win64_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line)
+{
+    std::stringstream win64_call_ss;
+
+    // todo: Windows 64 call
+
+    return win64_call_ss;
+}
+
+// Function returns
 
 std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol signature) {
     /*
@@ -328,15 +356,26 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
         // types are compatible; how the value gets returned (and how the callee gets cleaned up) depends on the function's calling convention
         if (signature.get_calling_convention() == SINCALL) {
             ret_ss << this->sincall_return(ret, return_type).str() << std::endl;
-        } else {
-            // todo: other calling conventions; for now, throw an exception
+        }
+        else if (signature.get_calling_convention() == SYSTEM_V) {
+            // todo: System V
+        }
+        else if (signature.get_calling_convention() == WIN_64) {
+            // todo: Windows 64
+        }
+        else {
             throw CompilerException("Calling conventions other than sincall are currently not supported", 0, ret.get_line_number());
         }
     } else {
         throw ReturnMismatchException(ret.get_line_number());
     }
 
-    // now that the calling convention's return responsibilities have been dealt with, we can return; move the offset back by one qword, as ret pops the return address from the stack
+    ret_ss << "\t" << "mov rsp, rbp" << std::endl;
+    
+    // adjust the offset by one pointer width, as rsp needs to be where it was when we pushed the function return value
+    ret_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
+    
+    // now that the calling convention's return responsibilities have been dealt with, we can return
     ret_ss << "\t" << "ret" << std::endl;
     this->max_offset -= 8;
     return ret_ss;
@@ -357,5 +396,11 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
 
 	std::stringstream sincall_ss;
 	sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
+    sincall_ss << "\t" << "push rax" << std::endl;
+
+    // decrement the rc of all pointers and dynamic memory
+    sincall_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, true).str();
+    sincall_ss << "\t" << "pop rax" << std::endl;
+
     return sincall_ss;
 }

@@ -27,7 +27,7 @@ std::shared_ptr<Statement> Parser::parse_definition(lexeme current_lex) {
 	// We will know where to delegate based on the next lexeme
 	lexeme type_lex = this->next();
 
-	// if the value is "struct", delegate to the struct; else, 
+	// if the value is "struct", delegate to the struct (struct definitions do not contain qualities)
 	if (type_lex.value == "struct") {
 		return this->parse_struct_definition(type_lex);
 	} else {
@@ -78,8 +78,19 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 			else {
 				this->next();	// skip the closing paren
 			}
-
 			// Args should be empty if we don't have any
+
+			// check to see if we have postfixed qualities
+			if (this->peek().value == "&") {
+				// eat the ampersand
+				this->next();
+				symbol_qualities postfixed = this->get_postfix_qualities();
+				func_type_data.add_qualities(postfixed);
+			}
+
+			// Get the calling convention
+			calling_convention call_con = Parser::get_calling_convention(func_type_data.get_qualities(), this->current_token().line_number);
+
 			// Now, check to make sure we have a curly brace
 			if (this->peek().value == "{") {
 				this->next();
@@ -101,10 +112,8 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 				// if so, return it; otherwise, throw an error
 				if (returned) {
 					// Return the pointer to our function
-					stmt = std::make_shared<FunctionDefinition>(func_name.value, func_type_data, args, std::make_shared<StatementBlock>(procedure));
+					stmt = std::make_shared<FunctionDefinition>(func_name.value, func_type_data, args, std::make_shared<StatementBlock>(procedure), call_con);
 					stmt->set_line_number(current_lex.line_number);
-
-					return stmt;
 				}
 				else {
 					throw ParserException("All functions must return a value (if type is void, use 'return void')", 0, current_lex.line_number);
@@ -122,6 +131,8 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 	else {
 		throw ParserException("Expected identifier", 330, current_lex.line_number);
 	}
+
+	return stmt;
 }
 
 std::shared_ptr<Statement> Parser::parse_struct_definition(lexeme current_lex) {

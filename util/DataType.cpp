@@ -201,6 +201,10 @@ void DataType::set_subtype(DataType new_subtype) {
 	this->subtype = std::make_shared<DataType>(new_subtype);
 }
 
+void DataType::set_subtype(std::shared_ptr<DataType> new_subtype) {
+	this->subtype = new_subtype;
+}
+
 void DataType::set_array_length(size_t new_length) {
 	this->array_length = new_length;
 }
@@ -220,7 +224,7 @@ void DataType::add_quality(SymbolQuality to_add) {
 	// generate a compiler warning if the primary type doesn't support the quality (has no effect)
 	if (this->primary == PTR || this->primary == BOOL || this->primary == ARRAY || this->primary == STRING || this->primary == RAW) {
 		if (to_add == LONG || to_add == SHORT || to_add == SIGNED || to_add == UNSIGNED) {
-			compiler_warning("Width and sign qualifiers have no effect for this type; as such, this quality will be ignored");
+			compiler_note("Width and sign qualifiers have no effect for this type; as such, this quality will be ignored");
 		}
 	}
 

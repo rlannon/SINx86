@@ -47,13 +47,29 @@ void symbol_table::erase(node to_erase) {
 
 	*/
 
-	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(to_erase.name);
+	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(
+		//symbol_table::get_mangled_name(to_erase.name)
+		to_erase.name
+	);
 	if (it == this->symbols.end()) {
 		throw std::exception();
 	}
 	else {
 		this->symbols.erase(it);
 	}
+}
+
+std::string symbol_table::get_mangled_name(std::string org) {
+	/*
+
+	get_mangled_name
+	Gets the mangled symbol name
+
+	SIN adds 'SIN_' to all symbol names
+
+	*/
+
+	return "SIN_" + org;
 }
 
 bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
@@ -66,8 +82,16 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	
 	*/
 
-	std::pair<std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator, bool> returned = this->symbols.insert(
-		std::make_pair<>(to_insert->get_name(), to_insert)
+	// we have to make sure the symbol table doesn't include copies of data with names unmangled
+	if (this->contains(to_insert->get_name())) {
+		throw std::exception();
+	}
+
+	auto returned = this->symbols.insert(
+		std::make_pair<>(
+			//symbol_table::get_mangled_name(to_insert->get_name()),
+			to_insert->get_name(),
+			to_insert)
 	);	// should std::unordered_map::emplace be used instead of insert?
 
 	if (returned.second) {
@@ -78,19 +102,29 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 				to_insert->get_scope_level()
 			)
 		);
-		return true;
 	}
 	else {
 		// todo: specialize exceptions thrown here
 		throw std::exception();
-		return false;
 	}
+
+	return returned.second;
 }
 
 bool symbol_table::contains(std::string symbol_name)
 {
-	// returns whether the symbol with a given name is in the symbol table	
-	return (bool)this->symbols.count(symbol_name);
+	// returns whether the symbol with a given name is in the symbol table
+	// if it can't find it with the name mangled, it will try finding the unmangled version
+	bool in_table = false;	
+	if ((bool)this->symbols.count(
+		symbol_table::get_mangled_name(symbol_name)
+	)) {
+		in_table = true;
+	}
+	else {
+		in_table = (bool)this->symbols.count(symbol_name);
+	}
+	return in_table;
 }
 
 std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
@@ -99,23 +133,67 @@ std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
 	
 	find
 	Returns an iterator to the desired symbol
+
+	If it can't find the symbol with the name mangled, it tries to find the unmangled version
 	
 	*/
 
-	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(to_find);
+	auto it = this->symbols.find(
+		symbol_table::get_mangled_name(to_find)
+	);
 	if (it == this->symbols.end()) {
-		throw std::exception();
+		it = this->symbols.find(to_find);
+
+		if (it == this->symbols.end())
+			throw std::exception();
 	}
 
 	return it->second;
 }
 
-void symbol_table::leave_scope()
+std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned int level, bool is_function) {
+	/*
+
+	get_symbols_to_free
+	Gets a list of symbols that need to have their references decremented before the scope is left
+	
+	Gets local variables that satisfy the following conditions:
+		* is marked as dynamic
+		* is a pointer
+		* is a reference
+	If we are in a function, we need to
+
+	*/
+
+	std::vector<symbol> v;
+	stack<node> l = this->locals;
+	while (
+		!l.empty() && 
+		(is_function ? 
+			(l.peek().scope_level <= level) :
+			(l.peek().scope_level == level)	&& 
+		l.peek().scope_name == name)
+	) {
+		symbol s = *this->find(l.pop_back().name);
+		if (
+			s.get_data_type().get_primary() == PTR ||
+			s.get_data_type().get_qualities().is_dynamic()
+		) {
+			v.push_back(s);
+		}
+	}
+
+	return v;
+}
+
+void symbol_table::leave_scope(std::string name, unsigned int level)
 {
 	/*
 	
 	leave_scope
 	Leaves the current scope, deleting all variables local to that scope
+
+	Any data that should be freed by the GC should be returned in a vector
 	
 	*/
 	
@@ -124,11 +202,7 @@ void symbol_table::leave_scope()
 		// create a sentinel variable
 		bool done = false;
 
-		// scope information
-		std::string leaving_scope_name = this->locals.peek().scope_name;
-		unsigned int leaving_scope_level = this->locals.peek().scope_level;
-
-		while (!this->locals.empty() && this->locals.peek().scope_level == leaving_scope_level && this->locals.peek().scope_name == leaving_scope_name) {
+		while (!this->locals.empty() && this->locals.peek().scope_level == level && this->locals.peek().scope_name == name) {
 			// pop the last node and erase it
 			node to_erase = this->locals.pop_back();
 

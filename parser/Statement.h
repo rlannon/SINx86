@@ -54,6 +54,14 @@ public:
 	~StatementBlock();
 };
 
+class ScopedBlock: public Statement
+{
+	StatementBlock statements;
+public:
+	StatementBlock get_statements();
+	ScopedBlock(StatementBlock statements);
+};
+
 class Include : public Statement
 {
 	std::string filename;
@@ -89,7 +97,7 @@ class Declaration : public Statement
 public:
 	std::string get_name() const;
 
-	DataType get_type_information() const;
+	DataType& get_type_information();
 	bool is_function() const;
 	bool is_struct() const;
 
@@ -137,7 +145,7 @@ class Allocation : public Statement
 
 	std::shared_ptr<Expression> initial_value;	// todo: use the parser to expand allocations with initial values into two statements
 public:
-	DataType get_type_information();
+	DataType& get_type_information();
 	static std::string get_var_type_as_string(Type to_convert);
 	std::string get_name();
 
@@ -175,27 +183,27 @@ public:
 class IfThenElse : public Statement
 {
 	std::shared_ptr<Expression> condition;
-	std::shared_ptr<StatementBlock> if_branch;
-	std::shared_ptr<StatementBlock> else_branch;
+	std::shared_ptr<Statement> if_branch;	// branches may be single statements or scope blocks
+	std::shared_ptr<Statement> else_branch;
 public:
 	std::shared_ptr<Expression> get_condition();
-	std::shared_ptr<StatementBlock> get_if_branch();
-	std::shared_ptr<StatementBlock> get_else_branch();
+	std::shared_ptr<Statement> get_if_branch();
+	std::shared_ptr<Statement> get_else_branch();
 
-	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<StatementBlock> if_branch_ptr, std::shared_ptr<StatementBlock> else_branch_ptr);
-	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<StatementBlock> if_branch_ptr);
+	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr);
+	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr);
 	IfThenElse();
 };
 
 class WhileLoop : public Statement
 {
 	std::shared_ptr<Expression> condition;
-	std::shared_ptr<StatementBlock> branch;
+	std::shared_ptr<Statement> branch;
 public:
 	std::shared_ptr<Expression> get_condition();
-	std::shared_ptr<StatementBlock> get_branch();
+	std::shared_ptr<Statement> get_branch();
 
-	WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<StatementBlock> branch);
+	WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch);
 	WhileLoop();
 };
 

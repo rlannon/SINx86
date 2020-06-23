@@ -62,6 +62,7 @@ public:
 
 	void set_primary(Type new_primary);
 	void set_subtype(DataType new_subtype);
+	void set_subtype(std::shared_ptr<DataType> new_subtype);
 
 	void set_array_length(size_t new_length);
 

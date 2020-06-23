@@ -39,7 +39,8 @@ enum stmt_type {
 	STRUCT_DEFINITION,
 	CALL,
 	INLINE_ASM,
-	FREE_MEMORY
+	FREE_MEMORY,
+	SCOPE_BLOCK
 };
 
 
@@ -50,12 +51,20 @@ enum exp_type {
 	LVALUE,		// any named data
 	LIST,	// initializer-lists, mostly; syntax is { ... , ... }
 	INDEXED,
-	ADDRESS_OF,
-	DEREFERENCED,
 	BINARY,
 	UNARY,
 	VALUE_RETURNING_CALL,
-	SIZE_OF
+	SIZE_OF,
+	CAST,
+	ATTRIBUTE,
+	KEYWORD_EXP
+};
+
+enum attribute {
+	NO_ATTRIBUTE,
+	LENGTH,
+	SIZE,
+	VARIABILITY
 };
 
 enum SymbolType {
@@ -76,12 +85,26 @@ enum SymbolQuality {
 	SIGNED,
 	UNSIGNED,
 	LONG,
-	SHORT
+	SHORT,
+	SINCALL_CONVENTION,
+	C64_CONVENTION,
+	WINDOWS_CONVENTION,
+	EXTERN
 };
 
 
 enum exp_operator {
 	// So that we have a clear list of operators
+	COPY_ASSIGN,	// the = operator
+	MOVE_ASSIGN,	// the -> operator
+	PLUS_EQUAL,	// +=
+	MINUS_EQUAL,	// -=
+	MULT_EQUAL,	// *=
+	DIV_EQUAL,	// /=
+	MOD_EQUAL,	// %=
+	AND_EQUAL,	// &=
+	OR_EQUAL,	// |=
+	XOR_EQUAL,	// ^=
 	PLUS,
 	MINUS,
 	UNARY_PLUS,
@@ -103,9 +126,16 @@ enum exp_operator {
 	BIT_OR,		// same goes with BIT_OR
 	BIT_XOR,	// same with BIT_XOR
 	BIT_NOT,	// same with BIT_NOT
+	LEFT_SHIFT,
+	RIGHT_SHIFT,
 	DOT,	// the . operator
 	ARROW,	// the -> operator
-	ADDRESS,	// todo: remove
+	ADDRESS,		// $
+	DEREFERENCE,	// *
+	TYPECAST,	// the 'as' operator
+	ATTRIBUTE_SELECTION,	// :
+	CONTROL_TRANSFER,	// @, used in function calls
+	SCOPE_RESOLUTION,	//	::
 	NO_OP
 };
 
@@ -164,7 +194,6 @@ enum reg {
 enum calling_convention {
 	// Calling conventions for functions
 	SINCALL,
-	CDECL,
-	WIN_64,
-	X64
+	SYSTEM_V,
+	WIN_64
 };

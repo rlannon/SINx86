@@ -21,6 +21,7 @@ Note that the Lexer class does /not/ parse source files; it simply puts those fi
 #include <functional>
 #include <algorithm>
 #include <vector>
+#include <set>
 #include <exception>
 
 #include "lexeme.h"
@@ -34,7 +35,7 @@ class Lexer
 	lexeme current_lexeme;
 	unsigned int current_line;	// track what line we are on in the file
 
-	static const std::vector<std::string> keywords;	// our keyword vector
+	static const std::set<std::string> keywords;	// our keywords
 
 	// Strings for our longer/more complex regular expressions; this will make it easier to edit them
 	static const std::string punc_exp;
@@ -75,7 +76,7 @@ class Lexer
 	static bool is_whitespace(char ch);	// tests if a character is \n, \t, or a space
 										// DELETE?
 	static bool is_newline(char ch);	// tests for a newline character
-										//
+	
 	static bool is_not_newline(char ch);
 	static bool is_digit(char ch);		// tests whether a character is a digit; used for the first digit in a number
 	static bool is_letter(char ch);
