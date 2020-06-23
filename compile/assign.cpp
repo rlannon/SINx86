@@ -188,7 +188,7 @@ std::stringstream compiler::handle_symbol_assignment(symbol &sym, std::shared_pt
 				std::shared_ptr<DataType> right_type = get_expression_data_type(value, this->symbols, this->structs, line).get_full_subtype();
 
 				if (is_valid_type_promotion(left_type->get_qualities(), right_type->get_qualities())) {
-					// pointers are really just integers, so we can
+					// pointers are really just integers, so we can use the integer function
 					handle_ss = handle_int_assignment(sym, value, line);
 				}
 				else {
@@ -239,7 +239,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
     handle_int_assignment
     Makes an assignment of the value given to the symbol
 
-    @param  symbol  The symbol containing the lvalue
+    @param  symbol  The symbol containing the lvalue to which we are assigning
     @param  value   The rvalue
     @return A stringstream containing the generated code
 
@@ -252,7 +252,18 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
 
     // Generate the code to evaluate the expression; it should go into the a register (rax, eax, ax, or al depending on the data width)
     assign_ss << this->evaluate_expression(value, line).str();
-    std::string src = (sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? "rax" : (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")); // get our source register based on the symbol's width
+
+    // get our source register based on the symbol's width
+    std::string src = (
+        sym.get_data_type().get_width() == sin_widths::PTR_WIDTH ? 
+        "rax" : 
+        (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")
+    );
+
+    // we need to make sure we decrement the reference currently at the destination before assigning
+    if (sym.get_data_type().get_primary() == PTR) {
+        assign_ss << call_sre_free(sym).str();
+    }
 
     // how the variable is allocated will determine how we make the assignment
     if (sym.get_data_type().get_qualities().is_static()) {
@@ -292,6 +303,19 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
         simply use the stack offset of the symbol in the assignment, subtracting from rbp
         */
         assign_ss << "\t" << "mov [rbp - " << std::dec << sym.get_offset() << "], " << src << std::endl;
+    }
+
+    // if the data to which we are assigning is a pointer, we need to add a reference to the source
+    // this will mean rax contains the address, we can just move it into rdi
+    if (sym.get_data_type().get_primary() == PTR) {
+        assign_ss << "\t" << "pushfq" << std::endl;
+        assign_ss << "\t" << "push rbp" << std::endl;
+        assign_ss << "\t" << "mov rbp, rsp" << std::endl;
+        assign_ss << "\t" << "mov rdi, rax" << std::endl;
+        assign_ss << "\t" << "call sre_add_ref" << std::endl;
+        assign_ss << "\t" << "mov rsp, rbp" << std::endl;
+        assign_ss << "\t" << "pop rbp" << std::endl;
+        assign_ss << "\t" << "popfq" << std::endl;
     }
 
     // return our generated code

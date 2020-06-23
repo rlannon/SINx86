@@ -728,3 +728,66 @@ std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int 
 
     return dec_ss;
 }
+
+std::stringstream call_sre_free(symbol& s) {
+    /*
+
+    call_sre_free
+    Calls sre_free on the specified symbol
+
+    */
+
+    return call_sre_mam_util(s, "sre_free");
+}
+
+std::stringstream call_sre_add_ref(symbol& s) {
+    /*
+
+    call_sre_add_ref
+    Calls the function to add a reference for the given symbol
+
+    */
+
+    return call_sre_mam_util(s, "sre_add_ref");
+}
+
+std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
+    /*
+
+    call_sre_mam_util
+    A utility that actually generates code
+
+    Takes a symbol and the function name and generates code for it
+    These functions may be:
+        * sre_add_ref
+        * sre_free
+
+    */
+
+    std::stringstream gen;
+    std::stringstream get_addr;
+
+    if (s.get_data_type().get_qualities().is_static()) {
+        get_addr << "\t" << "lea rdi, " << s.get_name() << std::endl;
+    }
+    else if (
+        s.get_data_type().get_primary() == PTR ||
+        s.get_data_type().get_qualities().is_dynamic()
+    ) {
+        get_addr << "\t" << "mov rdi, [rbp - " << s.get_offset() << "]" << std::endl;
+    }
+    else {
+        get_addr << "\t" << "mov rdi, rbp" << std::endl;
+        get_addr << "\t" << "sub rdi, " << s.get_offset() << std::endl;
+    }
+
+    gen << "\t" << "pushfq" << std::endl;
+    gen << "\t" << "push rbp" << std::endl;
+    gen << "\t" << "mov rbp, rsp" << std::endl;
+    gen << "\t" << get_addr.str();
+    gen << "\t" << "mov rsp, rbp" << std::endl;
+    gen << "\t" << "pop rbp" << std::endl;
+    gen << "\t" << "popfq" << std::endl;
+
+    return gen;
+}
