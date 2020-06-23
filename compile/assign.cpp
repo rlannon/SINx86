@@ -250,6 +250,11 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
 
     std::stringstream assign_ss;
 
+    // we need to make sure we decrement the reference currently at the destination before assigning
+    if (sym.get_data_type().get_primary() == PTR) {
+        assign_ss << call_sre_free(sym).str();
+    }
+
     // Generate the code to evaluate the expression; it should go into the a register (rax, eax, ax, or al depending on the data width)
     assign_ss << this->evaluate_expression(value, line).str();
 
@@ -259,11 +264,6 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
         "rax" : 
         (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")
     );
-
-    // we need to make sure we decrement the reference currently at the destination before assigning
-    if (sym.get_data_type().get_primary() == PTR) {
-        assign_ss << call_sre_free(sym).str();
-    }
 
     // how the variable is allocated will determine how we make the assignment
     if (sym.get_data_type().get_qualities().is_static()) {
@@ -308,14 +308,7 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
     // if the data to which we are assigning is a pointer, we need to add a reference to the source
     // this will mean rax contains the address, we can just move it into rdi
     if (sym.get_data_type().get_primary() == PTR) {
-        assign_ss << "\t" << "pushfq" << std::endl;
-        assign_ss << "\t" << "push rbp" << std::endl;
-        assign_ss << "\t" << "mov rbp, rsp" << std::endl;
-        assign_ss << "\t" << "mov rdi, rax" << std::endl;
-        assign_ss << "\t" << "call sre_add_ref" << std::endl;
-        assign_ss << "\t" << "mov rsp, rbp" << std::endl;
-        assign_ss << "\t" << "pop rbp" << std::endl;
-        assign_ss << "\t" << "popfq" << std::endl;
+        assign_ss << call_sre_add_ref(sym).str();
     }
 
     // return our generated code

@@ -631,7 +631,12 @@ std::string get_address(symbol &s, reg r) {
     }
     else {
         address_info = "\tmov " + reg_name + ", rbp\n";
-        address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset()) + "\n";
+        if (s.get_offset() < 0) {
+            address_info += "\tadd " + reg_name + ", " + std::to_string(-s.get_offset()) + "\n";
+        }
+        else {
+            address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset()) + "\n";
+        }
     }
 
     return address_info;
@@ -805,6 +810,7 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
     gen << "\t" << "pushfq" << std::endl;
     gen << "\t" << "push rbp" << std::endl;
     gen << "\t" << "mov rbp, rsp" << std::endl;
+    gen << "\t" << "call " << func_name << std::endl;
     gen << "\t" << "mov rsp, rbp" << std::endl;
     gen << "\t" << "pop rbp" << std::endl;
     gen << "\t" << "popfq" << std::endl;

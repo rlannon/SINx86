@@ -152,6 +152,34 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// construct the symbol
 			symbol allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
 
+			/*
+			
+			move RSP by the width of the type so that we can safely use the stack without overwriting our local variables
+			if we have an array or a struct, we need to calculate its width beyond just getting DataType::width
+			
+			This has to happen here for pointers -- we have to push values *below* the value we just assigned
+
+			*/
+			
+			size_t to_subtract = 0;
+
+			if (allocated.get_data_type().get_primary() == STRUCT && !allocated.get_data_type().get_qualities().is_dynamic()) {
+				struct_info &s = this->get_struct_info(allocated.get_data_type().get_struct_name(), alloc_stmt.get_line_number());
+				to_subtract = s.get_width();
+			}
+			else if (allocated.get_data_type().get_primary() == ARRAY && !allocated.get_data_type().get_qualities().is_dynamic()) {
+				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+				
+				// write the array length onto the stack
+				allocation_ss << "\t" << "mov eax, " << allocated.get_data_type().get_array_length() << std::endl;
+				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], eax" << std::endl;
+			}
+			else {
+				to_subtract = allocated.get_data_type().get_width();
+			}
+
+			allocation_ss << "\t" << "sub rsp, " << to_subtract << std::endl;
+
 			// if the type is string, we need to call sinl_string_alloc
 			if (alloc_data.get_primary() == STRING) {
 				// todo: get string length instead of passing 0 in
@@ -180,32 +208,6 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 			// add it to the table
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
-
-			/*
-			
-			now, move RSP by the width of the type so that we can safely use the stack without overwriting our local variables
-			if we have an array or a struct, we need to calculate its width beyond just getting DataType::width
-			
-			*/
-			
-			size_t to_subtract = 0;
-
-			if (allocated.get_data_type().get_primary() == STRUCT && !allocated.get_data_type().get_qualities().is_dynamic()) {
-				struct_info &s = this->get_struct_info(allocated.get_data_type().get_struct_name(), alloc_stmt.get_line_number());
-				to_subtract = s.get_width();
-			}
-			else if (allocated.get_data_type().get_primary() == ARRAY && !allocated.get_data_type().get_qualities().is_dynamic()) {
-				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
-				
-				// write the array length onto the stack
-				allocation_ss << "\t" << "mov eax, " << allocated.get_data_type().get_array_length() << std::endl;
-				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], eax" << std::endl;
-			}
-			else {
-				to_subtract = allocated.get_data_type().get_width();
-			}
-
-			allocation_ss << "\t" << "sub rsp, " << to_subtract << std::endl;
 		}
 	}
 	else {
