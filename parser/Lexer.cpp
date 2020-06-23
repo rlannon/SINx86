@@ -180,6 +180,10 @@ bool Lexer::is_keyword(std::string candidate) {
 	return (bool)keywords.count(candidate);
 }
 
+bool Lexer::is_valid_operator(std::string candidate) {
+	return std::regex_match(candidate, std::regex(op_exp));
+}
+
 /*
 
 Our read functions.
@@ -206,6 +210,31 @@ std::string Lexer::read_while(bool (*predicate)(char)) {
 	return msg;
 }
 
+
+std::string Lexer::read_operator() {
+	/*
+
+	read_operator
+	Reads in a valid operator from the stream
+
+	*/
+
+	// the string containing the full operator
+	std::string op_string;
+
+	// get the first character
+	char ch = this->peek();
+	op_string = std::string(1, ch);
+	while (this->is_valid_operator(op_string)) {
+		this->next();
+		ch = this->peek();
+		op_string.append(1, ch);
+	}
+
+	// we read ahead one too many characters, to pop the last one back
+	op_string.pop_back();
+	return op_string;
+}
 
 /*
 
@@ -343,21 +372,14 @@ lexeme Lexer::read_next() {
 		}
 		else if (this->is_op_char(ch)) {
 			type = OPERATOR;
-			char next_ch = this->peek();
-			if (next_ch != '*') {
-				value = this->read_while(&this->is_op_char);
-			}
-			else {
-				value = next_ch;
-				this->next();
-			}
+			value = this->read_operator();
 		}
 		else if (ch == '\n') {	// if we encounter a newline character
 			this->peek();
 			if (this->stream->eof()) {
-				next_lexeme = lexeme(NULL_LEXEME, "", 0);	// if we have reached the end of file, set the exit flag and return an empty tuple
+				type = NULL_LEXEME;
+				value = "";
 				this->exit_flag = true;
-				return next_lexeme;
 			}
 			else {
 				this->next();	// otherwise, continue by getting the next character

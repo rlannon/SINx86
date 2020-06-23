@@ -91,8 +91,10 @@ class Lexer
 	static bool is_boolean(std::string candidate);
 
 	static bool is_keyword(std::string candidate);	// test whether the string is a keyword (such as alloc or let) or an identifier (such as a variable name)
+	static bool is_valid_operator(std::string candidate);
 
 	std::string read_while(bool(*predicate)(char));
+	std::string read_operator();
 
 	void read_lexeme();
 
