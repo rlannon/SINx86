@@ -40,7 +40,7 @@ protected:
     bool freed; // whether the memory has been allocated or freed
 public:
     // to update our offset
-    void set_offset(int new_offset);
+    void set_offset(int new_offset);    // must be public -- cannot be protected because it will be accessed through a pointer
     
     // our getters
     SymbolType get_symbol_type() const;

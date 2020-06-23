@@ -8,10 +8,23 @@ Note that in SIN, the calling convention is always declared in the function defi
 
 The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike `_cdecl`, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers `RSI, RDI, RCX, RDX, R8, R9`, while floating-point types will be pushed in registers `XMM0 - XMM5`. `RAX` and `RBX` are never preserved by the caller nor the callee automatically; they are considered volatile.
 
-Typically, this will end up looking something like:
+In the SINCALL convention, function arguments exist _above_ the stack frame, meaning arguments are written into memory before the new stack frame is set up. This allows for easier evaluation of their values when called. Generally, the following happens in SINCALL:
+
+* First, the stack pointer is decremented to be below the function arguments; any arguments written to the stack will be written to a location like `[rsp + 8]`
+* In turn, each argument:
+  * is evaluated
+  * is stored either in a register or in memory, depending on how it is to be passed
+* The status register is pushed
+* The base pointer is pushed
+* The stack pointer is moved into the base pointer, setting up a new frame
+* The function is called
+
+The reverse is done when the function returns. Typically, a call in this convention will end up looking something like:
 
     caller:
-        ; function signature 'decl int callee(decl int a, decl int b, decl int c, decl int d, decl int e &long)'
+        ; function signature 'int callee(int a, int b, int c, int d, int e &long)'
+
+        sub rsp, 20 ; we need to reserve space for these as local variables above where we set up the frame
 
         ; pass arguments (call is '@callee(10, 20, 30, 40, 50)' )
         mov esi, 10
@@ -19,8 +32,6 @@ Typically, this will end up looking something like:
         mov ecx, 30
         mov edx, 40
         mov r8, 50  ; we can pass all of these in registers
-
-        sub rsp, 20 ; we need to reserve space for these as local variables above where we set up the frame
 
         pushfq  ; preserve the status
         push rbp   ; preserve old call frame

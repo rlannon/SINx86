@@ -60,6 +60,17 @@ function_symbol::function_symbol(std::string function_name, DataType return_type
 			// determine the register for each of our formal parameters
 			bool can_pass_in_reg = true;	// once we have one argument passed on the stack, all subsequent arguments will be
 			for (symbol &sym : this->formal_parameters) {
+				
+				// todo:
+				/*
+
+				this might not be correct
+				when evaluating parameter values, if one needs to be pushed, it won't be pushed to the correct place if the offset isn't adjusted correctly for the frame in which the evaluation occurs
+				though, then again, this push won't use symbols, but rather offsets based on the symbol's position in the list...so we could calculate the offset in the call
+				and then this would still work and be accurate for our function
+
+				*/
+				
 				// the offset for this symbol will be the total stack offset we calculated + the width of this object		
 				size_t obj_width = sym.get_data_type().get_width();
 				stack_offset += obj_width;

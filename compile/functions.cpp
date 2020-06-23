@@ -64,7 +64,8 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     unsigned int previous_scope_level = this->current_scope_level;
     size_t previous_max_offset = this->max_offset;
 
-    // todo:
+    // todo: sub from rsp the width of the formal parameters
+    // todo: ensure stack-passed parameters get written to the proper location
 
     // update the scope information
     this->current_scope_name = definition.get_name();
@@ -214,21 +215,27 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     std::stringstream register_preservation_ss; // for preserving registers used for argument passing
     std::stringstream sincall_ss;
 
+    // todo: if registers need to be preserved, that should be done here
+
     // get the formal parameters so we don't need to call a function every time
     std::vector<symbol> &formal_parameters = s.get_formal_parameters();
 
     // ensure the number of arguments provided is less than or equal to the number expected
     if (args.size() <= s.get_formal_parameters().size()) {
-        // preserve the processor status
-        sincall_ss << "\t" << "pushfq" << std::endl;
-        // now, preserve our stack frame
-        sincall_ss << "\t" << "push rbp" << std::endl;
-        sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
+        // get the width of arguments so we can calculate the offsets
+        unsigned int total_offset = 0;
+        for (symbol& s: formal_parameters) {
+            total_offset += s.get_data_type().get_width();
+        }
+
+        // we only need to subtract from rsp if the adjustment is non-zero
+        // do this now so that pushing values to the stack in evaluate_expression() doesn't overwrite parameters
+        if (total_offset != 0) {
+            sincall_ss << "\t" << "sub rsp, " << total_offset << std::endl;
+        }
 
         // iterate over our arguments, ensure the types match and that we have an appropriate number
-        size_t to_reserve = 0;  // the amount of space we need to reserve on the stack for parameters
-        bool adjusted_rsp = false;  // make sure we adjust RSP before we push stack arguments
-        size_t rsp_offset_adjust = 0;
+        unsigned int rsp_offset_adjust = 0;
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
             std::shared_ptr<Expression> arg = args[i];
@@ -237,33 +244,46 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             // first, ensure the types match
             DataType arg_type = get_expression_data_type(arg, this->symbols, this->structs, line);
             if (arg_type.is_compatible(param.get_data_type())) {
-                // before we evaluate the expression, adjust the stack offset if we need to push this argument and we haven't already adjusted it
-                if (param.get_register() == NO_REGISTER && !adjusted_rsp && rsp_offset_adjust != 0) {
-                    sincall_ss << "\t" << "sub rsp, " << rsp_offset_adjust << std::endl;
-                    adjusted_rsp = true;
-                }
-
                 // evaluate the expression and pass it in the appropriate manner
                 sincall_ss << this->evaluate_expression(arg, line).str();
+                std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
 
                 // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
                 // if the symbol has a register, pass it there; else, push it
                 if (param.get_register() == NO_REGISTER) {
-                    // todo: pass data on stack
+                    // use [rsp + (offset - BASE_PARAMETER_OFFSET)] because we haven't used pushfq or push rbp yet
+                    // however, the stack pointer is still below where we want to write the data
+                    // if the data needs to be copied in, we must handle it a little different
+                    if (param.get_data_type().get_primary() == ARRAY) {
+                        // todo: perform array copy
+                        // todo: semantics for passing arrays into functions
+                    }
+                    else if (param.get_data_type().get_primary() == STRING) {
+                        // todo: perform string copy
+                    }
+                    else if (param.get_data_type().get_primary() == STRUCT) {
+                        // todo: struct assignment
+                    }
+                    else {
+                        sincall_ss << "mov [rsp + " << param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
+                    }
                 } else {
-                    sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << get_rax_name_variant(param.get_data_type(), line) << std::endl;
-                    rsp_offset_adjust += param.get_data_type().get_width(); // add the width to the RSP offset adjustment
+                    sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << reg_name << std::endl;
                 }
+
+                // now, modify the rsp offset adjustment -- must be done for all arguments as they all live above the new stack frame
+                rsp_offset_adjust += param.get_data_type().get_width();
             } else {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
             }
         }
 
-        // adjust the offset if we ended with a register parameter
-        if (!formal_parameters.empty() && formal_parameters[formal_parameters.size() - 1].get_register() != NO_REGISTER) {
-            sincall_ss << "\t" << "sub rsp, " << rsp_offset_adjust << std::endl;
-        }
+        // preserve the processor status
+        sincall_ss << "\t" << "pushfq" << std::endl;
+        // now, preserve our stack frame
+        sincall_ss << "\t" << "push rbp" << std::endl;
+        sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
 
         // next, call the function
         sincall_ss << "\t" << "call " << s.get_name() << std::endl;
@@ -275,6 +295,13 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         sincall_ss << "\t" << "pop rbp" << std::endl;
         // and restore the processor status
         sincall_ss << "\t" << "popfq" << std::endl;
+
+        // if we had to adjust rsp, move it back
+        if (total_offset != 0) {
+            sincall_ss << "\t" << "add rsp, " << total_offset << std::endl;
+        }
+
+        // todo: if registers were preserved, restore them here
     } else {
         // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature
         throw FunctionSignatureException(line);

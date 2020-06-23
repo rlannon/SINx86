@@ -168,7 +168,9 @@ void register_usage::set(reg to_set, symbol* s) {
         it->second.in_use = true;  // it is a reference, so it will update the original
         it->second.has_been_used = true;   // mark the register as having been used
         it->second.contained = s;   // update the symbol we are pointing to
-        s->set_register(to_set);    // make sure the symbol says it's using this register, too
+        if (s != nullptr) {
+            s->set_register(to_set);    // make sure the symbol says it's using this register, too
+        }
     }
 }
 

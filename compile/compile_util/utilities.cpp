@@ -495,8 +495,9 @@ function_symbol create_function_symbol(T def, bool mangle) {
             throw CompilerException("Invalid statement type in function signature", compiler_errors::ILLEGAL_OPERATION_ERROR, def.get_line_number());
         }
 
-        // make sure it's marked as a paramter
+        // make sure it's marked as a paramter and marked as initialized
         param_sym.set_as_parameter();
+        param_sym.set_initialized();
         formal_parameters.push_back(param_sym);
     }
 
