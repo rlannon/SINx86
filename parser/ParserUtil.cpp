@@ -552,7 +552,7 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 	// ensure the token is a kwd
 	if (quality_token.type == KEYWORD) {
 		// Use the unordered_map to find the quality
-		std::unordered_map<std::string, SymbolQuality>::const_iterator it = symbol_qualities::quality_strings.find(quality_token.value);
+		auto it = symbol_qualities::quality_strings.find(quality_token.value);
 		
 		if (it == symbol_qualities::quality_strings.end()) {
 			throw ParserException("Invalid qualifier", 0, quality_token.line_number);

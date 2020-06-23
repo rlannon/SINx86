@@ -515,10 +515,10 @@ function_symbol create_function_symbol(T def, bool mangle) {
     return to_return;
 }
 
-template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&, bool);
-template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&, bool);
+template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&);
+template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&);
 template <typename T>
-symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool mangle) {
+symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset) {
     /*
 
     generate_symbol
@@ -541,6 +541,7 @@ symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name,
     */
 
     DataType &type_info = allocation.get_type_information();
+    bool mangle = !type_info.get_qualities().is_extern();   // don't mangle the name if we have the extern quality set
 
     stack_offset += data_width;
 
