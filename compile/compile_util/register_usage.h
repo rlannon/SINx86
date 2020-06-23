@@ -18,6 +18,7 @@ A class to track the current general-purpose registers in use
 #include "../../util/EnumeratedTypes.h"
 #include "../../util/Exceptions.h"
 #include "../../util/DataType.h"
+#include "../symbol.h"
 
 class register_usage {
     /*
@@ -26,8 +27,19 @@ class register_usage {
 
     */
 
+    struct node {
+        bool in_use;
+        bool has_been_used;
+        symbol* contained;
+
+        node();
+        ~node();
+    };
+
+    // todo: track WHICH symbol is being held by that register
+
     // using an unordered_map will allow much easier access to these booleans
-    std::unordered_map<reg, std::pair<bool, bool>> regs;  // first = currently in use; second = has been used
+    std::unordered_map<reg, node> regs;  // first = currently in use; second = has been used
     static std::unordered_map<reg, std::string> reg_strings;
     static std::unordered_map<reg, std::string> reg_32_strings;
     static std::unordered_map<reg, std::string> reg_16_strings;
@@ -46,7 +58,7 @@ public:
     bool was_used(reg to_test) const; // whether the register was used at all
 
     // todo: change to one function, 'set_available' ?
-    void set(reg to_set);
+    void set(reg to_set, symbol* s=nullptr);
     void clear(reg to_clear);
 
     // for getting the first available register

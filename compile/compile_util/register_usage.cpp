@@ -10,6 +10,16 @@ The implementation of the register_usage class
 
 #include "register_usage.h"
 
+register_usage::node::node() {
+    this->in_use = false;
+    this->has_been_used = false;
+    this->contained = nullptr;
+}
+
+register_usage::node::~node() {
+    // nothing to do here
+}
+
 const std::vector<reg> register_usage::all_regs {
     RAX,
     RBX,
@@ -126,47 +136,49 @@ bool register_usage::is_xmm_register(reg to_test) {
 
 bool register_usage::is_in_use(reg to_test) const {
     // Returns whether the specified register is in use
-    std::unordered_map<reg, std::pair<bool, bool>>::const_iterator it = this->regs.find(to_test);
+    auto it = this->regs.find(to_test);
 
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register choice");
     } else {
-        return it->second.first;
+        return it->second.in_use;
     }
 }
 
 bool register_usage::was_used(reg to_test) const {
     // Returns whether the specified register has been used at all
-    std::unordered_map<reg, std::pair<bool,bool>>::const_iterator it = this->regs.find(to_test);
+    auto it = this->regs.find(to_test);
 
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register choice");
     } else {
-        return it->second.second;
+        return it->second.has_been_used;
     }
 }
 
-void register_usage::set(reg to_set) {
+void register_usage::set(reg to_set, symbol* s) {
     // Sets a given register to 'in use'
-    std::unordered_map<reg, std::pair<bool, bool>>::iterator it = this->regs.find(to_set);
+    auto it = this->regs.find(to_set);
     
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register selection");
     } else {
-        it->second.first = true;  // it is a reference, so it will update the original
-        it->second.second = true;   // mark the register as having been used
+        it->second.in_use = true;  // it is a reference, so it will update the original
+        it->second.has_been_used = true;   // mark the register as having been used
+        it->second.contained = s;   // update the symbol we are pointing to
+        s->set_register(to_set);    // make sure the symbol says it's using this register, too
     }
 }
 
 void register_usage::clear(reg to_clear) {
     // Marks a register as available
-    std::unordered_map<reg, std::pair<bool, bool>>::iterator it = this->regs.find(to_clear);
+    auto it = this->regs.find(to_clear);
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register selection");
     } else {
-        it->second.first = false; // since it's a reference, it will update the original
+        it->second.in_use = false; // since it's a reference, it will update the original
     }
 }
 
@@ -185,8 +197,8 @@ reg register_usage::get_available_register(Type data_type) {
 
     // iterate through the registers until we find one that isn't in use and is of the type we want
     // call is_type via implicit dereferencing
-    std::unordered_map<reg, std::pair<bool, bool>>::iterator it = this->regs.begin();
-    while (it != this->regs.end() && (it->second.first || !is_type(it->first)) ) {
+    auto it = this->regs.begin();
+    while (it != this->regs.end() && (it->second.in_use || !is_type(it->first)) ) {
         it++;
     }
 
@@ -240,7 +252,7 @@ bool register_usage::is_valid_argument_register(const reg to_check, const callin
 
 std::string register_usage::get_register_name(const reg to_get) {
     // Get the string value of a register name
-	std::unordered_map<reg, std::string>::iterator it = reg_strings.find(to_get);
+	auto it = reg_strings.find(to_get);
 	if (it == reg_strings.end()) {
 		// todo: is the exception here necessary?
 		throw CompilerException("Invalid register selection");
@@ -276,28 +288,28 @@ std::string register_usage::get_register_name(const reg to_get, DataType t) {
 
 register_usage::register_usage(): 
     regs({
-		{RAX, std::pair<bool, bool>(false, false)},
-		{RBX, std::pair<bool, bool>(false, false)},
-		{RCX, std::pair<bool, bool>(false, false)},
-		{RDX, std::pair<bool, bool>(false, false)},
-		{RSI, std::pair<bool, bool>(false, false)},
-		{RDI, std::pair<bool, bool>(false, false)},
-		{R8, std::pair<bool, bool>(false, false)},
-		{R9, std::pair<bool, bool>(false, false)},
-		{R10, std::pair<bool, bool>(false, false)},
-		{R11, std::pair<bool, bool>(false, false)},
-		{R12, std::pair<bool, bool>(false, false)},
-		{R13, std::pair<bool, bool>(false, false)},
-		{R14, std::pair<bool, bool>(false, false)},
-		{R15, std::pair<bool, bool>(false, false)},
-		{XMM0, std::pair<bool, bool>(false, false)},
-		{XMM1, std::pair<bool, bool>(false, false)},
-		{XMM2, std::pair<bool, bool>(false, false)},
-		{XMM3, std::pair<bool, bool>(false, false)},
-		{XMM4, std::pair<bool, bool>(false, false)},
-		{XMM5, std::pair<bool, bool>(false, false)},
-		{XMM6, std::pair<bool, bool>(false, false)},
-		{XMM7, std::pair<bool, bool>(false, false)}
+		{RAX, node()},
+		{RBX, node()},
+		{RCX, node()},
+		{RDX, node()},
+		{RSI, node()},
+		{RDI, node()},
+		{R8, node()},
+		{R9, node()},
+		{R10, node()},
+		{R11, node()},
+		{R12, node()},
+		{R13, node()},
+		{R14, node()},
+		{R15, node()},
+		{XMM0, node()},
+		{XMM1, node()},
+		{XMM2, node()},
+		{XMM3, node()},
+		{XMM4, node()},
+		{XMM5, node()},
+		{XMM6, node()},
+		{XMM7, node()}
 	})
 {
     // nothing to do here

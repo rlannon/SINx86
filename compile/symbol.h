@@ -15,7 +15,6 @@ The class for compiler symbols
 #include <unordered_map>
 
 #include "../util/DataType.h"   // For all information about types
-#include "compile_util/register_usage.h"
 
 class symbol {
     /*
