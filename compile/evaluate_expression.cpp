@@ -439,7 +439,12 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                         eval_ss << "\t" << "mov rax, [rbp - " << sym.get_offset() << "]" << std::endl;
                     } else {
                         eval_ss << "\t" << "mov rax, rbp" << std::endl;
-                        eval_ss << "\t" << "sub rax, " << sym.get_offset() << std::endl;
+                        if (sym.get_offset() < 0) {
+                            eval_ss << "\t" << "add rax, " << -sym.get_offset() << std::endl;
+                        }
+                        else {
+                            eval_ss << "\t" << "sub rax, " << sym.get_offset() << std::endl;
+                        }
                     }
                 }
             }

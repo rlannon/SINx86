@@ -40,8 +40,13 @@ std::stringstream compiler::get_address(Unary &u, unsigned int line) {
         else {
             // first, get the stack address
             addr_ss << "\t" << "mov rax, rbp" << std::endl;
-            addr_ss << "\t" << "sub rax, " << s->get_offset() << std::endl;
-
+            if (s->get_offset() < 0) {
+                addr_ss << "\t" << "add rax, " << -s->get_offset() << std::endl;
+            }
+            else {
+                addr_ss << "\t" << "sub rax, " << s->get_offset() << std::endl;
+            }
+            
             // if the variable is dynamic or a string, dereference RAX
             if (s->get_data_type().get_qualities().is_dynamic() || s->get_data_type().get_primary() == STRING) {
                 addr_ss << "\t" << "mov rax, [rax]" << std::endl;
