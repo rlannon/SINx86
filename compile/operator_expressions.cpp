@@ -514,7 +514,6 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				}
 				else if (left_type.get_primary() == FLOAT) {
 					// todo: equivalency operators with floating-point numbers
-					requires_unsigned = true;
 				} else {
 					// if we have two unsigned variables, use unsigned comparison
 					requires_unsigned = left_type.get_qualities().is_unsigned() && right_type.get_qualities().is_unsigned();

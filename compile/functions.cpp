@@ -260,12 +260,17 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                     }
                     else if (param.get_data_type().get_primary() == STRING) {
                         // todo: perform string copy
+                        // if the string is final, we don't need to perform a string copy -- we can use the address
+                        if (param.get_data_type().get_qualities().is_final()) {
+                            sincall_ss << "\t" << "mov [rsp + " << -param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
+                        }
                     }
                     else if (param.get_data_type().get_primary() == STRUCT) {
                         // todo: struct assignment
                     }
                     else {
-                        sincall_ss << "mov [rsp + " << param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
+                        // since we are using +, we don't need to negate the parameter offset (as we normally would if we were using -)
+                        sincall_ss << "\t" << "mov [rsp + " << param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
                     }
                 } else {
                     sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << reg_name << std::endl;
