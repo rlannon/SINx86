@@ -433,6 +433,7 @@ std::string Lexer::read_string() {
 		}
 		else if (ch == '\\') {	// if we have not escaped the character and it's a backslash
 			escaped = true;	// escape the next one
+			str += ch;
 		}
 		else if (!escaped && ch == '"') {	// if we have not escaped it and the character is a double quote
 			string_done = true;	// we are done with the string
