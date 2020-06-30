@@ -34,19 +34,9 @@ int main (int argc, char *argv[]) {
 	}
 
 	try {
-		// todo: refactor constructors to streamline this process
-		std::ifstream infile;
-		infile.open(sin_file, std::ios::in);
-		Lexer l(infile);
-		Parser *p = new Parser(l);
+		// create the compiler and generate code
 		compiler *c = new compiler();
-
-		// compile our code
-		c->generate_asm(sin_file, *p);
-
-		// clean-up
-		infile.close();
-		delete p;
+		c->generate_asm(sin_file);
 		delete c;
 		
         return 0;

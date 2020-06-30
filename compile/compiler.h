@@ -30,7 +30,8 @@ Copyright 2019 Riley Lannon
 
 class compiler {
     // The class containing our compiler
-	
+	std::string filename;
+
     // todo: break code generation into multiple friend classes
 
 	compile_time_evaluator evaluator;	// the compile-time constant evaluator
@@ -107,9 +108,12 @@ class compiler {
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_member_selection(member_selection &m, unsigned int line);
 	std::stringstream get_address(Unary &u, unsigned int line);
+
+	// process an included file
+	std::stringstream process_include(std::string filename);
 public:
     // the compiler's entry function
-    void generate_asm(std::string filename, Parser &p);
+    void generate_asm(std::string filename);
 
     compiler();
     ~compiler();

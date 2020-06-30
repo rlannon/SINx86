@@ -33,10 +33,14 @@ Note that:
 #include "../util/general_utilities.h"
 
 class Parser
-{	
+{
+	// token trackers
 	std::vector<lexeme> tokens;
 	size_t position;
 	size_t num_tokens;
+
+	// the name of the file being parsed
+	std::string filename;
 
 	// Sentinel variable
 	bool quit;
@@ -109,7 +113,6 @@ public:
 	// our entry function
 	StatementBlock create_ast();
 
-	Parser(Lexer& lexer);
-	Parser();
+	Parser(std::string filename);
 	~Parser();
 };

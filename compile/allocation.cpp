@@ -138,7 +138,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// static data must be marked as 'global'
-			allocation_ss << "extern " << allocated.get_name() << std::endl;
+			allocation_ss << "global " << allocated.get_name() << std::endl;
 
 			// static const variables can go in the .rodata segment, so check to see if it is also const
 			if (alloc_data.get_qualities().is_const()) {

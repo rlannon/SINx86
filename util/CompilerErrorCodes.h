@@ -48,6 +48,8 @@ namespace compiler_errors {
     const unsigned int SIGNATURE_ERROR = 120;
     const unsigned int OUT_OF_SCOPE_ERROR = 150;
     const unsigned int DECLARATION_ERROR = 160;
+    const unsigned int INCLUDE_SCOPE_ERROR = 165;
+    const unsigned int FILE_NOT_FOUND_ERROR = 166;
     const unsigned int CALLING_CONVENTION_ERROR = 170;
 
     // Type errors
@@ -78,4 +80,7 @@ namespace compiler_errors {
     const unsigned int MISSING_IDENTIFIER_ERROR = 406;
     const unsigned int UNEXPECTED_KEYWORD_ERROR = 410;
     const unsigned int INCOMPLETE_TYPE_ERROR = 430; // type information given was incomplete and could not be parsed
+
+    // Warning codes
+    const unsigned int UNSAFE_OPERATION = 501;
 };

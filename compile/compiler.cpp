@@ -139,9 +139,32 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     stmt_type s_type = s->get_statement_type();
     switch (s_type) {
         case INCLUDE:
-            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
-            // todo: this is to be accomplished through the use of std::set
+        {
+            // includes must be in the global scope at level 0
+            if (this->current_scope_name == "global" && this->current_scope_level == 0) {
+                // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
+                auto include = dynamic_cast<Include*>(s.get());
+                if (this->compiled_headers.count(include->get_filename())) {
+                    // ignore include, generate a note saying as much
+                    compiler_note(
+                        "Included file \"" + include->get_filename() + "\" will be ignored here, as it has been included elsewhere",
+                        include->get_line_number()
+                    );
+                }
+                else {
+                    compile_ss << this->process_include(include->get_filename()).str();
+                }
+            }
+            else {
+                throw CompilerException(
+                    "Include statements must be made in the global scope at level 0",
+                    compiler_errors::INCLUDE_SCOPE_ERROR,
+                    s->get_line_number()
+                );
+            }
+
             break;
+        }
         case DECLARATION:
         {
             // handle a declaration
@@ -261,8 +284,20 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             break;
         }
         case INLINE_ASM:
-            // todo: write ASM to file
+        {
+            // writes asm directly to file
+            // warns user that this is very unsafe
+            compiler_warning(
+                "Use of inline assembly is highly discouraged as it cannot be analyzed by the compiler nor utilize certain runtime safety measures (unless done manually)",
+                compiler_errors::UNSAFE_OPERATION,
+                s->get_line_number()
+            );
+            InlineAssembly *asm_stmt = dynamic_cast<InlineAssembly*>(s.get());
+
+            // todo: write asm to file
+
             break;
+        }
         case FREE_MEMORY:
             /*
 
@@ -341,7 +376,47 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
     return compile_ss;
 }
 
-void compiler::generate_asm(std::string filename, Parser &p) {
+std::stringstream compiler::process_include(std::string filename) {
+    /*
+
+    process_include
+    Processes an include statement, returning any code that was generated
+
+    See docs/Includes.md for more information on how includes are handled.
+
+    */
+
+    std::stringstream include_ss;
+
+    // create the AST
+    auto sin_parser = new Parser(filename);
+    StatementBlock ast = sin_parser->create_ast();
+    delete sin_parser;
+
+    // walk through the AST and handle relevant statements
+    for (std::shared_ptr<Statement> s: ast.statements_list) {
+        if (s->get_statement_type() == ALLOCATION) {
+            // todo: included allocations
+        }
+        else if (s->get_statement_type() == FUNCTION_DEFINITION) {
+            // todo: included function definitions
+        }
+        else if (s->get_statement_type() == STRUCT_DEFINITION) {
+            // todo: included struct definitions
+        }
+        else if (s->get_statement_type() == DECLARATION) {
+            // todo: included declarations
+        }
+        else {
+            // ignore all other statements
+            continue;
+        }
+    }
+
+    return include_ss;
+}
+
+void compiler::generate_asm(std::string filename) {
     /*
 
     generate_asm
@@ -358,9 +433,14 @@ void compiler::generate_asm(std::string filename, Parser &p) {
 
     // catch parser exceptions here
     try {
+        this->filename = filename;
+
         // create our abstract syntax tree
-		std::cout << "Parsing..." << std::endl;
-        StatementBlock ast = p.create_ast();
+        std::cout << "Compiling " << filename << std::endl;
+		auto sin_parser = new Parser(filename);
+        std::cout << "Parsing..." << std::endl;
+        StatementBlock ast = sin_parser->create_ast();
+        delete sin_parser;
 
         // The code we are generating will go in the text segment -- writes to the data and bss sections will be done as needed in other functions
 		std::cout << "Generating code..." << std::endl;
@@ -406,7 +486,7 @@ void compiler::generate_asm(std::string filename, Parser &p) {
             this->text_segment << "\t" << "ret" << std::endl;
         } catch (SymbolNotFoundException &e) {
             // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
-            compiler_note("No entry point found in file", 0);
+            compiler_note("No entry point found in file \"" + filename + "\"", 0);
         }
 
         // remove the extension from the file name
@@ -489,5 +569,4 @@ compiler::compiler() {
 }
 
 compiler::~compiler() {
-    // todo: destructor
 }
