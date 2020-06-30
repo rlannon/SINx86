@@ -149,7 +149,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
             // we need to ensure that the current scope is global -- declarations can only happen in the global scope, as they must be static
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
-                this->handle_declaration(*decl_stmt);
+                compile_ss << this->handle_declaration(*decl_stmt).str();
             } else {
                 throw DeclarationException(decl_stmt->get_line_number());
             }

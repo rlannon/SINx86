@@ -83,7 +83,7 @@ class compiler {
 	// todo: handle assignments for char, float, etc.
 
 	// declarations
-	void handle_declaration(Declaration decl_stmt);
+	std::stringstream handle_declaration(Declaration decl_stmt);
 
 	// functions
 	std::stringstream define_function(FunctionDefinition definition);
