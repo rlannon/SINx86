@@ -109,9 +109,17 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
 
 	bool ok = this->structs.insert(to_add);
 
+    // if the struct was defined, throw an exception; otherwise, mark it as defined and update the struct_info object
 	if (!ok) {
-		throw DuplicateDefinitionException(line);
-	}
+        // if the width is known, it was already defined
+        auto s_info = this->structs.find(to_add.get_struct_name());
+        if (s_info.is_width_known()) {
+    		throw DuplicateDefinitionException(line);
+        }
+        else {
+            s_info = to_add;
+        }
+    }
 }
 
 struct_info& compiler::get_struct_info(std::string struct_name, unsigned int line) {

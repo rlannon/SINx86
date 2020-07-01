@@ -87,14 +87,23 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     function_symbol func_sym = create_function_symbol(definition);
 
     // check to see if the symbol already exists in the table and is undefined -- if so, we need to add 'global'
+    bool marked_extern = false;
     if (this->symbols.contains(func_sym.get_name())) {
         auto sym = this->symbols.find(func_sym.get_name());
         if (sym->is_defined()) {
             throw DuplicateDefinitionException(definition.get_line_number());
         }
         else {
+            // todo: check to ensure signatures match
             definition_ss << "global " << func_sym.get_name() << std::endl;
+            sym->set_defined();
+            marked_extern = true;
         }
+    }
+
+    // if the function is marked as 'extern', ensure it is global
+    if (!marked_extern && func_sym.get_data_type().get_qualities().is_extern()) {
+        definition_ss << "global " << func_sym.get_name() << std::endl;
     }
 
     // add the symbol to the table

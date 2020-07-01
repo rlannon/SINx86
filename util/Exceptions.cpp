@@ -33,6 +33,26 @@ InvisibleSymbolException::InvisibleSymbolException(unsigned int line):
 	// super called
 }
 
+InvalidMemberSelectionOperator::InvalidMemberSelectionOperator(unsigned int line):
+	CompilerException(
+		"Invalid operator in member selection expression",
+		compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+		line
+	)
+{
+	// super called
+}
+
+UndefinedStructAccession::UndefinedStructAccession(unsigned int line):
+	CompilerException(
+		"Accessing member of declared struct is illegal",
+		compiler_errors::UNDEFINED_STRUCT_ACCESSION,
+		line
+	)
+{
+	// super called
+}
+
 IllegalOperationException::IllegalOperationException(unsigned int line):
 	CompilerException("This operation is not allowed here", compiler_errors::ILLEGAL_OPERATION_ERROR, line)
 {

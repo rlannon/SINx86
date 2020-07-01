@@ -10,6 +10,57 @@ Implementation of the member_selection class
 
 #include "member_selection.h"
 
+member_selection member_selection::create_unary_node(Unary& exp, struct_table& structs, symbol_table& symbols, unsigned int line) {
+	/*
+
+	create_unary_node
+	Creates a unary node for the member_selection expression, utilizing recursion
+
+	*/
+
+	member_selection m;
+
+	auto operand = exp.get_operand();
+	if (operand->get_expression_type() == UNARY) {
+		m = create_unary_node(*dynamic_cast<Unary*>(operand.get()), structs, symbols, line);
+	}
+	if (operand->get_expression_type() == BINARY) {
+		m = create_member_selection(*dynamic_cast<Binary*>(operand.get()), structs, symbols, line);
+	}
+	else if (operand->get_expression_type() == LVALUE) {
+		m = create_lvalue_node(*dynamic_cast<LValue*>(operand.get()), structs, symbols, line, exp.get_operator() == DEREFERENCE);
+	}
+	else {
+		throw CompilerException("Illegal expression in member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+	}
+
+	return m;
+}
+
+member_selection member_selection::create_lvalue_node(LValue& exp, struct_table& structs, symbol_table& symbols, unsigned int line, bool is_pointer) {
+	/*
+
+	creatE_lvalue_node
+	Creates a member_selection object from an lvalue
+
+	*/
+	
+	member_selection m;
+
+	// get the symbol information
+	symbol* left_sym = dynamic_cast<symbol*>(symbols.find(exp.getValue()).get());
+	if (
+		(!is_pointer && left_sym->get_data_type().get_primary() != STRUCT) ||
+		(is_pointer && left_sym->get_data_type().get_subtype() != STRUCT)
+	) {
+		throw CompilerException("Expected left-hand argument of 'struct' type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
+	}
+
+	// add the symbol to our list
+	m.append(*left_sym);
+	return m;
+}
+
 member_selection member_selection::create_member_selection(Binary &exp, struct_table& structs, symbol_table& symbols, unsigned int line) {
 	/*
 	
@@ -19,14 +70,15 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 	The algorithm works, generally, as follows:
 		I. Look at the left side
 			A.	If the type is 'binary', we need to call this function recursively on it
-			B.	If the type is some other valid expression (LValue or Dereferenced) then we look up the information for that struct
+			B.	If the type is some other valid expression (LValue or Unary) then we look up the information for that struct
 		II. Look at the right side
 			A.	Ensure it is a correct type (LValue only)
 			B.	Look up the symbol within the left-hand struct
 			C.	Create a node pointing to this symbol
 		III. Finalize our member_selection object and return it
 
-	If the expression we encounter is a Dereferenced expression, we need to get the symbol being dereferenced correctly. Further, the compiler also needs to verify that the number of dereferences is actually accessing the right object -- otherwise, we will run into problems.
+	If the expression we encounter is a dereferenced pointer, we need to get the symbol being dereferenced correctly.
+	Further, the compiler also needs to verify that the number of dereferences is actually accessing the right object -- otherwise, we will run into problems.
 
 	@param	exp	The binary dot/arrow expression we are evaluating
 	@param	structs	The struct table we need to look into for our struct data
@@ -53,29 +105,58 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 		Binary* left = dynamic_cast<Binary*>(exp.get_left().get());
 		m = create_member_selection(*left, structs, symbols, line);
 	}
+	else if (exp.get_left()->get_expression_type() == UNARY) {
+		/*
+
+		Unary LHS expressions would be something like:
+			(*pointer).member
+		where 'pointer' is of the type ptr< T >; in C, this would be equivalent to pointer->member
+
+		If a struct has a pointer-to-struct member, and a member of that struct is accessed, we would have the following in C:
+			p1->p2->m
+		but SIN doesn't allow this syntactic sugar; instead, we have
+			(*(*p1).p2).m
+		This will get parsed into:
+			Binary
+				LHS: Unary
+					Operand: Binary
+						LHS: Unary
+							Operand: LValue
+						RHS: LValue
+				RHS:
+					LValue
+		
+		*/
+
+		Unary *left = dynamic_cast<Unary*>(exp.get_left().get());
+		m = create_unary_node(*left, structs, symbols, line);
+	}
 	else if (exp.get_left()->get_expression_type() == LVALUE) {
 		LValue* left = dynamic_cast<LValue*>(exp.get_left().get());
-
-		// get the symbol information
-		symbol* left_sym = dynamic_cast<symbol*>(symbols.find(left->getValue()).get());
-		if (left_sym->get_data_type().get_primary() != STRUCT) {
-			throw CompilerException("Expected left-hand argument of 'struct' type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
-		}
-
-		// add the symbol to our list
-		m.append(*left_sym);
+		m = create_lvalue_node(*left, structs, symbols, line);
 	}
 	else {
-		throw CompilerException("Invalid expression in left-hand position of member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+		throw InvalidMemberSelectionOperator(line);
 	}
 
 	// note a unary expression should never appear on the left hand side, as they all have lower precedences than the dot operator
 
 	// get the struct_info object for the last struct in the chain; this is where we look up the next symbol
-	if (!structs.contains(m.last().get_data_type().get_struct_name())) {
+	// however, because we may have had pointer types, get the pointed-to struct name
+	DataType t = m.last().get_data_type();
+	while (t.get_primary() == PTR) {
+		t = *m.last().get_data_type().get_full_subtype().get();
+	}
+
+	if (!structs.contains(t.get_struct_name())) {
 		throw SymbolNotFoundException(line);
 	}
-	struct_info& last_struct = structs.find(m.last().get_data_type().get_struct_name());
+	struct_info& last_struct = structs.find(t.get_struct_name());
+
+	// check to see if the struct has been defined by checking whether its width is known
+	if (!last_struct.is_width_known()) {
+		throw UndefinedStructAccession(line);	// struct members cannot be accessed if they haven't been defined
+	}
 
 	// todo: allow indexed expressions on RHS
 

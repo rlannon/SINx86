@@ -44,6 +44,18 @@ public:
 	explicit InvisibleSymbolException(unsigned int line);
 };
 
+class InvalidMemberSelectionOperator: public CompilerException
+{
+public:
+	explicit InvalidMemberSelectionOperator(unsigned int line);
+};
+
+class UndefinedStructAccession: public CompilerException
+{
+public:
+	explicit UndefinedStructAccession(unsigned int line);
+};
+
 class IllegalOperationException : public CompilerException
 {
 public:

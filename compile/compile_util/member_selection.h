@@ -6,7 +6,7 @@ SIN Toolchain (x86 target)
 member_selection.h
 Copyright 2020 Riley Lannon
 
-A class to contain information about dot/arrow expressions so that they may be properly evaluated
+A class to contain information about dot expressions so that they may be properly evaluated
 
 */
 
@@ -23,6 +23,9 @@ class member_selection {
 
 	// this should only be accessed by this class
 	void append(symbol& to_add);
+
+	static member_selection create_unary_node(Unary& exp, struct_table& structs, symbol_table& symbols, unsigned int line);
+	static member_selection create_lvalue_node(LValue& exp, struct_table& structs, symbol_table& symbols, unsigned int line, bool is_pointer=false);
 public:
 	static member_selection create_member_selection(Binary& exp, struct_table& structs, symbol_table& symbols, unsigned int line);
 
