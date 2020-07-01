@@ -87,27 +87,49 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     function_symbol func_sym = create_function_symbol(definition);
 
     // check to see if the symbol already exists in the table and is undefined -- if so, we need to add 'global'
-    bool marked_extern = false;
+    bool marked_extern = false; // to ensure we don't mark it as global twice if the declared function is 'extern'
     if (this->symbols.contains(func_sym.get_name())) {
         auto sym = this->symbols.find(func_sym.get_name());
-        if (sym->is_defined()) {
-            throw DuplicateDefinitionException(definition.get_line_number());
+        if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
+            auto declared_sym = dynamic_cast<function_symbol*>(sym.get());
+            if (sym->is_defined()) {
+                throw DuplicateDefinitionException(definition.get_line_number());
+            }
+            else {
+                // check to ensure signatures match
+                if (
+                    !func_sym.matches(*declared_sym)
+                ) {
+                    throw CompilerException(
+                        "Function signature does not match that of declaration",
+                        compiler_errors::SIGNATURE_MISMATCH,
+                        definition.get_line_number()
+                    );
+                }
+
+                // mark this label as 'global'
+                definition_ss << "global " << func_sym.get_name() << std::endl;
+                sym->set_defined();
+                marked_extern = true;
+            }
         }
         else {
-            // todo: check to ensure signatures match
-            definition_ss << "global " << func_sym.get_name() << std::endl;
-            sym->set_defined();
-            marked_extern = true;
+            throw CompilerException(
+                "Attempt to redefine \"" + func_sym.get_name() + "\" as a function",
+                compiler_errors::DUPLICATE_SYMBOL_ERROR,
+                definition.get_line_number()
+            );
         }
+    }
+    else {
+        // add the symbol to the table
+        this->add_symbol(func_sym, definition.get_line_number());
     }
 
     // if the function is marked as 'extern', ensure it is global
     if (!marked_extern && func_sym.get_data_type().get_qualities().is_extern()) {
         definition_ss << "global " << func_sym.get_name() << std::endl;
     }
-
-    // add the symbol to the table
-    this->add_symbol(func_sym, definition.get_line_number());
 
     // now, we have to iterate over the function symbol's parameters and add them to our symbol table
     // todo: optimize by enabling symbol table additions in template function?

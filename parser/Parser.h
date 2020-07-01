@@ -45,9 +45,6 @@ class Parser
 	// Sentinel variable
 	bool quit;
 
-	// 'include' directives can only come at the very beginning of the program; once any other statement comes, the include directives will throw errors
-	bool can_use_include_statement;
-
 	// translates an operator character into an exp_operator type
 	static const exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
 

@@ -35,6 +35,9 @@ class symbol_qualities
 	bool c64_con;
 	bool windows_con;
 public:
+	bool operator==(const symbol_qualities& right) const;
+	bool operator!=(const symbol_qualities& right) const;
+
 	static const std::unordered_map<std::string, SymbolQuality> quality_strings;
 
 	bool is_const();	// accessors

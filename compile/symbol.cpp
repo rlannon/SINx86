@@ -9,6 +9,31 @@ The implementation of the symbol class
 
 #include "symbol.h"
 
+bool symbol::operator==(const symbol& right) const {
+	/*
+
+	operator==
+	Checks whether two symbols match
+	
+	This means that:
+		- their names are the same
+		- their types are the same
+		- their scopes are the same
+
+	*/
+
+	return (
+		this->name == right.name &&
+		this->type == right.type &&
+		this->scope_name == right.scope_name &&
+		this->scope_level == right.scope_level
+	);
+}
+
+bool symbol::operator!=(const symbol& right) const {
+	return !this->operator==(right);
+}
+
 SymbolType symbol::get_symbol_type() const {
 	// get the symbol's type
     return this->symbol_type;

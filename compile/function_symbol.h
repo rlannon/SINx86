@@ -29,6 +29,8 @@ class function_symbol: public symbol {
     // calling convention -- defaults to SIN
     calling_convention call_con;
 public:
+    bool matches(const function_symbol& right) const;
+    
     std::vector<symbol> &get_formal_parameters();
     calling_convention get_calling_convention();
 

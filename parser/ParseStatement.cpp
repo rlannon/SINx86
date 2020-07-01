@@ -38,13 +38,8 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		if (current_lex.value == "include") {
 			stmt = this->parse_include(current_lex);
 		}
-		else {
-			// as soon as we hit a statement that is not an include statement, we are no longer allowed to use them (they must go at the top of the file)
-			can_use_include_statement = false;
-		}
-
 		// parse inline assembly
-		if (current_lex.value == "asm") {
+		else if (current_lex.value == "asm") {
 			lexeme next = this->next();
 
 			if (next.value == "<") {
@@ -210,27 +205,22 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 std::shared_ptr<Statement> Parser::parse_include(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt = nullptr;
 
-	if (this->can_use_include_statement) {
+	lexeme next = this->next();
 
-		lexeme next = this->next();
+	if (next.type == STRING_LEX) {
+		std::string filename = next.value;
 
-		if (next.type == STRING_LEX) {
-			std::string filename = next.value;
-
-			stmt = std::make_shared<Include>(filename);
-			stmt->set_line_number(current_lex.line_number);
-			return stmt;
-		}
-		else {
-			throw ParserException("Expected a filename in quotes in 'include' statement", 0, current_lex.line_number);
-			// TODO: error numbers for includes
-		}
+		stmt = std::make_shared<Include>(filename);
+		stmt->set_line_number(current_lex.line_number);
 	}
 	else {
-		throw ParserException("Include statements must come at the top of the file.", 0, current_lex.line_number);
+		throw ParserException("Expected a filename in quotes in 'include' statement", 0, current_lex.line_number);
+		// TODO: error numbers for includes
 	}
+
+	return stmt;
 }
 
 std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is_function_parameter) {

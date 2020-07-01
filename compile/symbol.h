@@ -41,6 +41,10 @@ protected:
     bool initialized;   // whether the data was initialized
     bool freed; // whether the memory has been allocated or freed
 public:
+    // to check whether two symbols are the same
+    bool operator==(const symbol& right) const;
+    bool operator!=(const symbol& right) const;
+
     // to update our offset
     void set_offset(int new_offset);    // must be public -- cannot be protected because it will be accessed through a pointer
     

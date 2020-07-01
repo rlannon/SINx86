@@ -72,6 +72,7 @@ namespace compiler_errors {
     const unsigned int SIGNED_UNSIGNED_MISMATCH = 241;
     const unsigned int WIDTH_MISMATCH = 242;
     const unsigned int POTENTIAL_DATA_LOSS = 243;
+    const unsigned int SIGNATURE_MISMATCH = 250;
 
     // Internal errors
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;

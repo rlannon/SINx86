@@ -41,8 +41,8 @@ class DataType
 public:
 	DataType& operator=(const DataType &right);
 
-	bool operator==(const DataType right);
-	bool operator!=(const DataType right);
+	bool operator==(const DataType& right) const;
+	bool operator!=(const DataType& right) const;
 
 	bool operator==(const Type right[2]);
 	bool operator!=(const Type right[2]);

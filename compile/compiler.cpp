@@ -395,7 +395,7 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
     return compile_ss;
 }
 
-std::stringstream compiler::process_include(std::string filename) {
+std::stringstream compiler::process_include(std::string include_filename) {
     /*
 
     process_include
@@ -408,7 +408,7 @@ std::stringstream compiler::process_include(std::string filename) {
     std::stringstream include_ss;
 
     // create the AST
-    auto sin_parser = new Parser(filename);
+    auto sin_parser = new Parser(include_filename);
     StatementBlock ast = sin_parser->create_ast();
     delete sin_parser;
 

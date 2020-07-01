@@ -18,7 +18,7 @@ Let's say we have a file `simple_math.sin` that defines some functions:
 
 and we want to use them in our main file. We can simply use the `include` file to include these functions and allow `main.sin` to use them (though this code would not compile -- this will be dicussed later):
 
-    include "simple_math.sin"
+    include "simple_math.sin";
 
     def int main() {
         alloc int x: 10;
@@ -81,7 +81,7 @@ SIN `decl` statements will ensure that the assembler directive `extern` is used,
     ...
 
     // main.sin
-    include "simple_math.sin"
+    include "simple_math.sin";
 
     def int main() {
         alloc int x: 10;
@@ -98,7 +98,7 @@ This is fine, but using Declarative SIN, the following would be done:
     ...
 
     // simple_math.sin
-    include "simple_math.sinh"  // includes the declarations for global symbols
+    include "simple_math.sinh";  // includes the declarations for global symbols
 
     // the compiler will ensure this signature matches the one in the declaration
     def int multiply(alloc int a, alloc int b) {
@@ -112,7 +112,7 @@ This is fine, but using Declarative SIN, the following would be done:
     ...
 
     // main.sin
-    include "simple_math.sinh"
+    include "simple_math.sinh";
 
     def int main() {
         alloc int x: 10;

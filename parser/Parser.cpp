@@ -86,7 +86,6 @@ Parser::Parser(std::string filename) {
 	}
 
 	this->quit = false;
-	this->can_use_include_statement = true;	// include statements must be first in the file
 	this->position = 0;
 	this->num_tokens = Parser::tokens.size();
 }

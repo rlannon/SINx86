@@ -110,7 +110,7 @@ class compiler {
 	std::stringstream get_address(Unary &u, unsigned int line);
 
 	// process an included file
-	std::stringstream process_include(std::string filename);
+	std::stringstream process_include(std::string include_filename);
 public:
     // the compiler's entry function
     void generate_asm(std::string filename);

@@ -9,6 +9,20 @@ Implementation of the function_symbol class
 
 #include "function_symbol.h"
 
+bool function_symbol::matches(const function_symbol& right) const {
+	/*
+
+	matches
+	Checks whether two function signatures match
+
+	*/
+
+	bool name_match = this->name == right.name;
+	bool ret_match = this->type == right.type;
+	bool param_match = this->formal_parameters == right.formal_parameters;
+	return name_match && ret_match && param_match;
+}
+
 calling_convention function_symbol::get_calling_convention() {
     // Get the function's calling convention
     return this->call_con;
