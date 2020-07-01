@@ -636,7 +636,7 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 	while (!done) {
 		// ensure the previous type is 'struct'
 		if (m.peek_previous().get_data_type().get_primary() != STRUCT) {
-			throw CompilerException("Expected left-hand argument of struct type", compiler_errors::STRUCT_TYPE_EXPECTED_RROR, line);
+			throw CompilerException("Expected left-hand argument of struct type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
 		}
 
 		// fetch the struct data of the previous symbol

@@ -32,13 +32,16 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
         this->add_symbol(sym, decl_stmt.get_line_number());
         decl_ss << "extern " << sym.get_name() << std::endl;
     } else if (decl_stmt.is_struct()) {
-        // todo: add struct to struct table with the caveat that it's an incomplete type
-        // this means that member access is not possible
+        // add struct to struct table with the caveat that it's an incomplete type - this means that member access is not possible
+        // note 'extern' is not needed here -- no symbol information is created
+        struct_info s_info(decl_stmt.get_type_information().get_struct_name());
+        this->add_struct(s_info, decl_stmt.get_line_number());
     } else {
         // add a symbol
         // note: pass 0 as the data width because declared data doesn't occupy stack space
         symbol sym = generate_symbol(decl_stmt, 0, this->current_scope_name, this->current_scope_level, this->max_offset);
         this->add_symbol(sym, decl_stmt.get_line_number());
+        decl_ss << "extern " << sym.get_name() << std::endl;
     }
 
     return decl_ss;
@@ -116,7 +119,6 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     this->reg_stack.push_back(func_sym.get_arg_regs());
 
     // add a label for the function
-    definition_ss << "global " << func_sym.get_name() << std::endl; // make sure it is marked as global in the assembler
     definition_ss << func_sym.get_name() << ":" << std::endl;
     // note: we don't need to account for parameters passed in registers as these will be located *above* the return address
 

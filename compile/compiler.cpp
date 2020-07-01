@@ -396,16 +396,50 @@ std::stringstream compiler::process_include(std::string filename) {
     // walk through the AST and handle relevant statements
     for (std::shared_ptr<Statement> s: ast.statements_list) {
         if (s->get_statement_type() == ALLOCATION) {
-            // todo: included allocations
+            auto a = dynamic_cast<Allocation*>(s.get());
+
+            // allocations must be qualified with 'extern'
+            if (a->get_type_information().get_qualities().is_extern()) {
+                // add the symbol
+                auto sym = generate_symbol(
+                    *a,
+                    a->get_type_information().get_width(),
+                    "global",
+                    0,
+                    this->max_offset,
+                    false
+                );
+                this->add_symbol(sym, a->get_line_number());
+            }
+            else {
+                throw InvisibleSymbolException(a->get_line_number());
+            }
         }
         else if (s->get_statement_type() == FUNCTION_DEFINITION) {
-            // todo: included function definitions
+            auto f = dynamic_cast<FunctionDefinition*>(s.get());
+
+            // function definitions must be 'extern'
+            if (f->get_type_information().get_qualities().is_extern()) {
+                // create the function symbol
+                auto sym = create_function_symbol(
+                    *f,
+                    false
+                );
+                this->add_symbol(sym, f->get_line_number());
+            }
+            else {
+                throw InvisibleSymbolException(f->get_line_number());
+            }
         }
         else if (s->get_statement_type() == STRUCT_DEFINITION) {
-            // todo: included struct definitions
+            // included struct definitions
+            auto d = dynamic_cast<StructDefinition*>(s.get());
+            struct_info s_info = define_struct(*d);
+            this->add_struct(s_info, d->get_line_number());
         }
         else if (s->get_statement_type() == DECLARATION) {
-            // todo: included declarations
+            auto d = dynamic_cast<Declaration*>(s.get());
+            include_ss << this->handle_declaration(*d).str();
         }
         else {
             // ignore all other statements

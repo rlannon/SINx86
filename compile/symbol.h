@@ -36,6 +36,8 @@ protected:
 
     DataType type;  // the symbol's type
 
+    bool defined;   // whether the symbol was defined
+
     bool initialized;   // whether the data was initialized
     bool freed; // whether the memory has been allocated or freed
 public:
@@ -57,6 +59,9 @@ public:
     DataType get_data_type() const;
     int get_offset() const;
 
+    bool is_defined() const;
+    void set_defined();
+
     // note these won't have any effect on functions (as functions are not allocated in SIN)
     bool was_initialized() const;
     bool was_freed() const;
@@ -65,7 +70,14 @@ public:
     void free();
 
     // constructors
-    explicit symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int offset);
+    explicit symbol(
+        std::string name,
+        std::string scope_name,
+        unsigned int scope_level,
+        DataType type_information,
+        unsigned int offset,
+        bool defined=true
+    );
     symbol();
     virtual ~symbol(); // the destructor must be virtual for the sake of the child class
 };

@@ -23,10 +23,20 @@ CompilerException::CompilerException(const std::string& message, unsigned int co
 	this->message = "**** Compiler error C" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
 
+InvisibleSymbolException::InvisibleSymbolException(unsigned int line):
+	CompilerException(
+		"Attempt to include a non-globalized symbol in SIN file; use Declarative SIN or \"extern\"",
+		compiler_errors::INVISIBLE_SYMBOL,
+		line
+	)
+{
+	// super called
+}
+
 IllegalOperationException::IllegalOperationException(unsigned int line):
 	CompilerException("This operation is not allowed here", compiler_errors::ILLEGAL_OPERATION_ERROR, line)
 {
-
+	// super called
 }
 
 IllegalReturnException::IllegalReturnException(unsigned int line):

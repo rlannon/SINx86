@@ -38,6 +38,12 @@ public:
 	virtual const char* what() const noexcept;
 };
 
+class InvisibleSymbolException : public CompilerException
+{
+public:
+	explicit InvisibleSymbolException(unsigned int line);
+};
+
 class IllegalOperationException : public CompilerException
 {
 public:

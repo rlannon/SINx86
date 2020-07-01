@@ -59,7 +59,7 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 		// get the symbol information
 		symbol* left_sym = dynamic_cast<symbol*>(symbols.find(left->getValue()).get());
 		if (left_sym->get_data_type().get_primary() != STRUCT) {
-			throw CompilerException("Expected left-hand argument of 'struct' type", compiler_errors::STRUCT_TYPE_EXPECTED_RROR, line);
+			throw CompilerException("Expected left-hand argument of 'struct' type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
 		}
 
 		// add the symbol to our list

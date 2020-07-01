@@ -51,6 +51,7 @@ namespace compiler_errors {
     const unsigned int INCLUDE_SCOPE_ERROR = 165;
     const unsigned int FILE_NOT_FOUND_ERROR = 166;
     const unsigned int CALLING_CONVENTION_ERROR = 170;
+    const unsigned int INVISIBLE_SYMBOL = 180;  // see docs/Includes.md
 
     // Type errors
     const unsigned int INVALID_SYMBOL_TYPE_ERROR = 200;
@@ -62,7 +63,8 @@ namespace compiler_errors {
     const unsigned int INVALID_CAST_ERROR = 213;
     const unsigned int RETURN_MISMATCH_ERROR = 215; // a function's return type does not match its signature
 	const unsigned int TYPE_VALIDITY_RULE_VIOLATION_ERROR = 220;	// SIN has strict type validity rules, and one or more were violated
-	const unsigned int STRUCT_TYPE_EXPECTED_RROR = 225;	// to use the dot operator, the left-hand expression must be 'struct' type
+	const unsigned int STRUCT_TYPE_EXPECTED_ERROR = 225;	// to use the dot operator, the left-hand expression must be 'struct' type
+    const unsigned int ILLEGAL_STRUCT_NAME = 226;
     const unsigned int QUALITY_CONFLICT_ERROR = 230;
     const unsigned int ILLEGAL_QUALITY_ERROR = 231;
 	const unsigned int VARIABILITY_ERROR = 232;
