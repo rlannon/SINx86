@@ -89,11 +89,16 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // construct the symbol for the function -- everything is offloaded to the utility
     function_symbol func_sym = create_function_symbol(definition);
 
-    // todo: delete -- no longer relevant due to calling convention updates
-    // // now, update the stack offset to account for all parameters
-    // if (!func_sym.get_formal_parameters().empty()) {
-    //     this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
-    // }
+    // check to see if the symbol already exists in the table and is undefined -- if so, we need to add 'global'
+    if (this->symbols.contains(func_sym.get_name())) {
+        auto sym = this->symbols.find(func_sym.get_name());
+        if (sym->is_defined()) {
+            throw DuplicateDefinitionException(definition.get_line_number());
+        }
+        else {
+            definition_ss << "global " << func_sym.get_name() << std::endl;
+        }
+    }
 
     // add the symbol to the table
     this->add_symbol(func_sym, definition.get_line_number());
@@ -111,13 +116,6 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
             arg_regs.insert(sym.get_register());
         }
     }
-
-    // todo: delete - no longer relevant due to calling convention updates
-    // // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
-    // if (!func_sym.get_formal_parameters().empty()) {
-    //     const symbol &last_sym = func_sym.get_formal_parameters().back(); 
-    //     this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
-    // }
 
     // get the register_usage object from func_sym and push that
     this->reg_stack.push_back(func_sym.get_arg_regs());
