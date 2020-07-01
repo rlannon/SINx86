@@ -9,6 +9,31 @@ The implementation of the symbol class
 
 #include "symbol.h"
 
+bool symbol::operator==(const symbol& right) const {
+	/*
+
+	operator==
+	Checks whether two symbols match
+	
+	This means that:
+		- their names are the same
+		- their types are the same
+		- their scopes are the same
+
+	*/
+
+	return (
+		this->name == right.name &&
+		this->type == right.type &&
+		this->scope_name == right.scope_name &&
+		this->scope_level == right.scope_level
+	);
+}
+
+bool symbol::operator!=(const symbol& right) const {
+	return !this->operator==(right);
+}
+
 SymbolType symbol::get_symbol_type() const {
 	// get the symbol's type
     return this->symbol_type;
@@ -60,6 +85,14 @@ void symbol::set_offset(int new_offset) {
 	this->offset = new_offset;
 }
 
+bool symbol::is_defined() const {
+	return this->defined;
+}
+
+void symbol::set_defined() {
+	this->defined = true;
+}
+
 bool symbol::was_initialized() const {
 	// check whether the symbol was initialized
     return this->initialized;
@@ -80,12 +113,20 @@ void symbol::free() {
     this->freed = true;
 }
 
-symbol::symbol(std::string name, std::string scope_name, unsigned int scope_level, DataType type_information, unsigned int stack_offset) : 
+symbol::symbol(
+	std::string name,
+	std::string scope_name,
+	unsigned int scope_level,
+	DataType type_information,
+	unsigned int stack_offset,
+	bool defined
+): 
     name(name),
     scope_name(scope_name),
     scope_level(scope_level),
     type(type_information),
-    offset(stack_offset)
+    offset(stack_offset),
+	defined(defined)
 {
     this->current_reg = NO_REGISTER;
     this->symbol_type = VARIABLE;

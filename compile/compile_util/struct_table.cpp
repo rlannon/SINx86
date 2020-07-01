@@ -22,11 +22,8 @@ bool struct_table::insert(struct_info to_add) {
 	*/
 
 	std::pair<std::string, struct_info> to_insert(to_add.get_struct_name(), to_add);
-	std::pair<std::unordered_map<std::string, struct_info>::iterator, bool> returned = this->structs.insert(to_insert);	 // insert the pair containing our key/value pair, store the result in a pair
-	if (returned.second)
-		return true;
-	else
-		return false;
+	auto returned = this->structs.insert(to_insert);	 // insert the pair containing our key/value pair, store the result in a pair
+	return returned.second;
 }
 
 bool struct_table::contains(std::string name) {

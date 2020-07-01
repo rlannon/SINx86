@@ -250,6 +250,11 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
 
     std::stringstream assign_ss;
 
+    // we need to make sure we decrement the reference currently at the destination before assigning
+    if (sym.get_data_type().get_primary() == PTR) {
+        assign_ss << call_sre_free(sym).str();
+    }
+
     // Generate the code to evaluate the expression; it should go into the a register (rax, eax, ax, or al depending on the data width)
     assign_ss << this->evaluate_expression(value, line).str();
 
@@ -259,11 +264,6 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
         "rax" : 
         (sym.get_data_type().get_width() == sin_widths::SHORT_WIDTH ? "ax" : "eax")
     );
-
-    // we need to make sure we decrement the reference currently at the destination before assigning
-    if (sym.get_data_type().get_primary() == PTR) {
-        assign_ss << call_sre_free(sym).str();
-    }
 
     // how the variable is allocated will determine how we make the assignment
     if (sym.get_data_type().get_qualities().is_static()) {
@@ -277,8 +277,19 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
         // get pointer for dynamic variable and assign to it
         // the pointer should go in RSI; if it's in use, push it then restore
         bool preserve_rsi = this->reg_stack.peek().is_in_use(RSI);
+        bool rsi_was_variable = false;
         if (preserve_rsi) {
-            assign_ss << "\t" << "pushq rsi" << std::endl;
+            // RSI might contain a variable; if so, push it into its respective place
+            symbol *contained = this->reg_stack.peek().get_contained_symbol(RSI);
+            if (contained == nullptr) {
+                assign_ss << "\t" << "pushq rsi" << std::endl;
+            }
+            else {
+                assign_ss << "\t" << "mov [rbp - " << contained->get_offset() << "], " << register_usage::get_register_name(RSI, contained->get_data_type()) << std::endl;
+                contained->set_register(NO_REGISTER);
+                this->reg_stack.peek().clear_contained_symbol(RSI);
+                rsi_was_variable = true;
+            }
         } else {
             // mark the register as in use
             this->reg_stack.peek().set(RSI);
@@ -291,31 +302,34 @@ std::stringstream compiler::handle_int_assignment(symbol &sym, std::shared_ptr<E
         // then, assign to the address pointed to by rsi
         assign_ss << "\t" << "mov [rsi], " << src << std::endl;
 
-        // if we had to preserve RSI, restore it
-        if (preserve_rsi) {
+        // if we had to preserve RSI, and it wasn't a variable, restore it
+        if (preserve_rsi && !rsi_was_variable) {
             assign_ss << "\t" << "popq rsi" << std::endl;
         } else {
             this->reg_stack.peek().clear(RSI);
         }
     } else {
         /*
+        
         automatic memory will write to the appropriate address on the stack for integral types
+        however, if 'sym' is currently held in a register, then we will write it to that register instead
         simply use the stack offset of the symbol in the assignment, subtracting from rbp
+        
         */
-        assign_ss << "\t" << "mov [rbp - " << std::dec << sym.get_offset() << "], " << src << std::endl;
+
+        if (sym.get_register() == NO_REGISTER) {
+            assign_ss << "\t" << "mov [rbp - " << std::dec << sym.get_offset() << "], " << src << std::endl;
+        }
+        else {
+            assign_ss << "\t" << "mov " << register_usage::get_register_name(sym.get_register()) << ", rax" << std::endl;
+        }
     }
 
     // if the data to which we are assigning is a pointer, we need to add a reference to the source
     // this will mean rax contains the address, we can just move it into rdi
-    if (sym.get_data_type().get_primary() == PTR) {
-        assign_ss << "\t" << "pushfq" << std::endl;
-        assign_ss << "\t" << "push rbp" << std::endl;
-        assign_ss << "\t" << "mov rbp, rsp" << std::endl;
-        assign_ss << "\t" << "mov rdi, rax" << std::endl;
-        assign_ss << "\t" << "call sre_add_ref" << std::endl;
-        assign_ss << "\t" << "mov rsp, rbp" << std::endl;
-        assign_ss << "\t" << "pop rbp" << std::endl;
-        assign_ss << "\t" << "popfq" << std::endl;
+    // however, we do *not* call it if the rvalue is a function call -- the RC is adjusted in the function already
+    if (sym.get_data_type().get_primary() == PTR && value->get_expression_type() != VALUE_RETURNING_CALL) {
+        assign_ss << call_sre_add_ref(sym).str();
     }
 
     // return our generated code

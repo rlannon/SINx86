@@ -367,21 +367,26 @@ DataType Parser::get_type(std::string grouping_symbol)
 		if (this->peek().value == "<") {
 			this->next();	// eat the angle bracket
 
-			// parse an expression to obtain the array length; the _current lexeme_ should be the first lexeme of the expression		
-			this->next();
-			array_length_exp = this->parse_expression();
-			
-			// the array length will be evaluated by the compiler; continue parsing
-
-			// a comma should follow the size
-			if (this->peek().value == ",") {
-				this->next();
-					
-				// parse a full type
+			// if the next value is a keyword, we can leave array_length_exp as a nullptr
+			if (this->peek().type == KEYWORD) {
 				new_var_subtype = this->parse_subtype("<");
-			}
-			else {
-				throw ParserException("The size of an array must be followed by the type", 0, current_lex.line_number);
+			} else {
+				// parse an expression to obtain the array length; the _current lexeme_ should be the first lexeme of the expression		
+				this->next();
+				array_length_exp = this->parse_expression();
+				
+				// the array length will be evaluated by the compiler; continue parsing
+
+				// a comma should follow the size
+				if (this->peek().value == ",") {
+					this->next();
+						
+					// parse a full type
+					new_var_subtype = this->parse_subtype("<");
+				}
+				else {
+					throw ParserException("The size of an array must be followed by the type", 0, current_lex.line_number);
+				}
 			}
 		}
 		else {

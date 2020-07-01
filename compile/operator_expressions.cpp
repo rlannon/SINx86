@@ -514,7 +514,6 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				}
 				else if (left_type.get_primary() == FLOAT) {
 					// todo: equivalency operators with floating-point numbers
-					requires_unsigned = true;
 				} else {
 					// if we have two unsigned variables, use unsigned comparison
 					requires_unsigned = left_type.get_qualities().is_unsigned() && right_type.get_qualities().is_unsigned();
@@ -610,7 +609,7 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 	// move the address into RBX; if it is a pointer type (but not 'dynamic'), this will be handled in a second -- this will move the address of the *pointer* into memory, and the actual address will be fetched if necessary
 	if (entry_type.get_qualities().is_dynamic()) {
 		// dynamic memory and pointers fetch the data at the offset
-		eval_ss << "\t" << "mov rbx, " << "[rbp - " << table_entry.get_offset() << "]" << std::endl;
+		eval_ss << "\t" << "mov rbx, [rbp - " << table_entry.get_offset() << "]" << std::endl;
 	}
 	else if (entry_type.get_qualities().is_static()) {
 		// static memory utilizes the name
@@ -622,13 +621,6 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 		eval_ss << "\t" << "sub rbx, " << table_entry.get_offset() << std::endl;
 	}
 
-	// sufficiently dereference it if necessary
-	while (current_node.get_data_type() != entry_type) {
-		// dereference the pointer and update the type
-		eval_ss << "\t" << "mov rbx, " << "[rbx]" << std::endl;
-		entry_type = *entry_type.get_full_subtype();
-	}
-
 	// now, step through the member_selection object, fetching each from the _previous_ struct's symbol table
 	current_node = m.next();
 	bool done = false;
@@ -636,12 +628,19 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 	// note we want to compare the *identity* of the symbols because we always use references
 	while (!done) {
 		// ensure the previous type is 'struct'
-		if (m.peek_previous().get_data_type().get_primary() != STRUCT) {
-			throw CompilerException("Expected left-hand argument of struct type", compiler_errors::STRUCT_TYPE_EXPECTED_RROR, line);
+		// note that since dereferences were parsed out by member_expression, we should check the pointed-to struct type
+		DataType t = m.peek_previous().get_data_type();
+		while (t.get_primary() == PTR) {
+			// get the address of the struct in RBX
+			eval_ss << "\t" << "mov rbx, [rbx]" << std::endl;
+			t = *t.get_full_subtype();
+		}
+		if (t.get_primary() != STRUCT) {
+			throw CompilerException("Expected left-hand argument of struct type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
 		}
 
 		// fetch the struct data of the previous symbol
-		struct_info& s = this->get_struct_info(m.peek_previous().get_data_type().get_struct_name(), line);	// this function throws an exception if the struct hasn't been defined
+		struct_info& s = this->get_struct_info(t.get_struct_name(), line);	// this function throws an exception if the struct hasn't been defined
 		
 		// now, get the symbol for the struct member
 		symbol& member_data = s.get_member(current_node.get_name());

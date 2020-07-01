@@ -25,6 +25,26 @@ const std::unordered_map<std::string, SymbolQuality> symbol_qualities::quality_s
 	{ "extern", EXTERN }
 };
 
+bool symbol_qualities::operator==(const symbol_qualities& right) const {
+	return (
+		this->long_q == right.long_q &&
+		this->short_q == right.short_q &&
+		this->signed_q == right.signed_q &&
+		this->unsigned_q == right.unsigned_q &&
+		this->const_q == right.const_q &&
+		this->final_q == right.final_q &&
+		this->dynamic_q == right.dynamic_q &&
+		this->extern_q == right.extern_q &&
+		this->c64_con == right.c64_con &&
+		this->windows_con == right.windows_con &&
+		this->sincall_con == right.sincall_con
+	);
+}
+
+bool symbol_qualities::operator!=(const symbol_qualities& right) const {
+	return !this->operator==(right);
+}
+
 bool symbol_qualities::is_long()
 {
     return long_q;

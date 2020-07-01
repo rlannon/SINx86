@@ -454,10 +454,10 @@ struct_info define_struct(StructDefinition definition) {
 
 // Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
-template function_symbol create_function_symbol(FunctionDefinition, bool=false);
-template function_symbol create_function_symbol(Declaration, bool=false);
+template function_symbol create_function_symbol(FunctionDefinition, bool=true, bool=true);
+template function_symbol create_function_symbol(Declaration, bool=true, bool=true);
 template <typename T>
-function_symbol create_function_symbol(T def, bool mangle) {
+function_symbol create_function_symbol(T def, bool mangle, bool defined) {
     /*
 
     create_function_symbol
@@ -508,17 +508,18 @@ function_symbol create_function_symbol(T def, bool mangle) {
         name,
         def.get_type_information(),
         formal_parameters,
-        def.get_calling_convention()
+        def.get_calling_convention(),
+        defined
     );
 
     // finally, return the function symbol
     return to_return;
 }
 
-template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&);
-template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&);
+template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&, bool);
+template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&, bool);
 template <typename T>
-symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset) {
+symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined) {
     /*
 
     generate_symbol
@@ -551,7 +552,9 @@ symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name,
         scope_name,
         scope_level,
         type_info,
-        stack_offset);
+        stack_offset,
+        defined
+    );
 
     return to_return;
 }
@@ -631,7 +634,12 @@ std::string get_address(symbol &s, reg r) {
     }
     else {
         address_info = "\tmov " + reg_name + ", rbp\n";
-        address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset()) + "\n";
+        if (s.get_offset() < 0) {
+            address_info += "\tadd " + reg_name + ", " + std::to_string(-s.get_offset()) + "\n";
+        }
+        else {
+            address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset()) + "\n";
+        }
     }
 
     return address_info;
@@ -723,7 +731,14 @@ std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int 
         for (symbol& s: v) {
             // we need to move the old base pointer into rbx and subtract the offset from that
             dec_ss << "\t" << "mov rbx, [rsp]" << std::endl;
-            dec_ss << "\t" << "sub rbx, " << s.get_offset() << std::endl;
+
+            // if we have a negative number, add it instead
+            if (s.get_offset() < 0) {
+                dec_ss << "\t" << "add rbx, " << -s.get_offset() << std::endl;
+            }
+            else {
+                dec_ss << "\t" << "sub rbx, " << s.get_offset() << std::endl;
+            }
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
             dec_ss << "\t" << "call sre_free" << std::endl;
         }
@@ -785,13 +800,20 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
     }
     else {
         get_addr << "\t" << "mov rdi, rbp" << std::endl;
-        get_addr << "\t" << "sub rdi, " << s.get_offset() << std::endl;
+
+        if (s.get_offset() < 0) {
+            get_addr << "\t" << "add rdi, " << -s.get_offset() << std::endl;
+        }
+        else {
+            get_addr << "\t" << "sub rdi, " << s.get_offset() << std::endl;
+        }
     }
 
     gen << "\t" << get_addr.str();
     gen << "\t" << "pushfq" << std::endl;
     gen << "\t" << "push rbp" << std::endl;
     gen << "\t" << "mov rbp, rsp" << std::endl;
+    gen << "\t" << "call " << func_name << std::endl;
     gen << "\t" << "mov rsp, rbp" << std::endl;
     gen << "\t" << "pop rbp" << std::endl;
     gen << "\t" << "popfq" << std::endl;

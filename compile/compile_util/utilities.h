@@ -50,10 +50,10 @@ std::string get_rax_name_variant(DataType t, unsigned int line);
 struct_info define_struct(StructDefinition definition);
 
 template<typename T>
-function_symbol create_function_symbol(T def, bool mangle=true);
+function_symbol create_function_symbol(T def, bool mangle=true, bool defined=true);
 
 template<typename T>
-symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset);
+symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined=true);
 
 std::stringstream push_used_registers(register_usage regs, bool ignore_ab = false);
 std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false);

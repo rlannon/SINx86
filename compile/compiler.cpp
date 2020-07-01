@@ -69,15 +69,26 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 
 	// insert the symbol
     std::shared_ptr<T> s = std::make_shared<T>(to_add);
-	bool ok = this->symbols.insert(s);
+    bool ok = this->symbols.insert(s);
 
-    // throw an exception if the symbol could not be inserted
+    // if the symbol could not be inserted, we *might* need to throw an exception
+    // it's also possible the symbol was added as a declaration and is now being defined
     if (!ok) {
-		// if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
-		if (to_add.get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
-			throw DuplicateDefinitionException(line);
-		else
-			throw DuplicateSymbolException(line);
+        // get the current symbol
+        auto sym = this->symbols.find(s->get_name());
+
+        // if it was defined, throw an error
+        if (sym->is_defined()) {
+            // if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
+            if (to_add.get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
+                throw DuplicateDefinitionException(line);
+            else
+                throw DuplicateSymbolException(line);
+        }
+        // otherwise, mark the symbol as defined
+        else {
+            sym->set_defined();
+        }
     }
 }
 
@@ -98,9 +109,17 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
 
 	bool ok = this->structs.insert(to_add);
 
+    // if the struct was defined, throw an exception; otherwise, mark it as defined and update the struct_info object
 	if (!ok) {
-		throw DuplicateDefinitionException(line);
-	}
+        // if the width is known, it was already defined
+        auto s_info = this->structs.find(to_add.get_struct_name());
+        if (s_info.is_width_known()) {
+    		throw DuplicateDefinitionException(line);
+        }
+        else {
+            s_info = to_add;
+        }
+    }
 }
 
 struct_info& compiler::get_struct_info(std::string struct_name, unsigned int line) {
@@ -139,9 +158,32 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     stmt_type s_type = s->get_statement_type();
     switch (s_type) {
         case INCLUDE:
-            // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
-            // todo: this is to be accomplished through the use of std::set
+        {
+            // includes must be in the global scope at level 0
+            if (this->current_scope_name == "global" && this->current_scope_level == 0) {
+                // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
+                auto include = dynamic_cast<Include*>(s.get());
+                if (this->compiled_headers.count(include->get_filename())) {
+                    // ignore include, generate a note saying as much
+                    compiler_note(
+                        "Included file \"" + include->get_filename() + "\" will be ignored here, as it has been included elsewhere",
+                        include->get_line_number()
+                    );
+                }
+                else {
+                    compile_ss << this->process_include(include->get_filename()).str();
+                }
+            }
+            else {
+                throw CompilerException(
+                    "Include statements must be made in the global scope at level 0",
+                    compiler_errors::INCLUDE_SCOPE_ERROR,
+                    s->get_line_number()
+                );
+            }
+
             break;
+        }
         case DECLARATION:
         {
             // handle a declaration
@@ -149,7 +191,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
             // we need to ensure that the current scope is global -- declarations can only happen in the global scope, as they must be static
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
-                this->handle_declaration(*decl_stmt);
+                compile_ss << this->handle_declaration(*decl_stmt).str();
             } else {
                 throw DeclarationException(decl_stmt->get_line_number());
             }
@@ -188,7 +230,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
 			compile_ss << this->evaluate_expression(ite->get_condition(), ite->get_line_number()).str();
-			compile_ss << "\t" << "jz sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
+			compile_ss << "\t" << "jne sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
 			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
@@ -216,7 +258,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
             compile_ss << "sinl_while_" << current_block_num << ":" << std::endl;
             compile_ss << this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number()).str();
-            compile_ss << "\t" << "jz sinl_while_done_" << current_block_num << std::endl;
+            compile_ss << "\t" << "jne sinl_while_done_" << current_block_num << std::endl;
 
             // compile the loop body
             compile_ss << this->compile_statement(while_stmt->get_branch(), signature).str();
@@ -261,8 +303,20 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             break;
         }
         case INLINE_ASM:
-            // todo: write ASM to file
+        {
+            // writes asm directly to file
+            // warns user that this is very unsafe
+            compiler_warning(
+                "Use of inline assembly is highly discouraged as it cannot be analyzed by the compiler nor utilize certain runtime safety measures (unless done manually)",
+                compiler_errors::UNSAFE_OPERATION,
+                s->get_line_number()
+            );
+            InlineAssembly *asm_stmt = dynamic_cast<InlineAssembly*>(s.get());
+
+            // todo: write asm to file
+
             break;
+        }
         case FREE_MEMORY:
             /*
 
@@ -341,7 +395,86 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
     return compile_ss;
 }
 
-void compiler::generate_asm(std::string filename, Parser &p) {
+std::stringstream compiler::process_include(std::string include_filename) {
+    /*
+
+    process_include
+    Processes an include statement, returning any code that was generated
+
+    See docs/Includes.md for more information on how includes are handled.
+
+    */
+
+    std::stringstream include_ss;
+
+    // adjust the path
+    if (include_filename.length() > 0 && include_filename[0] != '~' && include_filename[0] != '/') {
+        include_filename = this->file_path + include_filename;
+    }
+
+    // create the AST
+    auto sin_parser = new Parser(include_filename);
+    StatementBlock ast = sin_parser->create_ast();
+    delete sin_parser;
+
+    // walk through the AST and handle relevant statements
+    for (std::shared_ptr<Statement> s: ast.statements_list) {
+        if (s->get_statement_type() == ALLOCATION) {
+            auto a = dynamic_cast<Allocation*>(s.get());
+
+            // allocations must be qualified with 'extern'
+            if (a->get_type_information().get_qualities().is_extern()) {
+                // add the symbol
+                auto sym = generate_symbol(
+                    *a,
+                    a->get_type_information().get_width(),
+                    "global",
+                    0,
+                    this->max_offset,
+                    false
+                );
+                this->add_symbol(sym, a->get_line_number());
+            }
+            else {
+                throw InvisibleSymbolException(a->get_line_number());
+            }
+        }
+        else if (s->get_statement_type() == FUNCTION_DEFINITION) {
+            auto f = dynamic_cast<FunctionDefinition*>(s.get());
+
+            // function definitions must be 'extern'
+            if (f->get_type_information().get_qualities().is_extern()) {
+                // create the function symbol
+                auto sym = create_function_symbol(
+                    *f,
+                    false
+                );
+                this->add_symbol(sym, f->get_line_number());
+            }
+            else {
+                throw InvisibleSymbolException(f->get_line_number());
+            }
+        }
+        else if (s->get_statement_type() == STRUCT_DEFINITION) {
+            // included struct definitions
+            auto d = dynamic_cast<StructDefinition*>(s.get());
+            struct_info s_info = define_struct(*d);
+            this->add_struct(s_info, d->get_line_number());
+        }
+        else if (s->get_statement_type() == DECLARATION) {
+            auto d = dynamic_cast<Declaration*>(s.get());
+            include_ss << this->handle_declaration(*d).str();
+        }
+        else {
+            // ignore all other statements
+            continue;
+        }
+    }
+
+    return include_ss;
+}
+
+void compiler::generate_asm(std::string filename) {
     /*
 
     generate_asm
@@ -358,9 +491,21 @@ void compiler::generate_asm(std::string filename, Parser &p) {
 
     // catch parser exceptions here
     try {
+        this->filename = filename;
+
+        // all include paths should be relative to the path of the file being compiled, unless a / or ~ is at the beginning
+        size_t last_slash = filename.find_last_of("/");
+        if (last_slash != std::string::npos)
+            this->file_path = filename.substr(0, last_slash+1);
+        else
+            this->file_path = "";
+
         // create our abstract syntax tree
-		std::cout << "Parsing..." << std::endl;
-        StatementBlock ast = p.create_ast();
+        std::cout << "Compiling " << filename << std::endl;
+		auto sin_parser = new Parser(filename);
+        std::cout << "Parsing..." << std::endl;
+        StatementBlock ast = sin_parser->create_ast();
+        delete sin_parser;
 
         // The code we are generating will go in the text segment -- writes to the data and bss sections will be done as needed in other functions
 		std::cout << "Generating code..." << std::endl;
@@ -386,6 +531,11 @@ void compiler::generate_asm(std::string filename, Parser &p) {
                 }
             }
 
+            // add 'extern' for every symbol that needs it
+            for (std::string s: this->externals) {
+                this->text_segment << "extern " << s << std::endl;
+            }
+
             // insert our wrapper for the program
             this->text_segment << "global main" << std::endl;
             this->text_segment << "main:" << std::endl;
@@ -406,7 +556,7 @@ void compiler::generate_asm(std::string filename, Parser &p) {
             this->text_segment << "\t" << "ret" << std::endl;
         } catch (SymbolNotFoundException &e) {
             // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
-            compiler_note("No entry point found in file", 0);
+            compiler_note("No entry point found in file \"" + filename + "\"", 0);
         }
 
         // remove the extension from the file name
@@ -489,5 +639,4 @@ compiler::compiler() {
 }
 
 compiler::~compiler() {
-    // todo: destructor
 }

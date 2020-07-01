@@ -30,12 +30,15 @@ Copyright 2019 Riley Lannon
 
 class compiler {
     // The class containing our compiler
-	
+	std::string filename;
+	std::string file_path;
+
     // todo: break code generation into multiple friend classes
 
 	compile_time_evaluator evaluator;	// the compile-time constant evaluator
 
     std::set<std::string> compiled_headers; // which headers have already been handled
+	std::set<std::string> externals;	// symbols which use 'extern'
 
     std::string current_scope_name; // the name of the current scope
     unsigned int current_scope_level;   // the current scope level
@@ -83,7 +86,7 @@ class compiler {
 	// todo: handle assignments for char, float, etc.
 
 	// declarations
-	void handle_declaration(Declaration decl_stmt);
+	std::stringstream handle_declaration(Declaration decl_stmt);
 
 	// functions
 	std::stringstream define_function(FunctionDefinition definition);
@@ -107,9 +110,12 @@ class compiler {
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_member_selection(member_selection &m, unsigned int line);
 	std::stringstream get_address(Unary &u, unsigned int line);
+
+	// process an included file
+	std::stringstream process_include(std::string include_filename);
 public:
     // the compiler's entry function
-    void generate_asm(std::string filename, Parser &p);
+    void generate_asm(std::string filename);
 
     compiler();
     ~compiler();
