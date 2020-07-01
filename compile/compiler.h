@@ -37,6 +37,7 @@ class compiler {
 	compile_time_evaluator evaluator;	// the compile-time constant evaluator
 
     std::set<std::string> compiled_headers; // which headers have already been handled
+	std::set<std::string> externals;	// symbols which use 'extern'
 
     std::string current_scope_name; // the name of the current scope
     unsigned int current_scope_level;   // the current scope level

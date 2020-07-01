@@ -519,6 +519,11 @@ void compiler::generate_asm(std::string filename) {
                 }
             }
 
+            // add 'extern' for every symbol that needs it
+            for (std::string s: this->externals) {
+                this->text_segment << "extern " << s << std::endl;
+            }
+
             // insert our wrapper for the program
             this->text_segment << "global main" << std::endl;
             this->text_segment << "main:" << std::endl;

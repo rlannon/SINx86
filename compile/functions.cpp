@@ -34,7 +34,12 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
             false
         );
         this->add_symbol(sym, decl_stmt.get_line_number());
-        decl_ss << "extern " << sym.get_name() << std::endl;
+        if (this->externals.count(sym.get_name())) {
+            throw DuplicateDefinitionException(decl_stmt.get_line_number());
+        }
+        else {
+            this->externals.insert(sym.get_name());
+        }
     } else if (decl_stmt.is_struct()) {
         // add struct to struct table with the caveat that it's an incomplete type - this means that member access is not possible
         // note 'extern' is not needed here -- no symbol information is created
@@ -45,7 +50,12 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
         // note: pass 0 as the data width because declared data doesn't occupy stack space
         symbol sym = generate_symbol(decl_stmt, 0, this->current_scope_name, this->current_scope_level, this->max_offset, false);
         this->add_symbol(sym, decl_stmt.get_line_number());
-        decl_ss << "extern " << sym.get_name() << std::endl;
+        if (this->externals.count(sym.get_name())) {
+            throw DuplicateDefinitionException(decl_stmt.get_line_number());
+        }
+        else {
+            this->externals.insert(sym.get_name());
+        }
     }
 
     return decl_ss;
@@ -107,10 +117,14 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
                     );
                 }
 
-                // mark this label as 'global'
+                // mark this label as 'global', delete the 'extern' statement for it in this file
                 definition_ss << "global " << func_sym.get_name() << std::endl;
                 sym->set_defined();
                 marked_extern = true;
+
+                if (this->externals.count(sym->get_name())) {
+                    this->externals.erase(sym->get_name());
+                }
             }
         }
         else {
