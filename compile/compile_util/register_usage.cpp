@@ -137,23 +137,49 @@ bool register_usage::is_xmm_register(reg to_test) {
 bool register_usage::is_in_use(reg to_test) const {
     // Returns whether the specified register is in use
     auto it = this->regs.find(to_test);
-
+    bool b = false;
     // in practice, this error should never occur -- but check anyway to be safe
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register choice");
     } else {
-        return it->second.in_use;
+        b = it->second.in_use;
     }
+    return b;
 }
 
 bool register_usage::was_used(reg to_test) const {
     // Returns whether the specified register has been used at all
     auto it = this->regs.find(to_test);
-
+    bool b = false;
     if (it == this->regs.end()) {
         throw CompilerException("Invalid register choice");
     } else {
-        return it->second.has_been_used;
+        b = it->second.has_been_used;
+    }
+    return b;
+}
+
+symbol* register_usage::get_contained_symbol(reg r) {
+    // Returns the symbol in the specified register
+    auto it = this->regs.find(r);
+    symbol *s = nullptr;
+    if (it == this->regs.end()) {
+        throw CompilerException("Invalid register choice");
+    }
+    else {
+        s = it->second.contained;
+    }
+    return s;
+}
+
+void register_usage::clear_contained_symbol(reg r) {
+    // Does not clear the register from being 'in use', but sets the symbol to nullptr
+    auto it = this->regs.find(r);
+    if (it == this->regs.end()) {
+        throw CompilerException("Invalid reigster choice");
+    }
+    else {
+        it->second.contained = nullptr;
     }
 }
 

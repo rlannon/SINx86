@@ -385,10 +385,19 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     // if there is no register available, use RSI
                     r = this->reg_stack.peek().get_available_register(sym.get_data_type().get_primary());
                     if (r == NO_REGISTER) {
-                        // since no register is available, push rsi
-                        eval_ss << "\t" << "push rsi" << std::endl;
+                        // since no register is available, use rsi
+                        // if it contains a symbol, just 
+                        symbol *contained = this->reg_stack.peek().get_contained_symbol(RSI);
                         reg_used = "rsi";
-                        reg_pushed = true;
+                        if (contained == nullptr) {
+                            eval_ss << "\t" << "push rsi" << std::endl;
+                            reg_pushed = true;
+                        }
+                        else {
+                            eval_ss << "\t" << "mov [rbp - " << contained->get_offset() << "], " << register_usage::get_register_name(RSI, contained->get_data_type()) << std::endl;
+                            contained->set_register(NO_REGISTER);
+                            this->reg_stack.peek().clear_contained_symbol(RSI);
+                        }
                     } else {
                         reg_used = register_usage::get_register_name(r);
                     }
@@ -402,10 +411,21 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                         eval_ss << "\t" << "pop rsi" << std::endl;
                     }
                 } else {
-                    // automatic memory
-                    // get the stack offset; instruction should be something like
-                    //      mov rax, [rbp - 4]
-                    eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                    /*
+                    
+                    automatic memory
+                    get the stack offset; instruction should be something like
+                        mov rax, [rbp - 4]
+                    If the value is in a register, then just perform a register move
+                    
+                    */
+
+                    if (sym.get_register() == NO_REGISTER) {
+                        eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                    }
+                    else {
+                        eval_ss << "\t" << "mov rax, " << register_usage::get_register_name(sym.get_register()) << std::endl;
+                    }
                 }
 
                 return eval_ss;
