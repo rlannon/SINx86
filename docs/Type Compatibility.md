@@ -4,7 +4,7 @@
 
 In SIN, there are fairly strict rules surrounding type compatibility in SIN due to its strongly-typed nature. To understand how type compatibility operates in SIN, one must first understand how SIN types are structured.
 
-All SIN types are composed of a *primary type,* a *width,* a *sign,* *storage and access specifiers,* and possibly a *subtype* which is itself a complete type. All of these factors play into whether two types are compatible. Further, whether types are compatible depends on the order they appear (type `A` and type `B` may be compatible like `let A = B`, but not `let B = A`); this is typically due to the variability of each type.
+All SIN types are composed of a *primary type,* a *width,* a *sign,* *storage, variability, visibility, and layout specifiers,* and possibly a *subtype* which is itself a complete type. All of these factors play into whether two types are compatible. Further, whether types are compatible depends on the order they appear (type `A` and type `B` may be compatible such that `let A = B` is valid, but `let B = A` is not); this is typically due to the variability of each type.
 
 ## Rules
 
@@ -18,6 +18,26 @@ In order for two types to be comptible, their primary types must be compatible. 
 * One of the primary types is `raw< N >`
 
 Note that this does not take into account whether you are using an operator like `$` or `[]`; these operators change the expression type, and so are evaluated on the basis of the operator's return type *and* the symbol's type, not the symbol's type alone.
+
+### Width Comparison
+
+Types of differing widths can be compatible, but a warning will be generated indicating a loss of data is possible when converting to a type with a smaller width than the current one (e.g., trying to store a `long int` in an `int`).
+
+### Sign Comparison
+
+Signed and unsigned types are considered compatible, but like differing-width types, a compiler warning will be generated indicating that there is a possible data loss when the two types interact. Note that an expression will be considered signed if either of these conditions are met:
+
+* subtraction is present in the expression
+* any of the data members are signed
+
+### Storage
+
+Storage specifiers specify _where_ in memory some data lives. There are three (or four) areas of memory where data can reside:
+
+* The stack (automatic memory; no specifier)
+* The heap (dynamic memory; utilizes `dynamic`)
+* In the `.data` segment (allocated at compile-time; utilizes `static`)
+* In the `.rodata` segment (allocated and computed at compile-time; utilizes `static const`)
 
 ### Variability
 
@@ -61,13 +81,8 @@ In the above example, we can see that when we assign the address of non-const, n
 
 That also means that we are explicitly forbidden from "demoting" data from `const` or `final` to anything less restrictive.
 
-### Width Comparison
+### Visibility
 
-Types of differing widths can be compatible, but a warning will be generated indicating a loss of data is possible when converting to a type with a smaller width than the current one (e.g., trying to store a `long int` in an `int`).
+By default, data defined in a particular source file may only be accessed from within that file; it has local visibility. However, there are two ways data can be made available globally -- either with the `extern` keyword or by using a `decl` statement. Data that is made available with `extern` will not undergo name mangling, and therefore will be available to, for example, a C program. Data that utilizes `decl` will still undergo name mangling, and will be available to other source files. It also allows for forward-declaration of data.
 
-### Sign Comparison
-
-Signed and unsigned types are considered compatible, but like differing-width types, a compiler warning will be generated indicating that there is a possible data loss when the two types interact. Note that an expression will be considered signed if either of these conditions are met:
-
-* subtraction is present in the expression
-* any of the data members are signed
+See [the document on includes](Includes.md) for more information on why `decl` is important in included files.

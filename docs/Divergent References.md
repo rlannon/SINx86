@@ -10,7 +10,7 @@ Take the following example:
     alloc string s: "abc";
     alloc ptr<string> p: $s;
 
-    // Assign a much longer string
+    // Assign a much longer string to ensure a reallocation will be necessary
     let s = "Lorem ipsum dolor sit amet, consectetur adipiscing elit. In accumsan leo est, in lobortis orci cursus sed. Integer ex odio, egestas non nunc non, consequat efficitur nibh. Donec ex neque, porttitor eu cursus vel, convallis at magna. Nunc est est, malesuada a velit et, laoreet elementum est. Nullam a porta arcu, nec mattis turpis. In molestie ac tortor vitae facilisis. Curabitur pellentesque malesuada libero, ac elementum eros. Mauris sem felis, blandit a est et, hendrerit malesuada diam. Duis accumsan metus sapien, sit amet consectetur nisl dapibus quis. Sed ornare venenatis ex vel porta. Nam porta orci dui, ut condimentum quam consequat et. Nam aliquam pulvinar arcu, non laoreet purus tristique feugiat. Vivamus vitae leo leo. Aliquam dignissim malesuada orci non pulvinar. Vivamus sapien nisl, maximus ac posuere a, hendrerit nec turpis.";
 
     @print(*p);
