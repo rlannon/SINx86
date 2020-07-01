@@ -1,0 +1,13 @@
+// attributes.sin
+// demo of :len, etc.
+
+def int main() {
+    alloc array<10, int> myarr;
+    alloc int i: 0;
+
+    while (i < myarr:len) {
+        let i = i + 1;
+    }
+
+    return true as int;
+}

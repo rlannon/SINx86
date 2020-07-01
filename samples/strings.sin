@@ -1,0 +1,10 @@
+// strings.sin
+// Test string functionality
+
+def int main() {
+    alloc string s: "hello";
+    alloc string s2;
+    let s2 = s + " world! " + s + " and how are you?";
+    
+    return 0;
+}

@@ -1,0 +1,11 @@
+// declarations.sin
+// test the decl keyword
+
+include "point_include.sin";
+
+def int main() {
+    alloc ptr<point> p1: @make_point_2d(10, 20);
+    alloc int x;
+    let x = (*p1).x;    // throws error C100 -- we can't access struct members when they are declared
+    return 0;
+}

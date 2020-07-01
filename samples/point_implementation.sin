@@ -1,0 +1,12 @@
+// point_implementation.sin
+// the implementation file for point_include.sin
+
+include "point_include.sin";
+
+def ptr<point> make_point_2d(alloc int x, alloc int y) {
+    alloc dynamic point p;
+    let p.x = x;
+    let p.y = y;
+    let p.z = 0;
+    return $p;
+}

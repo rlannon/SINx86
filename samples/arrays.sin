@@ -1,0 +1,9 @@
+// arrays.sin
+// a sample of array functionality
+
+def unsigned int main() {
+    alloc array<10, int> my_arr;
+    alloc array<5, int> second_arr: {0, 1, 2, 3, 4};
+    let my_arr = second_arr;
+    return 0;
+}

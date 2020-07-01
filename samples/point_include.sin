@@ -1,0 +1,10 @@
+// point_include.sin
+// includes the definitions listed in declarations.sin
+
+def struct point {
+    alloc int x;
+    alloc int y;
+    alloc int z;
+}
+
+decl ptr<point> make_point_2d(decl int x, decl int y);
