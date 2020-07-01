@@ -68,7 +68,7 @@ This calling convention therefore means that all parameters will always be locat
 
     rbp + 16 + offset
 
-to account for the width of the old base pointer, the width of `rflags`, and then the offset where it lies within the stack. This means the last parameter will have an offset of 0, while the last will have an offset of the sum of every offset that comes after it. This also means that we must subtract every time from `rsp` the sum of the widths of all of the parameters.
+to account for the width of the old base pointer (8 bytes), the width of `rflags` (8 bytes), and then the offset where it lies within the stack. This means the last parameter will have an offset of 16, while the first parameter will have an offset of 16 + the widths of all parameters that come after it.
 
 Now, we will look more in-depth at the rules for calling functions and returning values, as how values are passed and return depends on their data type.
 
@@ -104,11 +104,11 @@ will pass values as follows:
 | `g` | R8W |
 | `h` | XMM2 |
 
-Note that the compiler will allocate 'shadow space' for the register parameters on the stack and will make note of their offsets from the stack frame base, moving the stack pointer appropriately. This reflects the idea that all function parameters occupy space within the function as local variables, and are the first to be allocated in a function.
+Note that the compiler will allocate 'shadow space' for the register parameters on the stack and will make note of their offsets relative to the stack frame base. This reflects the idea that all function parameters occupy space within the function as local variables, and are the first to be allocated in a function.
 
 #### Aggregate and User-Defined Types
 
-Aggregate types (arrays) and user-defined types (structs) must always be passed either as pointers in registers or on the stack. If the width is known at compile-time, they may be passed on the stack; otherwise, the caller will allocate memory for the object, copy the data into the newly-allocated area, and pass a pointer into the function. Note that syntactically, this is value does not appear to be passed as a pointer.
+Aggregate types (arrays) and user-defined types (structs) must always be passed either as pointers in registers or on the stack. If the width is known at compile-time, they may be passed on the stack; otherwise, the caller will allocate memory for the object, copy the data into the newly-allocated area, and pass a pointer into the function.
 
 ### Return Values
 
@@ -116,7 +116,7 @@ Values are returned on RAX (or another variant of the register depending on the 
 
 #### Non-Primitive Return Values
 
-User-defined types (structs), arrays, and strings (if necessary) return a *pointer* to the data in `RAX`. This follows the convention for so-called 'hidden pointer types' where pointers are passed and assignments use copies and pointer dereferencing under the hood.
+User-defined types (structs), arrays, and strings (if necessary) return a *pointer* to the data in `RAX`. This follows the convention for so-called 'reference types' where pointers are passed and assignments use copies and pointer dereferencing under the hood.
 
 Note that, since structs and arrays are written in "reverse order" onto the stack (first byte at low address, last byte at high address), we can easily copy between memory areas without needing to worry about reversing the way we write data. The formula for figuring out where a given struct member is in the stack is:
 
@@ -124,15 +124,13 @@ Note that, since structs and arrays are written in "reverse order" onto the stac
 
 Writing structs to the stack in reverse order will make it easy to copy between the stack and other areas of memory (as struct member order does not need to be accounted for).
 
-#### Secondary Return Values
-
-Some SIN runtime library functions utilize multiple return values, meaning values will be contained in `rax` and `rbx`. While secondary return values are not a feature in SIN, the calling convention allows for them because they are required by the language. For example, the ASM dynamic memory allocation functions in the runtime environment return a pointer to the allocated memory in `rax`, but they will also return the number of allocated bytes in `rbx`.
-
 ### Register Preservation
 
-The only registers that are always preserved by this convention are `rbp` and `rflags`. All other registers must be preserved before the call if they need to be saved.
+The only registers that are always preserved by this convention are `rbp` and `rflags`. All other registers must be preserved before the call--specifically, before `rsp` is modified--if they need to be saved.
 
 ## Interfacing with C
+
+For more information see [this document](Interfacing%20with%20C.md).
 
 The SIN calling convention also allows compilers to interface with C functions, and as such, there must be a way to ensure the SIN compiler handles arguments and return values properly. As such, a few keywords exist to alert the compiler to how a function should be called in the function declaration. Note these keywords may also be used with SIN functions, but must be done in the definition (and declaration, if present).
 
@@ -152,11 +150,11 @@ If a function uses the `c64` qualifier by itself, the function should follow the
 
 #### Windows
 
-If a function uses the `windows` qualifier *in conjunction with* the `c64` qualifier, it will utilize the Windows 64-bit calling convention.
+If a function uses the `windows` qualifier *in conjunction with* the `c64` qualifier, it will utilize the Windows 64-bit calling convention. Without the `c64` qualifier, use of `windows` will raise a compiler error.
 
 #### SINCALL
 
-By default, the `sincall` convention is used, though you may add it in for redundancy. If the `sincall` keyword is used, use of the other calling convention specifications will generate an error.
+By default, the `sincall` convention is used, though you may add it in for redundancy. If the `sincall` keyword is used, use of the other calling convention specifiers will generate an error.
 
 ### C Types in SIN
 

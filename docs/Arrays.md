@@ -36,6 +36,40 @@ Note that arrays may *not* contain other arrays, though they may contain *pointe
 Note that while arrays usually require the length, there are a few scenarios when it isn't:
 
 * the array is a subtype of `ptr`; if a length is given, it will be ignored by the compiler (the programmer shall be notified this is the behavior by the compiler in a compiler note)
-* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations. Note that if a length is not given, the array will have a size of 0 and the runtime bounds checks will prevent the array from being accessed (it must be reallocated)
+* the array is marked as `dynamic`; a length indicates how much initial memory should be reserved for the array, (possibly) preventing some of the overhead associated with reallocations. Note that if a length is not given, the array will have a size of 0 and the runtime bounds checks will prevent the array from being accessed (it must be reallocated).
 
-Finally, arrays are always structured with the 32-bit length followed immediately by the array's elements, starting at 0. Regardless of where they are allocated, the length is at the lowest memory address and the final element is at the highest.
+#### Memory structure and safety
+
+Arrays are always structured with the 32-bit length followed immediately by the array's elements, starting at 0. Regardless of where they are allocated, the length is at the lowest memory address and the final element is at the highest. Whenever an array is accessed, the desired index is checked against the array's length to ensure the access is within the bounds of the array. Any attempt at accessing elements beyond the end or before the beginning of the array will cause the program to exit. However, this makes checking that the accession is within bounds easy via the array's `len` [attribute](Attributes.md).
+
+The `=` assignment operator will always copy data from the source into the destination. For example, `let my_arr = another_arr` will copy _up to_ `my_arr:len` elements from `another_arr` into `my_arr`. Arrays do not have to be the same length for a copy to happen; if this is the case, the runtime will copy as many elements as it can from the source into the destination without stepping outside the bounds of either array. If `another_arr` is shorter, the 0th through `another_arr:len - 1` elements will be copied in.
+
+Note that memory safety mechanisms for arrays still apply even when a `ptr<array>` is used.
+
+### Arrays as function parameters
+
+Arrays, like every other type, can be passed to functions as arguments. Depending on the qualities of the array, it may be passed on the stack or as a reference type to dynamic memory. The qualifications are as follows:
+
+#### Fixed-length arrays
+
+Arrays whose length is known at compile-time may be passed on the stack directly. Their data will be copied from the source into the destination, just as any other array, and will be treated as a local array. However, in order for arrays to be passed like this, they must declare their length in the function definition. Arrays of different lengths may be passed to the function, and like other arrays, it will copy as many elements as it can from the source into the destination. A sample function definition that uses this method would look like:
+
+    def void my_func(alloc array<10, int> arr) { ... }
+
+#### Variable-length (`dynamic`) arrays
+
+If a variable-length array is desired, the `dynamic` keyword may be used on the argument. For example:
+
+    def void my_func(alloc dynamic array<int> arr) { ... }
+
+This will create a _new_ resource and copy the data from the source (argument supplied) into the space pointed to by `arr`. This can be wasteful, so if the array doesn't need to be modified, consider using `ptr<final array>` instead.
+
+An example of variable-length arrays as function parameters is in the program's entry point, `main`. The proper signature for `main` is:
+
+    def int main(alloc dynamic array<string> args) { ... }
+
+Note the compiler will allow a return type other than `int`, though a warning will be generated. It will also allow a definition of `main` with no parameters, but any parameters aside from a `dynamic array<string>` will be rejected at compile-time.
+
+#### Pointers to arrays
+
+Finally, a pointer to an array can be given, which may point to any array, fixed-length or not. Like other pointers, modifications to the data at the pointer in the scope of the function will modify the original, as a copy is not made.
