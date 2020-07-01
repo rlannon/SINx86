@@ -407,6 +407,11 @@ std::stringstream compiler::process_include(std::string include_filename) {
 
     std::stringstream include_ss;
 
+    // adjust the path
+    if (include_filename.length() > 0 && include_filename[0] != '~' && include_filename[0] != '/') {
+        include_filename = this->file_path + include_filename;
+    }
+
     // create the AST
     auto sin_parser = new Parser(include_filename);
     StatementBlock ast = sin_parser->create_ast();
@@ -487,6 +492,13 @@ void compiler::generate_asm(std::string filename) {
     // catch parser exceptions here
     try {
         this->filename = filename;
+
+        // all include paths should be relative to the path of the file being compiled, unless a / or ~ is at the beginning
+        size_t last_slash = filename.find_last_of("/");
+        if (last_slash != std::string::npos)
+            this->file_path = filename.substr(0, last_slash+1);
+        else
+            this->file_path = "";
 
         // create our abstract syntax tree
         std::cout << "Compiling " << filename << std::endl;

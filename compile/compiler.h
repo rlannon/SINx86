@@ -31,6 +31,7 @@ Copyright 2019 Riley Lannon
 class compiler {
     // The class containing our compiler
 	std::string filename;
+	std::string file_path;
 
     // todo: break code generation into multiple friend classes
 
