@@ -9,6 +9,20 @@ Implementation of the function_symbol class
 
 #include "function_symbol.h"
 
+bool function_symbol::matches(const function_symbol& right) const {
+	/*
+
+	matches
+	Checks whether two function signatures match
+
+	*/
+
+	bool name_match = this->name == right.name;
+	bool ret_match = this->type == right.type;
+	bool param_match = this->formal_parameters == right.formal_parameters;
+	return name_match && ret_match && param_match;
+}
+
 calling_convention function_symbol::get_calling_convention() {
     // Get the function's calling convention
     return this->call_con;
@@ -25,13 +39,14 @@ register_usage function_symbol::get_arg_regs() {
 }
 
 // for the time being, at least, all functions must be in the global scope at level 0
-function_symbol::function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con) :
+function_symbol::function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con, bool defined) :
 	symbol(
 		function_name,
 		"global", 
 		0, 
 		return_type, 
-		0
+		0,
+		defined
 	),
 	formal_parameters(formal_parameters),
 	call_con(call_con)

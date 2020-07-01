@@ -63,37 +63,32 @@ StatementBlock Parser::create_ast() {
 }
 
 
-Parser::Parser(Lexer& lexer) {
+Parser::Parser(std::string filename) {
+	this->filename = filename;
+
+	// create a lexer
+	std::ifstream infile;
+	infile.open(filename, std::ios::in);
+	Lexer lexer(infile);
+
+	// Tokenize the file
 	std::cout << "Lexing..." << std::endl;
 	while (!lexer.eof() && !lexer.exit_flag_is_set()) {
 		lexeme token = lexer.read_next();
 
 		// only push back tokens that aren't empty
 		if ((token.type != NULL_LEXEME) && (token.value != "") && (token.line_number != 0)) {
-			Parser::tokens.push_back(token);
+			this->tokens.push_back(token);
 		}
 		else {
 			continue;
 		}
 	}
 
-	Parser::quit = false;
-	Parser::can_use_include_statement = true;	// include statements must be first in the file
-	Parser::position = 0;
-	Parser::num_tokens = Parser::tokens.size();
-}
-
-Parser::Parser()
-{
-	// Default constructor will intialize (almost) everything to 0
-	this->tokens = {};
-	this->position = 0;
-	this->num_tokens = 0;
-
 	this->quit = false;
-	this->can_use_include_statement = true;	// this will initialize to true because we haven't hit any other statement
+	this->position = 0;
+	this->num_tokens = Parser::tokens.size();
 }
-
 
 Parser::~Parser()
 {

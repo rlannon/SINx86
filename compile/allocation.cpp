@@ -101,11 +101,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
 			// dynamic allocation
-			data_width = sin_widths::PTR_WIDTH;
-			symbol allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
+			symbol allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
 			
 			// add the symbol and move RSP further into the stack, by the width of a pointer
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
+
+			// push registers currently in use
+			allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
 
 			// allocate dynamic memory with a call to sre_request_resource
 			allocation_ss << "\t" << "pushfq" << std::endl;
@@ -116,6 +118,9 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
 			allocation_ss << "\t" << "pop rbp" << std::endl;
 			allocation_ss << "\t" << "popfq" << std::endl;
+
+			// restore used registers
+			allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
 
 			// store the returned address in the space allocated for the resource
 			allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
@@ -132,7 +137,6 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			}
 		}
 		else if (alloc_data.get_qualities().is_static()) {
-			// todo: allocate static memory
 			data_width = 0;	// takes up no space on the stack
 			symbol allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
 			this->add_symbol(allocated, alloc_stmt.get_line_number());

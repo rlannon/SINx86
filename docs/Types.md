@@ -10,6 +10,7 @@ SIN is a strongly-typed language, and so all allocated memory must have a type d
 * **sign** - `signed` and `unsigned`; may only be used on `int` type
 * **location** - `static` and `dynamic`; specifies where in memory the data should be allocated; in a function, all memory is allocated on the stack by default (except in the case of hidden pointer types), but the programmer may specify a different memory location with a keyword
 * **variability** - `const` and `final` are used to indicate the variability of data; see the [relevant documentation](Constants.md) for more information on the difference
+* **visibility** - `extern` is currently the only keyword marking visibility (currently, there is no `public` vs `private` distinction on struct members, though this is a planned addition), though `decl` statements will also alter data visibility
 
 Here is a table containing relevant type information:
 
@@ -32,43 +33,6 @@ A few types in SIN require 'subtypes', meaning types that are contained by or po
 
 ### Typecasting
 
-Not only is SIN a strongly-typed language, it does not allow implicit type conversions. As a result, it is the responsibility of the programmer to cast expressions to the proper type. SIN uses Rust-style typecasting with the `as` keyword. All primitive types can be cast to most other primitive types, but some conversions require standard library functions. The following is a matrix of type conversions allowed using `as`:
+Not only is SIN a strongly-typed language, it does not allow implicit type conversions. As a result, it is the responsibility of the programmer to cast expressions to the proper type. SIN uses Rust-style typecasting with the `as` keyword. All primitive types can be cast to most other primitive types, but some conversions require standard library functions.
 
-| Type | Cast to `bool` | to `int` | to `float` | to `string` | to `array< T >` |
-| ---- | -------------- | -------- | ---------- | ----------- | --------------- |
-| `bool` | | `false` is `0`, `true` is `1` | `false` is `0.0`, `true` is `1.0` | Expressed as `"false"` or `"true"` | |
-| `int` | 0 is `false`, all non-zero are `true` | | Equivalent whole floating-point number | | Expressed as string | |
-| `float` | 0 is `false`, all non-zero are `true` | Remove fractional portion | Expressed as string | |
-| `string` | Empty strings are `false`, non-empty strings are `true` (uses `string:len as bool`) | Must use standard library string parsing | Must use standard library string parsing | | Casts to `array<str:len, char>` |
-
-You may also specify widths and signs, and the compiler may issue a warning about potential data loss.
-
-**NB:** changing the base expressed when using `int as string` is not supported, but may be done with the standard library `to_string` function.
-
-As an example of when typecasting is necessary -- although the following code would work in C:
-
-    int x = 10;
-    if (x) {
-        printf("true");
-    }
-
-its SIN counterpart would not:
-
-    alloc int x: 10;
-    if (x) {                // error: expected 'bool', found 'int'
-        @print("true");
-    }
-
-You would have to rewrite it as:
-
-    alloc int x: 10;
-    if ( x != 0 ) {
-        @print("true");
-    }
-
-or, use typecasting:
-
-    alloc int x: 10;
-    if (x as bool) {
-        @print("true");
-    }
+For more information, see the [relevant document](Typecasting.md).

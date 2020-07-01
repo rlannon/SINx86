@@ -29,13 +29,15 @@ class function_symbol: public symbol {
     // calling convention -- defaults to SIN
     calling_convention call_con;
 public:
+    bool matches(const function_symbol& right) const;
+    
     std::vector<symbol> &get_formal_parameters();
     calling_convention get_calling_convention();
 
     register_usage get_arg_regs();
 
     // constructors
-    function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con = SINCALL);
+    function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con = SINCALL, bool defined = true);
     function_symbol();
     ~function_symbol();
 };

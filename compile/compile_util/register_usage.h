@@ -57,6 +57,9 @@ public:
     bool is_in_use(reg to_test) const;    // whether the register is _currently_ in use
     bool was_used(reg to_test) const; // whether the register was used at all
 
+    symbol* get_contained_symbol(reg r); // checks whether the register contains a symbol
+    void clear_contained_symbol(reg r); // sets the contained symbol to nullptr
+
     // todo: change to one function, 'set_available' ?
     void set(reg to_set, symbol* s=nullptr);
     void clear(reg to_clear);

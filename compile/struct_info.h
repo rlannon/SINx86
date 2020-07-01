@@ -22,7 +22,7 @@ class struct_info {
     std::string struct_name;
     symbol_table members;    // struct members are proper symbols within the struct's scope
 
-    bool width_known;   // todo: consider - why wouldn't a struct's size be known at compile time?
+    bool width_known;   // will be false if the struct wasn't defined
     size_t struct_width;
 public:
     std::string get_struct_name() const;   // get the struct's name
@@ -31,6 +31,7 @@ public:
     bool is_width_known() const;    // whether the width of the struct is known
 
     struct_info(std::string struct_name, std::vector<symbol> members, unsigned int line);
+    struct_info(std::string struct_name);
     struct_info();
     ~struct_info();
 };

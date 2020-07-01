@@ -10,7 +10,7 @@ This file contains all of the functionality to define and call functions
 
 #include "compiler.h"
 
-void compiler::handle_declaration(Declaration decl_stmt) {
+std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
     /*
 
     declare_function
@@ -24,17 +24,41 @@ void compiler::handle_declaration(Declaration decl_stmt) {
 
     */
 
+    std::stringstream decl_ss;
+
     if (decl_stmt.is_function()) {
-        function_symbol sym = create_function_symbol(decl_stmt);
+        // note that declared data must be marked as 'extern' so the assembler can reference it
+        function_symbol sym = create_function_symbol(
+            decl_stmt,
+            !decl_stmt.get_type_information().get_qualities().is_extern(),
+            false
+        );
         this->add_symbol(sym, decl_stmt.get_line_number());
+        if (this->externals.count(sym.get_name())) {
+            throw DuplicateDefinitionException(decl_stmt.get_line_number());
+        }
+        else {
+            this->externals.insert(sym.get_name());
+        }
     } else if (decl_stmt.is_struct()) {
-        // todo: add struct to struct table with the caveat that it's an incomplete type
+        // add struct to struct table with the caveat that it's an incomplete type - this means that member access is not possible
+        // note 'extern' is not needed here -- no symbol information is created
+        struct_info s_info(decl_stmt.get_type_information().get_struct_name());
+        this->add_struct(s_info, decl_stmt.get_line_number());
     } else {
         // add a symbol
         // note: pass 0 as the data width because declared data doesn't occupy stack space
-        symbol sym = generate_symbol(decl_stmt, 0, this->current_scope_name, this->current_scope_level, this->max_offset);
+        symbol sym = generate_symbol(decl_stmt, 0, this->current_scope_name, this->current_scope_level, this->max_offset, false);
         this->add_symbol(sym, decl_stmt.get_line_number());
+        if (this->externals.count(sym.get_name())) {
+            throw DuplicateDefinitionException(decl_stmt.get_line_number());
+        }
+        else {
+            this->externals.insert(sym.get_name());
+        }
     }
+
+    return decl_ss;
 }
 
 std::stringstream compiler::define_function(FunctionDefinition definition) {
@@ -64,9 +88,6 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     unsigned int previous_scope_level = this->current_scope_level;
     size_t previous_max_offset = this->max_offset;
 
-    // todo: sub from rsp the width of the formal parameters
-    // todo: ensure stack-passed parameters get written to the proper location
-
     // update the scope information
     this->current_scope_name = definition.get_name();
     this->current_scope_level = 1;
@@ -75,14 +96,54 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // construct the symbol for the function -- everything is offloaded to the utility
     function_symbol func_sym = create_function_symbol(definition);
 
-    // todo: delete -- no longer relevant due to calling convention updates
-    // // now, update the stack offset to account for all parameters
-    // if (!func_sym.get_formal_parameters().empty()) {
-    //     this->max_offset += func_sym.get_formal_parameters()[func_sym.get_formal_parameters().size() - 1].get_offset();
-    // }
+    // check to see if the symbol already exists in the table and is undefined -- if so, we need to add 'global'
+    bool marked_extern = false; // to ensure we don't mark it as global twice if the declared function is 'extern'
+    if (this->symbols.contains(func_sym.get_name())) {
+        auto sym = this->symbols.find(func_sym.get_name());
+        if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
+            auto declared_sym = dynamic_cast<function_symbol*>(sym.get());
+            if (sym->is_defined()) {
+                throw DuplicateDefinitionException(definition.get_line_number());
+            }
+            else {
+                // check to ensure signatures match
+                if (
+                    !func_sym.matches(*declared_sym)
+                ) {
+                    throw CompilerException(
+                        "Function signature does not match that of declaration",
+                        compiler_errors::SIGNATURE_MISMATCH,
+                        definition.get_line_number()
+                    );
+                }
 
-    // add the symbol to the table
-    this->add_symbol(func_sym, definition.get_line_number());
+                // mark this label as 'global', delete the 'extern' statement for it in this file
+                definition_ss << "global " << func_sym.get_name() << std::endl;
+                sym->set_defined();
+                marked_extern = true;
+
+                if (this->externals.count(sym->get_name())) {
+                    this->externals.erase(sym->get_name());
+                }
+            }
+        }
+        else {
+            throw CompilerException(
+                "Attempt to redefine \"" + func_sym.get_name() + "\" as a function",
+                compiler_errors::DUPLICATE_SYMBOL_ERROR,
+                definition.get_line_number()
+            );
+        }
+    }
+    else {
+        // add the symbol to the table
+        this->add_symbol(func_sym, definition.get_line_number());
+    }
+
+    // if the function is marked as 'extern', ensure it is global
+    if (!marked_extern && func_sym.get_data_type().get_qualities().is_extern()) {
+        definition_ss << "global " << func_sym.get_name() << std::endl;
+    }
 
     // now, we have to iterate over the function symbol's parameters and add them to our symbol table
     // todo: optimize by enabling symbol table additions in template function?
@@ -97,13 +158,6 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
             arg_regs.insert(sym.get_register());
         }
     }
-
-    // todo: delete - no longer relevant due to calling convention updates
-    // // update the stack offset -- since symbols are pushed in order, just get the last one and add it to the current offset
-    // if (!func_sym.get_formal_parameters().empty()) {
-    //     const symbol &last_sym = func_sym.get_formal_parameters().back(); 
-    //     this->max_offset += last_sym.get_data_type().get_width() + last_sym.get_offset();
-    // }
 
     // get the register_usage object from func_sym and push that
     this->reg_stack.push_back(func_sym.get_arg_regs());
@@ -402,6 +456,22 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
 	std::stringstream sincall_ss;
 	sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
     sincall_ss << "\t" << "push rax" << std::endl;
+    
+    // if we are returning a pointer or address, we need to increment the RC by one so it doesn't get freed completely
+    if (get_expression_data_type(
+            ret.get_return_exp(),
+            this->symbols,
+            this->structs,
+            ret.get_line_number()
+        ).get_primary() == PTR
+    ) {
+        sincall_ss << "\t" << "mov rdi, rax" << std::endl;
+        sincall_ss << "\t" << "push rbp" << std::endl;
+        sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
+        sincall_ss << "\t" << "call sre_add_ref" << std::endl; 
+        sincall_ss << "\t" << "mov rsp, rbp" << std::endl;
+        sincall_ss << "\t" << "pop rbp" << std::endl;
+    }
 
     // decrement the rc of all pointers and dynamic memory
     sincall_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, true).str();

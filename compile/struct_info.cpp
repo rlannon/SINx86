@@ -81,6 +81,12 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
     }
 }
 
+struct_info::struct_info(std::string struct_name) {
+    this->struct_name = struct_name;
+    this->struct_width = 0;
+    this->width_known = false;
+}
+
 struct_info::struct_info() {
     this->struct_name = "";
     this->struct_width = 0;

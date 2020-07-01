@@ -454,10 +454,10 @@ struct_info define_struct(StructDefinition definition) {
 
 // Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
-template function_symbol create_function_symbol(FunctionDefinition, bool=false);
-template function_symbol create_function_symbol(Declaration, bool=false);
+template function_symbol create_function_symbol(FunctionDefinition, bool=true, bool=true);
+template function_symbol create_function_symbol(Declaration, bool=true, bool=true);
 template <typename T>
-function_symbol create_function_symbol(T def, bool mangle) {
+function_symbol create_function_symbol(T def, bool mangle, bool defined) {
     /*
 
     create_function_symbol
@@ -508,17 +508,18 @@ function_symbol create_function_symbol(T def, bool mangle) {
         name,
         def.get_type_information(),
         formal_parameters,
-        def.get_calling_convention()
+        def.get_calling_convention(),
+        defined
     );
 
     // finally, return the function symbol
     return to_return;
 }
 
-template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&);
-template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&);
+template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&, bool);
+template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&, bool);
 template <typename T>
-symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset) {
+symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined) {
     /*
 
     generate_symbol
@@ -551,7 +552,9 @@ symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name,
         scope_name,
         scope_level,
         type_info,
-        stack_offset);
+        stack_offset,
+        defined
+    );
 
     return to_return;
 }

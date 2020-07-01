@@ -89,14 +89,25 @@ DataType& DataType::operator=(const DataType &right)
 	return *this;
 }
 
-bool DataType::operator==(const DataType right)
+bool DataType::operator==(const DataType& right) const
 {
-	return (this->primary == right.primary) && (this->subtype == right.subtype);
+	bool primary_match = this->primary == right.primary;
+	bool subtype_match = true;
+	if (this->subtype != nullptr && right.subtype != nullptr) {
+		DataType &left_subtype = *this->subtype.get();
+		DataType &right_subtype = *right.subtype.get();
+		subtype_match = left_subtype == right_subtype;
+	}
+	else
+		subtype_match = this->subtype == right.subtype;
+	bool qualities_match = this->qualities == right.qualities;
+
+	return primary_match && subtype_match && qualities_match;
 }
 
-bool DataType::operator!=(const DataType right)
+bool DataType::operator!=(const DataType& right) const
 {
-	return (this->primary != right.primary) || (this->subtype != right.subtype);
+	return !this->operator==(right);
 }
 
 bool DataType::operator==(const Type right[2])

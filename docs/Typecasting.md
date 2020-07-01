@@ -31,6 +31,17 @@ Any numeric type may be converted to or from any other numeric type. Integers be
 
 Conversions to bool from numerics will yield `false` if equal to 0 (or 0.0), and `true` for any non-zero number. Similarly, a value of `false` will yield a value of 0 and `true` will yield 1 (or 0.0 and 1.0 for floating-point numbers, respectively).
 
+The following is a matrix of type conversions allowed using `as`:
+
+| Type | Cast to `bool` | to `int` | to `float` | to `string` | to `array< T >` |
+| ---- | -------------- | -------- | ---------- | ----------- | --------------- |
+| `bool` | | `false` is `0`, `true` is `1` | `false` is `0.0`, `true` is `1.0` | Expressed as `"false"` or `"true"` | |
+| `int` | 0 is `false`, all non-zero are `true` | | Equivalent whole floating-point number | | Expressed as string | |
+| `float` | 0 is `false`, all non-zero are `true` | Remove fractional portion | Expressed as string | |
+| `string` | Empty strings are `false`, non-empty strings are `true` (uses `string:len as bool`) | Must use standard library string parsing | Must use standard library string parsing | | Casts to `array<str:len, char>` |
+
+You may also specify widths and signs, and the compiler may issue a warning about potential data loss.
+
 ### Sign and Width Conversions
 
 Casts may also be done to change or specify the width or sign of a type, though decreasing a type's width (or range of values) might result in data loss. This will not generate a warning, as it is standard behavior. For example, mixing `unsigned int` and `signed int` will typically generate compiler warnings, but if typecasting is used, these warnings will go away. For example:

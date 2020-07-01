@@ -38,13 +38,8 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		if (current_lex.value == "include") {
 			stmt = this->parse_include(current_lex);
 		}
-		else {
-			// as soon as we hit a statement that is not an include statement, we are no longer allowed to use them (they must go at the top of the file)
-			can_use_include_statement = false;
-		}
-
 		// parse inline assembly
-		if (current_lex.value == "asm") {
+		else if (current_lex.value == "asm") {
 			lexeme next = this->next();
 
 			if (next.value == "<") {
@@ -210,27 +205,22 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 std::shared_ptr<Statement> Parser::parse_include(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt = nullptr;
 
-	if (this->can_use_include_statement) {
+	lexeme next = this->next();
 
-		lexeme next = this->next();
+	if (next.type == STRING_LEX) {
+		std::string filename = next.value;
 
-		if (next.type == STRING_LEX) {
-			std::string filename = next.value;
-
-			stmt = std::make_shared<Include>(filename);
-			stmt->set_line_number(current_lex.line_number);
-			return stmt;
-		}
-		else {
-			throw ParserException("Expected a filename in quotes in 'include' statement", 0, current_lex.line_number);
-			// TODO: error numbers for includes
-		}
+		stmt = std::make_shared<Include>(filename);
+		stmt->set_line_number(current_lex.line_number);
 	}
 	else {
-		throw ParserException("Include statements must come at the top of the file.", 0, current_lex.line_number);
+		throw ParserException("Expected a filename in quotes in 'include' statement", 0, current_lex.line_number);
+		// TODO: error numbers for includes
 	}
+
+	return stmt;
 }
 
 std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is_function_parameter) {
@@ -240,18 +230,35 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 		decl <type> <name>;
 	or
 		decl <type> <name>(<formal parameters>);
-	where the formal parameters are also declarations
+	where the formal parameters are also declarations, or
+		decl struct <name>;
 
 	*/
 
-	lexeme next_lexeme = this->peek();
+	lexeme next_lexeme = this->next();
+	std::shared_ptr<Expression> initial_value = nullptr;
+	std::shared_ptr<Declaration> stmt = nullptr;
 
-	// the next lexeme must be a keyword (specifically, a type)
-	if (next_lexeme.type == KEYWORD) {
-		next_lexeme = this->next();
+	// the next lexeme must be a keyword (specifically, a type or 'struct')
+	if (next_lexeme.value == "struct") {
+		// struct declaration
+		if (this->peek().type == IDENTIFIER) {
+			DataType struct_type(
+				STRUCT,
+				NONE,
+				symbol_qualities(),
+				nullptr,
+				this->next().value
+			);
+			stmt = std::make_shared<Declaration>(struct_type, "", initial_value, false, true);
+		}
+		else {
+			throw CompilerException("Expected struct name", compiler_errors::ILLEGAL_STRUCT_NAME, this->current_token().line_number);
+		}
+	}
+	else if (next_lexeme.type == KEYWORD) {
 		DataType symbol_type_data = this->get_type();
-		std::shared_ptr<Expression> initial_value = std::make_shared<Expression>(EXPRESSION_GENERAL);
-
+		
 		// get the variable name
 		next_lexeme = this->next();
 		if (next_lexeme.type == IDENTIFIER) {		// variable names must be identifiers; if an identifier doesn't follow the type, we have an error
@@ -322,7 +329,7 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 				Declaration decl_statement(symbol_type_data, var_name, initial_value, is_function, false, formal_parameters);
 				decl_statement.set_line_number(next_lexeme.line_number);
 
-				return std::make_shared<Declaration>(decl_statement);
+				stmt = std::make_shared<Declaration>(decl_statement);
 			}
 			else if (this->peek().value == ":") {
 				throw ParserException("Initializations are forbidden in declaration statements", 0, next_lexeme.line_number);
@@ -339,6 +346,8 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 	else {
 		throw ParserException("Expected type name following 'decl' in variable declaration", 0, current_lex.line_number);
 	}
+
+	return stmt;
 }
 
 std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
