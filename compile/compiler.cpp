@@ -69,15 +69,26 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 
 	// insert the symbol
     std::shared_ptr<T> s = std::make_shared<T>(to_add);
-	bool ok = this->symbols.insert(s);
+    bool ok = this->symbols.insert(s);
 
-    // throw an exception if the symbol could not be inserted
+    // if the symbol could not be inserted, we *might* need to throw an exception
+    // it's also possible the symbol was added as a declaration and is now being defined
     if (!ok) {
-		// if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
-		if (to_add.get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
-			throw DuplicateDefinitionException(line);
-		else
-			throw DuplicateSymbolException(line);
+        // get the current symbol
+        auto sym = this->symbols.find(s->get_name());
+
+        // if it was defined, throw an error
+        if (sym->is_defined()) {
+            // if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
+            if (to_add.get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
+                throw DuplicateDefinitionException(line);
+            else
+                throw DuplicateSymbolException(line);
+        }
+        // otherwise, mark the symbol as defined
+        else {
+            sym->set_defined();
+        }
     }
 }
 

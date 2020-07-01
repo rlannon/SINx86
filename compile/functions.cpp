@@ -28,7 +28,11 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
 
     if (decl_stmt.is_function()) {
         // note that declared data must be marked as 'extern' so the assembler can reference it
-        function_symbol sym = create_function_symbol(decl_stmt);
+        function_symbol sym = create_function_symbol(
+            decl_stmt,
+            !decl_stmt.get_type_information().get_qualities().is_extern(),
+            false
+        );
         this->add_symbol(sym, decl_stmt.get_line_number());
         decl_ss << "extern " << sym.get_name() << std::endl;
     } else if (decl_stmt.is_struct()) {
@@ -39,7 +43,7 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
     } else {
         // add a symbol
         // note: pass 0 as the data width because declared data doesn't occupy stack space
-        symbol sym = generate_symbol(decl_stmt, 0, this->current_scope_name, this->current_scope_level, this->max_offset);
+        symbol sym = generate_symbol(decl_stmt, 0, this->current_scope_name, this->current_scope_level, this->max_offset, false);
         this->add_symbol(sym, decl_stmt.get_line_number());
         decl_ss << "extern " << sym.get_name() << std::endl;
     }

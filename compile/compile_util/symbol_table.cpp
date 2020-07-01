@@ -84,7 +84,7 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 
 	// we have to make sure the symbol table doesn't include copies of data with names unmangled
 	if (this->contains(to_insert->get_name())) {
-		throw std::exception();
+		return false;
 	}
 
 	auto returned = this->symbols.insert(
