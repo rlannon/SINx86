@@ -78,9 +78,6 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     unsigned int previous_scope_level = this->current_scope_level;
     size_t previous_max_offset = this->max_offset;
 
-    // todo: sub from rsp the width of the formal parameters
-    // todo: ensure stack-passed parameters get written to the proper location
-
     // update the scope information
     this->current_scope_name = definition.get_name();
     this->current_scope_level = 1;
