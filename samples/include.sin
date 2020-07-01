@@ -1,0 +1,11 @@
+// include.sin
+// test the include keyword
+
+include "point_include.sinh";
+
+def int main() {
+    alloc ptr<point> p1: @make_point_2d(10, 20);
+    alloc int x;
+    let x = (*p1).x;
+    return 0;
+}

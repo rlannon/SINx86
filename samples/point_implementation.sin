@@ -1,7 +1,7 @@
 // point_implementation.sin
-// the implementation file for point_include.sin
+// the implementation file for point_include.sinh
 
-include "point_include.sin";
+include "point_include.sinh";
 
 def ptr<point> make_point_2d(alloc int x, alloc int y) {
     alloc dynamic point p;
