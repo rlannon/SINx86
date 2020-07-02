@@ -617,8 +617,7 @@ std::stringstream compiler::evaluate_member_selection(member_selection &m, unsig
 	}
 	else {
 		// automatic memory
-		eval_ss << "\t" << "mov rbx, rbp" << std::endl;
-		eval_ss << "\t" << "sub rbx, " << table_entry.get_offset() << std::endl;
+		eval_ss << "\t" << "lea rbx, [rbp - " << table_entry.get_offset() << "]" << std::endl;
 	}
 
 	// now, step through the member_selection object, fetching each from the _previous_ struct's symbol table

@@ -559,7 +559,33 @@ symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name,
     return to_return;
 }
 
-std::stringstream push_used_registers(register_usage regs, bool ignore_ab) {
+std::stringstream store_symbol(symbol &s) {
+    /*
+
+    store_symbol
+    Store symbol in its memory location
+
+    */
+
+    std::stringstream store_ss;
+
+    DataType dt = s.get_data_type();
+    if (dt.get_qualities().is_static()) {
+        store_ss << "\t" << "lea rax, [" << s.get_name() << "]" << std::endl;
+        store_ss << "\t" << "mov [rax], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+    }
+    else if (dt.get_qualities().is_dynamic()) {
+        store_ss << "\t" << "mov rax, [rbp - " << s.get_offset() << "]" << std::endl;
+        store_ss << "\t" << "mov [rax], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+    }
+    else {
+        store_ss << "\t" << "mov [rbp - " << s.get_offset() << "], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+    }
+
+    return store_ss;
+}
+
+std::stringstream push_used_registers(register_usage &regs, bool ignore_ab) {
     /*
 
     push_used_registers
@@ -578,7 +604,16 @@ std::stringstream push_used_registers(register_usage regs, bool ignore_ab) {
         it++
     ) {
         if (((*it != RAX && *it != RBX) || !ignore_ab) && regs.is_in_use(*it)) {
-            push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
+            // if the register contains a symbol, store it instead of pushing to the stack
+            symbol *s = regs.get_contained_symbol(*it);
+            if (s) {
+                push_ss << store_symbol(*s).str();
+                regs.clear(s->get_register());
+                s->set_register(NO_REGISTER);
+            }
+            else {
+                push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
+            }
         }
     }
 
@@ -626,19 +661,18 @@ std::string get_address(symbol &s, reg r) {
 
     // if it's static, we can just use the name
     if (s.get_data_type().get_qualities().is_static()) {
-        address_info = "\tmov " + reg_name + ", " + s.get_name();
+        address_info = "\tlea " + reg_name + ", [" + s.get_name() + "]\n";
     }
     // otherwise, we need to look in the stack
     else if (s.get_data_type().get_qualities().is_dynamic() || s.get_data_type().get_primary() == STRING) {
         address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]";
     }
     else {
-        address_info = "\tmov " + reg_name + ", rbp\n";
         if (s.get_offset() < 0) {
-            address_info += "\tadd " + reg_name + ", " + std::to_string(-s.get_offset()) + "\n";
+            address_info += "\tlea " + reg_name + ", [rbp + " + std::to_string(-s.get_offset()) + "]\n";
         }
         else {
-            address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset()) + "\n";
+            address_info += "\tlea " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
         }
     }
 

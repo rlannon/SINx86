@@ -55,7 +55,9 @@ function_symbol create_function_symbol(T def, bool mangle=true, bool defined=tru
 template<typename T>
 symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined=true);
 
-std::stringstream push_used_registers(register_usage regs, bool ignore_ab = false);
+std::stringstream store_symbol(symbol& s);
+
+std::stringstream push_used_registers(register_usage &regs, bool ignore_ab = false);
 std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false);
 
 std::string get_address(symbol &s, reg r);

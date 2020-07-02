@@ -367,12 +367,11 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                 // the data width determines which register size to use
                 std::string reg_string = get_rax_name_variant(sym.get_data_type(), line);
 
-                if (sym.get_data_type().get_qualities().is_const()) {
-                    // const variables can be looked up by their name -- they are in the .data section
-                    eval_ss << "\t" << "mov " << reg_string << ", [" << sym.get_name() << "]" << std::endl;
-                } else if (sym.get_data_type().get_qualities().is_static()) {
-                    // static memory can be looked up by name -- variables are in the .bss section
-                    eval_ss << "\t" << "mov " << reg_string << ", [" << sym.get_name() << "]" << std::endl;
+                // how we get this data depends on where it lives
+                if (sym.get_data_type().get_qualities().is_static()) {
+                    // static memory can be looked up by name -- variables are in the .bss, .data, or .rodata section
+                    eval_ss << "\t" << "lea rax, [" << sym.get_name() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", rax" << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory
                     // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
@@ -458,12 +457,11 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     if (sym.get_data_type().get_primary() == STRING) {
                         eval_ss << "\t" << "mov rax, [rbp - " << sym.get_offset() << "]" << std::endl;
                     } else {
-                        eval_ss << "\t" << "mov rax, rbp" << std::endl;
                         if (sym.get_offset() < 0) {
-                            eval_ss << "\t" << "add rax, " << -sym.get_offset() << std::endl;
+                            eval_ss << "\t" << "lea rax, [rbp + " << -sym.get_offset() << "]" << std::endl;
                         }
                         else {
-                            eval_ss << "\t" << "sub rax, " << sym.get_offset() << std::endl;
+                            eval_ss << "\t" << "lea rax, [rbp - " << sym.get_offset() << "]" << std::endl;
                         }
                     }
                 }
@@ -566,9 +564,8 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 			- Dereference the pointer
 
 		*/
-
-		eval_ss << "\t" << "mov rbx, rbp" << std::endl;
-		eval_ss << "\t" << "sub rbx, " << full_array_width << std::endl;
+    
+		eval_ss << "\t" << "lea rbx, [rbp - " << full_array_width << "]" << std::endl;
 
 		// perform a bounds check
 		eval_ss << "\t" << "mov eax, [rbx]" << std::endl;

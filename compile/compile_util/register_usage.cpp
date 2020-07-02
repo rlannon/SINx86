@@ -207,6 +207,7 @@ void register_usage::clear(reg to_clear) {
         throw CompilerException("Invalid register selection");
     } else {
         it->second.in_use = false; // since it's a reference, it will update the original
+        it->second.contained = nullptr;
     }
 }
 
