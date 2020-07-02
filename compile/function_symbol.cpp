@@ -95,7 +95,7 @@ function_symbol::function_symbol(std::string function_name, DataType return_type
 				Type primary_type = sym.get_data_type().get_primary();
 				
 				// assign the register, if possible
-				if (can_pass_in_reg && (primary_type != ARRAY && primary_type != STRUCT && primary_type != STRING)) {
+				if (can_pass_in_reg && (primary_type != ARRAY && primary_type != STRUCT)) {
 					// pass in the primary type; the get_available_register function will be able to handle it
 					reg to_use = NO_REGISTER;
 					const reg integer_registers[] = { RSI, RDI, RCX, RDX, R8, R9 };

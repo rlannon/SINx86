@@ -431,12 +431,9 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
             } else {
                 // values too large for registers will use _pointers_, although the SIN syntax hides this fact
                 // therefore, all data will go in rax
-                if (sym.get_data_type().get_qualities().is_const()) {
-                    // const pointers
-                    eval_ss << "\t" << "mov rax, " << sym.get_name() << std::endl;
-                } else if (sym.get_data_type().get_qualities().is_static()) {
+                if (sym.get_data_type().get_qualities().is_static()) {
                     // static pointers
-                    eval_ss << "\t" << "mov rax, " << sym.get_name() << std::endl;
+                    eval_ss << "\t" << "lea rax, [" << sym.get_name() << "]" << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory -- the address of the dynamic memory is on the stack, so we need the offset
                     // get address in A

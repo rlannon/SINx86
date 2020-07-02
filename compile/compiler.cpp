@@ -339,7 +339,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compile_ss << this->compile_ast(ast, signature).str();
 
             // free local data
-            compile_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, false).str();
+            compile_ss << decrement_rc(this->reg_stack.peek(), this->symbols, this->current_scope_name, this->current_scope_level, false).str();
             
             // restore the scope level
             this->current_scope_level = old_scope_level;

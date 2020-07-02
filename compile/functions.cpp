@@ -476,7 +476,7 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
     }
 
     // decrement the rc of all pointers and dynamic memory
-    sincall_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, true).str();
+    sincall_ss << decrement_rc(this->reg_stack.peek(), this->symbols, this->current_scope_name, this->current_scope_level, true).str();
     sincall_ss << "\t" << "pop rax" << std::endl;
 
     return sincall_ss;

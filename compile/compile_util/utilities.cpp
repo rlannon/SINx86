@@ -354,7 +354,7 @@ bool can_pass_in_register(DataType to_check) {
     bool can_pass = false;
 
     Type primary = to_check.get_primary();
-    if (primary == ARRAY || primary == STRUCT || primary == STRING) {
+    if (primary == ARRAY || primary == STRUCT) {
         // if the type is dyamic, then we can -- we are really passing in a pointer into the function
         // todo: can we have static parameters?
         can_pass = to_check.get_qualities().is_dynamic();
@@ -743,7 +743,7 @@ std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
     return copy_ss;
 }
 
-std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int level, bool is_function) {
+std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string scope, unsigned int level, bool is_function) {
     /*
 
     decrement_rc
@@ -758,20 +758,20 @@ std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int 
     // get the local variables that need to be freed
     std::vector<symbol> v = t.get_symbols_to_free(scope, level, is_function);
     if (!v.empty()) {
+        // preserve all registers to ensure the memory locations contain their respective values
+        dec_ss << push_used_registers(r, true).str();
+
         // set up the stack frame
         dec_ss << "\t" << "pushfq" << std::endl;
         dec_ss << "\t" << "push rbp" << std::endl;
         dec_ss << "\t" << "mov rbp, rsp" << std::endl;
         for (symbol& s: v) {
-            // we need to move the old base pointer into rbx and subtract the offset from that
-            dec_ss << "\t" << "mov rbx, [rsp]" << std::endl;
-
             // if we have a negative number, add it instead
             if (s.get_offset() < 0) {
-                dec_ss << "\t" << "add rbx, " << -s.get_offset() << std::endl;
+                dec_ss << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;
             }
             else {
-                dec_ss << "\t" << "sub rbx, " << s.get_offset() << std::endl;
+                dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
             }
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
             dec_ss << "\t" << "call sre_free" << std::endl;
@@ -780,6 +780,9 @@ std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int 
         dec_ss << "\t" << "mov rsp, rbp" << std::endl;
         dec_ss << "\t" << "pop rbp" << std::endl;
         dec_ss << "\t" << "popfq" << std::endl;
+
+        // restore our registers
+        dec_ss << pop_used_registers(r, true).str();
     }
 
     return dec_ss;
