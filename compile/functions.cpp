@@ -269,7 +269,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     std::stringstream register_preservation_ss; // for preserving registers used for argument passing
     std::stringstream sincall_ss;
 
-    // todo: if registers need to be preserved, that should be done here
+    // if registers need to be preserved, do that here
+    sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
 
     // get the formal parameters so we don't need to call a function every time
     std::vector<symbol> &formal_parameters = s.get_formal_parameters();
@@ -360,7 +361,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             sincall_ss << "\t" << "add rsp, " << total_offset << std::endl;
         }
 
-        // todo: if registers were preserved, restore them here
+        // if registers were preserved, restore them here
+        sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
     } else {
         // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature
         throw FunctionSignatureException(line);
