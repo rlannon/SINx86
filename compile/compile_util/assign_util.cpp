@@ -39,6 +39,9 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
         auto p = fetch_destination_operand(*sym, symbols, line, r, is_initialization);
         dest = p.first;
         gen_code << p.second;
+
+        // marks the symbol as initialized
+        sym->set_initialized();
     }
     else if (exp->get_expression_type() == UNARY) {
         // get the unary
@@ -72,6 +75,9 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
             dest = "[rbx]";
             member_selection m = member_selection::create_member_selection(*lhs, structures, symbols, line);
             gen_code << m.evaluate(symbols, structures, line).str();
+            
+            // mark the symbol as initialized
+            m.last().set_initialized();
         }
         else {
             throw NonModifiableLValueException(line);

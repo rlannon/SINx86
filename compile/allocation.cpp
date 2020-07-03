@@ -218,6 +218,9 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				allocated.set_initialized();
 			}
 
+			// subtract the width of the type from RSP
+			allocation_ss << "\t" << "sub rsp, " << allocated.get_data_type().get_width() << std::endl;
+
 			// add it to the table
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 		}
