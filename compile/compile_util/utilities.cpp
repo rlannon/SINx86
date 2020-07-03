@@ -205,29 +205,6 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
     return type_information;
 }
 
-bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
-	/*
-	
-	is_valid_type_promotion
-	Ensures that type promotion rules are not broken
-
-	Essentially, the right-hand variability quality must be equal to or *lower* than the left-hand one in the hierarchy
-
-	See doc/Type Compatibility.md for information on type promotion
-	
-	*/
-
-	if (left.is_const()) {
-		return true;	// a const left-hand side will always promote the right-hand expression
-	}
-	else if (left.is_final()) {
-		return !right.is_const();	// a const right-hand argument cannot be demoted
-	}
-	else {
-		return !(right.is_const() || right.is_final());	// the right-hand argument cannot be demoted
-	}
-}
-
 bool is_valid_cast(DataType &old_type, DataType &new_type) {
     /*
 
@@ -727,18 +704,22 @@ std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
 
     std::stringstream copy_ss;
 
-    // preserve registers in use, ignoring RAX and RBX
+    // preserve registers in use, ignoring RAX and RBX -- this will save values into memory appropriately
     copy_ss << push_used_registers(regs, true).str();
 
     // get the pointers
     copy_ss << get_address(src, RSI) << std::endl;
     copy_ss << get_address(dest, RDI) << std::endl;
+    copy_ss << "\tpushfq" << std::endl << "\tpush rpb" << std::endl << "\tmov rbp, rsp" << std::endl;
     copy_ss << "\t" << "call sinl_string_copy" << std::endl;
+    copy_ss << "\tmov rsp, rbp" << std::endl << "\tpop rbp" << std::endl << "\tpopfq" << std::endl;
+
+    // restore registers -- note this does not move values back into registers that were moved into memory!
+    copy_ss << pop_used_registers(regs, true).str();
+
+    // update the address
     copy_ss << get_address(dest, RBX) << std::endl;
     copy_ss << "\t" << "mov [rbx], rax" << std::endl;
-
-    // restore registers
-    copy_ss << pop_used_registers(regs, true).str();
 
     return copy_ss;
 }

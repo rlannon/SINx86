@@ -37,8 +37,6 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 
 bool returns(StatementBlock to_check);
 
-bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
-
 bool is_valid_cast(DataType &old_type, DataType &new_type);
 
 std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line);
