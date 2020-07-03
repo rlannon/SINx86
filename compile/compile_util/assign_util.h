@@ -27,4 +27,12 @@ namespace assign_utilities {
         reg r = RBX,
         bool is_initialization = false
     );
+    std::pair<std::string, std::string> fetch_destination_operand(
+        symbol &sym,
+        symbol_table &symbols,
+        unsigned int line,
+        reg r = RBX,
+        bool is_initialization = false
+    );
+    bool requires_copy(DataType &t);
 };

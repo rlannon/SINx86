@@ -197,7 +197,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         case ASSIGNMENT:
         {
             Assignment *assign_stmt = dynamic_cast<Assignment*>(s.get());
-            compile_ss << this->assign(*assign_stmt).str() << std::endl;
+            compile_ss << this->handle_assignment(*assign_stmt).str() << std::endl;
             break;
         }
         case RETURN_STATEMENT:

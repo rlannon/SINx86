@@ -82,7 +82,15 @@ std::unordered_map<reg, std::string> register_usage::reg_32_strings {
     { R12, "r12d" },
     { R13, "r13d" },
     { R14, "r14d" },
-    { R15, "r15d" }
+    { R15, "r15d" },
+    { XMM0, "xmm0" },   // todo: there is a better way to do this
+    { XMM1, "xmm1" },
+    { XMM2, "xmm2" },
+    { XMM3, "xmm3" },
+    { XMM4, "xmm4" },
+    { XMM5, "xmm5" },
+    { XMM6, "xmm6" },
+    { XMM7, "xmm7" }
 };
 
 std::unordered_map<reg, std::string> register_usage::reg_16_strings {

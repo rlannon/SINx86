@@ -77,12 +77,9 @@ class compiler {
 	std::stringstream allocate(Allocation alloc_stmt);
 
 	// assignments
-	std::stringstream assign(Assignment assign_stmt);
-	std::stringstream handle_dot_assignment(member_selection &m, std::shared_ptr<Expression> rvalue, unsigned int line);
-	std::stringstream handle_symbol_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
-	std::stringstream handle_int_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
-	std::stringstream handle_bool_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
-	std::stringstream handle_string_assignment(symbol &sym, std::shared_ptr<Expression> value, unsigned int line);
+	std::stringstream handle_assignment(Assignment &aw);
+	std::stringstream handle_alloc_init(symbol &sym, std::shared_ptr<Expression> rvalue, unsigned int line);
+	
 	// todo: handle assignments for char, float, etc.
 
 	// declarations
@@ -108,7 +105,6 @@ class compiler {
 	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
-	std::stringstream evaluate_member_selection(member_selection &m, unsigned int line);
 	std::stringstream get_address(Unary &u, unsigned int line);
 
 	// process an included file
