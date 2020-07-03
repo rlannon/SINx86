@@ -6,6 +6,9 @@ samples/*
 !samples/*.sin
 !samples/*.sinh
 
+# ignore the notes folder
+notes/*
+
 # also ignore SIN build file and folder
 build
 bin/*

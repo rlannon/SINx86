@@ -182,10 +182,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				to_subtract = allocated.get_data_type().get_width();
 			}
 
-			allocation_ss << "\t" << "sub rsp, " << to_subtract << std::endl;
-
 			// if the type is string, we need to call sinl_string_alloc
 			if (alloc_data.get_primary() == STRING) {
+				// preserve registers
+				allocation_ss << "\t" << push_used_registers(this->reg_stack.peek(), true).str();
+
+				allocation_ss << "\t" << "sub rsp, " << to_subtract << std::endl;
+
 				// todo: get string length instead of passing 0 in
 				allocation_ss << "\t" << "mov esi, 0" << std::endl;
 				allocation_ss << "\t" << "push rbp" << std::endl;
@@ -193,7 +196,12 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				allocation_ss << "\t" << "call sinl_string_alloc" << std::endl;
 				allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
 				allocation_ss << "\t" << "pop rbp" << std::endl;
+
+				allocation_ss << "\t" << "add rsp, " << to_subtract << std::endl;
 				
+				// restore used registers
+				allocation_ss << "\t" << pop_used_registers(this->reg_stack.peek(), true).str();
+
 				// save the location of the string
 				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			}
