@@ -279,6 +279,11 @@ bool DataType::is_valid_type(DataType &t) {
 		if (t.qualities.is_signed() || t.qualities.is_unsigned()) {
 			is_valid = false;
 		}
+
+		// they may also not use 'static' unless they are 'static const'; they are inherently dynamic
+		if (t.qualities.is_static() && !t.get_qualities().is_const()) {
+			is_valid = false;
+		}
 	}
 	else if (t.primary == STRUCT) {
 		// structs don't support numeric or width qualifiers
