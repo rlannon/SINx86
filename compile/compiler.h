@@ -79,7 +79,8 @@ class compiler {
 	// assignments
 	std::stringstream handle_assignment(Assignment &aw);
 	std::stringstream handle_alloc_init(symbol &sym, std::shared_ptr<Expression> rvalue, unsigned int line);
-	
+	std::stringstream assign(DataType lhs_type, DataType &rhs_type, std::pair<std::string, std::string> dest, std::shared_ptr<Expression> rvalue, unsigned int line);
+
 	// todo: handle assignments for char, float, etc.
 
 	// declarations
