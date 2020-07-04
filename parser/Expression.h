@@ -80,14 +80,15 @@ public:
 	~ListExpression();
 };
 
-// Indexed expressions are a child of an LValue
-class Indexed : public LValue
+class Indexed : public Expression
 {
 	std::shared_ptr<Expression> index_value;	// the index value is simply an expression
+	std::shared_ptr<Expression> to_index;	// what we are indexing
 public:
 	std::shared_ptr<Expression> get_index_value();
+	std::shared_ptr<Expression> get_to_index();
 
-	Indexed(std::string value, std::string LValue_type, std::shared_ptr<Expression> index_init);
+	Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value);
 	Indexed();
 };
 

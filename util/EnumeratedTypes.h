@@ -96,7 +96,8 @@ enum SymbolQuality {
 enum exp_operator {
 	// So that we have a clear list of operators
 	COPY_ASSIGN,	// the = operator
-	MOVE_ASSIGN,	// the -> operator
+	RIGHT_ARROW,	// the -> operator
+	LEFT_ARROW,	// the <- operator
 	PLUS_EQUAL,	// +=
 	MINUS_EQUAL,	// -=
 	MULT_EQUAL,	// *=
@@ -129,7 +130,7 @@ enum exp_operator {
 	LEFT_SHIFT,
 	RIGHT_SHIFT,
 	DOT,	// the . operator
-	ARROW,	// the -> operator
+	INDEX,	// square brackets for indexing
 	ADDRESS,		// $
 	DEREFERENCE,	// *
 	TYPECAST,	// the 'as' operator

@@ -353,10 +353,10 @@ std::shared_ptr<Expression> Indexed::get_index_value()
 	return this->index_value;
 }
 
-Indexed::Indexed(std::string value, std::string LValue_type, std::shared_ptr<Expression> index_init) : index_value(index_init)
+Indexed::Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value)
 {
-	this->value = value;
-	this->LValue_Type = LValue_type;
+	this->to_index = to_index;
+	this->index_value = index_value;
 	this->expression_type = INDEXED;
 }
 

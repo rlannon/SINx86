@@ -67,6 +67,7 @@ class Parser
 	static bool is_opening_grouping_symbol(std::string to_test);
 	static const bool has_return(StatementBlock to_test);
 	static const exp_operator get_unary_operator(std::string s);	// located in ParserUtil.cpp
+	static const bool is_valid_operator(lexeme l);
 
 	// get the appropriate SymbolQuality member from the lexeme containing it
 	static SymbolQuality get_quality(lexeme quality_token);
