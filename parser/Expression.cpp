@@ -353,6 +353,11 @@ std::shared_ptr<Expression> Indexed::get_index_value()
 	return this->index_value;
 }
 
+std::shared_ptr<Expression> Indexed::get_to_index()
+{
+	return this->to_index;
+}
+
 Indexed::Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value)
 {
 	this->to_index = to_index;
