@@ -30,6 +30,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 	DataType &alloc_data = alloc_stmt.get_type_information();
 	size_t data_width = alloc_data.get_width();
 
+	// todo: struct allocation -- allocate each member accordingly
+
 	// todo: array length needs to be determined for _all_ arrays
 	// where it can be determined at compile-time, this space must be reserved on the stack
 	// where this is not possible, evaluate the expression and pass it to sinl_array_alloc

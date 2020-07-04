@@ -84,6 +84,11 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
     }
 }
 
+std::vector<std::shared_ptr<symbol>> struct_info::get_all_members() {
+    // gets all struct members in a vector
+    return this->members.get_all_symbols();
+}
+
 struct_info::struct_info(std::string struct_name) {
     this->struct_name = struct_name;
     this->struct_width = 0;

@@ -214,6 +214,16 @@ void symbol_table::leave_scope(std::string name, unsigned int level)
 	}
 }
 
+std::vector<std::shared_ptr<symbol>> symbol_table::get_all_symbols() {
+	// gets all symbols
+	std::vector<std::shared_ptr<symbol>> v;
+	for (auto s: this->symbols) {
+		v.push_back(s.second);
+	}
+
+	return v;
+}
+
 symbol_table::symbol_table()
 {
 }
