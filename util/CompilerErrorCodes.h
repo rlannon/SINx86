@@ -36,7 +36,8 @@ namespace compiler_errors {
     const unsigned int UNARY_TYPE_NOT_SUPPORTED = 56;   // if the unary operator is not supported with a given type
 	const unsigned int UNDEFINED_OPERATOR_ERROR = 57;	// the operator used is undefined for the data type
     const unsigned int ILLEGAL_ADDRESS_OF_ARGUMENT = 61;    // the address-of operator may only be used with lvalues and member selection binary expressions
-    
+    const unsigned int ILLEGAL_INDIRECTION = 62;    // the * operator may only be used with pointer types
+
     const unsigned int SELF_CONTAINMENT_ERROR = 71; // a struct may not contain an instance of itself
 
     // Location / definition errors

@@ -47,23 +47,30 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
         // get the unary
         auto lhs = dynamic_cast<Unary*>(exp.get());
         if (lhs->get_operator() == exp_operator::DEREFERENCE) {
-            auto fetched = fetch_destination_operand(
-                lhs->get_operand(),
-                symbols,
-                structures,
-                scope_name,
-                scope_level,
-                line,
-                r,
-                is_initialization
-            );
-            
-            // add the fetched code from the recursive call to this one
-            dest = "[rbx]";
-            gen_code << fetched.second;
-            
-            // now, add an instruction to move the previously fetched destination into RBX
-            gen_code << "\t" << "mov rbx, " << fetched.first << std::endl;
+            // ensure the expression has a pointer type; else, indirection is illegal
+            auto op_t = get_expression_data_type(lhs->get_operand(), symbols, structures, line);
+            if (op_t.get_primary() == PTR) {
+                auto fetched = fetch_destination_operand(
+                    lhs->get_operand(),
+                    symbols,
+                    structures,
+                    scope_name,
+                    scope_level,
+                    line,
+                    r,
+                    is_initialization
+                );
+                
+                // add the fetched code from the recursive call to this one
+                dest = "[rbx]";
+                gen_code << fetched.second;
+                
+                // now, add an instruction to move the previously fetched destination into RBX
+                gen_code << "\t" << "mov rbx, " << fetched.first << std::endl;
+            }
+            else {
+                throw IllegalIndirectionException(line);
+            }
         }
         else {
             throw NonModifiableLValueException(line);
@@ -84,8 +91,15 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
         }
     }
     else if (exp->get_expression_type() == INDEXED) {
+        /*
+
+        To determine the destination of an indexed expression, we need to:
+            1) Get the address by calling this function recursively with the operand
+            2) Adjust the
+
+        */
+
         auto lhs = dynamic_cast<Indexed*>(exp.get());
-        // todo: indexed expressions
     }
     else {
         throw NonModifiableLValueException(line);

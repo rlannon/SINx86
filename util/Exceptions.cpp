@@ -281,6 +281,14 @@ InvalidTypecastException::InvalidTypecastException(unsigned int line) :
 		// super called
 }
 
+IllegalIndirectionException::IllegalIndirectionException(unsigned int line) :
+CompilerException(
+	"Illegal indirection; must have pointer type",
+	compiler_errors::ILLEGAL_INDIRECTION,
+	line
+) {
+	// super called
+}
 
 // Warnings and notes
 
