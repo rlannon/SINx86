@@ -137,7 +137,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	case exp_operator::ADDRESS:
 	{
 		// an address-of expression has its own function
-		eval_ss << this->get_address(to_evaluate, line).str();
+		eval_ss << this->get_address_of(to_evaluate, RAX, line).str();
 		break;
 	}
 	case exp_operator::DEREFERENCE:

@@ -59,7 +59,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				data_width = alloc_data.get_array_length() * alloc_data.get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
 			}
 			else {
-				throw CompilerException("An array width must be a positive integer", compiler_errors::TYPE_ERROR, alloc_stmt.get_line_number());
+				throw NonConstArrayLengthException(alloc_stmt.get_line_number());
 			}
 		}
 		else {
@@ -219,7 +219,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			}
 
 			// subtract the width of the type from RSP
-			allocation_ss << "\t" << "sub rsp, " << allocated.get_data_type().get_width() << std::endl;
+			allocation_ss << "\t" << "sub rsp, " << data_width << std::endl;
 
 			// add it to the table
 			this->add_symbol(allocated, alloc_stmt.get_line_number());

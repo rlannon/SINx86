@@ -5,5 +5,10 @@ def unsigned int main() {
     alloc array<10, int> my_arr;
     alloc array<5, int> second_arr: {0, 1, 2, 3, 4};
     let my_arr = second_arr;
+
+    alloc ptr<array<int>> p: $second_arr;
+    alloc int x;
+    let x = (*p)[2];
+
     return 0;
 }

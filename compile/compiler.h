@@ -27,6 +27,7 @@ Copyright 2019 Riley Lannon
 #include "../util/stack.h"  // the stack data structure
 
 #include "compile_util/constant_eval.h"
+#include "compile_util/expression_util.h"
 
 class compiler {
     // The class containing our compiler
@@ -56,7 +57,9 @@ class compiler {
 
 	// We need to track the number for string constants, if/else blocks, etc.
 	size_t strc_num;
+	size_t fltc_num;
 	size_t scope_block_num;
+	size_t rtbounds_num;
 
 	// We should have stringstreams for the text, rodata, data, and bss segments
 	std::stringstream text_segment;
@@ -99,6 +102,7 @@ class compiler {
 	std::stringstream sincall_return(ReturnStatement &ret, DataType return_type);
 
 	// utilities that require compiler's data members
+	std::stringstream get_exp_address(std::shared_ptr<Expression> to_evaluate, reg r, unsigned int line);
 	std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);
 	std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line);
 	std::stringstream evaluate_lvalue(LValue &to_evaluate, unsigned int line);
@@ -106,7 +110,7 @@ class compiler {
 	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
 	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
-	std::stringstream get_address(Unary &u, unsigned int line);
+	std::stringstream get_address_of(Unary &u, reg r, unsigned int line);
 
 	// process an included file
 	std::stringstream process_include(std::string include_filename, unsigned int line);

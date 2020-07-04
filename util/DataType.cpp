@@ -167,21 +167,26 @@ bool DataType::is_compatible(DataType to_compare) const
 
 	*/
 
-	bool compatible;
+	bool compatible = false;
 
 	if (this->primary == RAW || to_compare.get_primary() == RAW) {
 		compatible = true;
 	}
-	else if ((this->primary == PTR && to_compare.get_primary() == PTR) || (this->primary == ARRAY && to_compare.get_primary() == ARRAY))
+	else if (this->primary == PTR && to_compare.get_primary() == PTR)
 	{
 		// call is_compatible on the subtypes and ensure the type promotion is legal
 		if (this->subtype && to_compare.subtype) {
 			compatible = this->subtype->is_compatible(
-				*dynamic_cast<DataType*>(to_compare.get_full_subtype().get())
+				*to_compare.get_full_subtype()
 			) && is_valid_type_promotion(this->subtype->qualities, to_compare.subtype->qualities);
 		} else {
 			throw CompilerException("Expected subtype", 0, 0);	// todo: ptr and array should _always_ have subtypes
 		}
+	}
+	else if (this->primary == ARRAY && to_compare.get_primary() == ARRAY) {
+		compatible = this->subtype->is_compatible(
+			*to_compare.get_full_subtype()
+		);
 	}
 	else {
 		// primary types must be equal

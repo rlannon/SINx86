@@ -17,9 +17,11 @@ This file contains the function/class declarations required for the compiler's c
 #include "const_symbol.h"
 #include "symbol_table.h"
 #include "struct_table.h"
-#include "utilities.h"
 #include "../../util/Exceptions.h"
 #include "../../parser/Statement.h"	// includes "Expression.h"
+
+// forward-declare any functions from 'utilities'
+DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
 
 class compile_time_evaluator {
 	// data members

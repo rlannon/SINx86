@@ -38,7 +38,29 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     auto lhs_type = get_expression_data_type(a.get_lvalue(), this->symbols, this->structs, a.get_line_number());
     auto rhs_type = get_expression_data_type(a.get_rvalue(), this->symbols, this->structs, a.get_line_number());
 
-    return this->assign(lhs_type, rhs_type, p, a.get_rvalue(), a.get_line_number());
+    std::stringstream handle_ss;
+
+    // if we have an indexed expression as the lvalue, we need a special case (for code generation)
+    if (a.get_lvalue()->get_expression_type() == INDEXED) {
+        // overwrite p.second with the actual destination fetch code
+        std::stringstream overwrite;
+
+        // if RAX is used to fetch the RHS, we need to preserve it on the stack before determining the index
+        bool must_push = rhs_type.get_primary() != FLOAT;
+        if (must_push)
+            overwrite << "\t" << "push rax" << std::endl;
+        
+        overwrite << this->get_exp_address(a.get_lvalue(), RBX, a.get_line_number()).str();
+        
+        if (must_push)
+            overwrite << "\t" << "pop rax" << std::endl;
+        
+        p.second = overwrite.str();
+    }
+    
+    handle_ss << this->assign(lhs_type, rhs_type, p, a.get_rvalue(), a.get_line_number()).str();
+
+    return handle_ss;
 }
 
 std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expression> rvalue, unsigned int line) {

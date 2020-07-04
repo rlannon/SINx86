@@ -282,7 +282,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 		{
 			StructDefinition *def_stmt = dynamic_cast<StructDefinition*>(s.get());
 
-			struct_info defined = define_struct(*def_stmt);
+			struct_info defined = define_struct(*def_stmt, this->evaluator);
 			this->add_struct(defined, s->get_line_number());
 
 			break;
@@ -458,7 +458,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
             else if (s->get_statement_type() == STRUCT_DEFINITION) {
                 // included struct definitions
                 auto d = dynamic_cast<StructDefinition*>(s.get());
-                struct_info s_info = define_struct(*d);
+                struct_info s_info = define_struct(*d, this->evaluator);
                 this->add_struct(s_info, d->get_line_number());
             }
             else if (s->get_statement_type() == DECLARATION) {
@@ -635,6 +635,8 @@ bool compiler::is_in_scope(symbol &sym) {
 compiler::compiler() {
     // initialize our number trackers
     this->strc_num = 0;
+    this->fltc_num = 0;
+    this->rtbounds_num = 0;
     this->scope_block_num = 0;
     this->max_offset = 8;   // should be 8 (a qword) because of the way the x86 stack works
     

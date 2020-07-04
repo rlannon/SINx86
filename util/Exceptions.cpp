@@ -23,6 +23,15 @@ CompilerException::CompilerException(const std::string& message, unsigned int co
 	this->message = "**** Compiler error C" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
 
+NonConstArrayLengthException::NonConstArrayLengthException(unsigned int line):
+CompilerException(
+	"Array length must be an integer constant or declared as 'dynamic'; use a literal or 'constexpr'",
+	compiler_errors::UNKNOWN_LENGTH_ERROR,
+	line
+) {
+	// super called
+}
+
 InvisibleSymbolException::InvisibleSymbolException(unsigned int line):
 	CompilerException(
 		"Attempt to include a non-globalized symbol in SIN file; use Declarative SIN or \"extern\"",

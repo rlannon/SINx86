@@ -23,6 +23,7 @@ namespace compiler_errors {
     const unsigned int CONST_ASSIGNMENT_ERROR = 1;
     const unsigned int FINAL_ASSIGNMENT_ERROR = 2;
     const unsigned int DATA_WIDTH_ERROR = 3;
+    const unsigned int UNKNOWN_LENGTH_ERROR = 5;
 	const unsigned int CONST_ALLOCATION_ERROR = 11;	// constants must be initialized in their allocation
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
 	const unsigned int DUPLICATE_DEFINITION_ERROR = 31;	// The definition for this resource was already found

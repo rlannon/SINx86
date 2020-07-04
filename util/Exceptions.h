@@ -38,6 +38,12 @@ public:
 	virtual const char* what() const noexcept;
 };
 
+class NonConstArrayLengthException: public CompilerException
+{
+public:
+	explicit NonConstArrayLengthException(unsigned int line);
+};
+
 class InvisibleSymbolException : public CompilerException
 {
 public:

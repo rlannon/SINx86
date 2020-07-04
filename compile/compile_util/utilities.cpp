@@ -38,8 +38,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             break;
         }
         case LVALUE:
-		case INDEXED:	// since Indexed expressions inherit from LValue, we can use one switch case
-        {
+		{
             // look into the symbol table for an LValue
             LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
 			std::shared_ptr<symbol> sym;
@@ -52,13 +51,15 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 				throw SymbolNotFoundException(line);
 			}
 
-			// depending on whether we have an indexed or lvalue expression, we have to return different type data
-			if (expression_type == INDEXED) {
-				type_information = *sym->get_data_type().get_full_subtype().get();
-			}
-			else {
-				type_information = sym->get_data_type();
-			}
+            type_information = sym->get_data_type();
+            
+            break;
+        }
+        case INDEXED:
+        {
+            Indexed *idx = dynamic_cast<Indexed*>(to_eval.get());
+            DataType t = get_expression_data_type(idx->get_to_index(), symbols, structs, line);
+            type_information = *t.get_full_subtype();
             break;
         }
         case LIST:
@@ -372,7 +373,7 @@ std::string get_rax_name_variant(DataType t, unsigned int line) {
 	return reg_string;
 }
 
-struct_info define_struct(StructDefinition definition) {
+struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte) {
     /*
     
     define_struct
@@ -408,6 +409,24 @@ struct_info define_struct(StructDefinition definition) {
                 );
             }
             // todo: once references are enabled, disallow those as well -- they can't be null, so that would cause infinite recursion, too
+            else if (alloc->get_type_information().get_primary() == ARRAY) {
+                // arrays must have constant lengths or be dynamic
+                if (alloc->get_type_information().get_array_length_expression()->is_const()) {
+                    size_t array_length = stoul(
+                        cte.evaluate_expression(
+                            alloc->get_type_information().get_array_length_expression(),
+                            definition.get_name(),
+                            1,
+                            definition.get_line_number()
+                        )
+                    );
+                    array_length = array_length * alloc->get_type_information().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+                    alloc->get_type_information().set_array_length(array_length);
+                }
+                else {
+                    throw NonConstArrayLengthException(definition.get_line_number());
+                }
+            }
 
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
             

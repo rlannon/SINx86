@@ -29,6 +29,8 @@ Our various compiler utilities
 #include "../struct_info.h"
 #include "member_selection.h"
 
+#include "constant_eval.h"
+
 #include "../../util/general_utilities.h"
 
 // todo: put these in their own namespace
@@ -45,7 +47,7 @@ bool can_pass_in_register(DataType to_check);
 
 std::string get_rax_name_variant(DataType t, unsigned int line);
 
-struct_info define_struct(StructDefinition definition);
+struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte);
 
 template<typename T>
 function_symbol create_function_symbol(T def, bool mangle=true, bool defined=true);
