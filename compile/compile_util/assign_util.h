@@ -15,6 +15,7 @@ Utilities for assignment -- specifically, tools to determine the source and dest
 #include <memory>
 
 #include "utilities.h"
+#include "expression_util.h"
 
 namespace assign_utilities {
     std::pair<std::string, std::string> fetch_destination_operand(

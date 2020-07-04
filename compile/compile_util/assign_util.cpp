@@ -93,13 +93,13 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
     else if (exp->get_expression_type() == INDEXED) {
         /*
 
-        To determine the destination of an indexed expression, we need to:
-            1) Get the address by calling this function recursively with the operand
-            2) Adjust the
+        Indexed expressions can't be evaluated properly by this utility
+        As such, we should return the destination as [rbx] with no code generation
+        The code to generate the actual assignment function
 
         */
 
-        auto lhs = dynamic_cast<Indexed*>(exp.get());
+        dest = "[rbx]";
     }
     else {
         throw NonModifiableLValueException(line);
