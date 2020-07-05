@@ -90,8 +90,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
             size_t offset = 0;
             
-            // get the address in RDI
-            evaluation_ss << "\t" << "lea rdi, [" << list_label << "]" << std::endl;
+            // get the address in R15
+            evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
 
             // now, iterate
             for (auto m: le->get_list()) {
@@ -106,7 +106,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 
                     // store it in [r15 + offset]
                     std::string rax_name = register_usage::get_register_name(RAX, member_type);
-                    evaluation_ss << "mov [r15 + " << offset << "], " << rax_name << std::endl;
+                    evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << rax_name << std::endl;
 
                     // update the offset within the list of the element to which we are writing
                     offset += member_type.get_width();

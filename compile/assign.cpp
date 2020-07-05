@@ -106,8 +106,22 @@ std::stringstream compiler::assign(DataType lhs_type, DataType &rhs_type, std::p
         if (assign_utilities::requires_copy(lhs_type)) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
 
+            // set up our registers/arguments
             handle_assign << "\t" << "mov rsi, rax" << std::endl;
             handle_assign << "\t" << "mov rdi, rbx" << std::endl;
+            handle_assign << "\t" << "mov ecx, " << lhs_type.get_full_subtype()->get_width() << std::endl;
+
+            // set up the stack frame; call the function
+            handle_assign << "\t" << "pushfq" << std::endl;
+            handle_assign << "\t" << "push rbp" << std::endl;
+            handle_assign << "\t" << "mov rbp, rsp" << std::endl;
+
+            handle_assign << "\t" << "call sinl_array_copy" << std::endl;
+
+            // restore our old stack frame             
+            handle_assign << "\t" << "mov rsp, rbp" << std::endl;
+            handle_assign << "\t" << "pop rbp" << std::endl;
+            handle_assign << "\t" << "popfq" << std::endl;
 
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
