@@ -86,6 +86,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 	// allocate the variable if our type was valid
 	if (DataType::is_valid_type(alloc_data)) {
+		symbol allocated;
+
 		// variables in the global scope do not need to be marked as 'static' by the programmer, though they are located in static memory so we must set the static quality if we are in the global scope
 		if (this->current_scope_name == "global") {
 			alloc_data.get_qualities().add_quality(SymbolQuality::STATIC);
@@ -103,7 +105,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
 			// dynamic allocation
-			symbol allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
+			allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
 			
 			// add the symbol and move RSP further into the stack, by the width of a pointer
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
@@ -140,7 +142,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		}
 		else if (alloc_data.get_qualities().is_static()) {
 			data_width = 0;	// takes up no space on the stack
-			symbol allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
+			allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// static const variables can go in the .rodata segment, so check to see if it is also const
@@ -156,7 +158,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// allocate memory on the stack
 
 			// construct the symbol
-			symbol allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
+			allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
 
 			/*
 			
@@ -225,6 +227,47 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 			// add it to the table
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
+		}
+
+		// if the type is STRUCT, we need to initialize non-dynamic array members
+		if (allocated.get_data_type().get_primary() == STRUCT) {
+			// todo: eliminate this call and initialize a function-level object earlier?
+			struct_info &info = this->get_struct_info(allocated.get_data_type().get_struct_name(), alloc_stmt.get_line_number());
+			
+			// get a register for the address
+			reg r = this->reg_stack.peek().get_available_register(PTR);
+			bool push_r15 = false;
+			if (r == NO_REGISTER) {
+				symbol *contained = this->reg_stack.peek().get_contained_symbol(R15);
+				if (contained) {
+					allocation_ss << store_symbol(*contained).str();
+					contained->set_register(NO_REGISTER);
+					this->reg_stack.peek().clear_contained_symbol(R15);
+				}
+				else {
+					push_r15 = true;
+					allocation_ss << "\t" << "push r15" << std::endl;
+				}
+
+				r = R15;
+			}
+
+			// iterate through the struct members, initializing the array lengths if we have a struct
+			auto members = info.get_all_members();
+			std::string struct_addr = get_address(allocated, r);
+			allocation_ss << struct_addr;
+			for (auto m: members) {
+				// we only need to do this for non-dynamic arrays
+				if (m->get_data_type().get_primary() == ARRAY && !m->get_data_type().get_qualities().is_dynamic()) {
+					// evaluate the array length expression and move it (an integer) into [R15 + offset]
+					allocation_ss << this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number()).str();
+					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;	
+				}
+			}
+
+			if (push_r15) {
+				allocation_ss << "\t" << "pop r15" << std::endl;
+			}
 		}
 	}
 	else {

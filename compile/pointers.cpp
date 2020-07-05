@@ -67,7 +67,7 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
 
         // ensure we are within the bounds of the array
         addr_ss << "\t" << "cmp [rbx], eax" << std::endl;
-        addr_ss << "\t" << "jle sinl_rtbounds_" << this->rtbounds_num << std::endl;
+        addr_ss << "\t" << "jg sinl_rtbounds_" << this->rtbounds_num << std::endl;
 
         // if we were out of bounds, call the appropriate function
         addr_ss << "\t" << "push rbp" << std::endl;

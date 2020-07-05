@@ -56,19 +56,27 @@ Arrays whose length is known at compile-time may be passed on the stack directly
 
     def void my_func(alloc array<10, int> arr) { ... }
 
-#### Variable-length (`dynamic`) arrays
+#### Dynamicall-sized (`dynamic`) arrays
 
-If a variable-length array is desired, the `dynamic` keyword may be used on the argument. For example:
+If a dynamicall-sized array is desired, the `dynamic` keyword may be used on the argument. For example:
 
     def void my_func(alloc dynamic array<int> arr) { ... }
 
 This will create a _new_ resource and copy the data from the source (argument supplied) into the space pointed to by `arr`. This can be wasteful, so if the array doesn't need to be modified, consider using `ptr<final array>` instead.
 
-An example of variable-length arrays as function parameters is in the program's entry point, `main`. The proper signature for `main` is:
+However, a dynamically-sized array is not resizeable; once initialized, their lengths, like all arrays, are fixed. For dynamic arrays as struct members, an allocation expression _(note: not yet implemented)_ may be used to specify the length. If a dynamic array is allocated, but its width unspecified, the SRE allocation will be delayed until an assignment is made, in which case the MAM will allocate an array of the proper size (the size of the array being copied) on the heap and perform the copy. For example:
+
+    alloc array<5, int> a: {0, 1, 2, 3, 4};
+    alloc array<int> b &dynamic;    // allocation is deferred
+    let b = a; // allocates array 'b' with length 5 on the heap
+
+If you wish to have arrays that you can resize, you must implement this yourself.
+
+An example of dynamically-sized arrays as function parameters is in the program's entry point, `main`. The proper signature for `main` is:
 
     def int main(alloc dynamic array<string> args) { ... }
 
-Note the compiler will allow a return type other than `int`, though a warning will be generated. It will also allow a definition of `main` with no parameters, but any parameters aside from a `dynamic array<string>` will be rejected at compile-time.
+_Note:_ the compiler will allow a return type other than `int`, though a warning will be generated. It will also allow a definition of `main` with no parameters, but any parameters aside from a `dynamic array<string>` will be rejected at compile-time.
 
 #### Pointers to arrays
 
