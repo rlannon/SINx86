@@ -120,6 +120,9 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
                 }
             }
 
+            // move r15 into rax, as r15 contains the address of the list
+            evaluation_ss << "\t" << "mov rax, r15" << std::endl;
+
             // restore R15 and RCX, if we pushed them
             if (pushed_r15) {
                 evaluation_ss << "\t" << "pop r15" << std::endl;
