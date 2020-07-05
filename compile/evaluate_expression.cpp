@@ -63,7 +63,84 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case LIST:
         {
-			// todo: evaluate list expressions (using pointers)
+            // evaluate a list expression
+
+            // todo: would it be better to just iterate on an assignment and copy into the list? or is it better to use array_copy (as we are doing now)?
+            
+            // create our label
+            std::string list_label = "sinl_list_literal_" + std::to_string(this->list_literal_num);
+            this->list_literal_num += 1;
+
+            // preserve R15, as it will be used to keep track of where our list is
+            bool pushed_r15 = false;
+            if (this->reg_stack.peek().is_in_use(R15)) {
+                symbol *contained = this->reg_stack.peek().get_contained_symbol(R15);
+                if (contained) {
+                    contained->set_register(NO_REGISTER);
+                    this->reg_stack.peek().clear(R15);
+                }
+                else {
+                    evaluation_ss << "\t" << "push r15" << std::endl;
+                    pushed_r15 = true;
+                }
+            }
+
+            // get our type information
+            DataType t = get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
+            auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
+            size_t offset = 0;
+            
+            // get the address in RDI
+            evaluation_ss << "\t" << "lea rdi, [" << list_label << "]" << std::endl;
+
+            // now, iterate
+            for (auto m: le->get_list()) {
+                // first, make sure the type of this expression matches the list's subtype
+                DataType member_type = get_expression_data_type(m, this->symbols, this->structs, line);
+                
+                // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
+                
+                if (member_type == *t.get_full_subtype()) {
+                    // evaluate the expression
+                    evaluation_ss << this->evaluate_expression(m, line).str();
+
+                    // store it in [r15 + offset]
+                    std::string rax_name = register_usage::get_register_name(RAX, member_type);
+                    evaluation_ss << "mov [r15 + " << offset << "], " << rax_name << std::endl;
+
+                    // update the offset within the list of the element to which we are writing
+                    offset += member_type.get_width();
+                }
+                else {
+                    throw CompilerException(
+                        "Type mismatch (lists must be homogeneous)",
+                        compiler_errors::TYPE_ERROR,
+                        line
+                    );
+                }
+            }
+
+            // restore R15 and RCX, if we pushed them
+            if (pushed_r15) {
+                evaluation_ss << "\t" << "pop r15" << std::endl;
+            }
+
+            // finally, utilize the .bss section and the 'res' directive for our list
+            std::string res_instruction;
+            if (t.get_width() == 8) {
+                res_instruction = "resq";
+            }
+            else if (t.get_width() == 4) {
+                res_instruction = "resd";
+            }
+            else if (t.get_width() == 2) {
+                res_instruction = "resw";
+            }
+            else {
+                res_instruction = "resb";
+            }
+            this->bss_segment << list_label << ": " << res_instruction << " " << le->get_list().size() << std::endl;
+            
             break;
         }
         case BINARY:

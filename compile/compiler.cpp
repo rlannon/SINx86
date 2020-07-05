@@ -637,6 +637,7 @@ compiler::compiler() {
     this->strc_num = 0;
     this->fltc_num = 0;
     this->rtbounds_num = 0;
+    this->list_literal_num = 0;
     this->scope_block_num = 0;
     this->max_offset = 8;   // should be 8 (a qword) because of the way the x86 stack works
     
