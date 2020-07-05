@@ -521,6 +521,7 @@ void compiler::generate_asm(std::string filename) {
         this->text_segment << "%define _SRE_INCLUDE_" << std::endl;
         this->text_segment << "%include \"../SRE/src/asm/asm_include.s\"" << std::endl; // todo: better linkage to SRE
         this->text_segment << "%endif" << std::endl;
+        this->text_segment << "default rel" << std::endl;   // use 'default rel' to ensure we have PIC
 		this->text_segment << this->compile_ast(ast).str();
 
 		std::cout << "Consolidating code..." << std::endl;
