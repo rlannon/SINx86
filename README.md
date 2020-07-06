@@ -62,6 +62,17 @@ Note that SIN programs utilize the C standard library (and certain functionality
 
 I intend on using [GitHub Pages](rlannon.github.com/SINx86) for introductory programming materials. Note that currently, not everything is up-to-date, and the site will be updated periodically.
 
+To build projects, the following steps should be followed:
+
+* Ensure `make` is installed
+* Build the SRE using the provided makefile
+* Build the compiler using the provided makefile
+* Build all requisite `.sin` files for your project using `sinx86`
+* Assemble them using `nasm`; I suggest `nasm -f elf64 <path to assembly file>`, optionally specifying the `.o` files with the `-o` option and allowing debug symbols with the `-g` option
+* Link with G++ using `g++ <list object files> -L <path to SRE> -l SRE`, again optionally specifying the outfile with `-o`
+
+There is really no reason you shouldn't be able to utilize `make` for SIN projects; in fact, it would probably make your life quite a bit easier.
+
 ## Future Goals
 
 I hope to use this project as a stepping stone to develop other languages and explore other features, such as compilers for object-oriented programming languages. For this project specifically, I hope to add in:
