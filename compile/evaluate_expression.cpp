@@ -90,8 +90,13 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
             size_t offset = 0;
             
-            // get the address in R15
+            // get the address in R15; write in the length
             evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
+            evaluation_ss << "\t" << "mov eax, " << le->get_list().size() << std::endl;
+            evaluation_ss << "\t" << "mov [r15], eax" << std::endl;
+
+            // increment the pointer by one dword
+            evaluation_ss << "\t" << "add r15, " << sin_widths::INT_WIDTH << std::endl;
 
             // now, iterate
             for (auto m: le->get_list()) {
@@ -105,9 +110,15 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
                     evaluation_ss << this->evaluate_expression(m, line).str();
 
                     // store it in [r15 + offset]
-                    std::string rax_name = register_usage::get_register_name(RAX, member_type);
-                    evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << rax_name << std::endl;
-
+                    if (member_type.get_primary() == FLOAT) {
+                        std::string inst = member_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
+                        evaluation_ss << "\t" << inst << " [r15 + " << offset << "], xmm0" << std::endl;
+                    }
+                    else {
+                        std::string reg_name = register_usage::get_register_name(RAX, member_type);
+                        evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << reg_name << std::endl;
+                    }
+                    
                     // update the offset within the list of the element to which we are writing
                     offset += member_type.get_width();
                 }
@@ -120,8 +131,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
                 }
             }
 
-            // move r15 into rax, as r15 contains the address of the list
-            evaluation_ss << "\t" << "mov rax, r15" << std::endl;
+            // move the list address into RAX
+            evaluation_ss << "\t" << "lea rax, [" << list_label << "]" << std::endl;
 
             // restore R15 and RCX, if we pushed them
             if (pushed_r15) {
@@ -142,7 +153,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
             else {
                 res_instruction = "resb";
             }
-            this->bss_segment << list_label << ": " << res_instruction << " " << le->get_list().size() << std::endl;
+            this->bss_segment << list_label << ": resd 1" << std::endl; 
+            this->bss_segment << list_label << "_data: " << res_instruction << " " << le->get_list().size() << std::endl;
             
             break;
         }
@@ -350,7 +362,26 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
             throw CompilerException("Invalid type width", 0, line);
         }
     } else if (type.get_primary() == FLOAT) {
-        // todo: handle floats
+        /*
+
+        Floats cannot be used as immediate values; as such, we will need to define them in the .data section and load XMM0
+        If there is no width specifier used on the literal, we will default to float (not double)
+
+        */
+
+        std::string float_label = "sinl_fltc_" + std::to_string(this->fltc_num);
+        this->fltc_num += 1;
+
+        // todo: check to see if the width was specified with a type suffix
+
+        // if we have a single-precision
+        std::string res_directive = "dd";
+        std::string inst = "movss";
+
+        // todo: double-precision
+
+        data_segment << float_label << ": " << res_directive << " " << to_evaluate.get_value() << std::endl;
+        eval_ss << "\t" << inst << " xmm0, [" << float_label << "]" << std::endl;
     } else if (type.get_primary() == BOOL) {
         /*
 

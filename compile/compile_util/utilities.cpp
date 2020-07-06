@@ -395,6 +395,8 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
     std::vector<symbol> members;
     size_t current_offset = 0;
     for (std::shared_ptr<Statement> s: definition.get_procedure()->statements_list) {
+        size_t this_width = 0;
+
         // Only allocations are allowed within a struct body
         if (s->get_statement_type() == ALLOCATION) {
             // cast to Allocation and create a symbol
@@ -422,10 +424,14 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
                     );
                     array_length = array_length * alloc->get_type_information().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
                     alloc->get_type_information().set_array_length(array_length);
+                    this_width = array_length;
                 }
                 else {
                     throw NonConstArrayLengthException(definition.get_line_number());
                 }
+            }
+            else {
+                this_width = alloc->get_type_information().get_width();
             }
 
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
@@ -438,7 +444,7 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
 
             // update the data offset
             // todo: handle struct and array members
-            current_offset += alloc->get_type_information().get_width();
+            current_offset += this_width;
         } else {
             throw StructDefinitionException(definition.get_line_number());
         }
