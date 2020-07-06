@@ -101,6 +101,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		);
 	}
 	else if (current_lex.type == IDENTIFIER) {
+		// make an LValue expression
 		left = std::make_shared<LValue>(current_lex.value);
 	}
 	// if we have a keyword to begin an expression, parse it (could be a sizeof expression)

@@ -45,9 +45,11 @@ class Literal : public Expression
 	DataType type;
 	std::string value;
 public:
+	void set_type(DataType t);
 	DataType get_data_type();
 	std::string get_value();
 	Literal(Type data_type, std::string value, Type subtype = NONE);
+	Literal(DataType t, std::string value);
 	Literal();
 };
 

@@ -216,11 +216,26 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
                 // check to make sure the typecast itself is valid (follows the rules)
                 DataType old_type = get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
                 if (is_valid_cast(old_type, c->get_new_type())) {
-                    // to perform the typecast, we must first evaluate the expression to be casted
-                    evaluation_ss << this->evaluate_expression(c->get_exp(), line).str();
+                    // if we are casting a literal integer or float to itself (but with a different width), create a new Literal
+                    if (
+                        (c->get_exp()->get_expression_type() == LITERAL) &&
+                        (old_type.get_primary() == c->get_new_type().get_primary()) &&
+                        (old_type.get_primary() == INT || old_type.get_primary() == FLOAT)
+                    ) {
+                        // update the type
+                        std::shared_ptr<Literal> contained = std::dynamic_pointer_cast<Literal>(c->get_exp());
+                        contained->set_type(c->get_new_type());
 
-                    // now, use the utility function to actually cast the type
-                    evaluation_ss << cast(old_type, c->get_new_type(), line).str();
+                        // now, evaluate
+                        evaluation_ss << this->evaluate_expression(contained, line).str();
+                    }
+                    else {
+                        // to perform the typecast, we must first evaluate the expression to be casted
+                        evaluation_ss << this->evaluate_expression(c->get_exp(), line).str();
+
+                        // now, use the utility function to actually cast the type
+                        evaluation_ss << cast(old_type, c->get_new_type(), line).str();
+                    }
                 }
                 else {
                     throw InvalidTypecastException(line);

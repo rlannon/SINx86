@@ -2,13 +2,13 @@
 // test array struct members
 
 def struct MyStruct {
-    alloc array<5, int> i;
+    alloc array<10, int> i;
     alloc array<5, float> f;
 }
 
 def int main() {
     alloc MyStruct m;
-    let m.i = {0, 1, 2, 3, 4};
+    let m.i = {-5, -4, -3, -2, -1, 0, 1, 2, 3, 4};
     let m.f = {0.0, 1.1, 2.2, 3.3, 4.4};
 
     alloc int x;
