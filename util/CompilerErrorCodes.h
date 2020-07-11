@@ -25,6 +25,7 @@ namespace compiler_errors {
     const unsigned int DATA_WIDTH_ERROR = 3;
     const unsigned int UNKNOWN_LENGTH_ERROR = 5;
 	const unsigned int CONST_ALLOCATION_ERROR = 11;	// constants must be initialized in their allocation
+    const unsigned int STATIC_MEMORY_INITIALIZATION_ERROR = 15;
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
 	const unsigned int DUPLICATE_DEFINITION_ERROR = 31;	// The definition for this resource was already found
 	const unsigned int NON_MODIFIABLE_LVALUE_ERROR = 40;	// left hand expressions in assignments must be modifiable-lvalues

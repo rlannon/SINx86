@@ -2,6 +2,8 @@
 
 ## Assignment and Movement
 
+_Note: this document describes certain features which have not yet been implemented into the SIN compiler._
+
 SIN supports two methods of data assignment, `let` and `move`. While they can be interchangeable, they perform slightly different functions when used with references and dynamic data. As such, it is generally advised that, to maintain clarity, programmers stick with `let` for simple assignment and data copying, and only use `move` when they intend on changing a referent and transfering object ownership.
 
 ### Assignment
@@ -41,6 +43,8 @@ There are a few assignment operators you may use with `let`:
 | `^=` | Bit-XOR of LHS by RHS | `let a = a ^ b` |
 
 ### Movement
+
+_Note: not yet implemented in SIN._
 
 Sometimes, we want to *move* data instead of *copy* it, especially if we have large dynamically-allocated objects. For non-references and non-dynamic data, this ultimately copies the data, but if we are utilizing references or dynamic memory, we can move the data by copying its reference into a new location. For example:
 

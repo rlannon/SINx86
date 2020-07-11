@@ -166,6 +166,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				width_suffix = 'q';
 			}
 
+			// get the initial value of the static memory, if we have one we can use
 			std::string initial_value = "";
 			if (alloc_stmt.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
 				initial_value = this->evaluator.evaluate_expression(
@@ -192,6 +193,14 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			else if (allocated.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
 				// static, non-const, initialized data
 				this->data_segment << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
+			}
+			else if (allocated.was_initialized()) {
+				// if we have an initial value that is not constant, throw an exception; that isn't allowed
+				throw CompilerException(
+					"Static data must be initialized to a compile-time constant or not at all (default initialized to 0)",
+					compiler_errors::STATIC_MEMORY_INITIALIZATION_ERROR,
+					alloc_stmt.get_line_number()
+				);
 			}
 			else if (allocated.get_data_type().get_primary() == ARRAY) {
 				// static, non-const, array data -- define the width, reserve the appropriate number of bytes
