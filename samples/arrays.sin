@@ -4,6 +4,7 @@
 decl void print(decl string s);
 
 alloc static array<5, short int> my_static_array;
+alloc static const array<9, short int> binary_numbers: {0, 1, 2, 4, 8, 16, 32, 64, 128};
 
 def unsigned int main() {
     alloc array<10, int> my_arr;

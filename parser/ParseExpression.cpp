@@ -71,21 +71,32 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	}
 	// list expressions (array literals) have to be handled slightly differently than other expressions
 	else if (current_lex.value == "{") {
-		this->next();
 		std::vector<std::shared_ptr<Expression>> list_members = {};
 
 		// as long as the next token is a comma, we have elements to parse
-		while (this->peek().value != "}" && this->peek().value != ";") {
-			list_members.push_back(this->parse_expression(prec, "{"));
+		lexeme peeked = this->peek();
+		while (peeked.value != "}") {
 			this->next();	// skip the last character of the expression
+			try {
+				list_members.push_back(this->parse_expression(prec, "{"));
+			}
+			catch (std::exception &e) {
+				throw CompilerException(
+					"Unexpected token while parsing list expression",
+					compiler_errors::INVALID_TOKEN,
+					this->current_token().line_number
+				);
+			}
+			peeked = this->peek();
 		}
+		this->next();
 
 		// once we escape the loop, we must find a closing curly brace
 		if (this->peek().value == ";") {
 			left = std::make_shared<ListExpression>(list_members);
 		}
 		else {
-			throw InvalidTokenException(this->peek().value, this->peek().line_number);
+			throw MissingSemicolonError(this->current_token().line_number);
 		}
 	}
 	// if expressions are separated by commas, continue parsing the next one
@@ -194,6 +205,10 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				left = std::make_shared<Unary>(operand, unary_op);
 			}
 		}
+	}
+	// for safety, we need an else case
+	else {
+		throw InvalidTokenException(this->peek().value, this->peek().line_number);
 	}
 
 	// peek ahead at the next symbol; we may have a postfixed constexpr quality
