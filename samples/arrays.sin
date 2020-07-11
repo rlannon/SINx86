@@ -1,6 +1,10 @@
 // arrays.sin
 // a sample of array functionality
 
+decl void print(decl string s);
+
+alloc static array<5, short int> my_static_array;
+
 def unsigned int main() {
     alloc array<10, int> my_arr;
     alloc array<5, int> second_arr: {0, 1, 2, 3, 4};
@@ -9,6 +13,20 @@ def unsigned int main() {
     alloc ptr<array<int>> p: $second_arr;
     alloc int x;
     let x = (*p)[2];
+
+    let my_static_array[0] = 1;
+    let my_static_array[1] = 2;
+    let my_static_array[2] = 4;
+    let my_static_array[3] = 8;
+    let my_static_array[4] = 16;
+
+    alloc int t: my_static_array[4];
+    if (t = 16) {
+        @print("t is 16!\n");
+    }
+    else {
+        @print("Something broke.\n");
+    }
 
     return 0;
 }

@@ -156,6 +156,11 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
                 dest = "[rbx]";
                 gen_code << "\t" << "mov rbx, " << location << std::endl;
             }
+            else if (requires_copy(sym.get_data_type())) {
+                // if we don't have a string but we do require a copy, use lea
+                dest = "[rbx]";
+                gen_code << "\t" << "lea rbx, " << location << std::endl;
+            }
             else {
                 dest = location;
             }
@@ -165,7 +170,7 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
     return std::make_pair<>(dest, gen_code.str());
 }
 
-bool assign_utilities::requires_copy(DataType &t) {
+bool assign_utilities::requires_copy(DataType t) {
     /*
 
     requires_copy

@@ -35,5 +35,5 @@ namespace assign_utilities {
         reg r = RBX,
         bool is_initialization = false
     );
-    bool requires_copy(DataType &t);
+    bool requires_copy(DataType t);
 };

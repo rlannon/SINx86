@@ -51,6 +51,8 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
             this->reg_stack.peek().set(r);
         }
 
+        // the index value will be in eax and the array length will be in [rax]
+
         // evaluate the index value and multiply by the type width
         addr_ss << this->evaluate_expression(i->get_index_value(), line).str();
         
@@ -121,7 +123,7 @@ std::stringstream compiler::get_address_of(Unary &u, reg r, unsigned int line) {
         
         // look up the symbol; obtain the address based on its memory location
         std::shared_ptr<symbol> s = this->lookup(target->getValue(), line);
-        addr_ss << get_address(*s, RBX);
+        addr_ss << get_address(*s, r);
     }
     else if (u.get_operand()->get_expression_type() == INDEXED) {
 

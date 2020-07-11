@@ -145,12 +145,60 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
-			// static const variables can go in the .rodata segment, so check to see if it is also const
-			if (alloc_data.get_qualities().is_const()) {
-				// todo: static const memory
+			// we need to determine the width suffix (db, dw, resb, resw, etc)
+			size_t w = allocated.get_data_type().get_width();
+
+			// since arrays must contain a known-width type, we can just get the width of the subtype
+			if (allocated.get_data_type().get_primary() == ARRAY)
+				w = allocated.get_data_type().get_full_subtype()->get_width();
+			
+			char width_suffix;
+			if (w == sin_widths::BOOL_WIDTH) {
+				width_suffix = 'b';
+			}
+			else if (w == sin_widths::SHORT_WIDTH) {
+				width_suffix = 'w';
+			}
+			else if (w == sin_widths::INT_WIDTH) {
+				width_suffix = 'd';
 			}
 			else {
-				// todo: static, non-const memory
+				width_suffix = 'q';
+			}
+
+			std::string initial_value = "";
+			if (alloc_stmt.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
+				initial_value = this->evaluator.evaluate_expression(
+					alloc_stmt.get_initial_value(), 
+					"global", 
+					0, 
+					alloc_stmt.get_line_number()
+				);
+			}
+
+			// static const variables can go in the .rodata segment, so check to see if it is also const
+			if (alloc_data.get_qualities().is_const()) {
+				// static const memory
+				this->rodata_segment << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
+			}
+			else if (allocated.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
+				// static, non-const, initialized data
+				this->data_segment << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
+			}
+			else if (allocated.get_data_type().get_primary() == ARRAY) {
+				// static, non-const, array data -- define the width, reserve the appropriate number of bytes
+				this->data_segment << allocated.get_name() << " dd " << alloc_data.get_array_length() << std::endl;
+				this->data_segment << "times " << alloc_data.get_array_length() << " d" << width_suffix << " 0" << std::endl;
+			}
+			else {
+				// static, non-const, uninitialized data
+				if (allocated.get_data_type().get_primary() == STRUCT) {
+					// structs can just reserve bytes according to their total width
+					this->bss_segment << allocated.get_name() << " resb " << data_width << std::endl;
+				}
+				else {
+					this->bss_segment << allocated.get_name() << " res" << width_suffix << " 1" << std::endl;
+				}
 			}
 		}
 		else {
@@ -210,6 +258,9 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			}
 
+			// subtract the width of the type from RSP
+			allocation_ss << "\t" << "sub rsp, " << data_width << std::endl;
+
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
 				// get the initial value
@@ -221,9 +272,6 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// mark the symbol as initialized
 				allocated.set_initialized();
 			}
-
-			// subtract the width of the type from RSP
-			allocation_ss << "\t" << "sub rsp, " << data_width << std::endl;
 
 			// add it to the table
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
@@ -252,7 +300,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				r = R15;
 			}
 
-			// iterate through the struct members, initializing the array lengths if we have a struct
+			// if we have a struct, iterate through its members and initialize the array lengths
 			auto members = info.get_all_members();
 			std::string struct_addr = get_address(allocated, r);
 			allocation_ss << struct_addr;
