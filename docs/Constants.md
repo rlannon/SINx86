@@ -4,10 +4,10 @@
 
 SIN utilizes a few different keywords when talking about constant values, as there are two types of constants:
 
-* Compile-time constants (like C++'s `const` or `constexpr`)
-* Runtime constants (like Java's `final`)
+* Compile- or link-time constants
+* Runtime constants
 
-The difference here is fairly subtle, but very significant; a compile-time constant in SIN *must* be assigned with a `constexpr` or a literal value whereas a runtime constant is one whose value may be unknown at compile time, but canot change after initialization. This is more akin to Java's `final` keyword, which indicates that the *reference* may not change once it is assigned.
+The difference here is somewhat subtle, but very significant; a compile-time constant in SIN *must* be assigned with a `constexpr` or a literal value whereas a runtime constant is one whose value may be unknown at compile time, but canot change after initialization. This is more akin to Java's `final` keyword, which indicates that the *reference* may not change once it is assigned.
 
 In SIN, the words `const` and `final` are used for this distinction:
 
@@ -39,7 +39,7 @@ When the `constexpr` keyword is used, however, *all* data within must be known a
 
     alloc int a: 10;
     alloc const int b: 20;
-    alloc const int c: constexpr (a + b); // illegal; a is not const-qualified
+    alloc const int c: constexpr (a + b); // illegal; 'a' is not const-qualified
 
 To save on compilation time, expressions are assumed to be known only at runtime (and therefore their evaluation is ignored by the compiler) unless the `constexpr` keyword is used, in which case the compiler will attempt to evaluate the expression and use the result in the generated code instead of generating code for the expression's evaluation. As such, a statement like:
 
