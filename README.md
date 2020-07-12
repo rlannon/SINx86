@@ -29,7 +29,7 @@ For more information, check out the [guide](Basic%20Syntax.md).
 
 I cannot stress enough that this is a *learning exercise,* not an attempt at creating the next Python or Rust. This project is a hands-on way of learning compiler development. The purpose is not to create a particularly good compiler, but rather to serve as an exercise in compiler design and implementation. I intend on producing a *functioning* compiler, one that can be improved and expanded upon in the future. The goal is to generate code that *works,* and while I hope to improve the efficiency and overall funcionality of the compiler in the future, it is somewhat bodged together right now.
 
-The fact that it's a learning exercise should explain why I decided to write a parser by hand, instead of using yacc/lex/bison/some other tool; doing so would not have allowed me to learn how parsers (can) work as deeply as I did by writing this one. It should also explain why I'm compiling directly from an abstract syntax tree into assembly, rather than using an intermediate representation like lldb.
+The fact that it's a learning exercise should explain why I decided to write a parser by hand, instead of using yacc/lex/bison/some other tool; doing so would not have allowed me to learn how parsers (can) work as deeply as I did by writing this one. It should also explain why I'm compiling directly from an abstract syntax tree into assembly, rather than using an intermediate representation like llvm, GNU RTL, or even C.
 
 In other words: this compiler isn't *supposed* to be any good. The language spec might be alright, but if you try to use this to actually write any software, you've been warned.
 
