@@ -141,13 +141,14 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 
             // finally, utilize the .bss section and the 'res' directive for our list
             std::string res_instruction;
-            if (t.get_width() == 8) {
+            size_t subtype_width = t.get_full_subtype()->get_width();
+            if (subtype_width == 8) {
                 res_instruction = "resq";
             }
-            else if (t.get_width() == 4) {
+            else if (subtype_width == 4) {
                 res_instruction = "resd";
             }
-            else if (t.get_width() == 2) {
+            else if (subtype_width == 2) {
                 res_instruction = "resw";
             }
             else {
