@@ -81,44 +81,4 @@ An important aspect of structures is that they are constructed when they are ini
 
 _(Note that the `point` in the construct expression is not strictly necessary when using alloc-init syntax, as the type is already known)_
 
-However, this keyword may be used in four distinct scenarios:
-
-* Initialization with alloc-init syntax
-* New struct creation (replacement of alloc-init syntax)
-* Whole struct assignment
-* Struct replacement via anonymous struct creation
-
-The above example used alloc-init syntax. If a struct contains references, this will still work because a new struct is created that replaces the old one. For example, this code is valid:
-
-    alloc int x: 10;
-    alloc int y: 10;
-    def struct m {
-        alloc ref<int> r;
-    }
-
-    // alloc-init intialization
-    alloc m m1: construct {
-        r: $x,
-    };
-
-    // new struct creation without 'alloc'
-    construct point p1 {
-        x: 10,
-        y: 20,
-        z: 30,
-    };
-
-    // struct assignment
-    alloc point origin;
-    construct origin {
-        x: 0,
-        y: 0,
-        z: 0,
-    }
-
-    // struct replacement with an anonymous struct
-    let m1 = construct point {
-        r: $y,
-    };
-
-Typically, references are immutable, but in this instance, the entire struct `m1` is deleted and replaced with a new object. This means that we aren't really altering its references, we are replacing them.
+For more information on construction, see the relevant document on [type construction](Construction.md).
