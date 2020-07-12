@@ -530,14 +530,29 @@ void compiler::generate_asm(std::string filename) {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
             std::shared_ptr<symbol> main_function = this->lookup("main", 0);
             function_symbol main_symbol = *dynamic_cast<function_symbol*>(main_function.get());
+            
+            // 'main' should have a return type of 'int'; if not, issue a warning
+            if (main_function->get_data_type().get_primary() != INT) {
+                compiler_warning(
+                    "Function 'main' should have a return type of 'int'",
+                    compiler_errors::MAIN_SIGNATURE,
+                    main_function->get_line_defined()
+                );
+            }
+
+            // check parameters; should have one with type 'dynamic array<string>'
+            if (main_symbol.get_formal_parameters().size() != 1) {
+                compiler_warning(
+                    "Function 'main' should include one argument, 'dynamic array<string> args'",
+                    compiler_errors::MAIN_SIGNATURE,
+                    main_function->get_line_defined()
+                );
+            }
+            
             // todo: get actual command-line arguments, convert them into SIN data types
             std::vector<std::shared_ptr<Expression>> cmd_args = {};
             for (symbol s: main_symbol.get_formal_parameters()) {
-                if (s.get_data_type().get_primary() == INT) {
-                    cmd_args.push_back(
-                        std::make_shared<Literal>(Type::INT, "0")
-                    );
-                }
+                // todo: get argument
             }
 
             // add 'extern' for every symbol that needs it

@@ -3,7 +3,7 @@
 
 decl void print(decl string s);
 
-def int main() {
+def void main() {	// should generate a warning because it returns void
 	alloc int x: 10;
 	alloc int y: 20;
 	alloc int z: 30;
@@ -12,11 +12,11 @@ def int main() {
 	let n = x + y * z;
 
 	if (n = 610) {
-		@print("It works!");
+		@print("It works!\n");
 	}
 	else {
-		@print("Err");
+		@print("Err\n");
 	}
 
-	return 0;
+	return void;
 }

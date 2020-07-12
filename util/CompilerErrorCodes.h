@@ -91,4 +91,5 @@ namespace compiler_errors {
 
     // Warning codes
     const unsigned int UNSAFE_OPERATION = 501;
+    const unsigned int MAIN_SIGNATURE = 505;    // 'main' should return an integer and have one argument
 };
