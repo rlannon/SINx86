@@ -23,6 +23,15 @@ CompilerException::CompilerException(const std::string& message, unsigned int co
 	this->message = "**** Compiler error C" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
 
+NonConstArrayLengthException::NonConstArrayLengthException(unsigned int line):
+CompilerException(
+	"Array length must be an integer constant or declared as 'dynamic'; use a literal or 'constexpr'",
+	compiler_errors::UNKNOWN_LENGTH_ERROR,
+	line
+) {
+	// super called
+}
+
 InvisibleSymbolException::InvisibleSymbolException(unsigned int line):
 	CompilerException(
 		"Attempt to include a non-globalized symbol in SIN file; use Declarative SIN or \"extern\"",
@@ -271,6 +280,15 @@ ConstAllocationException::ConstAllocationException(unsigned int line) :
 	// super called
 }
 
+ConstInitializationException::ConstInitializationException(unsigned int line) :
+CompilerException(
+	"Constanst must be initialized with a compile-time constant",
+	compiler_errors::NON_CONST_VALUE_ERROR,
+	line
+) {
+	// super called
+}
+
 InvalidTypecastException::InvalidTypecastException(unsigned int line) :
 	CompilerException(
 		"Illegal typecast",
@@ -281,6 +299,14 @@ InvalidTypecastException::InvalidTypecastException(unsigned int line) :
 		// super called
 }
 
+IllegalIndirectionException::IllegalIndirectionException(unsigned int line) :
+CompilerException(
+	"Illegal indirection; must have pointer type",
+	compiler_errors::ILLEGAL_INDIRECTION,
+	line
+) {
+	// super called
+}
 
 // Warnings and notes
 

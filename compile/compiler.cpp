@@ -163,16 +163,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
                 // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
                 auto include = dynamic_cast<Include*>(s.get());
-                if (this->compiled_headers.count(include->get_filename())) {
-                    // ignore include, generate a note saying as much
-                    compiler_note(
-                        "Included file \"" + include->get_filename() + "\" will be ignored here, as it has been included elsewhere",
-                        include->get_line_number()
-                    );
-                }
-                else {
-                    compile_ss << this->process_include(include->get_filename()).str();
-                }
+                compile_ss << this->process_include(include->get_filename(), include->get_line_number()).str();
             }
             else {
                 throw CompilerException(
@@ -206,7 +197,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         case ASSIGNMENT:
         {
             Assignment *assign_stmt = dynamic_cast<Assignment*>(s.get());
-            compile_ss << this->assign(*assign_stmt).str() << std::endl;
+            compile_ss << this->handle_assignment(*assign_stmt).str() << std::endl;
             break;
         }
         case RETURN_STATEMENT:
@@ -291,7 +282,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 		{
 			StructDefinition *def_stmt = dynamic_cast<StructDefinition*>(s.get());
 
-			struct_info defined = define_struct(*def_stmt);
+			struct_info defined = define_struct(*def_stmt, this->evaluator);
 			this->add_struct(defined, s->get_line_number());
 
 			break;
@@ -348,7 +339,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compile_ss << this->compile_ast(ast, signature).str();
 
             // free local data
-            compile_ss << decrement_rc(this->symbols, this->current_scope_name, this->current_scope_level, false).str();
+            compile_ss << decrement_rc(this->reg_stack.peek(), this->symbols, this->current_scope_name, this->current_scope_level, false).str();
             
             // restore the scope level
             this->current_scope_level = old_scope_level;
@@ -395,7 +386,7 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
     return compile_ss;
 }
 
-std::stringstream compiler::process_include(std::string include_filename) {
+std::stringstream compiler::process_include(std::string include_filename, unsigned int line) {
     /*
 
     process_include
@@ -412,63 +403,80 @@ std::stringstream compiler::process_include(std::string include_filename) {
         include_filename = this->file_path + include_filename;
     }
 
-    // create the AST
-    auto sin_parser = new Parser(include_filename);
-    StatementBlock ast = sin_parser->create_ast();
-    delete sin_parser;
+    // check to see if this file was already included (with the proper path)
+    if (this->compiled_headers.count(include_filename)) {
+        compiler_note(
+            "Included file \"" + include_filename + "\" will be ignored here, as it has been included elsewhere",
+            line
+        );
+    }
+    // if not, compile it
+    else {
+        // create the AST
+        auto sin_parser = new Parser(include_filename);
+        StatementBlock ast = sin_parser->create_ast();
+        delete sin_parser;
 
-    // walk through the AST and handle relevant statements
-    for (std::shared_ptr<Statement> s: ast.statements_list) {
-        if (s->get_statement_type() == ALLOCATION) {
-            auto a = dynamic_cast<Allocation*>(s.get());
+        // walk through the AST and handle relevant statements
+        for (std::shared_ptr<Statement> s: ast.statements_list) {
+            if (s->get_statement_type() == ALLOCATION) {
+                auto a = dynamic_cast<Allocation*>(s.get());
 
-            // allocations must be qualified with 'extern'
-            if (a->get_type_information().get_qualities().is_extern()) {
-                // add the symbol
-                auto sym = generate_symbol(
-                    *a,
-                    a->get_type_information().get_width(),
-                    "global",
-                    0,
-                    this->max_offset,
-                    false
-                );
-                this->add_symbol(sym, a->get_line_number());
+                // allocations must be qualified with 'extern'
+                if (a->get_type_information().get_qualities().is_extern()) {
+                    // add the symbol
+                    auto sym = generate_symbol(
+                        *a,
+                        a->get_type_information().get_width(),
+                        "global",
+                        0,
+                        this->max_offset,
+                        false
+                    );
+                    this->add_symbol(sym, a->get_line_number());
+                }
+                else {
+                    throw InvisibleSymbolException(a->get_line_number());
+                }
+            }
+            else if (s->get_statement_type() == FUNCTION_DEFINITION) {
+                auto f = dynamic_cast<FunctionDefinition*>(s.get());
+
+                // function definitions must be 'extern'
+                if (f->get_type_information().get_qualities().is_extern()) {
+                    // create the function symbol
+                    auto sym = create_function_symbol(
+                        *f,
+                        false
+                    );
+                    this->add_symbol(sym, f->get_line_number());
+                }
+                else {
+                    throw InvisibleSymbolException(f->get_line_number());
+                }
+            }
+            else if (s->get_statement_type() == STRUCT_DEFINITION) {
+                // included struct definitions
+                auto d = dynamic_cast<StructDefinition*>(s.get());
+                struct_info s_info = define_struct(*d, this->evaluator);
+                this->add_struct(s_info, d->get_line_number());
+            }
+            else if (s->get_statement_type() == DECLARATION) {
+                auto d = dynamic_cast<Declaration*>(s.get());
+                include_ss << this->handle_declaration(*d).str();
+            }
+            else if (s->get_statement_type() == INCLUDE) {
+                auto inc = dynamic_cast<Include*>(s.get());
+                include_ss << this->process_include(inc->get_filename(), inc->get_line_number()).str();
             }
             else {
-                throw InvisibleSymbolException(a->get_line_number());
+                // ignore all other statements
+                continue;
             }
         }
-        else if (s->get_statement_type() == FUNCTION_DEFINITION) {
-            auto f = dynamic_cast<FunctionDefinition*>(s.get());
 
-            // function definitions must be 'extern'
-            if (f->get_type_information().get_qualities().is_extern()) {
-                // create the function symbol
-                auto sym = create_function_symbol(
-                    *f,
-                    false
-                );
-                this->add_symbol(sym, f->get_line_number());
-            }
-            else {
-                throw InvisibleSymbolException(f->get_line_number());
-            }
-        }
-        else if (s->get_statement_type() == STRUCT_DEFINITION) {
-            // included struct definitions
-            auto d = dynamic_cast<StructDefinition*>(s.get());
-            struct_info s_info = define_struct(*d);
-            this->add_struct(s_info, d->get_line_number());
-        }
-        else if (s->get_statement_type() == DECLARATION) {
-            auto d = dynamic_cast<Declaration*>(s.get());
-            include_ss << this->handle_declaration(*d).str();
-        }
-        else {
-            // ignore all other statements
-            continue;
-        }
+        // mark the file as included (with the proper path)
+        this->compiled_headers.insert(include_filename);
     }
 
     return include_ss;
@@ -513,6 +521,7 @@ void compiler::generate_asm(std::string filename) {
         this->text_segment << "%define _SRE_INCLUDE_" << std::endl;
         this->text_segment << "%include \"../SRE/src/asm/asm_include.s\"" << std::endl; // todo: better linkage to SRE
         this->text_segment << "%endif" << std::endl;
+        this->text_segment << "default rel" << std::endl;   // use 'default rel' to ensure we have PIC
 		this->text_segment << this->compile_ast(ast).str();
 
 		std::cout << "Consolidating code..." << std::endl;
@@ -521,14 +530,29 @@ void compiler::generate_asm(std::string filename) {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
             std::shared_ptr<symbol> main_function = this->lookup("main", 0);
             function_symbol main_symbol = *dynamic_cast<function_symbol*>(main_function.get());
+            
+            // 'main' should have a return type of 'int'; if not, issue a warning
+            if (main_function->get_data_type().get_primary() != INT) {
+                compiler_warning(
+                    "Function 'main' should have a return type of 'int'",
+                    compiler_errors::MAIN_SIGNATURE,
+                    main_function->get_line_defined()
+                );
+            }
+
+            // check parameters; should have one with type 'dynamic array<string>'
+            if (main_symbol.get_formal_parameters().size() != 1) {
+                compiler_warning(
+                    "Function 'main' should include one argument, 'dynamic array<string> args'",
+                    compiler_errors::MAIN_SIGNATURE,
+                    main_function->get_line_defined()
+                );
+            }
+            
             // todo: get actual command-line arguments, convert them into SIN data types
             std::vector<std::shared_ptr<Expression>> cmd_args = {};
             for (symbol s: main_symbol.get_formal_parameters()) {
-                if (s.get_data_type().get_primary() == INT) {
-                    cmd_args.push_back(
-                        std::make_shared<Literal>(Type::INT, "0")
-                    );
-                }
+                // todo: get argument
             }
 
             // add 'extern' for every symbol that needs it
@@ -627,6 +651,9 @@ bool compiler::is_in_scope(symbol &sym) {
 compiler::compiler() {
     // initialize our number trackers
     this->strc_num = 0;
+    this->fltc_num = 0;
+    this->rtbounds_num = 0;
+    this->list_literal_num = 0;
     this->scope_block_num = 0;
     this->max_offset = 8;   // should be 8 (a qword) because of the way the x86 stack works
     

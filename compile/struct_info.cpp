@@ -67,18 +67,26 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
             size_t sym_width = s.get_data_type().get_width();
             if (sym_width == 0) {
 				if (s.get_data_type().get_qualities().is_dynamic()) {
-					this->struct_width += sin_widths::PTR_WIDTH;
+					sym_width = sin_widths::PTR_WIDTH;
 				}
+                else if (s.get_data_type().get_primary() == ARRAY) {
+                    sym_width = s.get_data_type().get_array_length();
+                }
 				else {
 					this->width_known = false;	// todo: should this throw an error?
 				}
-            } else {
-				this->struct_width += s.get_data_type().get_width();
-			}
+            }
+
+            this->struct_width += sym_width;
         } catch (std::exception &e) {
             throw DuplicateSymbolException(line);
         }
     }
+}
+
+std::vector<std::shared_ptr<symbol>> struct_info::get_all_members() {
+    // gets all struct members in a vector
+    return this->members.get_all_symbols();
 }
 
 struct_info::struct_info(std::string struct_name) {

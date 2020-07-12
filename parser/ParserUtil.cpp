@@ -11,7 +11,8 @@ Contains the implementations of various utility functions for the parser.
 #include "Parser.h"
 
 const std::unordered_map<std::string, exp_operator> Parser::op_strings({
-	{"->", MOVE_ASSIGN},
+	{"->", RIGHT_ARROW},
+	{"<-", LEFT_ARROW},
 	{"+=", PLUS_EQUAL},
 	{"-=", MINUS_EQUAL},
 	{"*=", MULT_EQUAL},
@@ -46,12 +47,14 @@ const std::unordered_map<std::string, exp_operator> Parser::op_strings({
 	{"*", DEREFERENCE},
 	{":", ATTRIBUTE_SELECTION},
 	{".", DOT},
+	{"[", INDEX},
 	{"@", CONTROL_TRANSFER},
 	{"::", SCOPE_RESOLUTION}
 });
 
 const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
-	{MOVE_ASSIGN, 1},	// there is also a move assignment operator 
+	{RIGHT_ARROW, 1},	// there is also a move assignment operator
+	{LEFT_ARROW, 1},
 	{PLUS_EQUAL, 1},
 	{MINUS_EQUAL, 1},
 	{MULT_EQUAL, 1},
@@ -89,6 +92,7 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{ATTRIBUTE_SELECTION, 23},
 	{CONTROL_TRANSFER, 25},
 	{DOT, 25},
+	{INDEX, 25},
 	{SCOPE_RESOLUTION, 30}
 });
 
@@ -598,6 +602,18 @@ calling_convention Parser::get_calling_convention(symbol_qualities sq, unsigned 
 	}
 
 	return c;
+}
+
+const bool Parser::is_valid_operator(lexeme l) {
+	// Checks whether the lexeme is a valid operator for maybe_binary
+	return (
+		l.type == OPERATOR ||
+		l.value == "[" ||
+		l.value == "as" ||
+		l.value == "and" ||
+		l.value == "or" || 
+		l.value == "xor"
+	);
 }
 
 const exp_operator Parser::get_unary_operator(std::string s) {

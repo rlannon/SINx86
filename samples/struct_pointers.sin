@@ -1,0 +1,23 @@
+// struct_pointers.sinc
+// A demo of struct pointer members
+
+def struct point {
+    alloc int x;
+    alloc int y;
+    alloc int z;
+    alloc ptr<int> p;
+}
+
+def int main (alloc extern int param) {
+    alloc int n: 10;
+    alloc int m: param;
+    
+    alloc dynamic point coord;
+    let coord.x = 0;
+    let coord.y = 0;
+    let coord.z = 0;
+    let coord.p = $n;
+    let m = *coord.p;
+
+    return 0;
+}

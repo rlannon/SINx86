@@ -29,6 +29,8 @@ Our various compiler utilities
 #include "../struct_info.h"
 #include "member_selection.h"
 
+#include "constant_eval.h"
+
 #include "../../util/general_utilities.h"
 
 // todo: put these in their own namespace
@@ -36,8 +38,6 @@ Our various compiler utilities
 DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
 
 bool returns(StatementBlock to_check);
-
-bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
 
 bool is_valid_cast(DataType &old_type, DataType &new_type);
 
@@ -47,7 +47,7 @@ bool can_pass_in_register(DataType to_check);
 
 std::string get_rax_name_variant(DataType t, unsigned int line);
 
-struct_info define_struct(StructDefinition definition);
+struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte);
 
 template<typename T>
 function_symbol create_function_symbol(T def, bool mangle=true, bool defined=true);
@@ -55,7 +55,9 @@ function_symbol create_function_symbol(T def, bool mangle=true, bool defined=tru
 template<typename T>
 symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined=true);
 
-std::stringstream push_used_registers(register_usage regs, bool ignore_ab = false);
+std::stringstream store_symbol(symbol& s);
+
+std::stringstream push_used_registers(register_usage &regs, bool ignore_ab = false);
 std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false);
 
 std::string get_address(symbol &s, reg r);
@@ -63,7 +65,7 @@ std::string get_address(symbol &s, reg r);
 std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs);
 std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs);
 
-std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int level, bool is_function);
+std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string scope, unsigned int level, bool is_function);
 
 std::stringstream call_sre_free(symbol& s);
 std::stringstream call_sre_add_ref(symbol& s);

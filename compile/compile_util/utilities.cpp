@@ -38,8 +38,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             break;
         }
         case LVALUE:
-		case INDEXED:	// since Indexed expressions inherit from LValue, we can use one switch case
-        {
+		{
             // look into the symbol table for an LValue
             LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
 			std::shared_ptr<symbol> sym;
@@ -52,13 +51,15 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 				throw SymbolNotFoundException(line);
 			}
 
-			// depending on whether we have an indexed or lvalue expression, we have to return different type data
-			if (expression_type == INDEXED) {
-				type_information = *sym->get_data_type().get_full_subtype().get();
-			}
-			else {
-				type_information = sym->get_data_type();
-			}
+            type_information = sym->get_data_type();
+            
+            break;
+        }
+        case INDEXED:
+        {
+            Indexed *idx = dynamic_cast<Indexed*>(to_eval.get());
+            DataType t = get_expression_data_type(idx->get_to_index(), symbols, structs, line);
+            type_information = *t.get_full_subtype();
             break;
         }
         case LIST:
@@ -70,11 +71,9 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbols, structs, line);
 
             // the subtype will be the current primary type, and the primary type will be array
-            sub_data_type.set_subtype(sub_data_type);
-            sub_data_type.set_primary(ARRAY);
-
-            // copy it into type_information
-            type_information = sub_data_type;
+            type_information.set_subtype(sub_data_type);
+            type_information.set_primary(ARRAY);
+            
             break;
         }
         case BINARY:
@@ -205,29 +204,6 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
     return type_information;
 }
 
-bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
-	/*
-	
-	is_valid_type_promotion
-	Ensures that type promotion rules are not broken
-
-	Essentially, the right-hand variability quality must be equal to or *lower* than the left-hand one in the hierarchy
-
-	See doc/Type Compatibility.md for information on type promotion
-	
-	*/
-
-	if (left.is_const()) {
-		return true;	// a const left-hand side will always promote the right-hand expression
-	}
-	else if (left.is_final()) {
-		return !right.is_const();	// a const right-hand argument cannot be demoted
-	}
-	else {
-		return !(right.is_const() || right.is_final());	// the right-hand argument cannot be demoted
-	}
-}
-
 bool is_valid_cast(DataType &old_type, DataType &new_type) {
     /*
 
@@ -354,7 +330,7 @@ bool can_pass_in_register(DataType to_check) {
     bool can_pass = false;
 
     Type primary = to_check.get_primary();
-    if (primary == ARRAY || primary == STRUCT || primary == STRING) {
+    if (primary == ARRAY || primary == STRUCT) {
         // if the type is dyamic, then we can -- we are really passing in a pointer into the function
         // todo: can we have static parameters?
         can_pass = to_check.get_qualities().is_dynamic();
@@ -395,7 +371,7 @@ std::string get_rax_name_variant(DataType t, unsigned int line) {
 	return reg_string;
 }
 
-struct_info define_struct(StructDefinition definition) {
+struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte) {
     /*
     
     define_struct
@@ -417,6 +393,8 @@ struct_info define_struct(StructDefinition definition) {
     std::vector<symbol> members;
     size_t current_offset = 0;
     for (std::shared_ptr<Statement> s: definition.get_procedure()->statements_list) {
+        size_t this_width = 0;
+
         // Only allocations are allowed within a struct body
         if (s->get_statement_type() == ALLOCATION) {
             // cast to Allocation and create a symbol
@@ -431,6 +409,28 @@ struct_info define_struct(StructDefinition definition) {
                 );
             }
             // todo: once references are enabled, disallow those as well -- they can't be null, so that would cause infinite recursion, too
+            else if (alloc->get_type_information().get_primary() == ARRAY) {
+                // arrays must have constant lengths or be dynamic
+                if (alloc->get_type_information().get_array_length_expression()->is_const()) {
+                    size_t array_length = stoul(
+                        cte.evaluate_expression(
+                            alloc->get_type_information().get_array_length_expression(),
+                            definition.get_name(),
+                            1,
+                            definition.get_line_number()
+                        )
+                    );
+                    array_length = array_length * alloc->get_type_information().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+                    alloc->get_type_information().set_array_length(array_length);
+                    this_width = array_length;
+                }
+                else {
+                    throw NonConstArrayLengthException(definition.get_line_number());
+                }
+            }
+            else {
+                this_width = alloc->get_type_information().get_width();
+            }
 
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
             
@@ -442,7 +442,7 @@ struct_info define_struct(StructDefinition definition) {
 
             // update the data offset
             // todo: handle struct and array members
-            current_offset += alloc->get_type_information().get_width();
+            current_offset += this_width;
         } else {
             throw StructDefinitionException(definition.get_line_number());
         }
@@ -509,7 +509,8 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined) {
         def.get_type_information(),
         formal_parameters,
         def.get_calling_convention(),
-        defined
+        defined,
+        def.get_line_number()
     );
 
     // finally, return the function symbol
@@ -553,13 +554,40 @@ symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name,
         scope_level,
         type_info,
         stack_offset,
-        defined
+        defined,
+        allocation.get_line_number()
     );
 
     return to_return;
 }
 
-std::stringstream push_used_registers(register_usage regs, bool ignore_ab) {
+std::stringstream store_symbol(symbol &s) {
+    /*
+
+    store_symbol
+    Store symbol in its memory location
+
+    */
+
+    std::stringstream store_ss;
+
+    DataType dt = s.get_data_type();
+    if (dt.get_qualities().is_static()) {
+        store_ss << "\t" << "lea rax, [" << s.get_name() << "]" << std::endl;
+        store_ss << "\t" << "mov [rax], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+    }
+    else if (dt.get_qualities().is_dynamic()) {
+        store_ss << "\t" << "mov rax, [rbp - " << s.get_offset() << "]" << std::endl;
+        store_ss << "\t" << "mov [rax], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+    }
+    else {
+        store_ss << "\t" << "mov [rbp - " << s.get_offset() << "], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+    }
+
+    return store_ss;
+}
+
+std::stringstream push_used_registers(register_usage &regs, bool ignore_ab) {
     /*
 
     push_used_registers
@@ -578,7 +606,16 @@ std::stringstream push_used_registers(register_usage regs, bool ignore_ab) {
         it++
     ) {
         if (((*it != RAX && *it != RBX) || !ignore_ab) && regs.is_in_use(*it)) {
-            push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
+            // if the register contains a symbol, store it instead of pushing to the stack
+            symbol *s = regs.get_contained_symbol(*it);
+            if (s) {
+                push_ss << store_symbol(*s).str();
+                regs.clear(s->get_register());
+                s->set_register(NO_REGISTER);
+            }
+            else {
+                push_ss << "\t" << "push " << register_usage::get_register_name(*it) << std::endl;
+            }
         }
     }
 
@@ -626,19 +663,18 @@ std::string get_address(symbol &s, reg r) {
 
     // if it's static, we can just use the name
     if (s.get_data_type().get_qualities().is_static()) {
-        address_info = "\tmov " + reg_name + ", " + s.get_name();
+        address_info = "\tlea " + reg_name + ", [" + s.get_name() + "]\n";
     }
     // otherwise, we need to look in the stack
     else if (s.get_data_type().get_qualities().is_dynamic() || s.get_data_type().get_primary() == STRING) {
         address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]";
     }
     else {
-        address_info = "\tmov " + reg_name + ", rbp\n";
         if (s.get_offset() < 0) {
-            address_info += "\tadd " + reg_name + ", " + std::to_string(-s.get_offset()) + "\n";
+            address_info += "\tlea " + reg_name + ", [rbp + " + std::to_string(-s.get_offset()) + "]\n";
         }
         else {
-            address_info += "\tsub " + reg_name + ", " + std::to_string(s.get_offset()) + "\n";
+            address_info += "\tlea " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
         }
     }
 
@@ -693,23 +729,27 @@ std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
 
     std::stringstream copy_ss;
 
-    // preserve registers in use, ignoring RAX and RBX
+    // preserve registers in use, ignoring RAX and RBX -- this will save values into memory appropriately
     copy_ss << push_used_registers(regs, true).str();
 
     // get the pointers
     copy_ss << get_address(src, RSI) << std::endl;
     copy_ss << get_address(dest, RDI) << std::endl;
+    copy_ss << "\tpushfq" << std::endl << "\tpush rpb" << std::endl << "\tmov rbp, rsp" << std::endl;
     copy_ss << "\t" << "call sinl_string_copy" << std::endl;
+    copy_ss << "\tmov rsp, rbp" << std::endl << "\tpop rbp" << std::endl << "\tpopfq" << std::endl;
+
+    // restore registers -- note this does not move values back into registers that were moved into memory!
+    copy_ss << pop_used_registers(regs, true).str();
+
+    // update the address
     copy_ss << get_address(dest, RBX) << std::endl;
     copy_ss << "\t" << "mov [rbx], rax" << std::endl;
-
-    // restore registers
-    copy_ss << pop_used_registers(regs, true).str();
 
     return copy_ss;
 }
 
-std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int level, bool is_function) {
+std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string scope, unsigned int level, bool is_function) {
     /*
 
     decrement_rc
@@ -724,20 +764,20 @@ std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int 
     // get the local variables that need to be freed
     std::vector<symbol> v = t.get_symbols_to_free(scope, level, is_function);
     if (!v.empty()) {
+        // preserve all registers to ensure the memory locations contain their respective values
+        dec_ss << push_used_registers(r, true).str();
+
         // set up the stack frame
         dec_ss << "\t" << "pushfq" << std::endl;
         dec_ss << "\t" << "push rbp" << std::endl;
         dec_ss << "\t" << "mov rbp, rsp" << std::endl;
         for (symbol& s: v) {
-            // we need to move the old base pointer into rbx and subtract the offset from that
-            dec_ss << "\t" << "mov rbx, [rsp]" << std::endl;
-
             // if we have a negative number, add it instead
             if (s.get_offset() < 0) {
-                dec_ss << "\t" << "add rbx, " << -s.get_offset() << std::endl;
+                dec_ss << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;
             }
             else {
-                dec_ss << "\t" << "sub rbx, " << s.get_offset() << std::endl;
+                dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
             }
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
             dec_ss << "\t" << "call sre_free" << std::endl;
@@ -746,6 +786,9 @@ std::stringstream decrement_rc(symbol_table& t, std::string scope, unsigned int 
         dec_ss << "\t" << "mov rsp, rbp" << std::endl;
         dec_ss << "\t" << "pop rbp" << std::endl;
         dec_ss << "\t" << "popfq" << std::endl;
+
+        // restore our registers
+        dec_ss << pop_used_registers(r, true).str();
     }
 
     return dec_ss;

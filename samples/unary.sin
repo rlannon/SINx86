@@ -1,0 +1,9 @@
+// unary.sin
+// test unary expression parsing and handling
+
+def int main() {
+    alloc int x: 10;
+    alloc int y;
+    let y = --x;
+    return 0;
+}

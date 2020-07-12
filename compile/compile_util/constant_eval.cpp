@@ -128,7 +128,7 @@ std::string compile_time_evaluator::evaluate_expression(std::shared_ptr<Expressi
 	
 	*/
 
-	std::string evaluated_expression;
+	std::string evaluated_expression = "";
 
 	if (to_evaluate->get_expression_type() == LITERAL) {
 		Literal exp = *dynamic_cast<Literal*>(to_evaluate.get());
@@ -141,6 +141,13 @@ std::string compile_time_evaluator::evaluate_expression(std::shared_ptr<Expressi
 	else if (to_evaluate->get_expression_type() == UNARY) {
 		Unary unary = *dynamic_cast<Unary*>(to_evaluate.get());
 		evaluated_expression = this->evaluate_unary(unary, scope_name, scope_level, line);
+	}
+	else if (to_evaluate->get_expression_type() == LIST) {
+		// for lists, just evaluate each element individually and concatenate
+		auto l = dynamic_cast<ListExpression*>(to_evaluate.get());
+		for (auto elem: l->get_list()) {
+			evaluated_expression += this->evaluate_expression(elem, scope_name, scope_level, line) + ",";
+		}
 	}
 	// todo: more expression types
 	else {

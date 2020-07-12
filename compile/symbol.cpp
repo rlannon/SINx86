@@ -113,20 +113,32 @@ void symbol::free() {
     this->freed = true;
 }
 
+void symbol::set_line(unsigned int l) {
+	// sets the line number of the symbol
+	this->line_defined = l;
+}
+
+unsigned int symbol::get_line_defined() const {
+	// gets the line number of the symbol
+	return this->line_defined;
+}
+
 symbol::symbol(
 	std::string name,
 	std::string scope_name,
 	unsigned int scope_level,
 	DataType type_information,
 	unsigned int stack_offset,
-	bool defined
+	bool defined,
+	unsigned int line_defined
 ): 
     name(name),
     scope_name(scope_name),
     scope_level(scope_level),
     type(type_information),
     offset(stack_offset),
-	defined(defined)
+	defined(defined),
+	line_defined(line_defined)
 {
     this->current_reg = NO_REGISTER;
     this->symbol_type = VARIABLE;

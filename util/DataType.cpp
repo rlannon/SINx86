@@ -130,6 +130,29 @@ bool DataType::operator!=(const Type right)
 	return this->primary != right;
 }
 
+const bool DataType::is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
+	/*
+	
+	is_valid_type_promotion
+	Ensures that type promotion rules are not broken
+
+	Essentially, the right-hand variability quality must be equal to or *lower* than the left-hand one in the hierarchy
+
+	See doc/Type Compatibility.md for information on type promotion
+	
+	*/
+
+	if (left.is_const()) {
+		return true;	// a const left-hand side will always promote the right-hand expression
+	}
+	else if (left.is_final()) {
+		return !right.is_const();	// a const right-hand argument cannot be demoted
+	}
+	else {
+		return !(right.is_const() || right.is_final());	// the right-hand argument cannot be demoted
+	}
+}
+
 bool DataType::is_compatible(DataType to_compare) const
 {
 	/*
@@ -144,21 +167,26 @@ bool DataType::is_compatible(DataType to_compare) const
 
 	*/
 
-	bool compatible;
+	bool compatible = false;
 
 	if (this->primary == RAW || to_compare.get_primary() == RAW) {
 		compatible = true;
 	}
-	else if ((this->primary == PTR && to_compare.get_primary() == PTR) || (this->primary == ARRAY && to_compare.get_primary() == ARRAY))
+	else if (this->primary == PTR && to_compare.get_primary() == PTR)
 	{
-		// cast the subtypes to DataType (with a subtype of NONE) and call is_compatible on them
+		// call is_compatible on the subtypes and ensure the type promotion is legal
 		if (this->subtype && to_compare.subtype) {
 			compatible = this->subtype->is_compatible(
-				*dynamic_cast<DataType*>(to_compare.get_full_subtype().get())
-			);
+				*to_compare.get_full_subtype()
+			) && is_valid_type_promotion(this->subtype->qualities, to_compare.subtype->qualities);
 		} else {
 			throw CompilerException("Expected subtype", 0, 0);	// todo: ptr and array should _always_ have subtypes
 		}
+	}
+	else if (this->primary == ARRAY && to_compare.get_primary() == ARRAY) {
+		compatible = this->subtype->is_compatible(
+			*to_compare.get_full_subtype()
+		);
 	}
 	else {
 		// primary types must be equal
@@ -277,6 +305,11 @@ bool DataType::is_valid_type(DataType &t) {
 	else if (t.primary == STRING) {
 		// strings are not numerics and so may not be used with signed or unsigned qualifiers
 		if (t.qualities.is_signed() || t.qualities.is_unsigned()) {
+			is_valid = false;
+		}
+
+		// they may also not use 'static' unless they are 'static const'; they are inherently dynamic
+		if (t.qualities.is_static() && !t.get_qualities().is_const()) {
 			is_valid = false;
 		}
 	}

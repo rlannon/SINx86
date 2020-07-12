@@ -23,7 +23,10 @@ namespace compiler_errors {
     const unsigned int CONST_ASSIGNMENT_ERROR = 1;
     const unsigned int FINAL_ASSIGNMENT_ERROR = 2;
     const unsigned int DATA_WIDTH_ERROR = 3;
+    const unsigned int UNKNOWN_LENGTH_ERROR = 5;
 	const unsigned int CONST_ALLOCATION_ERROR = 11;	// constants must be initialized in their allocation
+    const unsigned int NON_CONST_VALUE_ERROR = 12;
+    const unsigned int STATIC_MEMORY_INITIALIZATION_ERROR = 15;
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
 	const unsigned int DUPLICATE_DEFINITION_ERROR = 31;	// The definition for this resource was already found
 	const unsigned int NON_MODIFIABLE_LVALUE_ERROR = 40;	// left hand expressions in assignments must be modifiable-lvalues
@@ -36,7 +39,8 @@ namespace compiler_errors {
     const unsigned int UNARY_TYPE_NOT_SUPPORTED = 56;   // if the unary operator is not supported with a given type
 	const unsigned int UNDEFINED_OPERATOR_ERROR = 57;	// the operator used is undefined for the data type
     const unsigned int ILLEGAL_ADDRESS_OF_ARGUMENT = 61;    // the address-of operator may only be used with lvalues and member selection binary expressions
-    
+    const unsigned int ILLEGAL_INDIRECTION = 62;    // the * operator may only be used with pointer types
+
     const unsigned int SELF_CONTAINMENT_ERROR = 71; // a struct may not contain an instance of itself
 
     // Location / definition errors
@@ -87,4 +91,5 @@ namespace compiler_errors {
 
     // Warning codes
     const unsigned int UNSAFE_OPERATION = 501;
+    const unsigned int MAIN_SIGNATURE = 505;    // 'main' should return an integer and have one argument
 };

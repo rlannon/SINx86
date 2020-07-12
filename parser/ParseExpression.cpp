@@ -71,21 +71,39 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	}
 	// list expressions (array literals) have to be handled slightly differently than other expressions
 	else if (current_lex.value == "{") {
-		this->next();
 		std::vector<std::shared_ptr<Expression>> list_members = {};
+		
+		// set this to false if any element is *not* const
+		is_const = true;
 
 		// as long as the next token is a comma, we have elements to parse
-		while (this->peek().value != "}" && this->peek().value != ";") {
-			list_members.push_back(this->parse_expression(prec, "{"));
+		lexeme peeked = this->peek();
+		while (peeked.value != "}") {
 			this->next();	// skip the last character of the expression
+			try {
+				auto elem = this->parse_expression(prec, "{");
+				if (!elem->is_const())
+					is_const = false;
+				
+				list_members.push_back(elem);
+			}
+			catch (std::exception &e) {
+				throw CompilerException(
+					"Unexpected token while parsing list expression",
+					compiler_errors::INVALID_TOKEN,
+					this->current_token().line_number
+				);
+			}
+			peeked = this->peek();
 		}
+		this->next();
 
 		// once we escape the loop, we must find a closing curly brace
 		if (this->peek().value == ";") {
 			left = std::make_shared<ListExpression>(list_members);
 		}
 		else {
-			throw InvalidTokenException(this->peek().value, this->peek().line_number);
+			throw MissingSemicolonError(this->current_token().line_number);
 		}
 	}
 	// if expressions are separated by commas, continue parsing the next one
@@ -101,14 +119,8 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		);
 	}
 	else if (current_lex.type == IDENTIFIER) {
-		// check to see if we have the identifier alone, or whether we have an index
-		if (this->peek().value == "[") {
-			this->next();
-			left = std::make_shared<Indexed>(current_lex.value, "var", this->parse_expression(0, "[", true));
-		}
-		else {
-			left = std::make_shared<LValue>(current_lex.value);
-		}
+		// make an LValue expression
+		left = std::make_shared<LValue>(current_lex.value);
 	}
 	// if we have a keyword to begin an expression, parse it (could be a sizeof expression)
 	else if (current_lex.type == KEYWORD) {
@@ -201,6 +213,10 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			}
 		}
 	}
+	// for safety, we need an else case
+	else {
+		throw InvalidTokenException(this->peek().value, this->peek().line_number);
+	}
 
 	// peek ahead at the next symbol; we may have a postfixed constexpr quality
 	if (this->peek().value == "&") {
@@ -264,10 +280,13 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == "," || (next.value == "=" && omit_equals)) {
 		return left;
 	}
-	// Otherwise, if we have an op_char or the 'and', 'or', 'xor', or 'as'
-	else if (next.type == OPERATOR || next.value == "and" || next.value == "or" || next.value == "xor" || next.value == "as") {
+	// Otherwise, if we have a valid operator
+	else if (is_valid_operator(next)) {
+		// get the operator
+		exp_operator op = translate_operator(next.value);
+
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
-		if (next.value == "&") {
+		if (op == BIT_AND) {
 			this->next();	// advance the iterator so we can see what comes after the ampersand
 			lexeme operand = this->peek();
 			
@@ -290,32 +309,42 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 			this->next();	// go to the next character in our stream (the op_char)
 			this->next();	// go to the character after the op char
 
-			// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
-			auto right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+			std::shared_ptr<Expression> to_check = nullptr;
 
-			// Create the binary expression
-			auto binary = std::make_shared<Binary>(left, right, translate_operator(next.value));	// "next" still contains the op_char; we haven't updated it yet
-
-			// if the left and right sides are constants, the whole expression is a constant
-			if (left->is_const() && right->is_const())
-				binary->set_const();
-			
-			// now, call maybe_binary based on the binary type (transform the statement)
-			std::shared_ptr<Expression> to_check = binary;
-			if (binary->get_operator() == ATTRIBUTE_SELECTION) {
-				to_check = std::make_shared<AttributeSelection>(binary);
+			// we might have an indexed expression here
+			if (op == INDEX) {
+				auto index_value = this->parse_expression(his_prec, "[");
+				this->next();
+				to_check = std::make_shared<Indexed>(left, index_value);
 			}
-			else if (binary->get_operator() == TYPECAST) {
-				to_check = std::make_shared<Cast>(binary);
-			}
+			else {
+				// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
+				auto right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
-			// ensure we still have a valid expression
-			if (to_check->get_expression_type() == EXPRESSION_GENERAL) {
-				throw CompilerException(
-					"Illegal expression",
-					compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
-					next.line_number
-				);
+				// Create the binary expression
+				auto binary = std::make_shared<Binary>(left, right, op);	// "next" still contains the op_char; we haven't updated it yet
+
+				// if the left and right sides are constants, the whole expression is a constant
+				if (left->is_const() && right->is_const())
+					binary->set_const();
+				
+				// now, call maybe_binary based on the binary type (transform the statement)
+				to_check = binary;
+				if (binary->get_operator() == ATTRIBUTE_SELECTION) {
+					to_check = std::make_shared<AttributeSelection>(binary);
+				}
+				else if (binary->get_operator() == TYPECAST) {
+					to_check = std::make_shared<Cast>(binary);
+				}
+
+				// ensure we still have a valid expression
+				if (to_check->get_expression_type() == EXPRESSION_GENERAL) {
+					throw CompilerException(
+						"Illegal expression",
+						compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+						next.line_number
+					);
+				}
 			}
 			
 			// call maybe_binary again at the old prec level in case this expression is part of a higher precedence one

@@ -1,0 +1,14 @@
+// Samples
+// function.sin
+// A demo of functions
+
+def int get_int() {
+    return 10;
+}
+
+def void main() {
+    alloc int a: @get_int();
+    alloc int b: a * 2;
+    
+    return void;
+}

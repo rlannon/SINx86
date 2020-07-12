@@ -10,7 +10,7 @@ SIN is a custom procedural programming language based on C, C++, and Python, des
 
 SIN is very C-like; it is strictly procedural, utilizes strict type safety, doesn't allow implicit conversions, and gives the programmer a decent amount of freedom over the environment should they choose to use it. However, programmers shouldn't *have* to worry about manually allocating and freeing memory, especially when we have the resources to let a runtime environment do it automatically. As such, SIN utilizes a runtime environment for automatic memory management, it includes reference types (like C++), and even contains runtime bounds-checking on arrays.
 
-The central idea of SIN is to create a language with a fairly readable syntax that allows more safety than C but without all of the complicated object-oriented features of languages. I wanted, essentially, a slightly more modernized version of C, one with some of the ease-of-development and safety features that are offered by modern languages. It aims to prove that "modern" does not have to mean "object-oriented" (which I think Rust did well). That said, my goal isn't really to make a modern language competitor -- see the 'Goal of the Project' section for more.
+The central idea of SIN is to create a language with a fairly readable syntax that allows more safety than C but without all of the complicated object-oriented features of languages like Java. I wanted, essentially, a slightly more modernized version of C, one with some of the ease-of-development and safety features that are offered by modern languages. It aims to show that "modern" does not have to mean "object-oriented" (which I think Rust did well). That said, my goal isn't really to make a modern language competitor -- see the 'Goal of the Project' section for more.
 
 ### Sample
 
@@ -21,7 +21,7 @@ The following is an obligatory 'hello world!' sample:
         return 0;
     }
 
-Like Python, functions are defined with `def`, function calls look similar enought (though they are prefixed with `@` -- this is for a future language feature). Like C and Java, the entry point of entry program is 'main', though unlike Java (and like C), the return type and arguments for this function are not fixed. It's good practice to use a return type of `int` and the argument `dynamic array<string> args`, but it's not strictly required.
+Like Python, functions are defined with `def`, function calls look similar enough (though they are prefixed with `@` -- this is for a future language feature). Like C and Java, the entry point of entry program is 'main', though unlike Java (and like C), the return type and arguments for this function are not fixed. It's good practice to use a return type of `int` and the argument `dynamic array<string> args`, but it's not strictly required.
 
 For more information, check out the [guide](Basic%20Syntax.md).
 
@@ -29,7 +29,7 @@ For more information, check out the [guide](Basic%20Syntax.md).
 
 I cannot stress enough that this is a *learning exercise,* not an attempt at creating the next Python or Rust. This project is a hands-on way of learning compiler development. The purpose is not to create a particularly good compiler, but rather to serve as an exercise in compiler design and implementation. I intend on producing a *functioning* compiler, one that can be improved and expanded upon in the future. The goal is to generate code that *works,* and while I hope to improve the efficiency and overall funcionality of the compiler in the future, it is somewhat bodged together right now.
 
-The fact that it's a learning exercise should explain why I decided to write a parser by hand, instead of using yacc/lex/bison/some other tool; doing so would not have allowed me to learn how parsers (can) work as deeply as I did by writing this one. It should also explain why I'm compiling directly from an abstract syntax tree into assembly, rather than using an intermediate representation like lldb.
+The fact that it's a learning exercise should explain why I decided to write a parser by hand, instead of using yacc/lex/bison/some other tool; doing so would not have allowed me to learn how parsers (can) work as deeply as I did by writing this one. It should also explain why I'm compiling directly from an abstract syntax tree into assembly, rather than using an intermediate representation like llvm, GNU RTL, or even C.
 
 In other words: this compiler isn't *supposed* to be any good. The language spec might be alright, but if you try to use this to actually write any software, you've been warned.
 
@@ -61,6 +61,17 @@ Note that SIN programs utilize the C standard library (and certain functionality
 ### Using SIN
 
 I intend on using [GitHub Pages](rlannon.github.com/SINx86) for introductory programming materials. Note that currently, not everything is up-to-date, and the site will be updated periodically.
+
+To build projects, the following steps should be followed:
+
+* Ensure `make` is installed
+* Build the SRE using the provided makefile
+* Build the compiler using the provided makefile
+* Build all requisite `.sin` files for your project using `sinx86`
+* Assemble them using `nasm`; I suggest `nasm -f elf64 <path to assembly file>`, optionally specifying the `.o` files with the `-o` option and allowing debug symbols with the `-g` option
+* Link with G++ using `g++ <list object files> -L <path to SRE> -l SRE`, again optionally specifying the outfile with `-o`
+
+There is really no reason you shouldn't be able to utilize `make` for SIN projects; in fact, it would probably make your life quite a bit easier.
 
 ## Future Goals
 

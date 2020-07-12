@@ -39,6 +39,8 @@ class DataType
 
 	void set_width();	// sets the symbol's type based on the primary type
 public:
+	static const bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
+
 	DataType& operator=(const DataType &right);
 
 	bool operator==(const DataType& right) const;

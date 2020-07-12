@@ -3,7 +3,11 @@
 
 # ignore our samples and assembly files (for now)
 samples/*
-*.s
+!samples/*.sin
+!samples/*.sinh
+
+# ignore the notes folder
+notes/*
 
 # also ignore SIN build file and folder
 build

@@ -40,6 +40,8 @@ protected:
 
     bool initialized;   // whether the data was initialized
     bool freed; // whether the memory has been allocated or freed
+
+    unsigned int line_defined; // the line on which this symbol was introduced
 public:
     // to check whether two symbols are the same
     bool operator==(const symbol& right) const;
@@ -73,6 +75,9 @@ public:
     void set_initialized();
     void free();
 
+    void set_line(unsigned int l);
+    unsigned int get_line_defined() const;
+
     // constructors
     explicit symbol(
         std::string name,
@@ -80,7 +85,8 @@ public:
         unsigned int scope_level,
         DataType type_information,
         unsigned int offset,
-        bool defined=true
+        bool defined=true,
+        unsigned int line_defined=0
     );
     symbol();
     virtual ~symbol(); // the destructor must be virtual for the sake of the child class

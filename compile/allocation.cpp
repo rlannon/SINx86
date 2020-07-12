@@ -30,6 +30,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 	DataType &alloc_data = alloc_stmt.get_type_information();
 	size_t data_width = alloc_data.get_width();
 
+	// todo: struct allocation -- allocate each member accordingly
+
 	// todo: array length needs to be determined for _all_ arrays
 	// where it can be determined at compile-time, this space must be reserved on the stack
 	// where this is not possible, evaluate the expression and pass it to sinl_array_alloc
@@ -59,7 +61,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				data_width = alloc_data.get_array_length() * alloc_data.get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
 			}
 			else {
-				throw CompilerException("An array width must be a positive integer", compiler_errors::TYPE_ERROR, alloc_stmt.get_line_number());
+				throw NonConstArrayLengthException(alloc_stmt.get_line_number());
 			}
 		}
 		else {
@@ -84,6 +86,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 	// allocate the variable if our type was valid
 	if (DataType::is_valid_type(alloc_data)) {
+		symbol allocated;
+
 		// variables in the global scope do not need to be marked as 'static' by the programmer, though they are located in static memory so we must set the static quality if we are in the global scope
 		if (this->current_scope_name == "global") {
 			alloc_data.get_qualities().add_quality(SymbolQuality::STATIC);
@@ -101,7 +105,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
 			// dynamic allocation
-			symbol allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
+			allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
 			
 			// add the symbol and move RSP further into the stack, by the width of a pointer
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
@@ -138,15 +142,95 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		}
 		else if (alloc_data.get_qualities().is_static()) {
 			data_width = 0;	// takes up no space on the stack
-			symbol allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
+			allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
+
+			// we need to determine the width suffix (db, dw, resb, resw, etc)
+			size_t w = allocated.get_data_type().get_width();
+
+			// since arrays must contain a known-width type, we can just get the width of the subtype
+			if (allocated.get_data_type().get_primary() == ARRAY)
+				w = allocated.get_data_type().get_full_subtype()->get_width();
+			
+			char width_suffix;
+			if (w == sin_widths::BOOL_WIDTH) {
+				width_suffix = 'b';
+			}
+			else if (w == sin_widths::SHORT_WIDTH) {
+				width_suffix = 'w';
+			}
+			else if (w == sin_widths::INT_WIDTH) {
+				width_suffix = 'd';
+			}
+			else {
+				width_suffix = 'q';
+			}
+
+			// get the initial value of the static memory, if we have one we can use
+			std::string initial_value = "";
+			if (alloc_stmt.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
+				initial_value = this->evaluator.evaluate_expression(
+					alloc_stmt.get_initial_value(), 
+					"global", 
+					0, 
+					alloc_stmt.get_line_number()
+				);
+			}
+			// if the data is const and we don't have a const initial value, it's an error
+			else if (alloc_data.get_qualities().is_const()) {
+				throw ConstInitializationException(alloc_stmt.get_line_number());
+			}
+			std::stringstream alloc_instruction;
+
+			// form the instruction
+			if (alloc_data.get_primary() == ARRAY) {
+				alloc_instruction << allocated.get_name() << " dd " <<
+					std::to_string(allocated.get_data_type().get_array_length()) << std::endl;
+				
+				// if the array was initialized, supply our array; else, initialize to a zeroed array
+				if (alloc_stmt.was_initialized()) {
+					alloc_instruction << "d" << width_suffix << " " << initial_value << std::endl;
+				}
+				else {
+					alloc_instruction << "times " << allocated.get_data_type().get_array_length() <<
+						" d" << width_suffix << " 0" << std::endl;
+				}
+			}
+			else if (alloc_data.get_primary() == STRUCT) {
+				alloc_instruction << allocated.get_name() << " times " << data_width << " db 0" << std::endl;
+			}
+			else {
+				if (alloc_stmt.was_initialized()) {
+					alloc_instruction << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
+				}
+				else {
+					alloc_instruction << allocated.get_name() << " res" << width_suffix << " 1" << std::endl;
+				}
+			}
 
 			// static const variables can go in the .rodata segment, so check to see if it is also const
 			if (alloc_data.get_qualities().is_const()) {
-				// todo: static const memory
+				// static const memory
+				this->rodata_segment << alloc_instruction.str() << std::endl;
+			}
+			else if (
+				(allocated.was_initialized() && alloc_stmt.get_initial_value()->is_const()) ||
+				alloc_data.get_primary() == ARRAY
+			) {
+				// static, non-const, initialized data
+				this->data_segment << alloc_instruction.str() << std::endl;
+			}
+			else if (allocated.was_initialized()) {
+				// if we have an initial value that is not constant, throw an exception; that isn't allowed
+				throw CompilerException(
+					"Static data must be initialized to a compile-time constant or not at all (default initialized to 0)",
+					compiler_errors::STATIC_MEMORY_INITIALIZATION_ERROR,
+					alloc_stmt.get_line_number()
+				);
 			}
 			else {
-				// todo: static, non-const memory
+				// static, non-const, uninitialized data
+				this->bss_segment << alloc_instruction.str() << std::endl;
 			}
 		}
 		else {
@@ -154,7 +238,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// allocate memory on the stack
 
 			// construct the symbol
-			symbol allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
+			allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
 
 			/*
 			
@@ -182,10 +266,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				to_subtract = allocated.get_data_type().get_width();
 			}
 
-			allocation_ss << "\t" << "sub rsp, " << to_subtract << std::endl;
-
 			// if the type is string, we need to call sinl_string_alloc
 			if (alloc_data.get_primary() == STRING) {
+				// preserve registers
+				allocation_ss << "\t" << push_used_registers(this->reg_stack.peek(), true).str();
+
+				allocation_ss << "\t" << "sub rsp, " << to_subtract << std::endl;
+
 				// todo: get string length instead of passing 0 in
 				allocation_ss << "\t" << "mov esi, 0" << std::endl;
 				allocation_ss << "\t" << "push rbp" << std::endl;
@@ -193,10 +280,18 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				allocation_ss << "\t" << "call sinl_string_alloc" << std::endl;
 				allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
 				allocation_ss << "\t" << "pop rbp" << std::endl;
+
+				allocation_ss << "\t" << "add rsp, " << to_subtract << std::endl;
 				
+				// restore used registers
+				allocation_ss << "\t" << pop_used_registers(this->reg_stack.peek(), true).str();
+
 				// save the location of the string
 				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			}
+
+			// subtract the width of the type from RSP
+			allocation_ss << "\t" << "sub rsp, " << data_width << std::endl;
 
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
@@ -204,7 +299,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
 
 				// make an assignment of 'initial_value' to 'allocated'
-				allocation_ss << this->handle_symbol_assignment(allocated, initial_value, alloc_stmt.get_line_number()).str();
+				allocation_ss << this->handle_alloc_init(allocated, initial_value, alloc_stmt.get_line_number()).str();
 
 				// mark the symbol as initialized
 				allocated.set_initialized();
@@ -212,6 +307,47 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 			// add it to the table
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
+		}
+
+		// if the type is STRUCT, we need to initialize non-dynamic array members
+		if (allocated.get_data_type().get_primary() == STRUCT) {
+			// todo: eliminate this call and initialize a function-level object earlier?
+			struct_info &info = this->get_struct_info(allocated.get_data_type().get_struct_name(), alloc_stmt.get_line_number());
+			
+			// get a register for the address
+			reg r = this->reg_stack.peek().get_available_register(PTR);
+			bool push_r15 = false;
+			if (r == NO_REGISTER) {
+				symbol *contained = this->reg_stack.peek().get_contained_symbol(R15);
+				if (contained) {
+					allocation_ss << store_symbol(*contained).str();
+					contained->set_register(NO_REGISTER);
+					this->reg_stack.peek().clear_contained_symbol(R15);
+				}
+				else {
+					push_r15 = true;
+					allocation_ss << "\t" << "push r15" << std::endl;
+				}
+
+				r = R15;
+			}
+
+			// if we have a struct, iterate through its members and initialize the array lengths
+			auto members = info.get_all_members();
+			std::string struct_addr = get_address(allocated, r);
+			allocation_ss << struct_addr;
+			for (auto m: members) {
+				// we only need to do this for non-dynamic arrays
+				if (m->get_data_type().get_primary() == ARRAY && !m->get_data_type().get_qualities().is_dynamic()) {
+					// evaluate the array length expression and move it (an integer) into [R15 + offset]
+					allocation_ss << this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number()).str();
+					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;	
+				}
+			}
+
+			if (push_r15) {
+				allocation_ss << "\t" << "pop r15" << std::endl;
+			}
 		}
 	}
 	else {

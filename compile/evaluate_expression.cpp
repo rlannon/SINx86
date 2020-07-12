@@ -13,8 +13,6 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 // todo: create an expression evaluation class and give it access to compiler members?
 
-// todo: allow a 'reg' object to be supplied instead of giving all values in RAX
-
 std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line) {
     /*
 
@@ -30,6 +28,8 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
     @return A stringstream containing the generated code
 
     */
+
+    // todo: allow a 'reg' object to be supplied instead of giving all values in RAX
 
     std::stringstream evaluation_ss;
 
@@ -55,16 +55,108 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         }
         case INDEXED:
         {
-            // get the indexed expression
-            Indexed indexed_exp = *dynamic_cast<Indexed*>(to_evaluate.get());
-            
-            // dispatch appropriately; evaluation of indexed expressions is sufficiently complicated to warrant it
-			evaluation_ss = this->evaluate_indexed(indexed_exp, line);
+            // get the address and dereference
+            DataType t = get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
+            evaluation_ss << this->get_exp_address(to_evaluate, RBX, line).str();
+            evaluation_ss << "\t" << "mov " << register_usage::get_register_name(RAX, t) << ", [rbx]" << std::endl;
             break;
         }
         case LIST:
         {
-			// todo: evaluate list expressions (using pointers)
+            // evaluate a list expression
+
+            // todo: would it be better to just iterate on an assignment and copy into the list? or is it better to use array_copy (as we are doing now)?
+            
+            // create our label
+            std::string list_label = "sinl_list_literal_" + std::to_string(this->list_literal_num);
+            this->list_literal_num += 1;
+
+            // preserve R15, as it will be used to keep track of where our list is
+            bool pushed_r15 = false;
+            if (this->reg_stack.peek().is_in_use(R15)) {
+                symbol *contained = this->reg_stack.peek().get_contained_symbol(R15);
+                if (contained) {
+                    contained->set_register(NO_REGISTER);
+                    this->reg_stack.peek().clear(R15);
+                }
+                else {
+                    evaluation_ss << "\t" << "push r15" << std::endl;
+                    pushed_r15 = true;
+                }
+            }
+
+            // get our type information
+            DataType t = get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
+            auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
+            size_t offset = 0;
+            
+            // get the address in R15; write in the length
+            evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
+            evaluation_ss << "\t" << "mov eax, " << le->get_list().size() << std::endl;
+            evaluation_ss << "\t" << "mov [r15], eax" << std::endl;
+
+            // increment the pointer by one dword
+            evaluation_ss << "\t" << "add r15, " << sin_widths::INT_WIDTH << std::endl;
+
+            // now, iterate
+            for (auto m: le->get_list()) {
+                // first, make sure the type of this expression matches the list's subtype
+                DataType member_type = get_expression_data_type(m, this->symbols, this->structs, line);
+                
+                // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
+                
+                if (member_type == *t.get_full_subtype()) {
+                    // evaluate the expression
+                    evaluation_ss << this->evaluate_expression(m, line).str();
+
+                    // store it in [r15 + offset]
+                    if (member_type.get_primary() == FLOAT) {
+                        std::string inst = member_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
+                        evaluation_ss << "\t" << inst << " [r15 + " << offset << "], xmm0" << std::endl;
+                    }
+                    else {
+                        std::string reg_name = register_usage::get_register_name(RAX, member_type);
+                        evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << reg_name << std::endl;
+                    }
+                    
+                    // update the offset within the list of the element to which we are writing
+                    offset += member_type.get_width();
+                }
+                else {
+                    throw CompilerException(
+                        "Type mismatch (lists must be homogeneous)",
+                        compiler_errors::TYPE_ERROR,
+                        line
+                    );
+                }
+            }
+
+            // move the list address into RAX
+            evaluation_ss << "\t" << "lea rax, [" << list_label << "]" << std::endl;
+
+            // restore R15 and RCX, if we pushed them
+            if (pushed_r15) {
+                evaluation_ss << "\t" << "pop r15" << std::endl;
+            }
+
+            // finally, utilize the .bss section and the 'res' directive for our list
+            std::string res_instruction;
+            size_t subtype_width = t.get_full_subtype()->get_width();
+            if (subtype_width == 8) {
+                res_instruction = "resq";
+            }
+            else if (subtype_width == 4) {
+                res_instruction = "resd";
+            }
+            else if (subtype_width == 2) {
+                res_instruction = "resw";
+            }
+            else {
+                res_instruction = "resb";
+            }
+            this->bss_segment << list_label << ": resd 1" << std::endl; 
+            this->bss_segment << list_label << "_data: " << res_instruction << " " << le->get_list().size() << std::endl;
+            
             break;
         }
         case BINARY:
@@ -82,7 +174,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
 					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
 
 				// now, generate the code to get our data member
-				evaluation_ss << this->evaluate_member_selection(m, line).str();
+				evaluation_ss << m.evaluate(this->symbols, this->structs, line).str();
 
                 // now, the address of our data is in RBX; dereference accordingly
                 if (can_pass_in_register(m.last().get_data_type())) {
@@ -125,11 +217,26 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
                 // check to make sure the typecast itself is valid (follows the rules)
                 DataType old_type = get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
                 if (is_valid_cast(old_type, c->get_new_type())) {
-                    // to perform the typecast, we must first evaluate the expression to be casted
-                    evaluation_ss << this->evaluate_expression(c->get_exp(), line).str();
+                    // if we are casting a literal integer or float to itself (but with a different width), create a new Literal
+                    if (
+                        (c->get_exp()->get_expression_type() == LITERAL) &&
+                        (old_type.get_primary() == c->get_new_type().get_primary()) &&
+                        (old_type.get_primary() == INT || old_type.get_primary() == FLOAT)
+                    ) {
+                        // update the type
+                        std::shared_ptr<Literal> contained = std::dynamic_pointer_cast<Literal>(c->get_exp());
+                        contained->set_type(c->get_new_type());
 
-                    // now, use the utility function to actually cast the type
-                    evaluation_ss << cast(old_type, c->get_new_type(), line).str();
+                        // now, evaluate
+                        evaluation_ss << this->evaluate_expression(contained, line).str();
+                    }
+                    else {
+                        // to perform the typecast, we must first evaluate the expression to be casted
+                        evaluation_ss << this->evaluate_expression(c->get_exp(), line).str();
+
+                        // now, use the utility function to actually cast the type
+                        evaluation_ss << cast(old_type, c->get_new_type(), line).str();
+                    }
                 }
                 else {
                     throw InvalidTypecastException(line);
@@ -271,7 +378,26 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
             throw CompilerException("Invalid type width", 0, line);
         }
     } else if (type.get_primary() == FLOAT) {
-        // todo: handle floats
+        /*
+
+        Floats cannot be used as immediate values; as such, we will need to define them in the .data section and load XMM0
+        If there is no width specifier used on the literal, we will default to float (not double)
+
+        */
+
+        std::string float_label = "sinl_fltc_" + std::to_string(this->fltc_num);
+        this->fltc_num += 1;
+
+        // todo: check to see if the width was specified with a type suffix
+
+        // if we have a single-precision
+        std::string res_directive = "dd";
+        std::string inst = "movss";
+
+        // todo: double-precision
+
+        data_segment << float_label << ": " << res_directive << " " << to_evaluate.get_value() << std::endl;
+        eval_ss << "\t" << inst << " xmm0, [" << float_label << "]" << std::endl;
     } else if (type.get_primary() == BOOL) {
         /*
 
@@ -367,12 +493,11 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                 // the data width determines which register size to use
                 std::string reg_string = get_rax_name_variant(sym.get_data_type(), line);
 
-                if (sym.get_data_type().get_qualities().is_const()) {
-                    // const variables can be looked up by their name -- they are in the .data section
-                    eval_ss << "\t" << "mov " << reg_string << ", [" << sym.get_name() << "]" << std::endl;
-                } else if (sym.get_data_type().get_qualities().is_static()) {
-                    // static memory can be looked up by name -- variables are in the .bss section
-                    eval_ss << "\t" << "mov " << reg_string << ", [" << sym.get_name() << "]" << std::endl;
+                // how we get this data depends on where it lives
+                if (sym.get_data_type().get_qualities().is_static()) {
+                    // static memory can be looked up by name -- variables are in the .bss, .data, or .rodata section
+                    eval_ss << "\t" << "lea rax, [" << sym.get_name() << "]" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", rax" << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory
                     // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
@@ -432,12 +557,9 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
             } else {
                 // values too large for registers will use _pointers_, although the SIN syntax hides this fact
                 // therefore, all data will go in rax
-                if (sym.get_data_type().get_qualities().is_const()) {
-                    // const pointers
-                    eval_ss << "\t" << "mov rax, " << sym.get_name() << std::endl;
-                } else if (sym.get_data_type().get_qualities().is_static()) {
+                if (sym.get_data_type().get_qualities().is_static()) {
                     // static pointers
-                    eval_ss << "\t" << "mov rax, " << sym.get_name() << std::endl;
+                    eval_ss << "\t" << "lea rax, [" << sym.get_name() << "]" << std::endl;
                 } else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory -- the address of the dynamic memory is on the stack, so we need the offset
                     // get address in A
@@ -458,12 +580,11 @@ std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int li
                     if (sym.get_data_type().get_primary() == STRING) {
                         eval_ss << "\t" << "mov rax, [rbp - " << sym.get_offset() << "]" << std::endl;
                     } else {
-                        eval_ss << "\t" << "mov rax, rbp" << std::endl;
                         if (sym.get_offset() < 0) {
-                            eval_ss << "\t" << "add rax, " << -sym.get_offset() << std::endl;
+                            eval_ss << "\t" << "lea rax, [rbp + " << -sym.get_offset() << "]" << std::endl;
                         }
                         else {
-                            eval_ss << "\t" << "sub rax, " << sym.get_offset() << std::endl;
+                            eval_ss << "\t" << "lea rax, [rbp - " << sym.get_offset() << "]" << std::endl;
                         }
                     }
                 }
@@ -494,89 +615,6 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     */
     
     std::stringstream eval_ss;
-
-    // first, get the symbol for the array or string we are indexing; make sure it was initialized
-    symbol indexed_sym = *(this->lookup(to_evaluate.getValue(), line).get());
-	if (!indexed_sym.was_initialized())
-		throw ReferencedBeforeInitializationException(indexed_sym.get_name(), line);
-
-	DataType contained_type = *indexed_sym.get_data_type().get_full_subtype().get();
-	size_t full_array_width = indexed_sym.get_data_type().get_array_length() * contained_type.get_width() + 4;
-
-    // ensure it is a valid type to be indexed (array or string); if so, get the index number in ecx
-    if (indexed_sym.get_symbol_type() == VARIABLE && 
-		(
-			indexed_sym.get_data_type().get_primary() == ARRAY || 
-			indexed_sym.get_data_type().get_primary() == STRING)
-		) {
-        // next, get the index and multiply it by the data width to get our byte offset
-        eval_ss << this->evaluate_expression(to_evaluate.get_index_value(), line).str();
-		
-		// preserve the element number in ecx
-		eval_ss << "\t" << "mov ecx, eax" << std::endl;	// todo: ensure the index can fit into a 32-bit integer?
-        
-        // mark RBX and RCX as "in use" in case a future operation requires them
-        // this will also cause any function that uses these registers to preserve them when called
-        this->reg_stack.peek().set(RBX);
-		this->reg_stack.peek().set(RCX);
-    } else {
-        throw TypeException(line);
-    }
-
-	// get the register name so that we can ensure we are reading a value of the appropriate width
-	std::string reg_name = get_rax_name_variant(contained_type, line);
-
-    // now that we have the index in RCX, fetch the value
-	if (indexed_sym.get_data_type().get_qualities().is_static()) {
-		/*
-		
-		Static arrays can use the name of the variable since they're reserved as named variables prior to runtime
-		Note that because they are static, their width must be known at compile time
-		
-		*/
-
-		eval_ss << "\t" << "mov eax, [" << indexed_sym.get_name() << "]" << std::endl;
-		eval_ss << "\t" << "cmp ecx, eax" << std::endl;	// perform the bounds check
-		// todo: SIN runtime errors; handle the error if necessary
-
-		// access the element
-		eval_ss << "\t" << "mov " << reg_name << ", [" << indexed_sym.get_name() << " + rcx*" << contained_type.get_width() << " + " << sin_widths::INT_WIDTH << "]" << std::endl;
-	}
-	else if (indexed_sym.get_data_type().get_qualities().is_dynamic()) {
-		// Dynamic arrays will use a pointer; their width may be variable
-
-		// first, get the length and perform the bounds check
-		eval_ss << "\t" << "mov rax, [rbp - " << indexed_sym.get_offset() << "]" << std::endl;
-		eval_ss << "\t" << "mov eax, [rax]" << std::endl;	// get the length of the array
-		eval_ss << "\t" << "cmp ecx, eax" << std::endl;	// compare EDX (element's index number) with EAX (number of elements in the array)
-		// todo: SIN runtime errors -- run an error routine if we are out of bounds
-		
-		eval_ss << "\t" << "mov rbx, [rbp - " << indexed_sym.get_offset() << "]" << std::endl;
-		eval_ss << "\t" << "mov " << reg_name << ", [rbx + rcx*" << contained_type.get_width() << " + " << sin_widths::INT_WIDTH << "]" << std::endl;
-    }
-	else {
-        /*
-		
-		Automatic arrays can live on the stack because their width _must_ be known at compile time
-		They also follow the convention of all other arrays where the lowest address in the array contains the width and the highest address contains the final element. This allows us to utilize effective addresses
-
-		The algorithm is simple:
-			- Get the address of the base element for the array
-			- Subtract the element's index from that pointer
-			- Dereference the pointer
-
-		*/
-
-		eval_ss << "\t" << "mov rbx, rbp" << std::endl;
-		eval_ss << "\t" << "sub rbx, " << full_array_width << std::endl;
-
-		// perform a bounds check
-		eval_ss << "\t" << "mov eax, [rbx]" << std::endl;
-		eval_ss << "\t" << "cmp ecx, eax" << std::endl;	// compare the index number with the number of elements
-		// todo: SRE error routine
-
-		eval_ss << "\t" << "mov " << reg_name << ", [rbx + rcx*" << contained_type.get_width() << " + " << sin_widths::INT_WIDTH << "]" << std::endl;
-    }
 
     // return our generated code
     return eval_ss;

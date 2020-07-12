@@ -1,0 +1,44 @@
+// arrays.sin
+// a sample of array functionality
+
+decl void print(decl string s);
+
+alloc static array<5, short int> my_static_array;
+alloc static const array<9, short int> binary_numbers: {0, 1, 2, 4, 8, 16, 32, 64, 128};
+
+def unsigned int pow(alloc unsigned int base, alloc unsigned int n) {
+    // a simple exponent implementation
+    alloc unsigned int i: 0;
+    alloc unsigned int val: 1;
+
+    while (i < n) {
+        let val = val * base;
+    }
+
+    return val;
+}
+
+def unsigned int main() {
+    alloc array<10, int> my_arr;
+    alloc array<5, int> second_arr: {0, 1, 2, 3, 4};
+    let my_arr = second_arr;
+
+    alloc ptr<array<int>> p: $second_arr;
+    alloc int x;
+    let x = (*p)[2];
+
+    alloc unsigned int i: 0;
+    while (i < my_static_array:len) {
+        alloc int j: 0;
+        let my_static_array[i] = @pow(2, i);
+    }
+
+    if (x * binary_numbers[8] = 256) {
+        @print("OK\n");
+    }
+    else {
+        @print("ERR\n");
+    }
+
+    return 0;
+}

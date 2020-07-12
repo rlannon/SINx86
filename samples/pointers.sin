@@ -1,0 +1,22 @@
+// pointers.sin
+// an example of pointer syntax/etc
+
+decl void print(decl final string s);
+
+def int main() {
+    alloc int x: 10;
+    alloc ptr<int> p: $x;
+    alloc int y: *p;
+
+    alloc ptr<ptr<int>> p_double: $p;
+    alloc int z: **p_double;
+
+    if (z = x) {
+        @print("Works!\nAs do escaped characters like \"\\\"\n");
+    }
+    else {
+        @print("Fail...\n");
+    }
+
+    return 0;
+}

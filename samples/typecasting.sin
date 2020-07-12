@@ -1,0 +1,9 @@
+// typecasting.sin
+
+def int main() {
+    alloc string s: "hello";
+    alloc string s2: s;
+    alloc bool x: s = s2;
+
+    return not x as int + true as int * 2;
+}

@@ -1,17 +1,22 @@
 // sample.sin
 // A test file for our compiler
 
-def struct point {
-	alloc int x;
-	alloc int y;
-}
+decl void print(decl string s);
 
-def void main(alloc int argc) {
-	alloc point p;
-	let p.x = 10;
-	let p.y = 20;
-	alloc int x: p.x;
-	alloc int y: p.y;
+def void main() {	// should generate a warning because it returns void
+	alloc int x: 10;
+	alloc int y: 20;
+	alloc int z: 30;
+
+	alloc int n;
+	let n = x + y * z;
+
+	if (n = 610) {
+		@print("It works!\n");
+	}
+	else {
+		@print("Err\n");
+	}
 
 	return void;
 }

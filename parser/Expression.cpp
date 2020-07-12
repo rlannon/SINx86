@@ -44,6 +44,10 @@ Expression::~Expression() {
 
 
 
+void Literal::set_type(DataType t) {
+	this->type = t;
+}
+
 DataType Literal::get_data_type() {
 	return this->type;
 }
@@ -53,28 +57,20 @@ std::string Literal::get_value() {
 }
 
 Literal::Literal(Type data_type, std::string value, Type subtype) : value(value) {
-	Literal::expression_type = LITERAL;
+	this->expression_type = LITERAL;
 
     // symbol qualities for our DataType object
     bool const_q = true;
     bool long_q = false;
     bool short_q = false;
-    bool signed_q = false;
+    bool signed_q = true;
     
-    // If we have an integer, parse the value to see if we can determine some qualities about it
+    // If we have an integer, check the value to see if we have a long int
     if (data_type == INT) {
         long val = std::stol(value);
 
-        // signed/unsigned
-        if (val < 0) {
-            signed_q = true;
-        }
-
-        // long/short
         if (val >= 0x100000000) {
             long_q = true;
-        } else if (val < 0x10000) {
-            short_q = true;
         }
 
         // todo: handle long/short for signed numbers?
@@ -84,12 +80,17 @@ Literal::Literal(Type data_type, std::string value, Type subtype) : value(value)
     symbol_qualities qualities(const_q, false, false, signed_q, !signed_q, long_q, short_q);  // literals are always considered const
 
     // todo: set long/short qualities for ints and floats
-	Literal::type = DataType(data_type, subtype, qualities);
+	this->type = DataType(data_type, subtype, qualities);
+}
+
+Literal::Literal(DataType t, std::string value) {
+	this->type = t;
+	this->value = value;
 }
 
 Literal::Literal() {
-	Literal::expression_type = LITERAL;
-	Literal::type = DataType();
+	this->expression_type = LITERAL;
+	this->type = DataType();
 }
 
 
@@ -353,10 +354,15 @@ std::shared_ptr<Expression> Indexed::get_index_value()
 	return this->index_value;
 }
 
-Indexed::Indexed(std::string value, std::string LValue_type, std::shared_ptr<Expression> index_init) : index_value(index_init)
+std::shared_ptr<Expression> Indexed::get_to_index()
 {
-	this->value = value;
-	this->LValue_Type = LValue_type;
+	return this->to_index;
+}
+
+Indexed::Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value)
+{
+	this->to_index = to_index;
+	this->index_value = index_value;
 	this->expression_type = INDEXED;
 }
 

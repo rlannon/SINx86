@@ -38,6 +38,12 @@ public:
 	virtual const char* what() const noexcept;
 };
 
+class NonConstArrayLengthException: public CompilerException
+{
+public:
+	explicit NonConstArrayLengthException(unsigned int line);
+};
+
 class InvisibleSymbolException : public CompilerException
 {
 public:
@@ -236,10 +242,22 @@ public:
 	explicit ConstAllocationException(unsigned int line);
 };
 
+class ConstInitializationException : public CompilerException
+{
+public:
+	explicit ConstInitializationException(unsigned int line);
+};
+
 class InvalidTypecastException : public CompilerException
 {
 public:
 	explicit InvalidTypecastException(unsigned int line);
+};
+
+class IllegalIndirectionException : public CompilerException
+{
+public:
+	explicit IllegalIndirectionException(unsigned int line);
 };
 
 // todo: allow warning and note codes?

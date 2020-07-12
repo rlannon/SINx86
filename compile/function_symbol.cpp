@@ -39,14 +39,22 @@ register_usage function_symbol::get_arg_regs() {
 }
 
 // for the time being, at least, all functions must be in the global scope at level 0
-function_symbol::function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con, bool defined) :
+function_symbol::function_symbol(
+	std::string function_name, 
+	DataType return_type, 
+	std::vector<symbol> formal_parameters, 
+	calling_convention call_con, 
+	bool defined,
+	unsigned int line_defined
+) :
 	symbol(
 		function_name,
 		"global", 
 		0, 
 		return_type, 
 		0,
-		defined
+		defined,
+		line_defined
 	),
 	formal_parameters(formal_parameters),
 	call_con(call_con)
@@ -95,7 +103,7 @@ function_symbol::function_symbol(std::string function_name, DataType return_type
 				Type primary_type = sym.get_data_type().get_primary();
 				
 				// assign the register, if possible
-				if (can_pass_in_reg && (primary_type != ARRAY && primary_type != STRUCT && primary_type != STRING)) {
+				if (can_pass_in_reg && (primary_type != ARRAY && primary_type != STRUCT)) {
 					// pass in the primary type; the get_available_register function will be able to handle it
 					reg to_use = NO_REGISTER;
 					const reg integer_registers[] = { RSI, RDI, RCX, RDX, R8, R9 };

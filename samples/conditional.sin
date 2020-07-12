@@ -1,0 +1,21 @@
+// conditional.sin
+// a test of our conditionals
+
+def void main() {
+    alloc int result;
+
+    if (true)
+        let result = 1;
+    else
+        let result = 2;
+    
+    if (result = 2) {
+        alloc int x: 0;
+        let result = result * x;
+    } else if (result = 1) {
+        let result = 10;
+    } else
+        let result = 30;
+    
+    return void;
+}
