@@ -349,9 +349,9 @@ DataType Parser::get_type(std::string grouping_symbol)
 	std::shared_ptr<Expression> array_length_exp = nullptr;
 	std::string struct_name = "";
 
-	if (current_lex.value == "ptr") {
+	if (current_lex.value == "ptr" || current_lex.value == "ref") {
 		// set the type
-		new_var_type = PTR;
+		new_var_type = current_lex.value == "ptr" ? PTR : REFERENCE;
 
 		// 'ptr' must be followed by '<'
 		if (this->peek().value == "<") {
@@ -361,7 +361,11 @@ DataType Parser::get_type(std::string grouping_symbol)
 		}
 		// if it's not, we have a syntax error
 		else {
-			throw ParserException("Proper syntax is 'alloc ptr< T >'", 212, current_lex.line_number);
+			throw ParserException(
+				"Proper syntax is 'alloc ptr< T >' or 'alloc ref< T >'",
+				compiler_errors::INVALID_TYPE_SYNTAX,
+				current_lex.line_number
+			);
 		}
 	}
 	// otherwise, if it's an array,
@@ -419,7 +423,8 @@ DataType Parser::get_type(std::string grouping_symbol)
 
 			struct_name = current_lex.value;
 		}
-	} else {
+	}
+	else {
 		throw ParserException(
 			("'" + current_lex.value + "' is not a valid type name"),
 			compiler_errors::MISSING_IDENTIFIER_ERROR,

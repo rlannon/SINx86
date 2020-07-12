@@ -16,7 +16,8 @@ void DataType::set_width() {
 	// The width of all dynamic memory is PTR_WIDTH
 	if (this->qualities.is_dynamic()) {
 		this->width = sin_widths::PTR_WIDTH;
-	} else {
+	}
+	else {
 		if (this->primary == INT) {
 			// ints are usually 4 bytes wide (32-bit), but can be 2 bytes for a short or 8 for a long 
 
@@ -40,8 +41,8 @@ void DataType::set_width() {
 		} else if (this->primary == BOOL) {
 			// bools are only a byte wide
 			this->width = sin_widths::BOOL_WIDTH;
-		} else if (this->primary == PTR) {
-			// because we are compiling to x86_64, pointers should be 64-bit
+		} else if (this->primary == PTR || this->primary == REFERENCE) {
+			// because we are compiling to x86_64, pointers and references should be 64-bit
 			this->width = sin_widths::PTR_WIDTH;
 		} else if (this->primary == STRING) {
 			// since strings are all implemented as pointers, they have widths of 8 bytes
