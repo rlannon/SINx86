@@ -160,11 +160,14 @@ bool DataType::is_compatible(DataType to_compare) const
 	
 	Compares 'this' with 'to_compare' as if 'this' was the left-hand operand and 'to_compare' was the right-hand.
 	Types are compatible if one of the following is true:
-		- if pointer or array type:
+		- if pointer, reference, or array type:
 			- subtypes are compatible
 			- one of the subtypes is RAW
-		- left OR right is RAW
-		- primaries are equal
+		- else,
+			- left OR right is RAW
+			- if reference:
+				- the subtype is compatible with to_compare
+			- primaries are equal
 
 	*/
 
@@ -173,8 +176,10 @@ bool DataType::is_compatible(DataType to_compare) const
 	if (this->primary == RAW || to_compare.get_primary() == RAW) {
 		compatible = true;
 	}
-	else if (this->primary == PTR && to_compare.get_primary() == PTR)
-	{
+	else if (
+		(this->primary == PTR && to_compare.get_primary() == PTR) ||
+		(this->primary == REFERENCE && to_compare.get_primary() == PTR)
+	) {
 		// call is_compatible on the subtypes and ensure the type promotion is legal
 		if (this->subtype && to_compare.subtype) {
 			compatible = this->subtype->is_compatible(
@@ -184,10 +189,24 @@ bool DataType::is_compatible(DataType to_compare) const
 			throw CompilerException("Expected subtype", 0, 0);	// todo: ptr and array should _always_ have subtypes
 		}
 	}
+	else if (this->primary == REFERENCE) {
+		// if we have a reference type but the other value isn't a pointer, compare the reference subtype to to_compare
+		if (this->subtype) {
+			compatible = this->subtype->is_compatible(to_compare);
+		}
+		else {
+			throw CompilerException("Expected subtype", 0, 0);
+		}
+	}
 	else if (this->primary == ARRAY && to_compare.get_primary() == ARRAY) {
-		compatible = this->subtype->is_compatible(
-			*to_compare.get_full_subtype()
-		);
+		if (this->subtype) {
+			compatible = this->subtype->is_compatible(
+				*to_compare.get_full_subtype()
+			);
+		}
+		else {
+			throw CompilerException("Expected subtype", 0, 0);
+		}
 	}
 	else {
 		// primary types must be equal
