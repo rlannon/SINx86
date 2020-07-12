@@ -348,10 +348,10 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				if (primary == INT) {
 					// we have to decide between mul and imul instructions -- use imul if either of the operands is signed
 					if (is_signed) {
-						eval_ss << "\t" << "imul rax, rbx" << std::endl;
+						eval_ss << "\t" << "imul rbx" << std::endl;
 					}
 					else {
-						eval_ss << "\t" << "mul rax, rbx" << std::endl;
+						eval_ss << "\t" << "mul rbx" << std::endl;
 					}
 				}
 				else if (primary == FLOAT) {
