@@ -180,15 +180,45 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			else if (alloc_data.get_qualities().is_const()) {
 				throw ConstInitializationException(alloc_stmt.get_line_number());
 			}
+			std::stringstream alloc_instruction;
+
+			// form the instruction
+			if (alloc_data.get_primary() == ARRAY) {
+				alloc_instruction << allocated.get_name() << " dd " <<
+					std::to_string(allocated.get_data_type().get_array_length()) << std::endl;
+				
+				// if the array was initialized, supply our array; else, initialize to a zeroed array
+				if (alloc_stmt.was_initialized()) {
+					alloc_instruction << "d" << width_suffix << " " << initial_value << std::endl;
+				}
+				else {
+					alloc_instruction << "times " << allocated.get_data_type().get_array_length() <<
+						" d" << width_suffix << " 0" << std::endl;
+				}
+			}
+			else if (alloc_data.get_primary() == STRUCT) {
+				alloc_instruction << allocated.get_name() << " times " << data_width << " db 0" << std::endl;
+			}
+			else {
+				if (alloc_stmt.was_initialized()) {
+					alloc_instruction << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
+				}
+				else {
+					alloc_instruction << allocated.get_name() << " res" << width_suffix << " 1" << std::endl;
+				}
+			}
 
 			// static const variables can go in the .rodata segment, so check to see if it is also const
 			if (alloc_data.get_qualities().is_const()) {
 				// static const memory
-				this->rodata_segment << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
+				this->rodata_segment << alloc_instruction.str() << std::endl;
 			}
-			else if (allocated.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
+			else if (
+				(allocated.was_initialized() && alloc_stmt.get_initial_value()->is_const()) ||
+				alloc_data.get_primary() == ARRAY
+			) {
 				// static, non-const, initialized data
-				this->data_segment << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
+				this->data_segment << alloc_instruction.str() << std::endl;
 			}
 			else if (allocated.was_initialized()) {
 				// if we have an initial value that is not constant, throw an exception; that isn't allowed
@@ -198,20 +228,9 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 					alloc_stmt.get_line_number()
 				);
 			}
-			else if (allocated.get_data_type().get_primary() == ARRAY) {
-				// static, non-const, array data -- define the width, reserve the appropriate number of bytes
-				this->data_segment << allocated.get_name() << " dd " << alloc_data.get_array_length() << std::endl;
-				this->data_segment << "times " << alloc_data.get_array_length() << " d" << width_suffix << " 0" << std::endl;
-			}
 			else {
 				// static, non-const, uninitialized data
-				if (allocated.get_data_type().get_primary() == STRUCT) {
-					// structs can just reserve bytes according to their total width
-					this->bss_segment << allocated.get_name() << " resb " << data_width << std::endl;
-				}
-				else {
-					this->bss_segment << allocated.get_name() << " res" << width_suffix << " 1" << std::endl;
-				}
+				this->bss_segment << alloc_instruction.str() << std::endl;
 			}
 		}
 		else {
