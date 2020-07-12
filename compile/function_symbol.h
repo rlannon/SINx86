@@ -37,7 +37,14 @@ public:
     register_usage get_arg_regs();
 
     // constructors
-    function_symbol(std::string function_name, DataType return_type, std::vector<symbol> formal_parameters, calling_convention call_con = SINCALL, bool defined = true);
+    function_symbol(
+        std::string function_name, 
+        DataType return_type, 
+        std::vector<symbol> formal_parameters, 
+        calling_convention call_con = SINCALL, 
+        bool defined = true,
+        unsigned int line_defined = 0
+    );
     function_symbol();
     ~function_symbol();
 };

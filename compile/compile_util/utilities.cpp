@@ -509,7 +509,8 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined) {
         def.get_type_information(),
         formal_parameters,
         def.get_calling_convention(),
-        defined
+        defined,
+        def.get_line_number()
     );
 
     // finally, return the function symbol
@@ -553,7 +554,8 @@ symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name,
         scope_level,
         type_info,
         stack_offset,
-        defined
+        defined,
+        allocation.get_line_number()
     );
 
     return to_return;
