@@ -242,6 +242,12 @@ public:
 	explicit ConstAllocationException(unsigned int line);
 };
 
+class ConstInitializationException : public CompilerException
+{
+public:
+	explicit ConstInitializationException(unsigned int line);
+};
+
 class InvalidTypecastException : public CompilerException
 {
 public:

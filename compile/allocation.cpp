@@ -176,19 +176,15 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 					alloc_stmt.get_line_number()
 				);
 			}
+			// if the data is const and we don't have a const initial value, it's an error
+			else if (alloc_data.get_qualities().is_const()) {
+				throw ConstInitializationException(alloc_stmt.get_line_number());
+			}
 
 			// static const variables can go in the .rodata segment, so check to see if it is also const
 			if (alloc_data.get_qualities().is_const()) {
 				// static const memory
-				/*if (alloc_data.get_primary() == ARRAY) {
-					// todo: static const arrays
-				}
-				else if (alloc_data.get_primary() == STRING) {
-					// todo: static const strings
-				}*/
-				//else {
-					this->rodata_segment << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
-				//}
+				this->rodata_segment << allocated.get_name() << " d" << width_suffix << " " << initial_value << std::endl;
 			}
 			else if (allocated.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
 				// static, non-const, initialized data

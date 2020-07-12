@@ -72,13 +72,20 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	// list expressions (array literals) have to be handled slightly differently than other expressions
 	else if (current_lex.value == "{") {
 		std::vector<std::shared_ptr<Expression>> list_members = {};
+		
+		// set this to false if any element is *not* const
+		is_const = true;
 
 		// as long as the next token is a comma, we have elements to parse
 		lexeme peeked = this->peek();
 		while (peeked.value != "}") {
 			this->next();	// skip the last character of the expression
 			try {
-				list_members.push_back(this->parse_expression(prec, "{"));
+				auto elem = this->parse_expression(prec, "{");
+				if (!elem->is_const())
+					is_const = false;
+				
+				list_members.push_back(elem);
 			}
 			catch (std::exception &e) {
 				throw CompilerException(

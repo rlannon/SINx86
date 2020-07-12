@@ -21,9 +21,9 @@ def unsigned int main() {
     let my_static_array[3] = 8;
     let my_static_array[4] = 16;
 
-    alloc int t: my_static_array[4];
-    if (t = 16) {
-        @print("t is 16!\n");
+    alloc int t: my_static_array[4] + binary_numbers[5];
+    if (t = 32) {
+        @print("t is 32!\n");
     }
     else {
         @print("Something broke.\n");

@@ -280,6 +280,15 @@ ConstAllocationException::ConstAllocationException(unsigned int line) :
 	// super called
 }
 
+ConstInitializationException::ConstInitializationException(unsigned int line) :
+CompilerException(
+	"Constanst must be initialized with a compile-time constant",
+	compiler_errors::NON_CONST_VALUE_ERROR,
+	line
+) {
+	// super called
+}
+
 InvalidTypecastException::InvalidTypecastException(unsigned int line) :
 	CompilerException(
 		"Illegal typecast",

@@ -71,11 +71,9 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbols, structs, line);
 
             // the subtype will be the current primary type, and the primary type will be array
-            sub_data_type.set_subtype(sub_data_type);
-            sub_data_type.set_primary(ARRAY);
-
-            // copy it into type_information
-            type_information = sub_data_type;
+            type_information.set_subtype(sub_data_type);
+            type_information.set_primary(ARRAY);
+            
             break;
         }
         case BINARY:
