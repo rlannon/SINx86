@@ -10,7 +10,7 @@ SIN is a custom procedural programming language based on C, C++, and Python, des
 
 SIN is very C-like; it is strictly procedural, utilizes strict type safety, doesn't allow implicit conversions, and gives the programmer a decent amount of freedom over the environment should they choose to use it. However, programmers shouldn't *have* to worry about manually allocating and freeing memory, especially when we have the resources to let a runtime environment do it automatically. As such, SIN utilizes a runtime environment for automatic memory management, it includes reference types (like C++), and even contains runtime bounds-checking on arrays.
 
-The central idea of SIN is to create a language with a fairly readable syntax that allows more safety than C but without all of the complicated object-oriented features of languages. I wanted, essentially, a slightly more modernized version of C, one with some of the ease-of-development and safety features that are offered by modern languages. It aims to prove that "modern" does not have to mean "object-oriented" (which I think Rust did well). That said, my goal isn't really to make a modern language competitor -- see the 'Goal of the Project' section for more.
+The central idea of SIN is to create a language with a fairly readable syntax that allows more safety than C but without all of the complicated object-oriented features of languages like Java. I wanted, essentially, a slightly more modernized version of C, one with some of the ease-of-development and safety features that are offered by modern languages. It aims to show that "modern" does not have to mean "object-oriented" (which I think Rust did well). That said, my goal isn't really to make a modern language competitor -- see the 'Goal of the Project' section for more.
 
 ### Sample
 
@@ -21,7 +21,7 @@ The following is an obligatory 'hello world!' sample:
         return 0;
     }
 
-Like Python, functions are defined with `def`, function calls look similar enought (though they are prefixed with `@` -- this is for a future language feature). Like C and Java, the entry point of entry program is 'main', though unlike Java (and like C), the return type and arguments for this function are not fixed. It's good practice to use a return type of `int` and the argument `dynamic array<string> args`, but it's not strictly required.
+Like Python, functions are defined with `def`, function calls look similar enough (though they are prefixed with `@` -- this is for a future language feature). Like C and Java, the entry point of entry program is 'main', though unlike Java (and like C), the return type and arguments for this function are not fixed. It's good practice to use a return type of `int` and the argument `dynamic array<string> args`, but it's not strictly required.
 
 For more information, check out the [guide](Basic%20Syntax.md).
 
