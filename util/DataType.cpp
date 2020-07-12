@@ -325,6 +325,25 @@ bool DataType::is_valid_type(DataType &t) {
 	return is_valid;
 }
 
+bool DataType::must_initialize() const {
+	/*
+
+	must_initialize
+	Determines whether the type must be initialized in its allocation
+
+	Check the documentation (specifically, docs/Construction.md) for the exact rules
+
+	*/
+
+	bool init_required = false;
+	init_required = this->get_qualities().is_const();
+	init_required = init_required || this->get_primary() == REFERENCE;
+	if (this->get_primary() == ARRAY) {
+
+	}
+	// todo: how to handle tuples?
+}
+
 DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp, std::string struct_name) :
     primary(primary),
 	subtype(nullptr),

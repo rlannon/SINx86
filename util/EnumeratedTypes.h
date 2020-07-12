@@ -40,7 +40,8 @@ enum stmt_type {
 	CALL,
 	INLINE_ASM,
 	FREE_MEMORY,
-	SCOPE_BLOCK
+	SCOPE_BLOCK,
+	CONSTRUCTION_STATEMENT
 };
 
 
@@ -57,7 +58,8 @@ enum exp_type {
 	SIZE_OF,
 	CAST,
 	ATTRIBUTE,
-	KEYWORD_EXP
+	KEYWORD_EXP,
+	CONSTRUCTION_EXP
 };
 
 enum attribute {
@@ -151,9 +153,11 @@ enum Type {
 	BOOL,
 	VOID,
 	PTR,
+	REFERENCE,
 	RAW,
 	ARRAY,
-	STRUCT
+	STRUCT,
+	TUPLE
 };
 
 enum reg {

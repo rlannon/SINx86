@@ -30,6 +30,34 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 	DataType &alloc_data = alloc_stmt.get_type_information();
 	size_t data_width = alloc_data.get_width();
 
+	// the first thing we need to do it check to make sure the type was initialized, if required
+	if (alloc_data.get_primary() == STRUCT) {
+		// structs just defer checking members until later -- we have to do it after allocation
+	}
+	else if (alloc_data.get_primary() == TUPLE) {
+		// todo: how to handle tuples?
+	}
+	else if (alloc_data.must_initialize() && !alloc_stmt.was_initialized()) {
+		// throw an exception based on the type/qualities
+		if (alloc_data.get_qualities().is_const()) {
+			throw ConstAllocationException(alloc_stmt.get_line_number());
+		}
+		else if (alloc_data.get_primary() == REFERENCE) {
+			throw CompilerException(
+				"Reference not initialized",
+				compiler_errors::REFERENCE_ALLOCATION_ERROR,
+				alloc_stmt.get_line_number()
+			);
+		}
+		else {
+			throw CompilerException(
+				"Data must be initialized in allocation",
+				compiler_errors::ALLOC_INIT_REQUIRED,
+				alloc_stmt.get_line_number()
+			);
+		}
+	}
+
 	// todo: struct allocation -- allocate each member accordingly
 
 	// todo: array length needs to be determined for _all_ arrays
@@ -95,10 +123,6 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 		// we have some special things we need to do when we allocate constants
 		if (alloc_data.get_qualities().is_const()) {
-			// check to ensure it was initialized
-			if (!alloc_stmt.was_initialized())
-				throw ConstAllocationException(alloc_stmt.get_line_number());
-
 			// todo: evaluate the constant and add it to the constant table
 		}
 
@@ -333,6 +357,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			}
 
 			// if we have a struct, iterate through its members and initialize the array lengths
+			// we also need to make sure that we are following construction rules
+			bool init_required = false;	// if the struct contains references, it must be initialized in the allocation
 			auto members = info.get_all_members();
 			std::string struct_addr = get_address(allocated, r);
 			allocation_ss << struct_addr;
@@ -343,8 +369,21 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 					allocation_ss << this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number()).str();
 					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;	
 				}
+				else if (m->get_data_type().must_initialize()) {
+					init_required = true;
+				}
 			}
 
+			// if we needed to initialize but didn't, throw an exception
+			if (init_required && !alloc_stmt.was_initialized()) {
+				throw CompilerException(
+					"Struct '" + info.get_struct_name() + "' must be initialized when allocated because it contains one or more members that require it (hint: use 'construct')",
+					compiler_errors::ALLOC_INIT_REQUIRED,
+					alloc_stmt.get_line_number()
+				);
+			}
+
+			// if we had to push r15, restore it
 			if (push_r15) {
 				allocation_ss << "\t" << "pop r15" << std::endl;
 			}
