@@ -58,6 +58,7 @@ class compiler {
 
 	// We need to track the number for string constants, if/else blocks, etc.
 	size_t strc_num;
+	size_t strcmp_num;
 	size_t fltc_num;
 	size_t list_literal_num;
 	size_t scope_block_num;
