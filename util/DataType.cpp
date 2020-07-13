@@ -160,7 +160,7 @@ bool DataType::is_compatible(DataType to_compare) const
 	
 	Compares 'this' with 'to_compare' as if 'this' was the left-hand operand and 'to_compare' was the right-hand.
 	Types are compatible if one of the following is true:
-		- if pointer, reference, or array type:
+		- if pointer or array type:
 			- subtypes are compatible
 			- one of the subtypes is RAW
 		- else,
@@ -176,10 +176,7 @@ bool DataType::is_compatible(DataType to_compare) const
 	if (this->primary == RAW || to_compare.get_primary() == RAW) {
 		compatible = true;
 	}
-	else if (
-		(this->primary == PTR && to_compare.get_primary() == PTR) ||
-		(this->primary == REFERENCE && to_compare.get_primary() == PTR)
-	) {
+	else if (this->primary == PTR && to_compare.get_primary() == PTR) {
 		// call is_compatible on the subtypes and ensure the type promotion is legal
 		if (this->subtype && to_compare.subtype) {
 			compatible = this->subtype->is_compatible(
@@ -190,7 +187,7 @@ bool DataType::is_compatible(DataType to_compare) const
 		}
 	}
 	else if (this->primary == REFERENCE) {
-		// if we have a reference type but the other value isn't a pointer, compare the reference subtype to to_compare
+		// if we have a reference type, compare the reference subtype to to_compare
 		if (this->subtype) {
 			compatible = this->subtype->is_compatible(to_compare);
 		}
