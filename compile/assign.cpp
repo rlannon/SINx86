@@ -58,6 +58,11 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
         p.fetch_instructions = overwrite.str();
     }
     
+    // we need to adjust our reference counts for pointers
+    if (lhs_type.get_primary() == PTR) {
+        //
+    }
+
     handle_ss << this->assign(lhs_type, rhs_type, p, a.get_rvalue(), a.get_line_number()).str();
 
     return handle_ss;
@@ -88,7 +93,7 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
         );
     }
     
-    return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line);
+    return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
 }
 
 std::stringstream compiler::assign(
@@ -96,7 +101,8 @@ std::stringstream compiler::assign(
     DataType &rhs_type,
     assign_utilities::destination_information dest,
     std::shared_ptr<Expression> rvalue,
-    unsigned int line
+    unsigned int line,
+    bool is_alloc_init
 ) {
     /*
 
@@ -111,6 +117,14 @@ std::stringstream compiler::assign(
     reg src_reg = rhs_type.get_primary() == FLOAT ? XMM0 : RAX;
 
     if (lhs_type.is_compatible(rhs_type)) {
+        // first, call sre_free on the lhs if we have a pointer
+        if (lhs_type.get_primary() == PTR) {
+            handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
+            handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
+            handle_assign << "\t" << "call sre_free" << std::endl;
+            handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
+        }
+
         // evaluate the rvalue, then the destination (lvalue)
         handle_assign << this->evaluate_expression(rvalue, line).str();
         handle_assign << dest.fetch_instructions;
@@ -169,6 +183,17 @@ std::stringstream compiler::assign(
             }
 
             handle_assign << "\t" << instruction << " " << dest.dest_location << ", " << src << std::endl; 
+        }
+
+        // now, call sre_add_ref on the lhs if we have a pointer OR if we have a reference and alloc-init
+        if (
+            (lhs_type.get_primary() == PTR) ||
+            (lhs_type.get_primary() == REFERENCE && is_alloc_init)
+        ) {
+            handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
+            handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
+            handle_assign << "\t" << "call sre_add_ref" << std::endl;
+            handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
     }
     else {

@@ -773,10 +773,8 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
         // preserve all registers to ensure the memory locations contain their respective values
         dec_ss << push_used_registers(r, true).str();
 
-        // set up the stack frame
+        // preserve our status register
         dec_ss << "\t" << "pushfq" << std::endl;
-        dec_ss << "\t" << "push rbp" << std::endl;
-        dec_ss << "\t" << "mov rbp, rsp" << std::endl;
         for (symbol& s: v) {
             // if we have a negative number, add it instead
             if (s.get_offset() < 0) {
@@ -788,9 +786,7 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
             dec_ss << "\t" << "call sre_free" << std::endl;
         }
-        // restore the stack frame
-        dec_ss << "\t" << "mov rsp, rbp" << std::endl;
-        dec_ss << "\t" << "pop rbp" << std::endl;
+        // restore the status
         dec_ss << "\t" << "popfq" << std::endl;
 
         // restore our registers
@@ -860,11 +856,7 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
 
     gen << get_addr.str();
     gen << "\t" << "pushfq" << std::endl;
-    gen << "\t" << "push rbp" << std::endl;
-    gen << "\t" << "mov rbp, rsp" << std::endl;
     gen << "\t" << "call " << func_name << std::endl;
-    gen << "\t" << "mov rsp, rbp" << std::endl;
-    gen << "\t" << "pop rbp" << std::endl;
     gen << "\t" << "popfq" << std::endl;
 
     return gen;

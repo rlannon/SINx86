@@ -89,7 +89,8 @@ class compiler {
 		DataType &rhs_type,
 		assign_utilities::destination_information dest,
 		std::shared_ptr<Expression> rvalue,
-		unsigned int line
+		unsigned int line,
+		bool is_alloc_init = false
 	);
 
 	// todo: handle assignments for char, float, etc.
