@@ -469,7 +469,7 @@ std::string Lexer::read_char() {
 	
 	while (this->peek() != '\'') {
 		to_return.append(
-			std::to_string(this->next())
+			1, this->next()
 		);
 	}
 

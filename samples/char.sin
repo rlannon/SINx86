@@ -4,6 +4,8 @@
 def int main(alloc dynamic array<string> args) {
     alloc char c;
     let c = 'a';
+    alloc char ch: c;
+    let c = '\n';
 
     return 0;
 }

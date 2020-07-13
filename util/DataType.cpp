@@ -48,7 +48,11 @@ void DataType::set_width() {
 			// since strings are all implemented as pointers, they have widths of 8 bytes
 			// (they always point to dynamic memory, but syntactically don't behave like pointers)
 			this->width = sin_widths::PTR_WIDTH;
-		} else {
+		} else if (this->primary == CHAR) {
+			// todo: determine whether it is ASCII or UTF-8
+			this->width = sin_widths::CHAR_WIDTH;
+		} 
+		else {
 			/*
 
 			Everything else should use 0:

@@ -417,7 +417,8 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         // Since SIN uses ASCII (for now), all chars get loaded into al as they are only a byte wide
         if (type.get_width() == sin_widths::CHAR_WIDTH) {
             // NASM supports an argument like 'a' for mov to load the char's ASCII value
-            eval_ss << "mov al, '" << to_evaluate.get_value() << "'" << std::endl;
+            // note: use backticks because we want to use escape characters
+            eval_ss << "\t" << "mov al, `" << to_evaluate.get_value() << "`" << std::endl;
         } else {
             throw CompilerException("Unicode currently not supported", compiler_errors::UNICODE_ERROR, line);
         }
