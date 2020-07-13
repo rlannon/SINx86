@@ -16,6 +16,7 @@ enum lexeme_type {
 	FLOAT_LEX,
 	INT_LEX,
 	STRING_LEX,
+	CHAR_LEX,
 	BOOL_LEX,
 	IDENTIFIER,
 	KEYWORD,

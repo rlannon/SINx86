@@ -5,7 +5,13 @@
 
 
 const bool is_literal(lexeme_type candidate_type) {
-	if (candidate_type == INT_LEX || candidate_type == FLOAT_LEX || candidate_type == BOOL_LEX || candidate_type == STRING_LEX) {
+	if (
+		candidate_type == INT_LEX || 
+		candidate_type == FLOAT_LEX || 
+		candidate_type == BOOL_LEX || 
+		candidate_type == STRING_LEX ||
+		candidate_type == CHAR_LEX
+	) {
 		return true;
 	}
 	else {

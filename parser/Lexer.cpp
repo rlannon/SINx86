@@ -11,7 +11,7 @@ The implementation of the lexer
 #include "Lexer.h"
 
 // The list of language keywords
-const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "const", 
+const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "char", "const", 
 "constexpr", "c64", "decl", "def", "dynamic", "else", "extern", "final", "float", "free", "if", "include", "int", 
 "len", "let", "long", "not", "null", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "size", 
 "sizeof", "static", "string", "struct", "unsigned", "var", "void", "while", "windows", "xor" };
@@ -343,6 +343,10 @@ lexeme Lexer::read_next() {
 			type = lexeme_type::STRING_LEX;
 			value = this->read_string();
 		}
+		else if (ch == '\'') {
+			type = lexeme_type::CHAR_LEX;
+			value = this->read_char();
+		}
 		else if (this->is_id_start(ch)) {
 			value = this->read_while(&this->is_id);
 			if (this->is_keyword(value)) {
@@ -419,13 +423,13 @@ void Lexer::read_lexeme() {
 
 std::string Lexer::read_string() {
 	std::string str = "";	// start with an empty string for the message
-	this->stream->get();	// skip the initial quote in the string
+	this->next();	// skip the initial quote in the string
 
 	bool escaped = false;	// initialized our "escaped" identifier to false
 	bool string_done = false;
 
 	while (!this->eof() && !string_done) {
-		char ch = this->stream->get();	// get the character
+		char ch = this->next();	// get the character
 
 		if (escaped) {	// if we have escaped the character
 			str += ch;
@@ -444,6 +448,40 @@ std::string Lexer::read_string() {
 	}
 
 	return str;
+}
+
+std::string Lexer::read_char() {
+	/*
+
+	read_char
+	Reads a char literal
+
+	SIN char literals are structured like C characters; any ASCII character (hopefully UTF-8 support will be added someday) enclosed between single quotes.
+	Since these characters may be escaped, they can be up to two C chars inside the single quotes; e.g., '\0'.
+	In SIN, an empty char ('') is equivalent to '\0'.
+	
+	Note that here we will be giving the string representation of the character. So a newline will read as \ character, n character, not the actual newline character. This is because we are going to be supplying this information to NASM, so we want the string itself.
+
+	*/
+
+	std::string to_return = "";
+	this->next();
+	
+	while (this->peek() != '\'') {
+		to_return.append(
+			std::to_string(this->next())
+		);
+	}
+
+	// if we had '', it should be interpreted as null
+	if (to_return.length() == 0) {
+		to_return = "\\0";
+	}
+
+	// eat the ' character
+	this->next();
+
+	return to_return;
 }
 
 std::string Lexer::read_ident() {

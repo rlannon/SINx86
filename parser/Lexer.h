@@ -99,6 +99,7 @@ class Lexer
 	void read_lexeme();
 
 	std::string read_string();
+	std::string read_char();
 	std::string read_ident();	// read the full identifier
 
 public:

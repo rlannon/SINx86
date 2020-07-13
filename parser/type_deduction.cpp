@@ -21,6 +21,8 @@ const Type type_deduction::get_type_from_lexeme(lexeme_type lex_type)
 		return INT;
 	case FLOAT_LEX:
 		return FLOAT;
+	case CHAR_LEX:
+		return CHAR;
 	default:
 		return STRUCT;
 	}
