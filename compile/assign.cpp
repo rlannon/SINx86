@@ -55,7 +55,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
         if (must_push)
             overwrite << "\t" << "pop rax" << std::endl;
         
-        p.second = overwrite.str();
+        p.fetch_instructions = overwrite.str();
     }
     
     handle_ss << this->assign(lhs_type, rhs_type, p, a.get_rvalue(), a.get_line_number()).str();
@@ -91,7 +91,13 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
     return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line);
 }
 
-std::stringstream compiler::assign(DataType lhs_type, DataType &rhs_type, std::pair<std::string, std::string> dest, std::shared_ptr<Expression> rvalue, unsigned int line) {
+std::stringstream compiler::assign(
+    DataType lhs_type,
+    DataType &rhs_type,
+    assign_utilities::destination_information dest,
+    std::shared_ptr<Expression> rvalue,
+    unsigned int line
+) {
     /*
 
     assign
@@ -107,7 +113,7 @@ std::stringstream compiler::assign(DataType lhs_type, DataType &rhs_type, std::p
     if (lhs_type.is_compatible(rhs_type)) {
         // evaluate the rvalue, then the destination (lvalue)
         handle_assign << this->evaluate_expression(rvalue, line).str();
-        handle_assign << dest.second;
+        handle_assign << dest.fetch_instructions;
 
         // get the appropriate variant of RAX based on the width of the type to which we are assigning
         std::string src = register_usage::get_register_name(src_reg, lhs_type);
@@ -119,19 +125,36 @@ std::stringstream compiler::assign(DataType lhs_type, DataType &rhs_type, std::p
             // set up our registers/arguments
             handle_assign << "\t" << "mov rsi, rax" << std::endl;
             handle_assign << "\t" << "mov rdi, rbx" << std::endl;
-            handle_assign << "\t" << "mov ecx, " << lhs_type.get_full_subtype()->get_width() << std::endl;
+
+            std::string proc_name;
+
+            // if we have an array
+            if (lhs_type.get_primary() == ARRAY) {
+                handle_assign << "\t" << "mov ecx, " << lhs_type.get_full_subtype()->get_width() << std::endl;
+                proc_name = "sinl_array_copy";
+            }
+            else {
+                handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                proc_name = "sinl_string_copy";
+            }
+            // todo: other copy types
 
             // set up the stack frame; call the function
             handle_assign << "\t" << "pushfq" << std::endl;
             handle_assign << "\t" << "push rbp" << std::endl;
             handle_assign << "\t" << "mov rbp, rsp" << std::endl;
 
-            handle_assign << "\t" << "call sinl_array_copy" << std::endl;
+            handle_assign << "\t" << "call " << proc_name << std::endl;
 
             // restore our old stack frame             
             handle_assign << "\t" << "mov rsp, rbp" << std::endl;
             handle_assign << "\t" << "pop rbp" << std::endl;
             handle_assign << "\t" << "popfq" << std::endl;
+
+            // now, if we had a string, we need to move the returned address into where the string is located
+            if (lhs_type.get_primary() == STRING) {
+                handle_assign << "\t" << "mov [r15], rax" << std::endl;
+            }
 
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
@@ -145,7 +168,7 @@ std::stringstream compiler::assign(DataType lhs_type, DataType &rhs_type, std::p
                 instruction = "mov";
             }
 
-            handle_assign << "\t" << instruction << " " << dest.first << ", " << src << std::endl; 
+            handle_assign << "\t" << instruction << " " << dest.dest_location << ", " << src << std::endl; 
         }
     }
     else {

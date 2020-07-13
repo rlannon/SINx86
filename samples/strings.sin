@@ -1,10 +1,15 @@
 // strings.sin
 // Test string functionality
 
+decl void print(decl string s);
+
 def int main() {
     alloc string s: "hello";
     alloc string s2;
     let s2 = s + " world! " + s + " and how are you?";
+
+    @print("s is: " + s + "\n");
+    @print("s2 is: " + s2 + "\n");
     
     return 0;
 }

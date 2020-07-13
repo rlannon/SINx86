@@ -741,9 +741,9 @@ std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
     // get the pointers
     copy_ss << get_address(src, RSI) << std::endl;
     copy_ss << get_address(dest, RDI) << std::endl;
-    copy_ss << "\tpushfq" << std::endl << "\tpush rpb" << std::endl << "\tmov rbp, rsp" << std::endl;
+    copy_ss << "\t" << "pushfq" << std::endl << "\tpush rpb" << std::endl << "\tmov rbp, rsp" << std::endl;
     copy_ss << "\t" << "call sinl_string_copy" << std::endl;
-    copy_ss << "\tmov rsp, rbp" << std::endl << "\tpop rbp" << std::endl << "\tpopfq" << std::endl;
+    copy_ss << "\t" << "mov rsp, rbp" << std::endl << "\tpop rbp" << std::endl << "\tpopfq" << std::endl;
 
     // restore registers -- note this does not move values back into registers that were moved into memory!
     copy_ss << pop_used_registers(regs, true).str();
@@ -858,7 +858,7 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
         }
     }
 
-    gen << "\t" << get_addr.str();
+    gen << get_addr.str();
     gen << "\t" << "pushfq" << std::endl;
     gen << "\t" << "push rbp" << std::endl;
     gen << "\t" << "mov rbp, rsp" << std::endl;
