@@ -20,8 +20,25 @@ def int main(alloc dynamic array<string> args) {    // utilize the proper signat
     alloc ref<string> s_ref: s;
     let s_ref = "hello, world!";    // this will actually result in divergent references
 
-    @print(s);  // this means this should print "hello"
-                // (the original needed to be reallocated when we were working with the reference)
+    if (s != s_ref) {
+        @print("Divergent reference found\n");
+    }
+    else {
+        @print("Strings equal\n");
+    }
+
+    @print(s + "\n");   // this means this should print "hello"
+                        // (the original needed to be reallocated when we were working with the reference)
+
+    // test to see whether non-diverging references will hold up
+    alloc ref<string> second_ref: s;
+    let s = "works";
+    @print(second_ref + "\n");
+
+    // this program should output:
+    // > Divergent reference found
+    // > hello
+    // > works
 
     return 0;
 }
