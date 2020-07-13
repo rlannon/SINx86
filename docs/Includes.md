@@ -60,7 +60,7 @@ When the main file is built, and the `include` is encountered, it will see the f
 
 #### Declarative SIN
 
-To avoid efficiency issues that may arise when including files, the compiler requires that header files utilize a flavor of SIN known as *Declarative SIN,* typically using the extension `.sinh` (though this is not required -- akin to the `.h` and `.c` distinction in C, where the files are just text files and have no real differences to the compiler). Declarative SIN allows only the following:
+To avoid efficiency issues that may arise when including files, the compiler requires that header files utilize a style of SIN known as *Declarative SIN,* typically using the extension `.sinh` (though this is not required -- akin to the `.h` and `.c` distinction in C, where the files are just text files and have no real differences to the compiler). Declarative SIN allows only the following:
 
 * `decl` statements to declare the existence of a function, data, or struct
 * Struct definitions
@@ -120,7 +120,7 @@ This is fine, but using Declarative SIN, the following would be done:
         return @multiply(x, y);
     }
 
-This allows `simple_math.sin` to be compiled separately from `main.sin`, meaning any changes to it will be ignored when `main.sin` is compiled and linked to the final executable. The compiler will be made aware of its functions through the `.sinh` file. This also has the benefit of giving us a lot less code to parse. Note that if Declarative SIN is not used, trying to compile the first example in this file would give an error stating:
+This allows `simple_math.sin` to be compiled separately from `main.sin`, meaning any changes to it will be ignored when `main.sin` is compiled and linked to the final executable. The compiler will be made aware of its functions through the `.sinh` file. This also has the benefit of giving us a lot less code to parse. Note that if Declarative SIN is not used, trying to compile the first example in this file would give an error upon reaching the function signature in the included file, stating:
 
     Attempt to include a non-globalized symbol in SIN file; use Declarative SIN or "extern"
 

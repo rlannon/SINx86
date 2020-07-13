@@ -1,6 +1,6 @@
 # SIN Documentation
 
-## Structs_
+## Structs
 
 SIN, like many programming languages, allows users to define their own types in order to expand the language's functionality. This may be done via structs, which are more or less equivalent to their C counterparts. Once defined, they may be allocated like any other data type. Although SIN is not object-oriented (and does not support inheritance or polymorphism), there is a benefit to allowing operator overloading for user-defined types as well as member functions.
 
@@ -58,7 +58,8 @@ So, that means that the offset of `m.x` from the example above is:
     rbp - [
         (8 + 18) -
         (6 + 4)
-    ] = rpb - [26 - 10] = rbp - 16
+    ]   = rpb - [26 - 10]
+        = rbp - 16
 
 and sure enough, looking at the sample memory structure, `m.x` is located at `rbp - 16`.
 
@@ -80,25 +81,4 @@ An important aspect of structures is that they are constructed when they are ini
 
 _(Note that the `point` in the construct expression is not strictly necessary when using alloc-init syntax, as the type is already known)_
 
-However, this keyword may be used in three distinct scenarios:
-
-* Initialization with alloc-init syntax
-* Struct replacement (whole struct assignment)
-* Anonymous struct creation
-
-The above example used alloc-init syntax. If a struct contains references, this will still work because a new struct is created that replaces the old one. For example, this code is valid:
-
-    alloc int x: 10;
-    alloc int y: 10;
-    def struct m {
-        alloc ref<int> r;
-    }
-
-    alloc m m1: construct {
-        r: $x;
-    };
-    let m1 = construct point {
-        r: $y;
-    };
-
-Typically, references are immutable, but in this instance, the entire struct `m1` is deleted and replaced with a new object. This means that we aren't really altering its references, we are replacing them.
+For more information on construction, see the relevant document on [type construction](Construction.md).
