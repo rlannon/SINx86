@@ -24,6 +24,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 	*/
 
 	// todo: use 'extern' quality and pass it to generate_symbol
+	
+	// todo: generate a warning about divergent references if we try to create a pointer or reference to a dynamic type
 
 	std::stringstream allocation_ss;
 

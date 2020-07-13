@@ -437,7 +437,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
         this->strc_num += 1;
 
         // now, load the a register with the address of the string
-        eval_ss << "\t" << "mov rax, " << name << std::endl;
+        eval_ss << "\t" << "lea rax, [" << name << "]" << std::endl;
     } else if (type.get_primary() == ARRAY) {
         /*
 

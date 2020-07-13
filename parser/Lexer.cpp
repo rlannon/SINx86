@@ -19,7 +19,7 @@ const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm
 // Our regular expressions
 const std::string Lexer::punc_exp = R"([',;\[\]\{\}\(\)])";	// expression for punctuation
 const std::string Lexer::op_exp = R"(
-	(\->)|[\.\+\-\*/%=\&\|\^<>\$\?!@#:]|(\+=|)|(\-=)|(\*=)|(/=)|(%=)|(&=)|(\|=)|(\^=)
+	(\->)|[\.\+\-\*/%=\&\|\^<>\$\?!~@#:]|(!=)|(\+=)|(\-=)|(\*=)|(/=)|(%=)|(&=)|(\|=)|(\^=)
 	)";	// expression for operations
 const std::string Lexer::id_exp = "[_0-9a-zA-Z]";	// expression for interior id letters
 const std::string Lexer::bool_exp = "[(true)|(false)]";

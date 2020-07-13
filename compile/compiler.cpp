@@ -221,14 +221,15 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
 			compile_ss << this->evaluate_expression(ite->get_condition(), ite->get_line_number()).str();
-			compile_ss << "\t" << "jne sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
+            compile_ss << "\t" << "cmp al, 1" << std::endl;
+            compile_ss << "\t" << "jne .sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
 			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
-			compile_ss << "\t" << "jmp sinl_ite_done_" << current_scope_num << std::endl;
-			compile_ss << "sinl_ite_else_" << current_scope_num << ":" << std::endl;
+			compile_ss << "\t" << "jmp .sinl_ite_done_" << current_scope_num << std::endl;
+			compile_ss << ".sinl_ite_else_" << current_scope_num << ":" << std::endl;
             
 			// compile the branch, if one exists
 			if (ite->get_else_branch().get()) {
@@ -236,7 +237,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			}
 
 			// clean-up
-			compile_ss << "sinl_ite_done_" << current_scope_num << ":" << std::endl;
+			compile_ss << ".sinl_ite_done_" << current_scope_num << ":" << std::endl;
 			break;
 		}
 		case WHILE_LOOP:
@@ -247,15 +248,16 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             auto current_block_num = this->scope_block_num;
             this->scope_block_num += 1;
 
-            compile_ss << "sinl_while_" << current_block_num << ":" << std::endl;
+            compile_ss << ".sinl_while_" << current_block_num << ":" << std::endl;
             compile_ss << this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number()).str();
-            compile_ss << "\t" << "jne sinl_while_done_" << current_block_num << std::endl;
+            compile_ss << "\t" << "cmp al, 1" << std::endl;
+            compile_ss << "\t" << "jne .sinl_while_done_" << current_block_num << std::endl;
 
             // compile the loop body
             compile_ss << this->compile_statement(while_stmt->get_branch(), signature).str();
-            compile_ss << "\t" << "jmp sinl_while_" << current_block_num << std::endl;
+            compile_ss << "\t" << "jmp .sinl_while_" << current_block_num << std::endl;
 
-            compile_ss << "sinl_while_done_" << current_block_num << ":" << std::endl;
+            compile_ss << ".sinl_while_done_" << current_block_num << ":" << std::endl;
             break;
         }
         case FUNCTION_DEFINITION:
@@ -651,6 +653,7 @@ bool compiler::is_in_scope(symbol &sym) {
 compiler::compiler() {
     // initialize our number trackers
     this->strc_num = 0;
+    this->strcmp_num = 0;
     this->fltc_num = 0;
     this->rtbounds_num = 0;
     this->list_literal_num = 0;

@@ -369,7 +369,9 @@ bool DataType::must_initialize() const {
 	if (this->get_primary() == ARRAY) {
 
 	}
+	
 	// todo: how to handle tuples?
+	return init_required;
 }
 
 DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp, std::string struct_name) :

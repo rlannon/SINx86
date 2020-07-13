@@ -28,6 +28,7 @@ Copyright 2019 Riley Lannon
 
 #include "compile_util/constant_eval.h"
 #include "compile_util/expression_util.h"
+#include "compile_util/assign_util.h"
 
 class compiler {
     // The class containing our compiler
@@ -57,6 +58,7 @@ class compiler {
 
 	// We need to track the number for string constants, if/else blocks, etc.
 	size_t strc_num;
+	size_t strcmp_num;
 	size_t fltc_num;
 	size_t list_literal_num;
 	size_t scope_block_num;
@@ -83,7 +85,14 @@ class compiler {
 	// assignments
 	std::stringstream handle_assignment(Assignment &aw);
 	std::stringstream handle_alloc_init(symbol &sym, std::shared_ptr<Expression> rvalue, unsigned int line);
-	std::stringstream assign(DataType lhs_type, DataType &rhs_type, std::pair<std::string, std::string> dest, std::shared_ptr<Expression> rvalue, unsigned int line);
+	std::stringstream assign(
+		DataType lhs_type,
+		DataType &rhs_type,
+		assign_utilities::destination_information dest,
+		std::shared_ptr<Expression> rvalue,
+		unsigned int line,
+		bool is_alloc_init = false
+	);
 
 	// todo: handle assignments for char, float, etc.
 

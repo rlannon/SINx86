@@ -511,9 +511,16 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 						// use the cmpsb function
 						eval_ss << "\t" << "mov rsi, rax" << std::endl;
 						eval_ss << "\t" << "mov rdi, rbx" << std::endl;
+
+						// but first, check to see whether the lengths are equal
+						eval_ss << "\t" << "mov eax, [rsi]" << std::endl;
+						eval_ss << "\t" << "cmp eax, dword [rdi]" << std::endl;
+						eval_ss << "\t" << "jne .strcmp_" << this->strcmp_num << std::endl;
 						eval_ss << "\t" << "mov ecx, [rsi]" << std::endl;
 						eval_ss << "\t" << "add ecx, 4" << std::endl;	// include the length information in the comparison
 						eval_ss << "\t" << "repe cmpsb" << std::endl;	// this will set EFLAGS appropriately
+						eval_ss << ".strcmp_" << this->strcmp_num << ":" << std::endl;
+						this->strcmp_num += 1;
 					}
 					else {
 						throw CompilerException("Illegal equivalency operator on string type", compiler_errors::UNDEFINED_OPERATOR_ERROR, line);
@@ -561,9 +568,8 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					break;
 				}
 
-				// write the instruction sequence
+				// set al accordingly
 				eval_ss << "\t" << instruction << " al" << std::endl;
-				eval_ss << "\t" << "movzx rax, al" << std::endl;	// movzx - move with zero extend
 			}
 		}
 		else {

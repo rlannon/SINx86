@@ -177,6 +177,8 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 		symbol s = *this->find(l.pop_back().name);
 		if (
 			s.get_data_type().get_primary() == PTR ||
+			s.get_data_type().get_primary() == REFERENCE ||
+			s.get_data_type().get_primary() == STRING ||
 			s.get_data_type().get_qualities().is_dynamic()
 		) {
 			v.push_back(s);
