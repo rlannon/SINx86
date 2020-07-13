@@ -308,6 +308,15 @@ CompilerException(
 	// super called
 }
 
+TypeNotSubscriptableException::TypeNotSubscriptableException(unsigned int line) :
+CompilerException(
+	"Type not subscriptable",
+	compiler_errors::NOT_SUBSCRIPTABLE_ERROR,
+	line
+) {
+	// super called
+}
+
 // Warnings and notes
 
 void compiler_warning(std::string message, unsigned int code, unsigned int line_number) {

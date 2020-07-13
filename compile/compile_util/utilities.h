@@ -41,6 +41,8 @@ bool returns(StatementBlock to_check);
 
 bool is_valid_cast(DataType &old_type, DataType &new_type);
 
+bool is_subscriptable(Type t);
+
 std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line);
 
 bool can_pass_in_register(DataType to_check);

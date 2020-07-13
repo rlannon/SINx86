@@ -609,6 +609,8 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
 		memory_base + index*size + 4
 	The program first ensures the array index is within bounds by looking at the 32-bit integer at [array_base]; if we have a valid index, then it fetches the value using the effective address
 
+    The only valid types for indexing are arrays and strings; tuples are to be accessed like structs, with the dot operator.
+
     @param  to_evaluate The indexed expression we are examining
     @param  line    The line number where the expression occurs (for error handling)
     @return A stringstream containing the generated code
@@ -616,6 +618,14 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     */
     
     std::stringstream eval_ss;
+
+    DataType to_index_type = get_expression_data_type(to_evaluate.get_to_index(), this->symbols, this->structs, line);
+    if (is_subscriptable(to_index_type.get_primary())) {
+        // todo: evaluate indexed
+    }
+    else {
+        throw TypeNotSubscriptableException(line);
+    }
 
     // return our generated code
     return eval_ss;

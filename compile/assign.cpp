@@ -42,6 +42,20 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
 
     // if we have an indexed expression as the lvalue, we need a special case (for code generation)
     if (a.get_lvalue()->get_expression_type() == INDEXED) {
+        // make sure that the type is actually indexable/subscriptable
+        auto idx = dynamic_cast<Indexed*>(a.get_lvalue().get());
+        if (!is_subscriptable(
+                get_expression_data_type(
+                    idx->get_to_index(), 
+                    this->symbols, 
+                    this->structs,
+                    a.get_line_number()
+                ).get_primary()
+            )
+        ) {
+            throw TypeNotSubscriptableException(a.get_line_number());
+        }
+
         // overwrite p.second with the actual destination fetch code
         std::stringstream overwrite;
 

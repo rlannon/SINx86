@@ -231,6 +231,10 @@ bool is_valid_cast(DataType &old_type, DataType &new_type) {
     );
 }
 
+bool is_subscriptable(Type t) {
+    return (t == ARRAY || t == STRING);
+}
+
 std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line) {
     /*
 
