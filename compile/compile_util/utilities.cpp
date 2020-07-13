@@ -51,8 +51,14 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 				throw SymbolNotFoundException(line);
 			}
 
-            type_information = sym->get_data_type();
-            
+            // the expression type of a reference should be treated as its subtype
+            if (sym->get_data_type().get_primary() == REFERENCE) {
+                type_information = *sym->get_data_type().get_full_subtype();
+            }
+            else {
+                type_information = sym->get_data_type();
+            }
+
             break;
         }
         case INDEXED:
@@ -666,8 +672,8 @@ std::string get_address(symbol &s, reg r) {
         address_info = "\tlea " + reg_name + ", [" + s.get_name() + "]\n";
     }
     // otherwise, we need to look in the stack
-    else if (s.get_data_type().get_qualities().is_dynamic() || s.get_data_type().get_primary() == STRING) {
-        address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]";
+    else if (s.get_data_type().is_reference_type()) {
+        address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
     }
     else {
         if (s.get_offset() < 0) {

@@ -16,7 +16,8 @@ void DataType::set_width() {
 	// The width of all dynamic memory is PTR_WIDTH
 	if (this->qualities.is_dynamic()) {
 		this->width = sin_widths::PTR_WIDTH;
-	} else {
+	}
+	else {
 		if (this->primary == INT) {
 			// ints are usually 4 bytes wide (32-bit), but can be 2 bytes for a short or 8 for a long 
 
@@ -40,8 +41,8 @@ void DataType::set_width() {
 		} else if (this->primary == BOOL) {
 			// bools are only a byte wide
 			this->width = sin_widths::BOOL_WIDTH;
-		} else if (this->primary == PTR) {
-			// because we are compiling to x86_64, pointers should be 64-bit
+		} else if (this->primary == PTR || this->primary == REFERENCE) {
+			// because we are compiling to x86_64, pointers and references should be 64-bit
 			this->width = sin_widths::PTR_WIDTH;
 		} else if (this->primary == STRING) {
 			// since strings are all implemented as pointers, they have widths of 8 bytes
@@ -162,8 +163,11 @@ bool DataType::is_compatible(DataType to_compare) const
 		- if pointer or array type:
 			- subtypes are compatible
 			- one of the subtypes is RAW
-		- left OR right is RAW
-		- primaries are equal
+		- else,
+			- left OR right is RAW
+			- if reference:
+				- the subtype is compatible with to_compare
+			- primaries are equal
 
 	*/
 
@@ -172,8 +176,7 @@ bool DataType::is_compatible(DataType to_compare) const
 	if (this->primary == RAW || to_compare.get_primary() == RAW) {
 		compatible = true;
 	}
-	else if (this->primary == PTR && to_compare.get_primary() == PTR)
-	{
+	else if (this->primary == PTR && to_compare.get_primary() == PTR) {
 		// call is_compatible on the subtypes and ensure the type promotion is legal
 		if (this->subtype && to_compare.subtype) {
 			compatible = this->subtype->is_compatible(
@@ -183,10 +186,24 @@ bool DataType::is_compatible(DataType to_compare) const
 			throw CompilerException("Expected subtype", 0, 0);	// todo: ptr and array should _always_ have subtypes
 		}
 	}
+	else if (this->primary == REFERENCE) {
+		// if we have a reference type, compare the reference subtype to to_compare
+		if (this->subtype) {
+			compatible = this->subtype->is_compatible(to_compare);
+		}
+		else {
+			throw CompilerException("Expected subtype", 0, 0);
+		}
+	}
 	else if (this->primary == ARRAY && to_compare.get_primary() == ARRAY) {
-		compatible = this->subtype->is_compatible(
-			*to_compare.get_full_subtype()
-		);
+		if (this->subtype) {
+			compatible = this->subtype->is_compatible(
+				*to_compare.get_full_subtype()
+			);
+		}
+		else {
+			throw CompilerException("Expected subtype", 0, 0);
+		}
 	}
 	else {
 		// primary types must be equal
@@ -323,6 +340,36 @@ bool DataType::is_valid_type(DataType &t) {
 	// todo: more type checks where needed
 
 	return is_valid;
+}
+
+bool DataType::is_reference_type() const {
+	/*
+
+	is_reference_type
+	Returns whether the type in question is a reference type
+
+	*/
+
+	return this->get_qualities().is_dynamic() || this->primary == STRING || this->primary == REFERENCE;
+}
+
+bool DataType::must_initialize() const {
+	/*
+
+	must_initialize
+	Determines whether the type must be initialized in its allocation
+
+	Check the documentation (specifically, docs/Construction.md) for the exact rules
+
+	*/
+
+	bool init_required = false;
+	init_required = this->get_qualities().is_const();
+	init_required = init_required || this->get_primary() == REFERENCE;
+	if (this->get_primary() == ARRAY) {
+
+	}
+	// todo: how to handle tuples?
 }
 
 DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp, std::string struct_name) :

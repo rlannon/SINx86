@@ -78,6 +78,16 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
 
     reg src_reg = sym.get_data_type().get_primary() == FLOAT ? XMM0 : RAX;
 
+    // we need to have a special case for ref<T> initialization
+    if (sym.get_data_type().get_primary() == REFERENCE) {
+        // wrap the rvalue in a unary address-of expression
+        // this will be fine since we will be comparing against the subtype but evaluating a pointer
+        rvalue = std::make_shared<Unary>(
+            rvalue,
+            exp_operator::ADDRESS
+        );
+    }
+    
     return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line);
 }
 
@@ -101,7 +111,7 @@ std::stringstream compiler::assign(DataType lhs_type, DataType &rhs_type, std::p
 
         // get the appropriate variant of RAX based on the width of the type to which we are assigning
         std::string src = register_usage::get_register_name(src_reg, lhs_type);
-        
+
         // make the assignment
         if (assign_utilities::requires_copy(lhs_type)) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();

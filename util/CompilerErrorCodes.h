@@ -24,8 +24,10 @@ namespace compiler_errors {
     const unsigned int FINAL_ASSIGNMENT_ERROR = 2;
     const unsigned int DATA_WIDTH_ERROR = 3;
     const unsigned int UNKNOWN_LENGTH_ERROR = 5;
+    const unsigned int ALLOC_INIT_REQUIRED = 10;
 	const unsigned int CONST_ALLOCATION_ERROR = 11;	// constants must be initialized in their allocation
     const unsigned int NON_CONST_VALUE_ERROR = 12;
+    const unsigned int REFERENCE_ALLOCATION_ERROR = 13; // references must also be initialized
     const unsigned int STATIC_MEMORY_INITIALIZATION_ERROR = 15;
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
 	const unsigned int DUPLICATE_DEFINITION_ERROR = 31;	// The definition for this resource was already found
@@ -86,6 +88,7 @@ namespace compiler_errors {
     const unsigned int MISSING_SEMICOLON_ERROR = 404;
     const unsigned int MISSING_GROUPING_SYMBOL_ERROR = 405;
     const unsigned int MISSING_IDENTIFIER_ERROR = 406;
+    const unsigned int INVALID_TYPE_SYNTAX = 407;
     const unsigned int UNEXPECTED_KEYWORD_ERROR = 410;
     const unsigned int INCOMPLETE_TYPE_ERROR = 430; // type information given was incomplete and could not be parsed
 
