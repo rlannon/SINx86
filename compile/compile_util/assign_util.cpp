@@ -152,7 +152,12 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
                 location = "[rbp - " + std::to_string(sym.get_offset()) + "]";
             }
 
-            if (dt.get_qualities().is_dynamic() || dt.get_primary() == STRING) {
+            // if we have a reference type, we need to dereference under the hood
+            // this is, of course, unless we are *initializing* a ref<T>
+            if (
+                (dt.is_reference_type()) &&
+                !(dt.get_primary() == REFERENCE && is_initialization)
+            ) {
                 dest = "[rbx]";
                 gen_code << "\t" << "mov rbx, " << location << std::endl;
             }

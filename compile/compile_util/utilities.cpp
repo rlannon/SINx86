@@ -51,8 +51,14 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 				throw SymbolNotFoundException(line);
 			}
 
-            type_information = sym->get_data_type();
-            
+            // the expression type of a reference should be treated as its subtype
+            if (sym->get_data_type().get_primary() == REFERENCE) {
+                type_information = *sym->get_data_type().get_full_subtype();
+            }
+            else {
+                type_information = sym->get_data_type();
+            }
+
             break;
         }
         case INDEXED:

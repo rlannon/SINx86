@@ -1,0 +1,11 @@
+// references.sin
+// A test of the ref< T > type
+
+def int main(alloc dynamic array<string> args) {    // utilize the proper signature
+    alloc int x: 30;
+    alloc ref<int> r: x;
+
+    let r = 65535;
+
+    return 0;
+}

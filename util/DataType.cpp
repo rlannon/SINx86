@@ -342,6 +342,17 @@ bool DataType::is_valid_type(DataType &t) {
 	return is_valid;
 }
 
+bool DataType::is_reference_type() const {
+	/*
+
+	is_reference_type
+	Returns whether the type in question is a reference type
+
+	*/
+
+	return this->get_qualities().is_dynamic() || this->primary == STRING || this->primary == REFERENCE;
+}
+
 bool DataType::must_initialize() const {
 	/*
 

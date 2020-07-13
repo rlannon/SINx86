@@ -111,7 +111,7 @@ std::stringstream compiler::assign(DataType lhs_type, DataType &rhs_type, std::p
 
         // get the appropriate variant of RAX based on the width of the type to which we are assigning
         std::string src = register_usage::get_register_name(src_reg, lhs_type);
-        
+
         // make the assignment
         if (assign_utilities::requires_copy(lhs_type)) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
