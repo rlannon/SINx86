@@ -78,6 +78,16 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
 
     reg src_reg = sym.get_data_type().get_primary() == FLOAT ? XMM0 : RAX;
 
+    // we need to have a special case for ref<T> initialization
+    if (sym.get_data_type().get_primary() == REFERENCE) {
+        // wrap the rvalue in a unary address-of expression
+        // this will be fine since we will be comparing against the subtype but evaluating a pointer
+        rvalue = std::make_shared<Unary>(
+            rvalue,
+            exp_operator::ADDRESS
+        );
+    }
+    
     return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line);
 }
 
