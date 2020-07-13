@@ -2,10 +2,16 @@
 // A test of the ref< T > type
 
 def int main(alloc dynamic array<string> args) {    // utilize the proper signature
+    // make sure initializations work
     alloc int x: 30;
     alloc ref<int> r: x;
 
+    // check that this actually updates x
     let r = 65535;
+
+    // check that this also actually updates x
+    alloc ptr<int> p: $r;
+    let *p = 0;
 
     return 0;
 }
