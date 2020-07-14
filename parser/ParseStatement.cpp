@@ -379,8 +379,10 @@ std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 		// if there was a single statement, ensure there was a semicolon
 		if (this->peek().value == ";")
 			this->next();
-		else if (this->current_token().value != "}")
-			throw MissingSemicolonError(this->current_token().line_number);
+		else {
+			if (this->current_token().value != "}")
+				throw MissingSemicolonError(this->current_token().line_number);
+		}
 
 		// Check for an else clause
 		if (!this->is_at_end() && this->peek().value == "else") {
@@ -599,14 +601,19 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 		std::vector<std::shared_ptr<Expression>> args;
 		this->next();
 		this->next();
-		while (this->current_token().value != ")") {
+		lexeme cur = this->current_token();
+		while (cur.value != ")") {
 			args.push_back(this->parse_expression());
-			this->next();
+			cur = this->next();
 		}
+		/*
 		while (this->peek().value != ";") {
 			this->next();
 		}
-		this->next();
+		*/
+		if (this->peek().value != ";") {
+			throw MissingSemicolonError(this->previous().line_number);
+		}
 		stmt = std::make_shared<Call>(std::make_shared<LValue>(func_name.value, "func"), args);
 		stmt->set_line_number(current_lex.line_number);
 		return stmt;

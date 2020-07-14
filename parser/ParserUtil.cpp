@@ -202,8 +202,7 @@ bool Parser::is_type(std::string lex_value)
 
 	// todo: is there a better way to do this? using a map might not be worth it because there are so few elements
 
-	size_t num_types = 9;
-	std::string type_strings[] = {
+	std::vector<std::string> types = {
 		"int",
 		"bool",
 		"string",
@@ -219,12 +218,13 @@ bool Parser::is_type(std::string lex_value)
 	// iterate through our list of type names
 	size_t i = 0;
 	bool found = false;
-
-	while (i < num_types && !found) {
-		if (lex_value == type_strings[i]) {
+	auto it = types.begin();
+	while (it != types.end() && !found) {
+		if (lex_value == *it) {
 			found = true;
-		} else {
-			i++;
+		}
+		else {
+			it++;
 		}
 	}
 
