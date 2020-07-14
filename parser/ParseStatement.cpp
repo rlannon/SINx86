@@ -606,11 +606,9 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 			args.push_back(this->parse_expression());
 			cur = this->next();
 		}
-		/*
-		while (this->peek().value != ";") {
-			this->next();
-		}
-		*/
+		
+		// function calls as statements must *always* be followed by semicolons
+		// this is not the function to parse a call that is part of an expression
 		if (this->peek().value != ";") {
 			throw MissingSemicolonError(this->previous().line_number);
 		}
