@@ -77,7 +77,7 @@ There is really no reason you shouldn't be able to utilize `make` for SIN projec
 
 Included with this project are a folder of various sample SIN files to test the compiler's functionality. They can also serve as general syntax/usage references.
 
-Within the samples folder is a folder called `benchmarks`, which includes various algorithms in both SIN and C to test compile and execution times and serve as benchmark tests.
+Within the samples folder is a folder called `benchmarks`, which includes various algorithms in SIN, Python, and C to test compile and execution times and serve as benchmark tests.
 
 ## Future Goals
 
