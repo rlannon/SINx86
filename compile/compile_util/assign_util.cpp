@@ -161,11 +161,16 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         else {
             // we will need the stack location no matter what
             std::string location;
-            if (sym.get_offset() < 0) {
-                location = "[rbp + " + std::to_string(-sym.get_offset()) + "]";
+            if (sym.get_register() == NO_REGISTER) {
+                if (sym.get_offset() < 0) {
+                    location = "[rbp + " + std::to_string(-sym.get_offset()) + "]";
+                }
+                else {
+                    location = "[rbp - " + std::to_string(sym.get_offset()) + "]";
+                }
             }
             else {
-                location = "[rbp - " + std::to_string(sym.get_offset()) + "]";
+                location = register_usage::get_register_name(sym.get_register(), sym.get_data_type());
             }
 
             // if we have a reference type, we need to dereference under the hood
