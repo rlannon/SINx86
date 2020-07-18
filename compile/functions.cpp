@@ -460,19 +460,15 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
     sincall_ss << "\t" << "push rax" << std::endl;
     
     // if we are returning a pointer or address, we need to increment the RC by one so it doesn't get freed completely
-    if (get_expression_data_type(
-            ret.get_return_exp(),
-            this->symbols,
-            this->structs,
-            ret.get_line_number()
-        ).get_primary() == PTR
-    ) {
+    auto t = get_expression_data_type(
+        ret.get_return_exp(),
+        this->symbols,
+        this->structs,
+        ret.get_line_number()
+    );
+    if (t.is_reference_type() || t.get_primary() == PTR) {
         sincall_ss << "\t" << "mov rdi, rax" << std::endl;
-        sincall_ss << "\t" << "push rbp" << std::endl;
-        sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
-        sincall_ss << "\t" << "call sre_add_ref" << std::endl; 
-        sincall_ss << "\t" << "mov rsp, rbp" << std::endl;
-        sincall_ss << "\t" << "pop rbp" << std::endl;
+        sincall_ss << "\t" << "call sre_add_ref" << std::endl;
     }
 
     // decrement the rc of all pointers and dynamic memory
