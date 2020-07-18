@@ -172,6 +172,7 @@ bool DataType::is_compatible(DataType to_compare) const
 			- if reference:
 				- the subtype is compatible with to_compare
 			- primaries are equal
+			- primaries are string and char
 
 	*/
 
@@ -212,7 +213,10 @@ bool DataType::is_compatible(DataType to_compare) const
 	else {
 		// primary types must be equal
 		// todo: generate warnings for width and sign differences
-		compatible = this->primary == to_compare.primary;
+		compatible = (
+			(this->primary == to_compare.primary) || 
+			(this->primary == STRING && to_compare.primary == CHAR)
+		);
 	}
 
 	return compatible;
@@ -391,6 +395,10 @@ DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, s
 	// if the subtype has a type of NONE, then the subtype should be a nullptr; otherwise, construct an object
 	if (subtype.get_primary() != NONE) {
 		this->subtype = std::make_shared<DataType>(subtype);
+	}
+	// otherwise, if we have a string type, set the subtype to CHAR
+	else if (primary == STRING) {
+		this->subtype = std::make_shared<DataType>(CHAR);
 	}
 
     // if the type is int, set signed to true if it is not unsigned

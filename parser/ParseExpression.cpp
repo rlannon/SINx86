@@ -313,7 +313,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 
 			// we might have an indexed expression here
 			if (op == INDEX) {
-				auto index_value = this->parse_expression(his_prec, "[");
+				auto index_value = this->parse_expression(0, "[");	// the prec level should be zero because it is an isolated expression
 				this->next();
 				to_check = std::make_shared<Indexed>(left, index_value);
 			}

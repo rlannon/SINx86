@@ -77,7 +77,10 @@ Parser::Parser(std::string filename) {
 		lexeme token = lexer.read_next();
 
 		// only push back tokens that aren't empty
-		if ((token.type != NULL_LEXEME) && (token.value != "") && (token.line_number != 0)) {
+		if (
+			(token.type != NULL_LEXEME) &&
+			(token.line_number != 0)
+		) {
 			this->tokens.push_back(token);
 		}
 		else {

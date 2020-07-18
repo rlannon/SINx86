@@ -65,7 +65,15 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
         {
             Indexed *idx = dynamic_cast<Indexed*>(to_eval.get());
             DataType t = get_expression_data_type(idx->get_to_index(), symbols, structs, line);
-            type_information = *t.get_full_subtype();
+            // we can index strings or arrays; if we index an array, we get the subtype, and if we index a string, we get a char
+            if (t.get_primary() == ARRAY) {
+                type_information = *t.get_full_subtype();
+            }
+            else if (t.get_primary() == STRING) {
+                type_information = DataType(
+                    Type::CHAR
+                );
+            }
             break;
         }
         case LIST:
