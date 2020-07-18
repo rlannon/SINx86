@@ -181,11 +181,6 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             }
             break;
         }
-        case SIZE_OF:
-            // size_of always returns a const unsigned integer type
-            type_information.set_primary(INT);
-            type_information.add_qualities(std::vector<SymbolQuality>{CONSTANT, UNSIGNED});
-            break;
         case CAST:
         {
             Cast *c = dynamic_cast<Cast*>(to_eval.get());

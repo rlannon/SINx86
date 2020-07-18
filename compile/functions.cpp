@@ -254,7 +254,7 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     }
 
     // todo: any miscellaneous clean-up?
-    return std::make_pair<>(call_ss, count);
+    return std::make_pair<>(call_ss.str(), count);
 }
 
 std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line) {
