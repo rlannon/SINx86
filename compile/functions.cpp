@@ -184,11 +184,11 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     return definition_ss;
 }
 
-template std::stringstream compiler::call_function(Call, unsigned int, bool);
-template std::stringstream compiler::call_function(ValueReturningFunctionCall, unsigned int, bool);
+template std::pair<std::string, size_t> compiler::call_function(Call, unsigned int, bool);
+template std::pair<std::string, size_t> compiler::call_function(ValueReturningFunctionCall, unsigned int, bool);
 
 template<typename T>
-std::stringstream compiler::call_function(T call, unsigned int line, bool allow_void) {
+std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line, bool allow_void) {
     /*
 
     call_function
@@ -204,15 +204,23 @@ std::stringstream compiler::call_function(T call, unsigned int line, bool allow_
 
     @param  call    May either be a Call statement or a ValueReturningFunctionCall; it contains the parsed function information
     @param  line    The line number on which the call occurs
-    @return A stringstream containing the generated code
+    @return A pair containing:
+        * a stringstream containing the generated code
+        * a size_t with the number of references to free
     @throws This function will throw an exception if an error is generated during the call
 
     */
 
     std::stringstream call_ss;
+    size_t count = 0;
 
     // first, look up the function
     std::shared_ptr<symbol> sym = this->lookup(call.get_func_name(), line);
+
+    // if the function returns a reference type, we need to increment the count
+    if (sym->get_data_type().is_reference_type()) {
+        count = 1;
+    }
 
     // ensure we have a function
     if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
@@ -246,7 +254,7 @@ std::stringstream compiler::call_function(T call, unsigned int line, bool allow_
     }
 
     // todo: any miscellaneous clean-up?
-    return call_ss;
+    return std::make_pair<>(call_ss, count);
 }
 
 std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line) {
@@ -314,10 +322,12 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                         // todo: semantics for passing arrays into functions
                     }
                     else if (param.get_data_type().get_primary() == STRING) {
-                        // todo: perform string copy
                         // if the string is final, we don't need to perform a string copy -- we can use the address
                         if (param.get_data_type().get_qualities().is_final()) {
                             sincall_ss << "\t" << "mov [rsp + " << -param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
+                        }
+                        else {
+                            // todo: perform string copy
                         }
                     }
                     else if (param.get_data_type().get_primary() == STRUCT) {
