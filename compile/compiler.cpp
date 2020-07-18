@@ -385,6 +385,7 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
 		size_t reserved_space = this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
         if (this->current_scope_level != 1) {
             compile_ss << "\t" << "add rsp, " << reserved_space << std::endl;
+            this->max_offset -= reserved_space;
         }
     }
 

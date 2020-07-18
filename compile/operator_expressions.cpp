@@ -292,6 +292,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					}
 					break;
 				case STRING:
+				{
 					/*
 
 					string concatenation (passes pointer to string to SRE function)
@@ -304,16 +305,22 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 					
 					*/
 
+					eval_ss << push_used_registers(this->reg_stack.peek(), true).str();
+
+					std::string routine_name = (right_type.get_primary() == CHAR) ? "sinl_string_append" : "sinl_string_concat";
 					eval_ss << "\t" << "mov rsi, rax" << std::endl;
 					eval_ss << "\t" << "mov rdi, rbx" << std::endl;
 
 					eval_ss << "\t" << "push rbp" << std::endl;
 					eval_ss << "\t" << "mov rbp, rsp" << std::endl;
-					eval_ss << "\t" << "call sinl_string_concat" << std::endl;
+					eval_ss << "\t" << "call " << routine_name << std::endl;
 					eval_ss << "\t" << "mov rsp, rbp" << std::endl;
 					eval_ss << "\t" << "pop rbp" << std::endl;
 
+					eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+					
 					break;
+				}
 				default:
 					// if we have an invalid type, throw an exception
 					// todo: should array concatenation be allowed with the + operator?
@@ -400,7 +407,9 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				// modulo only allowed for int and float
 				if (primary == INT) {
 					// for modulo, we need to determine what should happen if we are using signed numbers
-					// todo: modulo
+					eval_ss << "\t" << "mov edx, 0" << std::endl;
+					eval_ss << "\t" << "div ebx" << std::endl;
+					eval_ss << "\t" << "mov eax, edx" << std::endl;
 				}
 				else if (primary == FLOAT) {
 					// todo: implement modulo with floating-point numbers

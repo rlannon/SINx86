@@ -250,7 +250,7 @@ std::stringstream compiler::evaluate_expression(std::shared_ptr<Expression> to_e
         case ATTRIBUTE:
         {
             auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
-            auto t = attr->get_data_type();
+            auto t = get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
 
             // we have a limited number of attributes
             if (attr->get_attribute() == LENGTH) {
