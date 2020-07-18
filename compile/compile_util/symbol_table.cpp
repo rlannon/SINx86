@@ -188,17 +188,19 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 	return v;
 }
 
-void symbol_table::leave_scope(std::string name, unsigned int level)
+size_t symbol_table::leave_scope(std::string name, unsigned int level)
 {
 	/*
 	
 	leave_scope
-	Leaves the current scope, deleting all variables local to that scope
+	Leaves the current scope, deleting all variables local to that scope, returning the width of all of that data
 
 	Any data that should be freed by the GC should be returned in a vector
 	
 	*/
 	
+	size_t data_width = 0;
+
 	// so that exceptions aren't thrown, always make sure our stack isn't empty before we look at it
 	if (!this->locals.empty()) {
 		// create a sentinel variable
@@ -210,10 +212,24 @@ void symbol_table::leave_scope(std::string name, unsigned int level)
 
 			// ensure that we don't delete symbols from the global scope
 			if (to_erase.scope_name != "global") {
+				auto s = this->find(to_erase.name);
+				if (s->get_data_type().is_reference_type()) {
+					data_width += sin_widths::PTR_WIDTH;
+				}
+				else if (s->get_data_type().get_primary() == ARRAY) {
+					data_width += s->get_data_type().get_array_length();
+				}
+				else {
+					data_width += s->get_data_type().get_width();
+				}
+
+				// erase the node
 				this->erase(to_erase);
 			}
 		}
 	}
+
+	return data_width;
 }
 
 std::vector<std::shared_ptr<symbol>> symbol_table::get_all_symbols() {

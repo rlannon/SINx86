@@ -49,7 +49,7 @@ public:
 	std::shared_ptr<symbol>& find(std::string to_find);
 	
 	std::vector<symbol> get_symbols_to_free(std::string name, unsigned int level, bool is_function);
-	void leave_scope(std::string name, unsigned int level);
+	size_t leave_scope(std::string name, unsigned int level);
 
 	std::vector<std::shared_ptr<symbol>> get_all_symbols();
 

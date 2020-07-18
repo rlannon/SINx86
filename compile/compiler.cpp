@@ -382,8 +382,11 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
 	// when we leave a scope, remove local variables -- but NOT global variables (they must be retained for inclusions)
 	if (this->current_scope_name != "global") {
 		// todo: call leave_scope on the compile-time evaluator
-		this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
-	}
+		size_t reserved_space = this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
+        if (this->current_scope_level != 1) {
+            compile_ss << "\t" << "add rsp, " << reserved_space << std::endl;
+        }
+    }
 
     return compile_ss;
 }

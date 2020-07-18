@@ -372,13 +372,14 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 				// div only allowed for int and float
 				if (primary == INT) {
 					// how we handle integer division depends on whether we are using signed or unsigned integers
+					eval_ss << "\t" << "mov rdx, 0" << std::endl;
 					if (is_signed) {
 						// use idiv
-						eval_ss << "\t" << "idiv rax, rbx" << std::endl;
+						eval_ss << "\t" << "idiv rbx" << std::endl;
 					}
 					else {
 						// use div
-						eval_ss << "\t" << "div rax, rbx" << std::endl;
+						eval_ss << "\t" << "div rbx" << std::endl;
 					}
 				}
 				else if (primary == FLOAT) {
