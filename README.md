@@ -53,10 +53,10 @@ Note that the aforementioned repo should be fairly portable, as it is implemente
 
 This is not a full compiler suite, and as such, a few third-party applications are required. Without them, the compiler will be not be able to generate working binaries for the programs you write. The required programs are:
 
-* Working C and C++ compilers (such as GCC/G++) - the SIN compiler relies on certain C and C++ functionality for its runtime environment, and without a working C++ compiler, linking the standard library with an assembled SIN program will be impossible (unless a custom SRE implementation that does not use either language is used, in which case *some* linker will be required)
-* An assembler (NASM is recommended) - the compiler does not generate object code directly; instead, it generates x64 assembly in Intel syntax, meaning an assembler is required. While I prefer NASM, any assembler that supports Intel x86 syntax should work without too much difficulty
+* GCC, G++ - The SIN compiler relies on certain C and C++ functionality for its runtime environment, and without a working C++ compiler, linking the standard library with an assembled SIN program will be impossible (unless a custom SRE implementation that does not use either language is used, in which case *some* linker will still be required).
+* NASM - The compiler does not generate object code directly; instead, it generates x64 assembly in Intel syntax, meaning an assembler is required. Since NASM macros are used, it is highly recommended, though any assembler that supports both Intel syntax and the macros used would probably work.
 
-Note that SIN programs utilize the C standard library (and certain functionality from C++) that define `_start`. As such, SIN programs are started from `main` (SIN functions use minor name mangling, unless specified as `extern`), which is called by `_start`. A different implementation could do this differently, but this is the easiest workaround for the time being.
+It is also important to note that because SIN programs utilize the C standard library (and certain functionality from C++) that define `_start`, SIN programs begin execution from `main`, which is invoked by `_start`. However, SIN programs would *normally* utilize `_start` to initialize the runtime, command-line arguments, etc., this functionality must be moved into `main`. While a compiler could move these routines to the start of the user's `main` implementation, this compiler utilizes name mangling to call `SIN_main` from `main`. By slightly mangling every function and variable name, we can work around this issue pretty easily, but this is by no means the only (or even best) way of solving it.
 
 ### Using SIN
 
@@ -72,6 +72,12 @@ To build projects, the following steps should be followed:
 * Link with G++ using `g++ <list object files> -L <path to SRE> -l SRE`, again optionally specifying the outfile with `-o`
 
 There is really no reason you shouldn't be able to utilize `make` for SIN projects; in fact, it would probably make your life quite a bit easier.
+
+#### Language Samples and Benchmarks
+
+Included with this project are a folder of various sample SIN files to test the compiler's functionality. They can also serve as general syntax/usage references.
+
+Within the samples folder is a folder called `benchmarks`, which includes various algorithms in both SIN and C to test compile and execution times and serve as benchmark tests.
 
 ## Future Goals
 
