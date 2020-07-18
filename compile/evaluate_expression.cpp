@@ -292,7 +292,7 @@ std::pair<std::string, size_t> compiler::eval_helper(
                 size attribute
                 Returns the number of bytes occupied by the data.
 
-                Roughly equivalent to sizeof< T >, except it can return the sizes of variable-width types
+                Note this can return the sizes of const- and variable-width types alike
                 
                 */
 
