@@ -122,26 +122,9 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		// make an LValue expression
 		left = std::make_shared<LValue>(current_lex.value);
 	}
-	// if we have a keyword to begin an expression, parse it (could be a sizeof expression)
+	// if we have a keyword to begin an expression (could be 'not' or an attribute selection like int:size)
 	else if (current_lex.type == KEYWORD) {
-		if (current_lex.value == "sizeof") {
-			// expression must be enclosed in angle brackets
-			if (this->peek().value == "<") {
-				grouping_symbol = "<";
-				this->next();
-				
-				// use our type parsing function to parse the sizeof< T > type
-				DataType to_check = this->parse_subtype("<");
-				left = std::make_shared<SizeOf>(to_check);
-
-				// sizeof expressions are compile-time constants
-				is_const = true;
-			}
-			else {
-				throw ParserException("Syntax error; expected '<'", 0, current_lex.line_number);
-			}
-		}
-		else if (current_lex.value == "not") {
+		if (current_lex.value == "not") {
 			// the logical not operator
 			this->next();
 			auto negated = this->parse_expression(get_precedence(NOT, current_lex.line_number));
@@ -159,7 +142,6 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
 			}
 		}
-		// todo: enable type-level attributes as well as value-level (e.g., 'int:size') to replace 'sizeof'
 	}
 	// if we have an op_char to begin an expression, parse it (could be a pointer or a function call)
 	else if (current_lex.type == OPERATOR) {

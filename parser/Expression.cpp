@@ -340,21 +340,6 @@ ValueReturningFunctionCall::ValueReturningFunctionCall() {
 }
 
 
-
-// sizeof expressions
-
-DataType SizeOf::get_type() {
-	return this->to_check;
-}
-
-SizeOf::SizeOf(DataType to_check) : to_check(to_check) {
-	this->expression_type = SIZE_OF;
-}
-
-SizeOf::SizeOf() {
-	this->expression_type = SIZE_OF;
-}
-
 std::shared_ptr<Expression> Indexed::get_index_value()
 {
 	return this->index_value;

@@ -161,19 +161,6 @@ public:
 	ValueReturningFunctionCall();
 };
 
-
-// sizeof expressions
-
-class SizeOf : public Expression
-{
-	DataType to_check;	// because the sizeof expression could be a struct, the typename will be stored as a string
-public:
-	DataType get_type();
-
-	SizeOf(DataType to_check);
-	SizeOf();
-};
-
 // typecasting expressions
 class Cast : public Expression
 {

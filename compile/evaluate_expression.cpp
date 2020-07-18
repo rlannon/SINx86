@@ -215,12 +215,6 @@ std::pair<std::string, size_t> compiler::eval_helper(
 
             break;
         }
-        case SIZE_OF:
-        {
-            SizeOf sizeof_exp = *dynamic_cast<SizeOf*>(to_evaluate.get());
-            evaluation_ss = this->evaluate_sizeof(sizeof_exp, line);
-            break;
-        }
         case CAST:
         {
             auto c = dynamic_cast<Cast*>(to_evaluate.get());
@@ -689,62 +683,5 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     }
 
     // return our generated code
-    return eval_ss;
-}
-
-std::stringstream compiler::evaluate_sizeof(SizeOf &to_evaluate, unsigned int line) {
-    /*
-    
-    Since sizeof<T> always returns a const unsigned int, it should go into eax
-    Use sin_widths{} to fetch sizes
-
-    */
-
-    std::stringstream eval_ss;
-
-    if (to_evaluate.get_type().get_primary() == INT) {
-        eval_ss << "\t" << "mov eax, ";
-        if (to_evaluate.get_type().get_qualities().is_long()) {
-            eval_ss << sin_widths::LONG_WIDTH;
-        } else if (to_evaluate.get_type().get_qualities().is_short()) {
-            eval_ss << sin_widths::SHORT_WIDTH;
-        } else {
-            eval_ss << sin_widths::INT_WIDTH;
-        }
-        
-        eval_ss << std::endl;
-    } else if (to_evaluate.get_type().get_primary() == FLOAT) {
-        eval_ss << "\t" << "mov eax, ";
-        if (to_evaluate.get_type().get_qualities().is_long()) {
-            eval_ss << sin_widths::DOUBLE_WIDTH;
-        } else if (to_evaluate.get_type().get_qualities().is_short()) {
-            eval_ss << sin_widths::HALF_WIDTH;
-        } else {
-            eval_ss << sin_widths::FLOAT_WIDTH;
-        }
-        
-        eval_ss << std::endl;
-    } else if (to_evaluate.get_type().get_primary() == BOOL) {
-        eval_ss << "\t" << "mov eax, " << sin_widths::BOOL_WIDTH << std::endl;
-    } else if (to_evaluate.get_type().get_primary() == PTR) {
-        eval_ss << "\t" << "mov eax, " << sin_widths::PTR_WIDTH << std::endl;
-	}
-	else if (to_evaluate.get_type().get_primary() == STRUCT) {
-		// look into compiler table to see if we have a struct
-			
-		// todo: require struct widths to be known at compile time; any variable-width types must be dynamic or utilize pointers
-
-		struct_info &s_info = this->get_struct_info(to_evaluate.get_type().get_struct_name(), line);
-		if (s_info.is_width_known()) {
-			eval_ss << "\t" << "mov eax, " << s_info.get_width() << std::endl;
-		}
-		else {
-			throw CompilerException("sizeof<T> cannot be used with this struct type because its width is unknown", compiler_errors::UNDEFINED_ERROR, line);
-		}
-	} else {
-        // sizeof<array> and sizeof<string> are invalid
-        throw CompilerException("Invalid argument for sizeof<T>; only fixed-width types can be used", compiler_errors::DATA_WIDTH_ERROR, line);
-    }
-
     return eval_ss;
 }
