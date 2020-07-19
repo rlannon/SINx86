@@ -299,13 +299,20 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         if (total_offset != 0) {
             sincall_ss << "\t" << "sub rsp, " << total_offset << std::endl;
         }
-
+        
         // iterate over our arguments, ensure the types match and that we have an appropriate number
         unsigned int rsp_offset_adjust = 0;
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
             std::shared_ptr<Expression> arg = args[i];
             symbol param = formal_parameters[i];
+
+            // whether this expression must have an adjustment to its RC
+            bool adjust_rc = (
+                (arg->get_expression_type() == VALUE_RETURNING_CALL) &&
+                (!param.get_data_type().get_qualities().is_final()) &&  // final symbols can just copy references
+                (param.get_data_type().get_primary() == STRING || param.get_data_type().get_qualities().is_dynamic())
+            );
 
             // first, ensure the types match
             DataType arg_type = get_expression_data_type(arg, this->symbols, this->structs, line);
@@ -315,33 +322,12 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
 
                 // todo: utilize the assign functions to fetch source and destination operands
-
+                auto destination_operand = assign_utilities::fetch_destination_operand(arg, this->symbols, this->structs, s.get_name(), 1, line);
+                
                 // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
                 // if the symbol has a register, pass it there; else, push it
                 if (param.get_register() == NO_REGISTER) {
-                    // use [rsp + (offset - BASE_PARAMETER_OFFSET)] because we haven't used pushfq or push rbp yet
-                    // however, the stack pointer is still below where we want to write the data
-                    // if the data needs to be copied in, we must handle it a little differently
-                    if (param.get_data_type().get_primary() == ARRAY) {
-                        // todo: perform array copy
-                        // todo: semantics for passing arrays into functions
-                    }
-                    else if (param.get_data_type().get_primary() == STRING) {
-                        // if the string is final, we don't need to perform a string copy -- we can use the address
-                        if (param.get_data_type().get_qualities().is_final()) {
-                            sincall_ss << "\t" << "mov [rsp + " << -param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
-                        }
-                        else {
-                            // todo: perform string copy
-                        }
-                    }
-                    else if (param.get_data_type().get_primary() == STRUCT) {
-                        // todo: struct assignment
-                    }
-                    else {
-                        // since we are using +, we don't need to negate the parameter offset (as we normally would if we were using -)
-                        sincall_ss << "\t" << "mov [rsp + " << param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
-                    }
+                    // final strings *can* just copy the reference
                 } else {
                     // todo: copy-in data for register-passed arguments
 
@@ -356,9 +342,13 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
             }
-        }
 
-        // todo: functions which are called by themselves as parameters
+            // functions which are called by themselves as parameters should be handled here
+            // other expressions will be handled elsewhere
+            if (adjust_rc) {
+                // todo: adjust the reference count
+            }
+        }
 
         // preserve the processor status
         sincall_ss << "\t" << "pushfq" << std::endl;
@@ -438,6 +428,17 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     // first, ensure that the return statement's data type is compatible with the signature
     DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbols, this->structs, ret.get_line_number());
     if (return_type.is_compatible(signature.get_data_type())) {
+        // ensure we have a valid return type; we can't return local references
+        if (signature.get_data_type().get_primary() == REFERENCE || signature.get_data_type().get_primary() == PTR) {
+            if (!return_type.get_qualities().is_dynamic() && !return_type.get_qualities().is_static()) {
+                throw CompilerException(
+                    "References to automatic memory may not be returned",
+                    compiler_errors::RETURN_AUTOMATIC_REFERENCE,
+                    ret.get_line_number()
+                );
+            }
+        }
+
         // types are compatible; how the value gets returned (and how the callee gets cleaned up) depends on the function's calling convention
         if (signature.get_calling_convention() == SINCALL) {
             ret_ss << this->sincall_return(ret, return_type).str() << std::endl;
