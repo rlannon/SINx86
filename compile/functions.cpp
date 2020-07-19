@@ -280,6 +280,9 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     // if registers need to be preserved, do that here
     sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
 
+    // create a new reg stack for our parameters
+    this->reg_stack.push_back(register_usage());
+
     // get the formal parameters so we don't need to call a function every time
     std::vector<symbol> &formal_parameters = s.get_formal_parameters();
 
@@ -311,12 +314,14 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 sincall_ss << this->evaluate_expression(arg, line).str();
                 std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
 
+                // todo: utilize the assign functions to fetch source and destination operands
+
                 // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
                 // if the symbol has a register, pass it there; else, push it
                 if (param.get_register() == NO_REGISTER) {
                     // use [rsp + (offset - BASE_PARAMETER_OFFSET)] because we haven't used pushfq or push rbp yet
                     // however, the stack pointer is still below where we want to write the data
-                    // if the data needs to be copied in, we must handle it a little different
+                    // if the data needs to be copied in, we must handle it a little differently
                     if (param.get_data_type().get_primary() == ARRAY) {
                         // todo: perform array copy
                         // todo: semantics for passing arrays into functions
@@ -338,6 +343,10 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                         sincall_ss << "\t" << "mov [rsp + " << param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET << "], " << reg_name << std::endl;
                     }
                 } else {
+                    // todo: copy-in data for register-passed arguments
+
+                    // ensure the register is set as 'in use'
+                    this->reg_stack.peek().set(param.get_register());
                     sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << reg_name << std::endl;
                 }
 
@@ -348,6 +357,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 throw FunctionSignatureException(line);
             }
         }
+
+        // todo: functions which are called by themselves as parameters
 
         // preserve the processor status
         sincall_ss << "\t" << "pushfq" << std::endl;
@@ -370,6 +381,9 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         if (total_offset != 0) {
             sincall_ss << "\t" << "add rsp, " << total_offset << std::endl;
         }
+
+        // pop back the parameter register_usage object
+        this->reg_stack.pop_back();
 
         // if registers were preserved, restore them here
         sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
