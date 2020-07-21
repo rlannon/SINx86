@@ -165,6 +165,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     // add a label for the function
     definition_ss << func_sym.get_name() << ":" << std::endl;
     // note: we don't need to account for parameters passed in registers as these will be located *above* the return address
+    // it is the *caller's* responsibility to allocate this data
 
     // since we will be using the 'call' instruction, we must increase our stack offset by the width of a pointer so that we don't overwrite the return address
     // we don't need to adjust RSP manually, though, as that was done by the "call" instruction
@@ -237,12 +238,12 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
             // SIN calling convention
             call_ss << this->sincall(func_sym, call.get_args(), line).str(); // todo: return this function's result directly?
 		}
-		else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
+		/*else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
 			// todo: System V
 		}
         else if (func_sym.get_calling_convention() == calling_convention::WIN_64) {
             // todo: Windows x86-64
-        }
+        }*/
 		else {
             throw CompilerException("Other calling conventions not supported at this time", 0, line);
         }
@@ -296,12 +297,12 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
         // we only need to subtract from rsp if the adjustment is non-zero
         // do this now so that pushing values to the stack in evaluate_expression() doesn't overwrite parameters
+        // and, if we have no parameters, we won't have to do any of this
         if (total_offset != 0) {
             sincall_ss << "\t" << "sub rsp, " << total_offset << std::endl;
         }
         
         // iterate over our arguments, ensure the types match and that we have an appropriate number
-        unsigned int rsp_offset_adjust = 0;
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
             std::shared_ptr<Expression> arg = args[i];
@@ -311,61 +312,88 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             bool adjust_rc = (
                 (arg->get_expression_type() == VALUE_RETURNING_CALL) &&
                 (!param.get_data_type().get_qualities().is_final()) &&  // final symbols can just copy references
-                (param.get_data_type().get_primary() == STRING || param.get_data_type().get_qualities().is_dynamic())
+                (param.get_data_type().is_reference_type())
             );
 
             // first, ensure the types match
             DataType arg_type = get_expression_data_type(arg, this->symbols, this->structs, line);
-            if (arg_type.is_compatible(param.get_data_type())) {
-                // evaluate the expression and pass it in the appropriate manner
-                sincall_ss << this->evaluate_expression(arg, line).str();
-                std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
-
-                // todo: utilize the assign functions to fetch source and destination operands
-                auto destination_operand = assign_utilities::fetch_destination_operand(arg, this->symbols, this->structs, s.get_name(), 1, line);
-                
-                // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
-                // if the symbol has a register, pass it there; else, push it
-                if (param.get_register() == NO_REGISTER) {
-                    // final strings *can* just copy the reference
-                } else {
-                    // todo: copy-in data for register-passed arguments
-
-                    // ensure the register is set as 'in use'
-                    this->reg_stack.peek().set(param.get_register());
-                    sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << reg_name << std::endl;
-                }
-
-                // now, modify the rsp offset adjustment -- must be done for all arguments as they all live above the new stack frame
-                rsp_offset_adjust += param.get_data_type().get_width();
-            } else {
+            if (!arg_type.is_compatible(param.get_data_type())) {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
             }
+            
+            // evaluate the expression and pass it in the appropriate manner
+            sincall_ss << this->evaluate_expression(arg, line).str();
+            // auto arg_p = this->eval_helper(arg, line);
+            // sincall_ss << arg_p.first;
+            // if (arg_p.second) {
+            //     adjust_rc = true;
+            // }
 
-            // functions which are called by themselves as parameters should be handled here
-            // other expressions will be handled elsewhere
+            std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
+            auto destination_operand = assign_utilities::fetch_destination_operand(param, this->symbols, line);
+            bool copy_constructed = true;
+
+            // get the offset (rsp+) for this parameter
+            // note if we have to adjust the RC, the position will be one quadword *above* RSP because we push first, then do lea
+            size_t param_offset = -param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET;
             if (adjust_rc) {
-                // todo: adjust the reference count
+                param_offset += sin_widths::PTR_WIDTH;
+            }
+
+            // if we had a dynamic or string type, we have to construct it regardless (pass by value)
+            if (param.get_data_type().get_primary() == STRING) {
+                // to construct a string, we load the address where the parameter wil be stored into rdi
+                sincall_ss << "\t" << "lea rdi, [rsp + " << param_offset << "]" << std::endl;
+                
+                // preserve the source string so we can free it *if* we need to adjust its RC
+                // if (adjust_rc) {
+                //     sincall_ss << "\t" << "push rax" << std::endl;
+                // }
+                
+                sincall_ss << "\t" << "mov rsi, rax" << std::endl;
+                sincall_ss << call_sincall_subroutine("sinl_string_copy_construct") << std::endl;
+            }
+            else if (param.get_data_type().get_qualities().is_dynamic()) {
+                // todo: construct other types
+            }
+            else {
+                copy_constructed = false;
+            }
+
+            // if we needed to adjust the RC
+            if (adjust_rc) {
+                sincall_ss << "\t" << "pop rdi" << std::endl;   // free the original string to free
+                sincall_ss << "\t" << "call sre_free" << std::endl;
+                // now we need to move the parameter position back because we popped the value
+                param_offset -= sin_widths::PTR_WIDTH;
+            }
+
+            // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
+            // if the symbol has a register, pass it there; else, push it
+            if (param.get_register() == NO_REGISTER) {
+                if (copy_constructed) {
+                    sincall_ss << "\t" << "mov rax, [rsp + " << param_offset << "], " << std::endl;
+                }
+
+                // note final strings *can* just copy the reference
+                sincall_ss << "\t" << "mov [rsp + " << param_offset << "]" << ", " << reg_name << std::endl;
+            } else {
+                // ensure the register is set as 'in use'
+                if (copy_constructed) {
+                    reg_name = "[rsp + " + std::to_string(param_offset) + "]";
+                }
+
+                this->reg_stack.peek().set(param.get_register());
+                sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << reg_name << std::endl;
             }
         }
+        // todo: default values
 
-        // preserve the processor status
-        sincall_ss << "\t" << "pushfq" << std::endl;
-        // now, preserve our stack frame
-        sincall_ss << "\t" << "push rbp" << std::endl;
-        sincall_ss << "\t" << "mov rbp, rsp" << std::endl;
-
-        // next, call the function
-        sincall_ss << "\t" << "call " << s.get_name() << std::endl;
+        // call the function
+        sincall_ss << call_sincall_subroutine(s.get_name());
 
         // the return value is now in RAX or XMM0, depending on the data type
-
-        // now, restore the old stack frame
-        sincall_ss << "\t" << "mov rsp, rbp" << std::endl;
-        sincall_ss << "\t" << "pop rbp" << std::endl;
-        // and restore the processor status
-        sincall_ss << "\t" << "popfq" << std::endl;
 
         // if we had to adjust rsp, move it back
         if (total_offset != 0) {
@@ -443,12 +471,12 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
         if (signature.get_calling_convention() == SINCALL) {
             ret_ss << this->sincall_return(ret, return_type).str() << std::endl;
         }
-        else if (signature.get_calling_convention() == SYSTEM_V) {
+        /*else if (signature.get_calling_convention() == SYSTEM_V) {
             // todo: System V
         }
         else if (signature.get_calling_convention() == WIN_64) {
             // todo: Windows 64
-        }
+        }*/
         else {
             throw CompilerException("Calling conventions other than sincall are currently not supported", 0, ret.get_line_number());
         }

@@ -190,8 +190,12 @@ std::pair<std::string, size_t> compiler::eval_helper(
                 }
 			}
 			else {
-				evaluation_ss << this->evaluate_binary(bin_exp, line).str();
+				auto bin_p = this->evaluate_binary(bin_exp, line);
+                evaluation_ss << bin_p.first;
+                count += bin_p.second;
 			}
+
+            // todo: clean up binary operands here?
 
 			break;
         }
@@ -199,6 +203,7 @@ std::pair<std::string, size_t> compiler::eval_helper(
         {
 			Unary unary_exp = *dynamic_cast<Unary*>(to_evaluate.get());
 			evaluation_ss << this->evaluate_unary(unary_exp, line).str();
+            // todo: clean up unary?
             break;
         }
         case VALUE_RETURNING_CALL:
@@ -212,7 +217,11 @@ std::pair<std::string, size_t> compiler::eval_helper(
             // add the count from this expression to our current count
             // any parameters that returned a reference (but passed by value) were already dealt with
             count += call_p.second;
-
+            if (call_p.second) {
+                evaluation_ss << "; RAX now contains value to clean up" << std::endl;
+                evaluation_ss << "\t" << "push rax" << "\t" << "; we must push so we can free later" << std::endl;
+                // todo: fix this, it's really dumb how this works right now
+            }
             break;
         }
         case CAST:
@@ -366,10 +375,17 @@ std::stringstream compiler::evaluate_expression(
     size_t count = p.second;
 
     // if we have a nonzero count, we need to handle it; otherwise, we can just return the stringstream
-    if (count > 0) {
+    if ((count > 0) && (to_evaluate->get_expression_type() != VALUE_RETURNING_CALL)) {
         for (size_t i = 0; i < count; i++) {
-            // todo: free from stack
+            evaluation_ss << "; clean up reference-returning function (count " << count - i << ")" << std::endl;
+            evaluation_ss << "\t" << "pop rdi" << std::endl;
+            evaluation_ss << "\t" << "push rax" << std::endl;
+            evaluation_ss << "\t" << "call sre_free" << std::endl;
+            evaluation_ss << "\t" << "pop rax" << std::endl;
         }
+    }
+    else if (count > 0) {
+        evaluation_ss << "; Found value-returning function; delaying evaluation" << std::endl;
     }
 
     return evaluation_ss;

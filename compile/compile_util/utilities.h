@@ -35,6 +35,8 @@ Our various compiler utilities
 
 // todo: put these in their own namespace
 
+std::string call_sincall_subroutine(std::string name);
+
 DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
 
 bool returns(StatementBlock to_check);

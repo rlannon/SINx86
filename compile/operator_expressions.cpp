@@ -23,6 +23,8 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 
 	*/
 
+	// todo: update ref counts for unary operands
+
 	std::stringstream eval_ss;
 
 	// We need to know the data type in order to evaluate the expression properly
@@ -163,7 +165,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	return eval_ss;
 }
 
-std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int line) {
+std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, unsigned int line) {
 	/*
 
 	evaluate_binary
@@ -202,6 +204,7 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 	*/
 
 	std::stringstream eval_ss;
+	size_t count = 0;
 
 	// act based on the operator
 	if (to_evaluate.get_operator() == DOT) {
@@ -236,7 +239,10 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			// todo: ensure 16-byte stack alignment; this would allow us to use movdqa instead (and fit the System V ABI)
 
 			// evaluate the left-hand side
-			eval_ss << this->evaluate_expression(to_evaluate.get_left(), line).str();
+			auto lhs_pair = this->eval_helper(to_evaluate.get_left(), line);
+			eval_ss << lhs_pair.first;
+			count += lhs_pair.second;
+
 			if (left_type.get_primary() == FLOAT) {
 				// "push" xmm0 ('push xmm0' is not allowed)
 				eval_ss << "\t" << "sub rsp, 16" << std::endl;
@@ -248,7 +254,16 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			}
 
 			// evaluate the right-hand side
-			eval_ss << this->evaluate_expression(to_evaluate.get_right(), line).str();
+			auto rhs_pair = this->eval_helper(to_evaluate.get_right(), line);
+			eval_ss << rhs_pair.first;
+			count += rhs_pair.second;
+
+			// if the right hand side has a count, we need to slightly modify how we push
+			if (rhs_pair.second) {
+				// todo: this is really dumb
+				eval_ss << "\t" << "pop rax" << std::endl;	// we DON'T want this if RHS is a function call
+				eval_ss << "\t" << "mov r15, rax" << std::endl;
+			}
 
 			if (right_type.get_primary() == FLOAT) {
 				// this depends on the data width; note that floating-point values must always convert to double if a double is used
@@ -272,6 +287,11 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 			else {
 				eval_ss << "\t" << "mov rbx, rax" << std::endl;
 				eval_ss << "\t" << "pop rax" << std::endl;
+			}
+
+			// and *now* we push the value to free
+			if (rhs_pair.second) {
+				eval_ss << "\t" << "push r15" << std::endl;	// again, this is very dumb
 			}
 
 			// finally, act according to the operator and type
@@ -589,5 +609,5 @@ std::stringstream compiler::evaluate_binary(Binary &to_evaluate, unsigned int li
 	}
 
 	// finally, return the generated code
-	return eval_ss;
+	return std::make_pair<>(eval_ss.str(), count);
 }

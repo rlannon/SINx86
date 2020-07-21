@@ -106,6 +106,7 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
             exp_operator::ADDRESS
         );
     }
+    // todo: we can utilize the copy construction method for alloc-init when used with dynamic types
     
     return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
 }
@@ -167,17 +168,8 @@ std::stringstream compiler::assign(
             }
             // todo: other copy types
 
-            // set up the stack frame; call the function
-            handle_assign << "\t" << "pushfq" << std::endl;
-            handle_assign << "\t" << "push rbp" << std::endl;
-            handle_assign << "\t" << "mov rbp, rsp" << std::endl;
-
-            handle_assign << "\t" << "call " << proc_name << std::endl;
-
-            // restore our old stack frame             
-            handle_assign << "\t" << "mov rsp, rbp" << std::endl;
-            handle_assign << "\t" << "pop rbp" << std::endl;
-            handle_assign << "\t" << "popfq" << std::endl;
+            // call the function
+            handle_assign << call_sincall_subroutine(proc_name);
 
             // now, if we had a string, we need to move the returned address into where the string is located
             if (lhs_type.get_primary() == STRING) {

@@ -140,14 +140,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
 
 			// allocate dynamic memory with a call to sre_request_resource
-			allocation_ss << "\t" << "pushfq" << std::endl;
-			allocation_ss << "\t" << "push rbp" << std::endl;
-			allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
 			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
 			allocation_ss << "\t" << "call sre_request_resource" << std::endl;
-			allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
-			allocation_ss << "\t" << "pop rbp" << std::endl;
-			allocation_ss << "\t" << "popfq" << std::endl;
 
 			// restore used registers
 			allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
@@ -301,11 +295,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 				// todo: get string length instead of passing 0 in
 				allocation_ss << "\t" << "mov esi, 0" << std::endl;
-				allocation_ss << "\t" << "push rbp" << std::endl;
-				allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
-				allocation_ss << "\t" << "call sinl_string_alloc" << std::endl;
-				allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
-				allocation_ss << "\t" << "pop rbp" << std::endl;
+				allocation_ss << call_sincall_subroutine("sinl_string_alloc");
 
 				allocation_ss << "\t" << "add rsp, " << to_subtract << std::endl;
 				

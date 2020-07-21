@@ -9,7 +9,23 @@ Some utility functions for the compiler
 
 #include "utilities.h"
 
-// todo: don't use a template here; we can dynamic_cast to symbol because it is the parent class of symbol; similarly, we don't need symbol_table to be a template
+
+std::string call_sincall_subroutine(std::string name) {
+    // Sets up a stack frame, calls a function, restores frame
+    
+    std::stringstream call_ss;
+
+    call_ss << "\t" << "pushfq" << std::endl;
+    call_ss << "\t" << "push rbp" << std::endl;
+    call_ss << "\t" << "mov rbp, rsp" << std::endl;
+    call_ss << "\t" << "call " << name << std::endl;
+    call_ss << "\t" << "mov rsp, rbp" << std::endl;
+    call_ss << "\t" << "pop rbp" << std::endl;
+    call_ss << "\t" << "popfq" << std::endl;
+
+    return call_ss.str();
+}
+
 DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line) {
     /*
 
@@ -715,11 +731,7 @@ std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
     copy_ss << get_address(src, reg::RSI) << std::endl;
     copy_ss << get_address(dest, reg::RDI) << std::endl;
     copy_ss << "\t" << "mov ecx, " << src.get_data_type().get_full_subtype()->get_width() << std::endl;
-    copy_ss << "\t" << "push rbp" << std::endl;
-    copy_ss << "\t" << "mov rbp, rsp" << std::endl;
-    copy_ss << "\t" << "call sinl_array_copy" << std::endl;
-    copy_ss << "\t" << "mov rsp, rbp" << std::endl;
-    copy_ss << "\t" << "pop rbp" << std::endl;
+    copy_ss << call_sincall_subroutine("sinl_array_copy");
 
     // restore registers
     copy_ss << pop_used_registers(regs).str();
@@ -748,9 +760,7 @@ std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
     // get the pointers
     copy_ss << get_address(src, RSI) << std::endl;
     copy_ss << get_address(dest, RDI) << std::endl;
-    copy_ss << "\t" << "pushfq" << std::endl << "\tpush rpb" << std::endl << "\tmov rbp, rsp" << std::endl;
-    copy_ss << "\t" << "call sinl_string_copy" << std::endl;
-    copy_ss << "\t" << "mov rsp, rbp" << std::endl << "\tpop rbp" << std::endl << "\tpopfq" << std::endl;
+    copy_ss << call_sincall_subroutine("sinl_string_copy");
 
     // restore registers -- note this does not move values back into registers that were moved into memory!
     copy_ss << pop_used_registers(regs, true).str();

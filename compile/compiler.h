@@ -126,7 +126,7 @@ class compiler {
 	std::stringstream evaluate_lvalue(LValue &to_evaluate, unsigned int line);
 	std::stringstream evaluate_indexed(Indexed &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
-	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
+	std::pair<std::string, size_t> evaluate_binary(Binary &to_evaluate, unsigned int line);
 	std::stringstream get_address_of(Unary &u, reg r, unsigned int line);
 
 	// process an included file
