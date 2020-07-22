@@ -31,8 +31,10 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	DataType unary_type = get_expression_data_type(to_evaluate.get_operand(), this->symbols, this->structs, line);
 
 	// first, evaluate the expression we are modifying *unless* it is an ADDRESS operation
-	if (to_evaluate.get_operator() != ADDRESS)
-		eval_ss << this->evaluate_expression(to_evaluate.get_operand(), line).str();
+	if (to_evaluate.get_operator() != ADDRESS) {
+		auto addr_p = this->evaluate_expression(to_evaluate.get_operand(), line);
+		eval_ss << addr_p.first;
+	}
 
 	// switch to our operator -- only three unary operators are allowed (that don't have special expression types, such as dereferencing or address-of), but only unary minus and unary not have any effect
 	switch (to_evaluate.get_operator()) {
@@ -239,7 +241,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			// todo: ensure 16-byte stack alignment; this would allow us to use movdqa instead (and fit the System V ABI)
 
 			// evaluate the left-hand side
-			auto lhs_pair = this->eval_helper(to_evaluate.get_left(), line);
+			auto lhs_pair = this->evaluate_expression(to_evaluate.get_left(), line);
 			eval_ss << lhs_pair.first;
 			count += lhs_pair.second;
 
@@ -253,10 +255,16 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				// don't need to adjust the compiler's offset adjustment as this will be pulled from the stack before the next statement
 			}
 
+			if (lhs_pair.second) {
+				eval_ss << "; have lhs reference" << std::endl;
+			}
+
 			// evaluate the right-hand side
-			auto rhs_pair = this->eval_helper(to_evaluate.get_right(), line);
+			auto rhs_pair = this->evaluate_expression(to_evaluate.get_right(), line);
 			eval_ss << rhs_pair.first;
 			count += rhs_pair.second;
+
+			// todo: ensure dynamic returns work for ALL types
 
 			// if the right hand side has a count, we need to slightly modify how we push
 			if (rhs_pair.second) {
@@ -285,8 +293,20 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				}
 			}
 			else {
+				// restore the lhs
 				eval_ss << "\t" << "mov rbx, rax" << std::endl;
-				eval_ss << "\t" << "pop rax" << std::endl;
+				
+				// if we had something to free, it's the next thing on the stack
+				// we want to ensure that we preserve it
+				if (lhs_pair.second) {
+					// todo: get safe register
+					eval_ss << "\t" << "pop r12" << std::endl;
+					eval_ss << "\t" << "pop rax" << std::endl;
+					eval_ss << "\t" << "push r12" << std::endl;
+				}
+				else {
+					eval_ss << "\t" << "pop rax" << std::endl;
+				}
 			}
 
 			// and *now* we push the value to free
@@ -331,13 +351,11 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					eval_ss << "\t" << "mov rsi, rax" << std::endl;
 					eval_ss << "\t" << "mov rdi, rbx" << std::endl;
 
-					eval_ss << "\t" << "push rbp" << std::endl;
-					eval_ss << "\t" << "mov rbp, rsp" << std::endl;
-					eval_ss << "\t" << "call " << routine_name << std::endl;
-					eval_ss << "\t" << "mov rsp, rbp" << std::endl;
-					eval_ss << "\t" << "pop rbp" << std::endl;
-
+					eval_ss << call_sincall_subroutine(routine_name);
 					eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+					
+					count += 1;	// string concatenation and appendment allocate resources
+					eval_ss << "\t" << "push rax" << std::endl;
 					
 					break;
 				}

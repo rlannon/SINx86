@@ -308,13 +308,6 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             std::shared_ptr<Expression> arg = args[i];
             symbol param = formal_parameters[i];
 
-            // whether this expression must have an adjustment to its RC
-            bool adjust_rc = (
-                (arg->get_expression_type() == VALUE_RETURNING_CALL) &&
-                (!param.get_data_type().get_qualities().is_final()) &&  // final symbols can just copy references
-                (param.get_data_type().is_reference_type())
-            );
-
             // first, ensure the types match
             DataType arg_type = get_expression_data_type(arg, this->symbols, this->structs, line);
             if (!arg_type.is_compatible(param.get_data_type())) {
@@ -323,12 +316,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             }
             
             // evaluate the expression and pass it in the appropriate manner
-            sincall_ss << this->evaluate_expression(arg, line).str();
-            // auto arg_p = this->eval_helper(arg, line);
-            // sincall_ss << arg_p.first;
-            // if (arg_p.second) {
-            //     adjust_rc = true;
-            // }
+            auto arg_p = this->evaluate_expression(arg, line);
+            sincall_ss << arg_p.first;
 
             std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
             auto destination_operand = assign_utilities::fetch_destination_operand(param, this->symbols, line);
@@ -337,7 +326,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             // get the offset (rsp+) for this parameter
             // note if we have to adjust the RC, the position will be one quadword *above* RSP because we push first, then do lea
             size_t param_offset = -param.get_offset() - general_utilities::BASE_PARAMETER_OFFSET;
-            if (adjust_rc) {
+            if (arg_p.second) {
                 param_offset += sin_widths::PTR_WIDTH;
             }
 
@@ -362,7 +351,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             }
 
             // if we needed to adjust the RC
-            if (adjust_rc) {
+            if (arg_p.second) {
                 sincall_ss << "\t" << "pop rdi" << std::endl;   // free the original string to free
                 sincall_ss << "\t" << "call sre_free" << std::endl;
                 // now we need to move the parameter position back because we popped the value
@@ -509,7 +498,11 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
     */
 
 	std::stringstream sincall_ss;
-	sincall_ss << evaluate_expression(ret.get_return_exp(), ret.get_line_number()).str() << std::endl;
+
+    auto ret_p = evaluate_expression(ret.get_return_exp(), ret.get_line_number());
+
+	sincall_ss << ret_p.first;
+    // todo: count
     sincall_ss << "\t" << "push rax" << std::endl;
     
     // if we are returning a pointer or address, we need to increment the RC by one so it doesn't get freed completely

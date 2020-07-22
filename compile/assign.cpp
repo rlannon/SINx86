@@ -127,6 +127,7 @@ std::stringstream compiler::assign(
     */
     
     std::stringstream handle_assign;
+    size_t count = 0;
     
     // get the source register
     reg src_reg = rhs_type.get_primary() == FLOAT ? XMM0 : RAX;
@@ -141,7 +142,10 @@ std::stringstream compiler::assign(
         }
 
         // evaluate the rvalue, then the destination (lvalue)
-        handle_assign << this->evaluate_expression(rvalue, line).str();
+        auto handle_p = this->evaluate_expression(rvalue, line);
+        handle_assign << handle_p.first;
+        count += handle_p.second;
+        
         handle_assign << dest.fetch_instructions;
 
         // get the appropriate variant of RAX based on the width of the type to which we are assigning
@@ -199,6 +203,14 @@ std::stringstream compiler::assign(
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
             handle_assign << "\t" << "call sre_add_ref" << std::endl;
+            handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
+        }
+        
+        if (count > 0) {
+            handle_assign << "\t" << "pop rax" << std::endl;
+            handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
+            handle_assign << "\t" << "mov rdi, rax" << std::endl;
+            handle_assign << "\t" << "call sre_free" << std::endl;
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
     }

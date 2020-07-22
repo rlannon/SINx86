@@ -12,17 +12,13 @@ Generates code for evaluating an expression. This data will be loaded into regis
 // todo: add evaluation of expressions labeled 'constexpr'
 
 // todo: create an expression evaluation class and give it access to compiler members?
-std::pair<std::string, size_t> compiler::eval_helper(
+std::pair<std::string, size_t> compiler::evaluate_expression(
     std::shared_ptr<Expression> to_evaluate,
     unsigned int line
 ) {
     /*
 
-    eval_helper
-    This is the delegate function called by evaluate_expression. It is to be used to generate asm.
-
-    This is needed due to the potential issues with clean-up of resources returned by functions where the RC would otherwise be 1.
-    After being used, these resources may have no references but maintain an RC of one and never get collected. These cannot be cleaned up in a function's return statement because once the RC hits 0, the memory will be deallocated, and the stack can't be used because the widths of dynamic objects are highly variable. 
+    evaluate_expression
 
     This function will determine how many such objects must be freed in each expression so they can be properly handled by their parent expression. For example:
         @print("Found " + @itos(10) + " primes!\n");
@@ -112,7 +108,9 @@ std::pair<std::string, size_t> compiler::eval_helper(
                 
                 if (member_type == *t.get_full_subtype()) {
                     // evaluate the expression
-                    evaluation_ss << this->evaluate_expression(m, line).str();
+                    auto member_p = this->evaluate_expression(m, line);
+                    evaluation_ss << member_p.first;
+                    count += member_p.second;
 
                     // store it in [r15 + offset]
                     if (member_type.get_primary() == FLOAT) {
@@ -244,11 +242,12 @@ std::pair<std::string, size_t> compiler::eval_helper(
                         contained->set_type(c->get_new_type());
 
                         // now, evaluate
-                        evaluation_ss << this->evaluate_expression(contained, line).str();
+                        evaluation_ss << this->evaluate_expression(contained, line).first;
                     }
                     else {
                         // to perform the typecast, we must first evaluate the expression to be casted
-                        evaluation_ss << this->evaluate_expression(c->get_exp(), line).str();
+                        auto cast_p = this->evaluate_expression(c->get_exp(), line);
+                        evaluation_ss << cast_p.first;
 
                         // now, use the utility function to actually cast the type
                         evaluation_ss << cast(old_type, c->get_new_type(), line).str();
@@ -267,7 +266,7 @@ std::pair<std::string, size_t> compiler::eval_helper(
         {
             auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
             auto t = get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
-
+            auto attr_p = this->evaluate_expression(attr->get_selected(), line);
             // we have a limited number of attributes
             if (attr->get_attribute() == LENGTH) {
                 /*
@@ -284,7 +283,9 @@ std::pair<std::string, size_t> compiler::eval_helper(
 
                 if (t.get_primary() == ARRAY || t.get_primary() == STRING) {
                     // First, evaluate the selected expression
-                    evaluation_ss << this->evaluate_expression(attr->get_selected(), line).str();
+                    evaluation_ss << attr_p.first;
+                    count += attr_p.second;
+
                     evaluation_ss << "\t" << "mov eax, [rax]" << std::endl;
                 }
                 else if (t.get_primary() == STRUCT) {
@@ -310,7 +311,8 @@ std::pair<std::string, size_t> compiler::eval_helper(
                     evaluation_ss << "\t" << "mov eax, " << s.get_width() << std::endl;
                 }
                 else if (t.get_primary() == ARRAY || t.get_primary() == STRING) {
-                    evaluation_ss << this->evaluate_expression(attr->get_selected(), line).str();
+                    evaluation_ss << attr_p.first;
+                    count += attr_p.second;
                     evaluation_ss << "\t" << "mov eax, [rax]" << std::endl;
 
                     // strings have a type width of 1, if it's an array we need to get the width
@@ -344,51 +346,24 @@ std::pair<std::string, size_t> compiler::eval_helper(
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
     }
 
+    // if we have a count greater than 1, we can free a few references
+    if (count > 1) {
+        evaluation_ss << "; Have more than 1 reference to free" << std::endl;
+        evaluation_ss << "\t" << "pop r12" << std::endl;
+        evaluation_ss << "\t" << "mov r13, rax" << std::endl;
+        for (size_t i = 1; i < count; i++) {
+            evaluation_ss << "\t" << "pop rdi" << std::endl;
+            evaluation_ss << "\t" << "call sre_free" << std::endl;
+        }
+        evaluation_ss << "\t" << "push r12" << std::endl;
+        evaluation_ss << "\t" << "mov rax, r13" << std::endl;
+
+        // now, we can set the count to 1 because we handled the references that could be dealt with
+        count = 1;
+    }
+
     // return the pair
     return std::make_pair<>(evaluation_ss.str(), count);
-}
-
-std::stringstream compiler::evaluate_expression(
-    std::shared_ptr<Expression> to_evaluate,
-    unsigned int line
-) {
-    /*
-
-    evaluate_expression
-    Generates code to evaluate a given expression
-
-    Generates code to evaluate an expression, keeping the result in the A register (could be AL, AX, EAX, or RAX) if possible.
-    If the size of the object (i.e., non-dynamic arrays and structs) does not permit it to passed in a register, then it will be returned on the stack, and a pointer to the member will be passed
-
-    Note this function assumes any registers that needed to be saved were, and will be restored by the compiler after the expression evaluation
-
-    @param  value   The expression to be evaluated
-    @return A stringstream containing the generated code
-
-    */
-
-    // todo: allow a 'reg' object to be supplied instead of always returning in RAX
-
-    auto p = this->eval_helper(to_evaluate, line);
-    std::stringstream evaluation_ss;
-    evaluation_ss << p.first;
-    size_t count = p.second;
-
-    // if we have a nonzero count, we need to handle it; otherwise, we can just return the stringstream
-    if ((count > 0) && (to_evaluate->get_expression_type() != VALUE_RETURNING_CALL)) {
-        for (size_t i = 0; i < count; i++) {
-            evaluation_ss << "; clean up reference-returning function (count " << count - i << ")" << std::endl;
-            evaluation_ss << "\t" << "pop rdi" << std::endl;
-            evaluation_ss << "\t" << "push rax" << std::endl;
-            evaluation_ss << "\t" << "call sre_free" << std::endl;
-            evaluation_ss << "\t" << "pop rax" << std::endl;
-        }
-    }
-    else if (count > 0) {
-        evaluation_ss << "; Found value-returning function; delaying evaluation" << std::endl;
-    }
-
-    return evaluation_ss;
 }
 
 std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int line) {

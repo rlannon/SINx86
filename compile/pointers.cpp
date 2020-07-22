@@ -54,7 +54,8 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         // the index value will be in eax and the array length will be in [rax]
 
         // evaluate the index value and multiply by the type width
-        addr_ss << this->evaluate_expression(i->get_index_value(), line).str();
+        auto exp_address_p = this->evaluate_expression(i->get_index_value(), line);
+        addr_ss << exp_address_p.first;
         
         // now, restore our values if we needed to make any adjustments
         if (r == RBX) {

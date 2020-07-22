@@ -358,7 +358,9 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// we only need to do this for non-dynamic arrays
 				if (m->get_data_type().get_primary() == ARRAY && !m->get_data_type().get_qualities().is_dynamic()) {
 					// evaluate the array length expression and move it (an integer) into [R15 + offset]
-					allocation_ss << this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number()).str();
+					auto alloc_p = this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
+					allocation_ss << alloc_p.first;
+					// todo: counts
 					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;	
 				}
 				else if (m->get_data_type().must_initialize()) {

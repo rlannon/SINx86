@@ -117,8 +117,7 @@ class compiler {
 
 	// utilities that require compiler's data members
 	std::stringstream get_exp_address(std::shared_ptr<Expression> to_evaluate, reg r, unsigned int line);
-	std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);
-	std::pair<std::string, size_t> eval_helper(
+	std::pair<std::string, size_t> evaluate_expression(
 		std::shared_ptr<Expression> to_evaluate,
 		unsigned int line
 	);
