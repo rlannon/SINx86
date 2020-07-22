@@ -37,3 +37,25 @@ Strings may be marked as `dynamic`, and although this does not change where the 
 *A note about why* `string` *is a unique type:* The decision to add `string` to the language was done because of its ubiquity; since SIN's goal is to make the life of a programmer easier by reducing the use of confusing syntax and manual memory management, it makes more sense to have the `string` type rather than requiring programmers to create a `dynamic array<char>` and deal with the nightmares one might face in C (rather than, say, C++ or Python) every time they wish to utilize strings. While this may make the implementation of strings in the compiler a little more thorny, it reduces unnecessary difficulty when programming and so was deemed to belong in the language. Plus, it allows use of the concatenation operator (`+`) where `dynamic array<char>` would not.
 
 **NB:** It is generally a very *bad* idea to use pointers and references to strings; not only is it *very rarely* necessary, but because its size tends to be so variable, any references to it may be invalidated with any reassignment.
+
+### Temporary Instances of Reference Types
+
+Sometimes, expressions will yield temporary instances of reference types that need to be freed after the expression has been used. Take the following example:
+
+    decl string itos(decl int n);   // an integer-to-string function
+    
+    def int main(alloc dynamic array<string> args) {
+        @print(@itos(1000));
+        return 0;
+    }
+
+We obviously can't decrement the reference count of the value returned by `itos` in its `return` statement; doing so would potentially free the resource and give us garbage (if we were allowed to access that address at all). So, that value must live until the parameter `n` is initialized. `dynamic` and `string` types in SIN _always_ use a copy assignment; the only case where the compmiler is allowed to copy the address is when the type is `ref<T>` or `ptr<T>`.
+
+As a result of SIN's assignment semantics, the parameter `n` must be copy-constructed (to use C++ or OOP parlance). And, in order to clean up these values, we utilize an approach similar to what an object-oriented language would do with destructors (rather than let the GC handle it, which could lead to major problems). As such, we must do something like (using pseudocode):
+
+    temp = itos(1000)
+    call copy_construct(temp, &print.params[0])
+    call destruct(temp)
+    call print
+
+How this is accomplished is by tracking what expressions are returning values that must be freed, pushing these addresses onto the stack, and freeing them immediately after they are used.

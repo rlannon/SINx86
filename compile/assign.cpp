@@ -144,7 +144,7 @@ std::stringstream compiler::assign(
         // evaluate the rvalue, then the destination (lvalue)
         auto handle_p = this->evaluate_expression(rvalue, line);
         handle_assign << handle_p.first;
-        count += handle_p.second;
+        bool do_free = handle_p.second > 0;
         
         handle_assign << dest.fetch_instructions;
 
@@ -192,7 +192,11 @@ std::stringstream compiler::assign(
                 instruction = "mov";
             }
 
-            handle_assign << "\t" << instruction << " " << dest.dest_location << ", " << src << std::endl; 
+            handle_assign << "\t" << instruction << " " << dest.dest_location << ", " << src << std::endl;
+            
+            // if the returned value was a reference, we just performed a reference copy here
+            if (do_free)
+                do_free = false;
         }
 
         // now, call sre_add_ref on the lhs if we have a pointer OR if we have a reference and alloc-init
@@ -205,8 +209,9 @@ std::stringstream compiler::assign(
             handle_assign << "\t" << "call sre_add_ref" << std::endl;
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
-        
-        if (count > 0) {
+
+        // if the assignment was done via a temporary reference, we need to free it
+        if (do_free) {
             handle_assign << "\t" << "pop rax" << std::endl;
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, rax" << std::endl;

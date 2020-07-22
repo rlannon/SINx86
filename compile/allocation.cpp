@@ -305,6 +305,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// save the location of the string
 				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			}
+			// todo: utilize sinl_string_copy_construct for alloc-init with strings
 
 			// subtract the width of the type from RSP
 			allocation_ss << "\t" << "sub rsp, " << data_width << std::endl;
@@ -360,8 +361,13 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 					// evaluate the array length expression and move it (an integer) into [R15 + offset]
 					auto alloc_p = this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
 					allocation_ss << alloc_p.first;
-					// todo: counts
-					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;	
+					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;
+
+					// if we had a reference to an integer, we need to free it
+					if (alloc_p.second) {
+						allocation_ss << "\t" << "pop rdi" << std::endl;
+						allocation_ss << "\t" << "call sre_free" << std::endl;
+					}
 				}
 				else if (m->get_data_type().must_initialize()) {
 					init_required = true;
