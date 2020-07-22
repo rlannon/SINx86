@@ -26,3 +26,4 @@ while i < 1000:
 
 print()
 print(f"Found {count} primes")
+print("Done.")

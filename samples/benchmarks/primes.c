@@ -19,6 +19,7 @@ int main(int argc, char* argv[]) {
     }
     printf("\n");
     printf("Found %d primes\n", count);
+    printf("Done.\n");
 
     return 0;
 }
