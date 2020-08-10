@@ -31,6 +31,7 @@ Note that:
 #include "../util/Exceptions.h"	// ParserException
 #include "../util/DataType.h"	// type information
 #include "../util/general_utilities.h"
+#include "../util/EnumeratedTypes.h"
 
 class Parser
 {
