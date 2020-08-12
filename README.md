@@ -28,17 +28,17 @@ For more information, check out the [guide](Basic%20Syntax.md).
 
 ## Goal of the Project
 
-I cannot stress enough that this is a *learning exercise,* not an attempt at creating the next Python or Rust. This project is a hands-on way of learning compiler development. The purpose is not to create a particularly good compiler, but rather to serve as an exercise in compiler design and implementation. I intend on producing a *functioning* compiler, one that can be improved and expanded upon in the future. The goal is to generate code that *works,* and while I hope to improve the efficiency and overall funcionality of the compiler in the future, it is somewhat bodged together right now.
+I cannot stress enough that this is a _learning exercise_ in compiler development, not an attempt to make the next Python or Rust. The purpose is not to create a particularly _good_ compiler, but a _functioning_ compiler, one that can be improved and expanded upon in the future. While I hope to improve the efficiency and overall funcionality of the compiler in the future, it is somewhat bodged together right now.
 
-The fact that it's a learning exercise should explain why I decided to write a parser by hand, instead of using yacc/lex/bison/some other tool; doing so would not have allowed me to learn how parsers (can) work as deeply as I did by writing this one. It should also explain why I'm compiling directly from an abstract syntax tree into assembly, rather than using an intermediate representation like llvm, GNU RTL, or even C.
+The fact that it's a learning exercise should explain why I decided to write a parser by hand instead of using yacc/lex/bison/some other tool; doing so would not have allowed me to learn how parsers (can) work as deeply as I did by writing this one. It should also explain why I'm compiling directly from an abstract syntax tree into assembly rather than using an intermediate representation like llvm, GNU RTL, or even C.
 
-It also sort of explains why I am serializing the generated code into assembly, only to immediately assemble that code. This is a pretty inefficient method, but again, the goal is to generate something functional and hopefully incrementally improve its efficiency down the line once I have a full proof of concept.
+It also sort of explains why I am serializing the generated code into assembly only to immediately assemble that code. This is a pretty inefficient method, but again, the goal is to generate something functional and hopefully incrementally improve its efficiency down the line once I have a full proof of concept. This also helps me in debugging the code generator for a variety of reasons.
 
 ## Getting Started
 
 ### Installation / Build
 
-Note that this project requires at least C++ 14. Else, certain STL features will fail -- specifically, `std::unordered_map` cannot be used with enumeraed types because no hash function is given if C++ 11 or earlier is used. This was fixed in C++ 14, but if you absolutely have to compile with C++ 11, you will need to provide these hash functions.
+Note that this project requires at least C++ 14. Else, certain STL features will fail -- specifically, `std::unordered_map` cannot be used with enumerated types because no hash function is given by the C++11 STL. If you absolutely have to compile with C++11, you will need to provide these hash functions.
 
 ### The SRE
 
@@ -54,8 +54,8 @@ Note that the aforementioned repo should be fairly portable, but as is the case 
 
 This is not a full compiler suite, and as such, a few third-party applications are required. Without them, the compiler will be not be able to generate working binaries for the programs you write. The required programs are:
 
-* GCC, G++ - The SIN compiler relies on certain C and C++ functionality for its runtime environment, and without a working C++ compiler, linking the standard library with an assembled SIN program will be impossible (unless a custom SRE implementation that does not use either language is used, in which case _some_ linker will still be required). C++14 is used in this compiler.
-* NASM - The compiler does not generate object code directly; instead, it serializes it into x64 assembly in Intel syntax. I use [nasm](https://nasm.us) as my assembler, so all of the macros I use in the generated code are targeted for that assembler.
+* GCC - The SIN compiler relies on certain C and C++ functionality for its runtime environment, and without a working C++ compiler, linking the standard library with an assembled SIN program will be impossible (unless a custom SRE implementation that does not use either language is used, in which case _some_ linker will still be required).
+* NASM - The compiler does not generate object code directly; instead, it serializes it into x64 assembly in Intel syntax. I use [nasm](https://nasm.us), so all of the macros I use in the generated code are targeted for that assembler.
 
 It is also important to note that because SIN programs utilize standard library functions that define `_start`, SIN programs begin execution from `_main`, which is invoked by `_start`. However, SIN programs would *normally* utilize `_start` to initialize the runtime, command-line arguments, etc., this functionality must be moved into `_main`. While a compiler could move these routines to the start of the user's `_main` implementation, this compiler utilizes decoration to call `SIN_main` from `_main`. By slightly decorating every function and variable name, we can work around this issue pretty easily, but this is by no means the only (or even best) way of solving the problem.
 
