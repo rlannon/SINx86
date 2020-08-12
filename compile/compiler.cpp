@@ -572,19 +572,31 @@ void compiler::generate_asm(std::string filename) {
             }
 
             // insert our wrapper for the program
-            this->text_segment << "global main" << std::endl;
-            this->text_segment << "main:" << std::endl;
+            this->text_segment << "global _main" << std::endl;
+            this->text_segment << "_main:" << std::endl;
 
-            // call SRE init function (takes no parameters)
-            this->text_segment << "\t" << "mov rax, 0" << std::endl;
-            this->text_segment << "\t" << "call sre_init" << std::endl;
+            // call SRE init function (takes no parameters) -- ensure 16-byte stack alignment
+            this->text_segment << "\t" << "mov rax, rsp" << std::endl
+                << "\t" << "and rsp, -0x10" << std::endl
+                << "\t" << "push rax" << std::endl
+                << "\t" << "sub rsp, 8" << std::endl
+                << "\t" << "mov rax, 0" << std::endl
+                << "\t" << "call _sre_init" << std::endl
+                << "\t" << "add rsp, 8" << std::endl
+                << "\t" << "pop rsp" << std::endl;
 
             // call the main function with SINCALL
             this->text_segment << this->sincall(main_symbol, cmd_args, 0).str();
 
             // preserve the return value and call SRE cleanup function
             this->text_segment << "\t" << "push rax" << std::endl;
-            this->text_segment << "\t" << "call sre_clean" << std::endl;
+            this->text_segment << "\t" << "mov rax, rsp" << std::endl
+                << "\t" << "and rsp, -0x10" << std::endl
+                << "\t" << "push rax" << std::endl
+                << "\t" << "sub rsp, 8" << std::endl
+                << "\t" << "call _sre_clean" << std::endl
+                << "\t" << "add rsp, 8" << std::endl
+                << "\t" << "pop rsp" << std::endl;
 
             // restore main's return value and return
             this->text_segment << "\t" << "pop rax" << std::endl;
