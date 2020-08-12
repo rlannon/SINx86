@@ -74,7 +74,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     
     // we need to adjust our reference counts for pointers
     if (lhs_type.get_primary() == PTR) {
-        //
+        // todo: pointer rcs
     }
 
     handle_ss << this->assign(lhs_type, rhs_type, p, a.get_rvalue(), a.get_line_number()).str();
@@ -106,6 +106,7 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
             exp_operator::ADDRESS
         );
     }
+    // todo: we can utilize the copy construction method for alloc-init when used with dynamic types
     
     return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
 }
@@ -126,6 +127,7 @@ std::stringstream compiler::assign(
     */
     
     std::stringstream handle_assign;
+    size_t count = 0;
     
     // get the source register
     reg src_reg = rhs_type.get_primary() == FLOAT ? XMM0 : RAX;
@@ -140,7 +142,10 @@ std::stringstream compiler::assign(
         }
 
         // evaluate the rvalue, then the destination (lvalue)
-        handle_assign << this->evaluate_expression(rvalue, line).str();
+        auto handle_p = this->evaluate_expression(rvalue, line);
+        handle_assign << handle_p.first;
+        bool do_free = handle_p.second > 0;
+        
         handle_assign << dest.fetch_instructions;
 
         // get the appropriate variant of RAX based on the width of the type to which we are assigning
@@ -155,33 +160,33 @@ std::stringstream compiler::assign(
             handle_assign << "\t" << "mov rdi, rbx" << std::endl;
 
             std::string proc_name;
+            std::string assign_instruction; // if we are storing the reference in a register, we will need a different assign instruction
 
-            // if we have an array
+            // if we have an array, we don't need to worry about the address changing (they are never resized by array_copy)
             if (lhs_type.get_primary() == ARRAY) {
                 handle_assign << "\t" << "mov ecx, " << lhs_type.get_full_subtype()->get_width() << std::endl;
                 proc_name = "sinl_array_copy";
             }
+            // strings are different; they are automatically resized and so string_copy will return an address
             else {
-                handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                if (dest.in_register) {
+                    assign_instruction = "mov " + dest.address_for_lea + ", rax";
+                }
+                else {
+                    handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                    assign_instruction = "mov [r15], rax";
+                }
+
                 proc_name = "sinl_string_copy";
             }
             // todo: other copy types
 
-            // set up the stack frame; call the function
-            handle_assign << "\t" << "pushfq" << std::endl;
-            handle_assign << "\t" << "push rbp" << std::endl;
-            handle_assign << "\t" << "mov rbp, rsp" << std::endl;
-
-            handle_assign << "\t" << "call " << proc_name << std::endl;
-
-            // restore our old stack frame             
-            handle_assign << "\t" << "mov rsp, rbp" << std::endl;
-            handle_assign << "\t" << "pop rbp" << std::endl;
-            handle_assign << "\t" << "popfq" << std::endl;
+            // call the function
+            handle_assign << call_sincall_subroutine(proc_name);
 
             // now, if we had a string, we need to move the returned address into where the string is located
             if (lhs_type.get_primary() == STRING) {
-                handle_assign << "\t" << "mov [r15], rax" << std::endl;
+                handle_assign << "\t" << assign_instruction << std::endl;
             }
 
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
@@ -196,7 +201,11 @@ std::stringstream compiler::assign(
                 instruction = "mov";
             }
 
-            handle_assign << "\t" << instruction << " " << dest.dest_location << ", " << src << std::endl; 
+            handle_assign << "\t" << instruction << " " << dest.dest_location << ", " << src << std::endl;
+            
+            // if the returned value was a reference, we just performed a reference copy here
+            if (do_free)
+                do_free = false;
         }
 
         // now, call sre_add_ref on the lhs if we have a pointer OR if we have a reference and alloc-init
@@ -207,6 +216,15 @@ std::stringstream compiler::assign(
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
             handle_assign << "\t" << "call sre_add_ref" << std::endl;
+            handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
+        }
+
+        // if the assignment was done via a temporary reference, we need to free it
+        if (do_free) {
+            handle_assign << "\t" << "pop rax" << std::endl;
+            handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
+            handle_assign << "\t" << "mov rdi, rax" << std::endl;
+            handle_assign << "\t" << "call sre_free" << std::endl;
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
     }

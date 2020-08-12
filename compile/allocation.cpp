@@ -140,14 +140,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
 
 			// allocate dynamic memory with a call to sre_request_resource
-			allocation_ss << "\t" << "pushfq" << std::endl;
-			allocation_ss << "\t" << "push rbp" << std::endl;
-			allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
 			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
 			allocation_ss << "\t" << "call sre_request_resource" << std::endl;
-			allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
-			allocation_ss << "\t" << "pop rbp" << std::endl;
-			allocation_ss << "\t" << "popfq" << std::endl;
 
 			// restore used registers
 			allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
@@ -301,11 +295,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 				// todo: get string length instead of passing 0 in
 				allocation_ss << "\t" << "mov esi, 0" << std::endl;
-				allocation_ss << "\t" << "push rbp" << std::endl;
-				allocation_ss << "\t" << "mov rbp, rsp" << std::endl;
-				allocation_ss << "\t" << "call sinl_string_alloc" << std::endl;
-				allocation_ss << "\t" << "mov rsp, rbp" << std::endl;
-				allocation_ss << "\t" << "pop rbp" << std::endl;
+				allocation_ss << call_sincall_subroutine("sinl_string_alloc");
 
 				allocation_ss << "\t" << "add rsp, " << to_subtract << std::endl;
 				
@@ -315,6 +305,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// save the location of the string
 				allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			}
+			// todo: utilize sinl_string_copy_construct for alloc-init with strings
 
 			// subtract the width of the type from RSP
 			allocation_ss << "\t" << "sub rsp, " << data_width << std::endl;
@@ -368,8 +359,15 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// we only need to do this for non-dynamic arrays
 				if (m->get_data_type().get_primary() == ARRAY && !m->get_data_type().get_qualities().is_dynamic()) {
 					// evaluate the array length expression and move it (an integer) into [R15 + offset]
-					allocation_ss << this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number()).str();
-					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;	
+					auto alloc_p = this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
+					allocation_ss << alloc_p.first;
+					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;
+
+					// if we had a reference to an integer, we need to free it
+					if (alloc_p.second) {
+						allocation_ss << "\t" << "pop rdi" << std::endl;
+						allocation_ss << "\t" << "call sre_free" << std::endl;
+					}
 				}
 				else if (m->get_data_type().must_initialize()) {
 					init_required = true;

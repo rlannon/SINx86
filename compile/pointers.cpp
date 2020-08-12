@@ -54,7 +54,8 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         // the index value will be in eax and the array length will be in [rax]
 
         // evaluate the index value and multiply by the type width
-        addr_ss << this->evaluate_expression(i->get_index_value(), line).str();
+        auto exp_address_p = this->evaluate_expression(i->get_index_value(), line);
+        addr_ss << exp_address_p.first;
         
         // now, restore our values if we needed to make any adjustments
         if (r == RBX) {
@@ -72,11 +73,7 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         addr_ss << "\t" << "jg .sinl_rtbounds_" << this->rtbounds_num << std::endl;
 
         // if we were out of bounds, call the appropriate function
-        addr_ss << "\t" << "push rbp" << std::endl;
-        addr_ss << "\t" << "mov rbp, rsp" << std::endl;
         addr_ss << "\t" << "call sinl_rte_index_out_of_bounds" << std::endl;
-        addr_ss << "\t" << "mov rsp, rbp" << std::endl;
-        addr_ss << "\t" << "pop rbp" << std::endl;  // todo: do we need to clean up the stack frame? the function causes the program to exit
         
         addr_ss << ".sinl_rtbounds_" << this->rtbounds_num << ":" << std::endl;
         addr_ss << "\t" << "mov ecx, " << idx_type.get_full_subtype()->get_width() << std::endl;
@@ -114,7 +111,8 @@ std::stringstream compiler::get_address_of(Unary &u, reg r, unsigned int line) {
             throw CompilerException("Illegal binary operand in address-of expression", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
         }
 
-        addr_ss << this->evaluate_binary(*target, line).str();
+        auto bin_p = this->evaluate_binary(*target, line);
+        addr_ss << bin_p.first;
         addr_ss << "mov " << register_usage::get_register_name(r) << ", rbx" << std::endl;
         this->reg_stack.peek().clear(r);  // now we can use RBX again
     }

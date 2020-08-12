@@ -21,8 +21,9 @@ count = 0
 while i < 1000:
     if is_prime(i):
         count += 1
-        print(i, ", ", sep="")
+        print(i, ", ", sep="", end="")
     i += 1
 
 print()
 print(f"Found {count} primes")
+print("Done.")

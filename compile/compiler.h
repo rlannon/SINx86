@@ -84,7 +84,11 @@ class compiler {
 
 	// assignments
 	std::stringstream handle_assignment(Assignment &aw);
-	std::stringstream handle_alloc_init(symbol &sym, std::shared_ptr<Expression> rvalue, unsigned int line);
+	std::stringstream handle_alloc_init(
+		symbol &sym,
+		std::shared_ptr<Expression> rvalue,
+		unsigned int line
+	);
 	std::stringstream assign(
 		DataType lhs_type,
 		DataType &rhs_type,
@@ -102,7 +106,7 @@ class compiler {
 	// functions
 	std::stringstream define_function(FunctionDefinition definition);
 
-	template<typename T> std::stringstream call_function(T to_call, unsigned int line, bool allow_void = true);
+	template<typename T> std::pair<std::string, size_t> call_function(T to_call, unsigned int line, bool allow_void = true);
 	std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
 	std::stringstream system_v_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
 	std::stringstream win64_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
@@ -113,13 +117,15 @@ class compiler {
 
 	// utilities that require compiler's data members
 	std::stringstream get_exp_address(std::shared_ptr<Expression> to_evaluate, reg r, unsigned int line);
-	std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);
+	std::pair<std::string, size_t> evaluate_expression(
+		std::shared_ptr<Expression> to_evaluate,
+		unsigned int line
+	);
 	std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line);
 	std::stringstream evaluate_lvalue(LValue &to_evaluate, unsigned int line);
 	std::stringstream evaluate_indexed(Indexed &to_evaluate, unsigned int line);
-	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
-	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
+	std::pair<std::string, size_t> evaluate_binary(Binary &to_evaluate, unsigned int line);
 	std::stringstream get_address_of(Unary &u, reg r, unsigned int line);
 
 	// process an included file

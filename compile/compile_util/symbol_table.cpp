@@ -170,16 +170,17 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 	while (
 		!l.empty() && 
 		(is_function ? 
-			(l.peek().scope_level <= level) :
-			(l.peek().scope_level == level)	&& 
-		l.peek().scope_name == name)
+			(l.peek().scope_level >= level) :
+			(
+				(l.peek().scope_level == level)	&& 
+				(l.peek().scope_name == name)
+			)
+		)
 	) {
 		symbol s = *this->find(l.pop_back().name);
 		if (
 			s.get_data_type().get_primary() == PTR ||
-			s.get_data_type().get_primary() == REFERENCE ||
-			s.get_data_type().get_primary() == STRING ||
-			s.get_data_type().get_qualities().is_dynamic()
+			s.get_data_type().is_reference_type()
 		) {
 			v.push_back(s);
 		}

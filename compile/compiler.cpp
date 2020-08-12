@@ -220,7 +220,10 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
-			compile_ss << this->evaluate_expression(ite->get_condition(), ite->get_line_number()).str();
+            auto condition_p = this->evaluate_expression(ite->get_condition(), ite->get_line_number());
+			compile_ss << condition_p.first;
+            // todo: count
+            
             compile_ss << "\t" << "cmp al, 1" << std::endl;
             compile_ss << "\t" << "jne .sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
@@ -247,9 +250,11 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             // create a loop heading, evaluate the condition
             auto current_block_num = this->scope_block_num;
             this->scope_block_num += 1;
+            auto condition_p = this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number());
 
             compile_ss << ".sinl_while_" << current_block_num << ":" << std::endl;
-            compile_ss << this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number()).str();
+            compile_ss << condition_p.first;
+            // todo: count
             compile_ss << "\t" << "cmp al, 1" << std::endl;
             compile_ss << "\t" << "jne .sinl_while_done_" << current_block_num << std::endl;
 
@@ -292,7 +297,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         case CALL:
         {
             Call *call_stmt = dynamic_cast<Call*>(s.get());
-            compile_ss << this->call_function(*call_stmt, call_stmt->get_line_number()).str() << std::endl;
+            compile_ss << this->call_function(*call_stmt, call_stmt->get_line_number()).first << std::endl;
             break;
         }
         case INLINE_ASM:

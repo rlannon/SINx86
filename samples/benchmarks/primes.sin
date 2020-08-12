@@ -70,6 +70,7 @@ def int main(alloc dynamic array<string> args) {
     }
     @print("\n");
     @print("Found " + @itos(count) + " primes\n");
+    @print("Done.\n");
 
     return 0;
 }
