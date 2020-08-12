@@ -30,3 +30,4 @@ Debug/*
 .vs/*
 x64/*
 *.obj
+*.plist
