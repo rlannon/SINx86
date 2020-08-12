@@ -801,7 +801,7 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
                 dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
             }
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
-            dec_ss << "\t" << "call sre_free" << std::endl;
+            dec_ss << "\t" << "call _sre_free" << std::endl;
         }
         // restore the status
         dec_ss << "\t" << "popfq" << std::endl;
@@ -817,11 +817,11 @@ std::stringstream call_sre_free(symbol& s) {
     /*
 
     call_sre_free
-    Calls sre_free on the specified symbol
+    Calls _sre_free on the specified symbol
 
     */
 
-    return call_sre_mam_util(s, "sre_free");
+    return call_sre_mam_util(s, "_sre_free");
 }
 
 std::stringstream call_sre_add_ref(symbol& s) {
@@ -832,7 +832,7 @@ std::stringstream call_sre_add_ref(symbol& s) {
 
     */
 
-    return call_sre_mam_util(s, "sre_add_ref");
+    return call_sre_mam_util(s, "_sre_add_ref");
 }
 
 std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
@@ -843,8 +843,8 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
 
     Takes a symbol and the function name and generates code for it
     These functions may be:
-        * sre_add_ref
-        * sre_free
+        * _sre_add_ref
+        * _sre_free
 
     */
 
@@ -873,8 +873,22 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
 
     gen << get_addr.str();
     gen << "\t" << "pushfq" << std::endl;
-    gen << "\t" << "call " << func_name << std::endl;
+    gen << call_sre_function(func_name);
     gen << "\t" << "popfq" << std::endl;
 
     return gen;
+}
+
+std::string call_sre_function(std::string func_name) {
+    // Calls an SRE function
+    std::stringstream call_ss;
+    call_ss << "\t" << "mov rax, rsp" << std::endl	// ensure we have 16-byte stack alignment
+        << "\t" << "and rsp, -0x10" << std::endl
+        << "\t" << "push rax" << std::endl
+        << "\t" << "sub rsp, 8" << std::endl;
+    call_ss << "\t" << "call " << func_name << std::endl;
+    call_ss << "\t" << "add rsp, 8" << std::endl
+        << "\t" << "pop rsp" << std::endl;
+    
+    return call_ss.str();
 }

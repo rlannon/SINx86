@@ -353,7 +353,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         evaluation_ss << "\t" << "mov r13, rax" << std::endl;
         for (size_t i = 1; i < count; i++) {
             evaluation_ss << "\t" << "pop rdi" << std::endl;
-            evaluation_ss << "\t" << "call sre_free" << std::endl;
+            evaluation_ss << call_sre_function("_sre_free");
         }
         evaluation_ss << "\t" << "push r12" << std::endl;
         evaluation_ss << "\t" << "mov rax, r13" << std::endl;

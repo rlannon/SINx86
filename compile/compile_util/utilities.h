@@ -74,3 +74,4 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
 std::stringstream call_sre_free(symbol& s);
 std::stringstream call_sre_add_ref(symbol& s);
 std::stringstream call_sre_mam_util(symbol& s, std::string func_name);
+std::string call_sre_function(std::string func_name);

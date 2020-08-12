@@ -353,7 +353,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             // if we needed to adjust the RC
             if (arg_p.second) {
                 sincall_ss << "\t" << "pop rdi" << std::endl;   // free the original string to free
-                sincall_ss << "\t" << "call sre_free" << std::endl;
+                sincall_ss << call_sre_function("_sre_free");
                 // now we need to move the parameter position back because we popped the value
                 param_offset -= sin_widths::PTR_WIDTH;
             }
@@ -514,7 +514,7 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
     );
     if (t.is_reference_type() || t.get_primary() == PTR) {
         sincall_ss << "\t" << "mov rdi, rax" << std::endl;
-        sincall_ss << "\t" << "call sre_add_ref" << std::endl;
+        sincall_ss << call_sre_function("_sre_add_ref");
     }
 
     // decrement the rc of all pointers and dynamic memory
