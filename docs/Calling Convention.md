@@ -2,9 +2,9 @@
 
 ## SIN Calling Convention
 
-The SIN calling convention is modeled after the x64 calling conventions for Windows and Linux, specifically `_cdecl`. However, the calling conventions differ slightly.
+The SIN calling convention is modeled after the x64 calling conventions for Windows and Linux, but the calling conventions differ in a few important ways that make them incompatible. However, the compiler can accomodate for these differences and allow different calling conventions to be used, provided the user supplies the appropriate information.
 
-Note that in SIN, the calling convention is always declared in the function definition and _never_ in the call itself, as the convention affects how function bodies are generated.
+### General Overview
 
 The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike `_cdecl`, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers `RSI, RDI, RCX, RDX, R8, R9`, while floating-point types will be pushed in registers `XMM0 - XMM5`. `RAX` and `RBX` are never preserved by the caller nor the callee automatically; they are considered volatile.
 
@@ -70,7 +70,9 @@ This calling convention therefore means that all parameters will always be locat
 
 to account for the width of the old base pointer (8 bytes), the width of `rflags` (8 bytes), and then the offset where it lies within the stack. This means the last parameter will have an offset of 16, while the first parameter will have an offset of 16 + the widths of all parameters that come after it.
 
-Now, we will look more in-depth at the rules for calling functions and returning values, as how values are passed and return depends on their data type.
+### Stack Alignment
+
+One of the key differences between SINCALL and the Windows or System V ABIs is that SINCALL never requires any particular stack alignment on a function call. Other x64 ABIs require a 16-byte alignment for SSE instructions, but in the SIN convention, it is the _callee,_ not the _caller,_ that is responsible for aligning the stack if it requires a 16-byte alignment.
 
 ### Function Arguments
 
@@ -83,9 +85,9 @@ Primitive types (`float`, `int`, `char`, `bool`, `ptr`) will pass the first 6 pa
 | `float` | XMM0 - XMM5 | How much of the register is used depends on whether it is single- or double-precision |
 | `int` | RSI, RDI, RCX, RDX, R8, R9 | May use a different register width depending on type qualifiers |
 | `bool` | SIL, DIL, CL, DL, R8B, R9B | Booleans will use a whole byte; they are not packed in this convention |
-| `ptr` | RSI, RDI, RCX, RDX, R8, R9 | String values are passed as pointers and use the same registers |
+| `ptr`, `ref`, and `string` | RSI, RDI, RCX, RDX, R8, R9 | String values are passed as pointers and use the same registers |
 
-Unlike the Windows x64 ABI, the SIN convention will pass more than six parameters in registers if it can. However, once an argument is passed on the stack, *all subsequent arguments will also be passed on the stack.* As a result, the maximum number of arguments that can be passed in registers is 12.
+Unlike the Windows x64 ABI, the SIN convention will pass more than six parameters in registers if it can (other conventions will pass at most 6, but SINCALL could theoretically pass up to 12 because it could pass a combination of integral and floating-point types). However, once an argument is passed on the stack, _all subsequent arguments will also be passed on the stack._ As a result, the maximum number of arguments that can be passed in registers is 12.
 
 For example, the function
 
@@ -108,11 +110,11 @@ Note that the compiler will allocate 'shadow space' for the register parameters 
 
 #### Aggregate and User-Defined Types
 
-Aggregate types (arrays) and user-defined types (structs) must always be passed either as pointers in registers or on the stack. If the width is known at compile-time, they may be passed on the stack; otherwise, the caller will allocate memory for the object, copy the data into the newly-allocated area, and pass a pointer into the function.
+Aggregate types (arrays, tuples) and user-defined types (structs) must always be passed either as pointers in registers (if passed as a pointer or reference, such as using `ptr<T>` or `dynamic T`) or on the stack, if the width is known at compile time (meaning the type is not dynamic).
 
 ### Return Values
 
-Values are returned on RAX (or another variant of the register depending on the data width) where possible. Floating-point types are returned in XMM0 as scalar values. Any unused bits in the register are undefined; as an example, returning a value in `al` does not necessarily mean that `ah` will have been zeroed.
+Values are returned in `rax` (or another variant of the register depending on the data width) where possible. Floating-point types are returned in XMM0 as scalar values. Any unused bits in the register are undefined; as an example, returning a value in `al` does not necessarily mean that `ah` will have been zeroed.
 
 #### Non-Primitive Return Values
 
@@ -143,6 +145,8 @@ The SIN compiler will then know to generate code for calls to this function in a
 In general these qualifiers default to the GCC ABIs used by Unix-like systems, but the `&windows` qualifier may be used to specify the user wishes to use the Microsoft convention instead. If you are worried the conventions may not be correct for your system, it is always a good idea to double-check your C compiler to ensure these SIN features are compatible with your system.
 
 ### Calling Conventions
+
+SINCALL does not require a 16-byte stack alignment before a call, but other calling conventions do. As such, whenever a function that utilizes the calling convention for the Windows or System V ABIs, the compiler must generate code to properly align the stack on a 16-byte boundary. The [SRE](SIN%20Runtime%20Environment.md) handles this for built-in types, and the compiler will handle it when calling non-SINCALL functions.
 
 #### System V ABI (Unix-like systems)
 
