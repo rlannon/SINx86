@@ -544,7 +544,7 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 
 	// continue parsing our SymbolQualities until we hit a semicolon, at which point we will trigger the 'done' flag
 	bool done = false;
-	while (this->peek().type == KEYWORD && !done) {
+	while (this->peek().type == KEYWORD) {
 		lexeme quality_token = this->next();	// get the token for the quality
 		SymbolQuality quality = this->get_quality(quality_token);	// use our 'get_quality' function to get the SymbolQuality based on the token
 
@@ -554,15 +554,11 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 		} catch (CompilerException &e) {
 			throw QualityConflictException(quality_token.value, quality_token.line_number);
 		}
+	}
 
-		// the quality must be followed by either another quality, a semicolon, a closing grouping symbol, or a curly brace
-		if (this->peek().value == ";" || this->peek().value == closing_symbol || this->peek().value == "{") {
-			done = true;
-		}
-		// there's an error if the next token is not a keyword and also not a semicolon
-		else if (this->peek().type != KEYWORD) {
-			throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
-		}
+	// the quality must be followed by either another quality, a semicolon, a closing grouping symbol, an opening paren, or a colon
+	if (this->peek().value != ";" && this->peek().value != closing_symbol && this->peek().value != "(" && this->peek().value != ":") {
+		throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
 	}
 
 	return qualities;

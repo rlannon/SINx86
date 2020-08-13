@@ -202,6 +202,8 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 
 	// peek ahead at the next symbol; we may have a postfixed constexpr quality
 	if (this->peek().value == "&") {
+		// todo: allow type quality overrides
+
 		// eat the ampersand
 		this->next();
 		lexeme quality = this->next();

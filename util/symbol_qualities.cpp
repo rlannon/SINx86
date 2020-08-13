@@ -109,6 +109,7 @@ void symbol_qualities::add_qualities(symbol_qualities to_add) {
 	// combines two SymbolQualities objects
 
 	// todo: refactor how qualities are stored in SymbolQualities so that we can simplify this
+	// todo: quality conflict exceptions
 
 	if (to_add.is_const()) this->add_quality(CONSTANT);
 	if (to_add.is_final()) this->add_quality(FINAL);

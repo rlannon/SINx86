@@ -140,7 +140,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		}
 		// pare an allocation
 		else if (current_lex.value == "alloc") {
-			stmt = this->parse_allocation(current_lex);
+			stmt = this->parse_allocation(current_lex, is_function_parameter);
 		}
 		// Parse an assignment
 		else if (current_lex.value == "let") {
@@ -265,7 +265,18 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 			// get our variable name
 			std::string var_name = next_lexeme.value;
 			bool is_function = false;
-			// todo: struct declarations...
+
+			// check to see if we have postfixed symbol qualities
+			if (this->peek().value == "&") {
+				// append the posftixed qualities to symbol_type_data.qualities
+				this->next();
+				symbol_qualities postfixed_qualities = this->get_postfix_qualities(is_function_parameter ? "(" : "");
+				try {
+					symbol_type_data.add_qualities(postfixed_qualities);
+				} catch(std::string &offending_quality) {
+					throw QualityConflictException(offending_quality, this->current_token().line_number);
+				}
+			}
 
 			std::vector<std::shared_ptr<Statement>> formal_parameters = {};
 
@@ -309,18 +320,6 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 				else {
 					throw CompilerException("Cannot use alloc-assign syntax in declarations unless said declaration is a default function parameter",
 						this->current_token().line_number);
-				}
-			}
-
-			// check to see if we have postfixed symbol qualities using the & operator
-			if (this->peek().value == "&") {
-				// append the posftixed qualities to symbol_type_data.qualities
-				this->next();
-				symbol_qualities postfixed_qualities = this->get_postfix_qualities();
-				try {
-					symbol_type_data.add_qualities(postfixed_qualities);
-				} catch(std::string &offending_quality) {
-					throw QualityConflictException(offending_quality, this->current_token().line_number);
 				}
 			}
 			
@@ -410,7 +409,7 @@ std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
+std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_function_parameter)
 {
 	// create an object for the statement as well as the variable's name
 	std::shared_ptr<Statement> stmt;
@@ -427,6 +426,22 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
 		if (this->peek().type == IDENTIFIER) {
 			next_token = this->next();
 			new_var_name = next_token.value;
+
+			// get our postfixed qualities, if we have any
+			// now, get postfixed symbol qualities, if we have any
+			if (this->peek().value == "&") {
+				// append the posftixed qualities to symbol_type_data.qualities
+				this->next();
+				symbol_qualities postfixed_qualities = this->get_postfix_qualities(is_function_parameter ? "(" : "");
+
+				// we may encounter an error when trying to add our postfixed qualities; catch it and craft a new exception that includes the line number
+				try {
+					symbol_type_data.add_qualities(postfixed_qualities);
+				} catch (std::string &offending_quality) {
+					throw QualityConflictException(offending_quality, this->current_token().line_number);
+				}
+			}
+
 			bool initialized = false;
 			std::shared_ptr<Expression> initial_value = std::make_shared<Expression>();
 
@@ -439,20 +454,6 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
 				initial_value = this->parse_expression();
 			}
 
-			// check to see if we have any postfixed qualities
-			if (this->peek().value == "&") {
-				// append the posftixed qualities to symbol_type_data.qualities
-				this->next();
-				symbol_qualities postfixed_qualities = this->get_postfix_qualities();
-
-				// we may encounter an error when trying to add our postfixed qualities; catch it and craft a new exception that includes the line number
-				try {
-					symbol_type_data.add_qualities(postfixed_qualities);
-				} catch (std::string &offending_quality) {
-					throw QualityConflictException(offending_quality, this->current_token().line_number);
-				}
-			}
-
 			// if it's a semicolon, comma, or closing paren, craft the statement and return
 			if (this->peek().value == ";" || this->peek().value == "," || this->peek().value == ")") {
 				// craft the statement
@@ -461,7 +462,7 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex)
 			}
 			// otherwise, it's an invalid character
 			else {
-				throw ParserException("Syntax error; invalid character following allocation", 0, next_token.line_number);
+				throw MissingSemicolonError(this->current_token().line_number);
 			}
 		}
 		else {
