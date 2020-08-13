@@ -57,7 +57,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             Identifier lvalue_exp = *dynamic_cast<Identifier*>(to_evaluate.get());
 
             // dispatch to our evaluation function
-            evaluation_ss = this->evaluate_lvalue(lvalue_exp, line);
+            evaluation_ss = this->evaluate_identifier(lvalue_exp, line);
             break;
         }
         case INDEXED:
@@ -503,7 +503,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
     return eval_ss;
 }
 
-std::stringstream compiler::evaluate_lvalue(Identifier &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigned int line) {
     /*
 
     Generate code for evaluating an lvalue (a variable)

@@ -295,10 +295,29 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
             }
         }
         else {
-            if (old_type.get_width() == sin_widths::BOOL_WIDTH) {
+            /*
+
+            If we have a boolean, zero extend to RAX
+            If both types are signed, move with a sign extension
+                * If the old size is smaller than the new one, we need to use a movsx instruction
+                * If the new type is smaller or equal, we do nothing
+            If one of the types was signed and the other is not, we do nothing
+
+            */
+
+            if (old_type.get_primary() == BOOL) {
                 cast_ss << "\t" << "cmp al, 0" << std::endl;
                 cast_ss << "\t" << "setne al" << std::endl;
                 cast_ss << "\t" << "movzx rax, al" << std::endl;
+            }
+            else if (
+                (old_type.get_qualities().is_signed() && new_type.get_qualities().is_signed()) && 
+                (old_type.get_width() < new_type.get_width())
+            ) {
+                // we need to move with sign extension
+                cast_ss << "\t" << "movsx " 
+                    << register_usage::get_register_name(reg::RAX, new_type) << ", " 
+                    << register_usage::get_register_name(reg::RAX, old_type) << std::endl;
             }
             else {
                 compiler_note("Typecast appears to have no effect", line);
