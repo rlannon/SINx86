@@ -25,6 +25,7 @@ Note that the Lexer class does /not/ parse source files; it simply puts those fi
 #include <exception>
 
 #include "lexeme.h"
+#include "../util/Exceptions.h"
 
 class Lexer
 {

@@ -113,6 +113,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	}
 	// if it is not an expression within a grouping symbol, it is parsed below
 	else if (is_literal(current_lex.type)) {
+		// todo: allow _ in integer and float literals (as a comma separator)
 		left = std::make_shared<Literal>(
 			type_deduction::get_type_from_lexeme(current_lex.type),
 			current_lex.value
@@ -200,7 +201,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		throw InvalidTokenException(this->peek().value, this->peek().line_number);
 	}
 
-	// peek ahead at the next symbol; we may have a postfixed constexpr quality
+	// peek ahead at the next symbol; we may have a postfixed quality for constexpr or a quality override
 	if (this->peek().value == "&") {
 		// todo: allow type quality overrides
 
@@ -212,7 +213,6 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		} else {
 			this->back();
 			this->back();
-			// throw IllegalQualityException(quality.value, quality.line_number);
 		}
 
 		// do not advance token; we use 'peek' in maybe_binary

@@ -123,7 +123,7 @@ bool Lexer::is_letter(char ch) {
 }
 
 bool Lexer::is_number(char ch) {
-	if (match_character(ch, "[0-9\\.]")) {
+	if (match_character(ch, "[0-9\\._]")) {
 		return true;
 	}
 	else {
@@ -360,14 +360,26 @@ lexeme Lexer::read_next() {
 			}
 		}
 		else if (this->is_digit(ch)) {
-			value = this->read_while(&this->is_number);	// get the number
+			// todo: allow 0x and 0b prefixes -- check the next character here (currently only allows base 10)
 
-			// Now we must test whether the number we got is an int or a float
-			if (std::regex_search(value, std::regex("\\."))) {
-				type = FLOAT_LEX;
-			}
-			else {
-				type = INT_LEX;
+			std::string num = this->read_while(&this->is_number);	// get the number
+
+			// finally, iterate over the string and add all non-underscored characters to the value
+			// this allows the string to be more readable for the programmer, but we don't want them in our end result
+			type = INT_LEX;
+			bool found_decimal = false;
+			for (auto it = num.begin(); it != num.end(); it++) {
+				if (*it != '_') {
+					value.push_back(*it);
+				}
+				else if (*it == '.') {
+					// if we already found a decimal point, we want to throw an exception -- it's an invalid numeric literal
+					if (found_decimal) {
+						throw CompilerException("Invalid numeric literal", compiler_errors::BAD_LITERAL, current_line);
+					}
+					found_decimal = true;
+					type = FLOAT_LEX;
+				}
 			}
 		}
 		else if (this->is_punc(ch)) {

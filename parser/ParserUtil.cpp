@@ -556,6 +556,7 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 		}
 	}
 
+	// todo: turn this into a utility function
 	// the quality must be followed by either another quality, a semicolon, a closing grouping symbol, an opening paren, or a colon
 	if (this->peek().value != ";" && this->peek().value != closing_symbol && this->peek().value != "(" && this->peek().value != ":") {
 		throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
