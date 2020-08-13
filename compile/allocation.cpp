@@ -88,7 +88,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 						this->current_scope_level,
 						alloc_stmt.get_line_number()
 					)));
-				data_width = alloc_data.get_array_length() * alloc_data.get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+				data_width = alloc_data.get_array_length() * alloc_data.get_subtype().get_width() + sin_widths::INT_WIDTH;
 			}
 			else {
 				throw NonConstArrayLengthException(alloc_stmt.get_line_number());
@@ -170,7 +170,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 			// since arrays must contain a known-width type, we can just get the width of the subtype
 			if (allocated.get_data_type().get_primary() == ARRAY)
-				w = allocated.get_data_type().get_full_subtype()->get_width();
+				w = allocated.get_data_type().get_subtype().get_width();
 			
 			char width_suffix;
 			if (w == sin_widths::BOOL_WIDTH) {
@@ -276,7 +276,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				to_subtract = s.get_width();
 			}
 			else if (allocated.get_data_type().get_primary() == ARRAY && !allocated.get_data_type().get_qualities().is_dynamic()) {
-				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_subtype().get_width() + sin_widths::INT_WIDTH;
 				
 				// write the array length onto the stack
 				allocation_ss << "\t" << "mov eax, " << allocated.get_data_type().get_array_length() << std::endl;

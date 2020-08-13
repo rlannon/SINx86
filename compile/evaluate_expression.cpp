@@ -106,7 +106,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                 
                 // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
                 
-                if (member_type == *t.get_full_subtype()) {
+                if (member_type == t.get_subtype()) {
                     // evaluate the expression
                     auto member_p = this->evaluate_expression(m, line);
                     evaluation_ss << member_p.first;
@@ -144,7 +144,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
             // finally, utilize the .bss section and the 'res' directive for our list
             std::string res_instruction;
-            size_t subtype_width = t.get_full_subtype()->get_width();
+            size_t subtype_width = t.get_subtype().get_width();
             if (subtype_width == 8) {
                 res_instruction = "resq";
             }
@@ -318,7 +318,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                     // strings have a type width of 1, if it's an array we need to get the width
                     size_t type_width = 1;
                     if (t.get_primary() == ARRAY) {
-                        type_width = t.get_full_subtype()->get_width();
+                        type_width = t.get_subtype().get_width();
                     }
 
                     evaluation_ss << "\t" << "mov rbx, " << type_width << std::endl;

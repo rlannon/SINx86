@@ -164,7 +164,7 @@ std::stringstream compiler::assign(
 
             // if we have an array, we don't need to worry about the address changing (they are never resized by array_copy)
             if (lhs_type.get_primary() == ARRAY) {
-                handle_assign << "\t" << "mov ecx, " << lhs_type.get_full_subtype()->get_width() << std::endl;
+                handle_assign << "\t" << "mov ecx, " << lhs_type.get_subtype().get_width() << std::endl;
                 proc_name = "sinl_array_copy";
             }
             // strings are different; they are automatically resized and so string_copy will return an address

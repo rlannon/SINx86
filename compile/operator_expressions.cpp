@@ -149,7 +149,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 		// ensure we are dereferencing a pointer
 		if (unary_type.get_primary() == PTR) {
 			// the address is already in RAX, so we just need to dereference (according to the type width)
-			DataType pointed_to_type = *unary_type.get_full_subtype();	// we need to know what type the pointer points to in order to get the correct register
+			DataType pointed_to_type = unary_type.get_subtype();	// we need to know what type the pointer points to in order to get the correct register
 			std::string rax_name = get_rax_name_variant(pointed_to_type, line);
 			eval_ss << "\t" << "mov " << rax_name << ", [rax]" << std::endl;
 		}

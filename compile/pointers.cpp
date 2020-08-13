@@ -73,10 +73,10 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         addr_ss << "\t" << "jg .sinl_rtbounds_" << this->rtbounds_num << std::endl;
 
         // if we were out of bounds, call the appropriate function
-        addr_ss << "\t" << "call sinl_rte_index_out_of_bounds" << std::endl;
+        addr_ss << "\t" << "call _sinl_rte_index_out_of_bounds" << std::endl;
         
         addr_ss << ".sinl_rtbounds_" << this->rtbounds_num << ":" << std::endl;
-        addr_ss << "\t" << "mov ecx, " << idx_type.get_full_subtype()->get_width() << std::endl;
+        addr_ss << "\t" << "mov ecx, " << idx_type.get_subtype().get_width() << std::endl;
         addr_ss << "\t" << "mul ecx" << std::endl;
 
         if (this->reg_stack.peek().is_in_use(RCX)) {

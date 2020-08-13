@@ -69,7 +69,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 
             // the expression type of a reference should be treated as its subtype
             if (sym->get_data_type().get_primary() == REFERENCE) {
-                type_information = *sym->get_data_type().get_full_subtype();
+                type_information = sym->get_data_type().get_subtype();
             }
             else {
                 type_information = sym->get_data_type();
@@ -83,7 +83,7 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             DataType t = get_expression_data_type(idx->get_to_index(), symbols, structs, line);
             // we can index strings or arrays; if we index an array, we get the subtype, and if we index a string, we get a char
             if (t.get_primary() == ARRAY) {
-                type_information = *t.get_full_subtype();
+                type_information = t.get_subtype();
             }
             else if (t.get_primary() == STRING) {
                 type_information = DataType(
@@ -168,13 +168,13 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
 
             // if the operator is ADDRESS, we need to wrap the type information in a pointer
             if (u->get_operator() == ADDRESS) {
-                auto full_subtype = std::make_shared<DataType>(type_information);
+                auto full_subtype = DataType(type_information);
                 type_information = DataType(PTR);
                 type_information.set_subtype(full_subtype);
             }
             // if the operator is DEREFERENCE, we need to *remove* the pointer type
             else if (u->get_operator() == DEREFERENCE) {
-                type_information = *type_information.get_full_subtype();
+                type_information = type_information.get_subtype();
             }
 
             break;
@@ -449,7 +449,7 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
                             definition.get_line_number()
                         )
                     );
-                    array_length = array_length * alloc->get_type_information().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+                    array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
                     alloc->get_type_information().set_array_length(array_length);
                     this_width = array_length;
                 }
@@ -730,7 +730,7 @@ std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
 
     copy_ss << get_address(src, reg::RSI) << std::endl;
     copy_ss << get_address(dest, reg::RDI) << std::endl;
-    copy_ss << "\t" << "mov ecx, " << src.get_data_type().get_full_subtype()->get_width() << std::endl;
+    copy_ss << "\t" << "mov ecx, " << src.get_data_type().get_subtype().get_width() << std::endl;
     copy_ss << call_sincall_subroutine("sinl_array_copy");
 
     // restore registers

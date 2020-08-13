@@ -49,9 +49,10 @@ member_selection member_selection::create_lvalue_node(LValue& exp, struct_table&
 
 	// get the symbol information
 	symbol* left_sym = dynamic_cast<symbol*>(symbols.find(exp.getValue()).get());
+	auto t = left_sym->get_data_type();
 	if (
-		(!is_pointer && left_sym->get_data_type().get_primary() != STRUCT) ||
-		(is_pointer && left_sym->get_data_type().get_subtype() != STRUCT)
+		(!is_pointer && t.get_primary() != STRUCT) ||
+		(is_pointer && t.has_subtype() && t.get_subtype().get_primary() != STRUCT)
 	) {
 		throw CompilerException("Expected left-hand argument of 'struct' type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
 	}
@@ -126,7 +127,7 @@ std::stringstream member_selection::evaluate(symbol_table &symbols, struct_table
 		while (t.get_primary() == PTR) {
 			// get the address of the struct in RBX
 			eval_ss << "\t" << "mov rbx, [rbx]" << std::endl;
-			t = *t.get_full_subtype();
+			t = t.get_subtype();
 		}
 		if (t.get_primary() != STRUCT) {
 			throw CompilerException("Expected left-hand argument of struct type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
@@ -146,7 +147,7 @@ std::stringstream member_selection::evaluate(symbol_table &symbols, struct_table
 		// if the types don't match, ensure we have pointers and continue updating until we have sufficiently dereferenced the symbol
 		while (current_node.get_data_type() != member_data_type) {
 			eval_ss << "\t" << "mov rbx, [rbx]" << std::endl;
-			member_data_type = *member_data_type.get_full_subtype();
+			member_data_type = member_data_type.get_subtype();
 		}
 
 		// update the current node; if we can't, then we are done
@@ -246,7 +247,7 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 	// however, because we may have had pointer types, get the pointed-to struct name
 	DataType t = m.last().get_data_type();
 	while (t.get_primary() == PTR) {
-		t = *m.last().get_data_type().get_full_subtype().get();
+		t = m.last().get_data_type().get_subtype();
 	}
 
 	if (!structs.contains(t.get_struct_name())) {
