@@ -41,6 +41,9 @@ void Expression::override_qualities(symbol_qualities sq) {
 	// todo: datatype for base?
 }
 
+bool Expression::has_type_information() const {
+	return false;
+}
 
 Expression::Expression(exp_type expression_type) : expression_type(expression_type) {
 	this->_const = false;	// all expressions default to being non-const
@@ -70,6 +73,10 @@ std::string Literal::get_value() {
 void Literal::override_qualities(symbol_qualities sq) {
 	// update the data type (for postfixed quality overrides)
 	this->type.add_qualities(sq);	// todo: ensure the type override is valid
+}
+
+bool Literal::has_type_information() const {
+	return true;
 }
 
 Literal::Literal(Type data_type, std::string value, Type subtype) : value(value) {

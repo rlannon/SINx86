@@ -33,6 +33,7 @@ public:
 	exp_type get_expression_type();
 
 	virtual void override_qualities(symbol_qualities sq);
+	virtual bool has_type_information() const;
 
 	Expression(exp_type expression_type);
 	Expression();
@@ -52,6 +53,7 @@ public:
 	std::string get_value();
 
 	void override_qualities(symbol_qualities sq) override;
+	bool has_type_information() const override;
 
 	Literal(Type data_type, std::string value, Type subtype = NONE);
 	Literal(DataType t, std::string value);

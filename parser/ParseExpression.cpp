@@ -214,8 +214,9 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				is_const = true;
 			}
 			else {
+				symbol_qualities sq;
 				try {
-					symbol_qualities sq = get_postfix_qualities(grouping_symbol);
+					sq = get_postfix_qualities(grouping_symbol);
 				}
 				catch (CompilerException &e) {
 					throw CompilerException(
@@ -225,7 +226,17 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 					);
 				}
 
-				// todo: update type information
+				// if this expression has known type information at the parse stage, we can utilize this -- else, we need a typecast
+				if (left->has_type_information()) {
+					left->override_qualities(sq);
+				}
+				else {
+					throw CompilerException(
+						"Expressions of this type may not utilize quality overrides; use a proper typecast instead",
+						compiler_errors::UNEXPECTED_SYMBOL_QUALITY,
+						this->current_token().line_number
+					);
+				}
 			}
 		} else {
 			this->back();
