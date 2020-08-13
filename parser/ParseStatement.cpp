@@ -398,8 +398,9 @@ std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 		else {
 			// if we do not have an else clause, we will return the if clause alone here
 			stmt = std::make_shared<IfThenElse>(condition, if_branch);
-			stmt->set_line_number(current_lex.line_number);
 		}
+
+		stmt->set_line_number(current_lex.line_number);
 	}
 	// If condition is not enclosed in parens
 	else {
