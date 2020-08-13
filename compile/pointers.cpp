@@ -116,8 +116,8 @@ std::stringstream compiler::get_address_of(Unary &u, reg r, unsigned int line) {
         addr_ss << "mov " << register_usage::get_register_name(r) << ", rbx" << std::endl;
         this->reg_stack.peek().clear(r);  // now we can use RBX again
     }
-    else if (u.get_operand()->get_expression_type() == LVALUE) {
-        LValue* target = dynamic_cast<LValue*>(u.get_operand().get());
+    else if (u.get_operand()->get_expression_type() == IDENTIFIER) {
+        Identifier* target = dynamic_cast<Identifier*>(u.get_operand().get());
         
         // look up the symbol; obtain the address based on its memory location
         std::shared_ptr<symbol> s = this->lookup(target->getValue(), line);

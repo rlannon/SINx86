@@ -27,8 +27,8 @@ member_selection member_selection::create_unary_node(Unary& exp, struct_table& s
 	if (operand->get_expression_type() == BINARY) {
 		m = create_member_selection(*dynamic_cast<Binary*>(operand.get()), structs, symbols, line);
 	}
-	else if (operand->get_expression_type() == LVALUE) {
-		m = create_lvalue_node(*dynamic_cast<LValue*>(operand.get()), structs, symbols, line, exp.get_operator() == DEREFERENCE);
+	else if (operand->get_expression_type() == IDENTIFIER) {
+		m = create_lvalue_node(*dynamic_cast<Identifier*>(operand.get()), structs, symbols, line, exp.get_operator() == DEREFERENCE);
 	}
 	else {
 		throw CompilerException("Illegal expression in member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
@@ -37,7 +37,7 @@ member_selection member_selection::create_unary_node(Unary& exp, struct_table& s
 	return m;
 }
 
-member_selection member_selection::create_lvalue_node(LValue& exp, struct_table& structs, symbol_table& symbols, unsigned int line, bool is_pointer) {
+member_selection member_selection::create_lvalue_node(Identifier& exp, struct_table& structs, symbol_table& symbols, unsigned int line, bool is_pointer) {
 	/*
 
 	creatE_lvalue_node
@@ -233,8 +233,8 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 		Unary *left = dynamic_cast<Unary*>(exp.get_left().get());
 		m = create_unary_node(*left, structs, symbols, line);
 	}
-	else if (exp.get_left()->get_expression_type() == LVALUE) {
-		LValue* left = dynamic_cast<LValue*>(exp.get_left().get());
+	else if (exp.get_left()->get_expression_type() == IDENTIFIER) {
+		Identifier* left = dynamic_cast<Identifier*>(exp.get_left().get());
 		m = create_lvalue_node(*left, structs, symbols, line);
 	}
 	else {
@@ -263,8 +263,8 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 	// todo: allow indexed expressions on RHS
 
 	// now, handle the right hand side -- note that dereferenced expressions are forbidden here (only allowed on the left side)
-	if (exp.get_right()->get_expression_type() == LVALUE) {
-		LValue* right = dynamic_cast<LValue*>(exp.get_right().get());
+	if (exp.get_right()->get_expression_type() == IDENTIFIER) {
+		Identifier* right = dynamic_cast<Identifier*>(exp.get_right().get());
 		
 		// get the symbol and append it
 		try {

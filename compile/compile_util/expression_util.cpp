@@ -27,9 +27,9 @@ std::stringstream expression_util::get_exp_address(
 
     std::string r_name = register_usage::get_register_name(r);
 
-    if (exp->get_expression_type() == LVALUE) {
+    if (exp->get_expression_type() == IDENTIFIER) {
         // we have a utility for these already
-        auto l = dynamic_cast<LValue*>(exp.get());
+        auto l = dynamic_cast<Identifier*>(exp.get());
         auto sym = symbols.find(l->getValue());
         addr_ss << get_address(*sym, r);
     }

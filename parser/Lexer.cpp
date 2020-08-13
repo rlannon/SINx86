@@ -350,13 +350,13 @@ lexeme Lexer::read_next() {
 		else if (this->is_id_start(ch)) {
 			value = this->read_while(&this->is_id);
 			if (this->is_keyword(value)) {
-				type = KEYWORD;
+				type = KEYWORD_LEX;
 			}
 			else if (this->is_boolean(value)) {
 				type = BOOL_LEX;
 			}
 			else {
-				type = IDENTIFIER;
+				type = IDENTIFIER_LEX;
 			}
 		}
 		else if (this->is_digit(ch)) {

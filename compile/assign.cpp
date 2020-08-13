@@ -142,7 +142,7 @@ std::stringstream compiler::assign(
         }
 
         // evaluate the rvalue, then the destination (lvalue)
-        auto handle_p = this->evaluate_expression(rvalue, line);
+        auto handle_p = this->evaluate_expression(rvalue, line, &lhs_type); // ensure we give evaluate_expression the lhs type as a hint
         handle_assign << handle_p.first;
         bool do_free = handle_p.second > 0;
         

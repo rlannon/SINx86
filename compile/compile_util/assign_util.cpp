@@ -46,9 +46,9 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     bool in_register;
 
     // generate code based on the expression type
-    if (exp->get_expression_type() == LVALUE) {
+    if (exp->get_expression_type() == IDENTIFIER) {
         // get the symbol information
-        auto lhs = dynamic_cast<LValue*>(exp.get());
+        auto lhs = dynamic_cast<Identifier*>(exp.get());
         auto sym = symbols.find(lhs->getValue());
         auto p = fetch_destination_operand(*sym, symbols, line, r, is_initialization);
         dest = p.dest_location;

@@ -1,0 +1,31 @@
+// arithmetic.sin
+// some simple arithmetic tests
+
+decl void print(decl string s);
+
+def int main & long (alloc array<string> args &dynamic)
+{
+    alloc int a &unsigned: 30;
+    alloc int b &unsigned: 50;
+    alloc unsigned int c: a + b;
+
+    alloc int l &long: 1_000_000;   // test separator parsing
+    alloc int l2 &long: 1;
+
+    if (l = 1_000_000) {
+        @print("l is 1,000,000");
+    }
+
+    alloc long int to_return;
+
+    if ((l * 2 + l2 - 2_001_000) = -999) {
+        @print("Works!\n");
+        let to_return = 0;
+    }
+    else {
+        @print("Arithmetic error.\n");
+        let to_return = 1;
+    }
+
+    return to_return;
+}

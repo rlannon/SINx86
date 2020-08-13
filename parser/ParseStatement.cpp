@@ -30,7 +30,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 	std::shared_ptr<Statement> stmt = nullptr;
 
 	// first, we will check to see if we need any keyword parsing
-	if (current_lex.type == KEYWORD) {
+	if (current_lex.type == KEYWORD_LEX) {
 
 		// Check to see what the keyword is
 
@@ -44,7 +44,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 			if (next.value == "<") {
 				lexeme asm_type = this->next();
-				if (asm_type.type == IDENTIFIER) {
+				if (asm_type.type == IDENTIFIER_LEX) {
 					std::string asm_architecture = asm_type.value;
 
 					if (this->peek().value == ">") {
@@ -80,7 +80,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 								asm_code << asm_data.value;
 
 								// put a space after idents, but not if a colon follows; also put spaces before semicolons
-								if (((asm_data.type == IDENTIFIER) && (this->peek().value != ":")) || (this->peek().value == ";")) {
+								if (((asm_data.type == IDENTIFIER_LEX) && (this->peek().value != ":")) || (this->peek().value == ";")) {
 									asm_code << " ";
 								}
 								// advance to the next token, but ONLY if we haven't hit the closing curly brace
@@ -112,14 +112,14 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 			*/
 
-			if (this->peek().type == IDENTIFIER) {
+			if (this->peek().type == IDENTIFIER_LEX) {
 				current_lex = this->next();
 
 				// make sure we end the statement correctly
 				if (this->peek().value == ";") {
 					this->next();
 
-					LValue to_free(current_lex.value, "var");
+					Identifier to_free(current_lex.value);
 					stmt = std::make_shared<FreeMemory>(to_free);
 				}
 				else {
@@ -242,7 +242,7 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 	// the next lexeme must be a keyword (specifically, a type or 'struct')
 	if (next_lexeme.value == "struct") {
 		// struct declaration
-		if (this->peek().type == IDENTIFIER) {
+		if (this->peek().type == IDENTIFIER_LEX) {
 			DataType struct_type(
 				STRUCT,
 				NONE,
@@ -256,12 +256,12 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 			throw CompilerException("Expected struct name", compiler_errors::ILLEGAL_STRUCT_NAME, this->current_token().line_number);
 		}
 	}
-	else if (next_lexeme.type == KEYWORD) {
+	else if (next_lexeme.type == KEYWORD_LEX) {
 		DataType symbol_type_data = this->get_type();
 		
 		// get the variable name
 		next_lexeme = this->next();
-		if (next_lexeme.type == IDENTIFIER) {		// variable names must be identifiers; if an identifier doesn't follow the type, we have an error
+		if (next_lexeme.type == IDENTIFIER_LEX) {		// variable names must be identifiers; if an identifier doesn't follow the type, we have an error
 			// get our variable name
 			std::string var_name = next_lexeme.value;
 			bool is_function = false;
@@ -417,13 +417,13 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 
 	// check our next token; it must be a keyword or a struct name (ident)
 	lexeme next_token = this->next();
-	if (next_token.type == KEYWORD || next_token.type == IDENTIFIER) {
+	if (next_token.type == KEYWORD_LEX || next_token.type == IDENTIFIER_LEX) {
 		// get the type data using Parser::get_type() -- this will tell us if the memory is to be dynamically allocated
 		// It will also throw an exception if the type specifier was invalid
 		DataType symbol_type_data = this->get_type();
 
 		// next, get the name
-		if (this->peek().type == IDENTIFIER) {
+		if (this->peek().type == IDENTIFIER_LEX) {
 			next_token = this->next();
 			new_var_name = next_token.value;
 
@@ -598,7 +598,7 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 
 	// Get the function's name
 	lexeme func_name = this->next();
-	if (func_name.type == IDENTIFIER) {
+	if (func_name.type == IDENTIFIER_LEX) {
 		std::vector<std::shared_ptr<Expression>> args;
 		this->next();
 		this->next();
@@ -613,7 +613,7 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 		if (this->peek().value != ";") {
 			throw MissingSemicolonError(this->previous().line_number);
 		}
-		stmt = std::make_shared<Call>(std::make_shared<LValue>(func_name.value, "func"), args);
+		stmt = std::make_shared<Call>(std::make_shared<Identifier>(func_name.value), args);
 		stmt->set_line_number(current_lex.line_number);
 		return stmt;
 	}

@@ -22,7 +22,7 @@ std::string compile_time_evaluator::evaluate_literal(Literal & exp)
 	return exp.get_value();
 }
 
-std::string compile_time_evaluator::evaluate_lvalue(LValue & exp, std::string scope_name, unsigned int scope_level, unsigned int line)
+std::string compile_time_evaluator::evaluate_lvalue(Identifier & exp, std::string scope_name, unsigned int scope_level, unsigned int line)
 {
 	/*
 	
@@ -134,8 +134,8 @@ std::string compile_time_evaluator::evaluate_expression(std::shared_ptr<Expressi
 		Literal exp = *dynamic_cast<Literal*>(to_evaluate.get());
 		evaluated_expression = compile_time_evaluator::evaluate_literal(exp);
 	}
-	else if (to_evaluate->get_expression_type() == LVALUE) {
-		LValue lvalue = *dynamic_cast<LValue*>(to_evaluate.get());
+	else if (to_evaluate->get_expression_type() == IDENTIFIER) {
+		Identifier lvalue = *dynamic_cast<Identifier*>(to_evaluate.get());
 		evaluated_expression = this->evaluate_lvalue(lvalue, scope_name, scope_level, line);
 	}
 	else if (to_evaluate->get_expression_type() == UNARY) {

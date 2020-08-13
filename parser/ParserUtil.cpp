@@ -387,7 +387,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 			this->next();	// eat the angle bracket
 
 			// if the next value is a keyword, we can leave array_length_exp as a nullptr
-			if (this->peek().type == KEYWORD) {
+			if (this->peek().type == KEYWORD_LEX) {
 				new_var_subtype = this->parse_subtype("<");
 			} else {
 				// parse an expression to obtain the array length; the _current lexeme_ should be the first lexeme of the expression		
@@ -413,7 +413,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 		}
 	}
 	// otherwise, if it is not a pointer or an array,
-	else if (current_lex.type == KEYWORD || current_lex.type == IDENTIFIER) {
+	else if (current_lex.type == KEYWORD_LEX || current_lex.type == IDENTIFIER_LEX) {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {
 			// if our symbol doesn't have signed or unsigned, set, it must be signed by default
@@ -428,7 +428,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 		// if we have a struct, make a note of the name
 		if (new_var_type == STRUCT) {
 			// if we didn't have a valid type name, but it was a keyword, then throw an exception -- the keyword used was not a valid type identifier
-			if (current_lex.type == KEYWORD) {
+			if (current_lex.type == KEYWORD_LEX) {
 				throw ParserException(("Invalid type specifier '" + current_lex.value + "'"), 0, current_lex.line_number);
 			}
 
@@ -503,7 +503,7 @@ symbol_qualities Parser::get_prefix_qualities(std::string grouping_symbol) {
 
 	// loop until we don't have a quality token, at which point we should return the qualities object
 	lexeme current = this->current_token();
-	while (current.type == KEYWORD && !is_type(current.value)) {
+	while (current.type == KEYWORD_LEX && !is_type(current.value)) {
 		// get the current quality and add it to our qualities object
 		try {
 			qualities.add_quality(get_quality(current));
@@ -544,7 +544,7 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 
 	// continue parsing our SymbolQualities until we hit a semicolon, at which point we will trigger the 'done' flag
 	bool done = false;
-	while (this->peek().type == KEYWORD) {
+	while (this->peek().type == KEYWORD_LEX) {
 		lexeme quality_token = this->next();	// get the token for the quality
 		SymbolQuality quality = this->get_quality(quality_token);	// use our 'get_quality' function to get the SymbolQuality based on the token
 
@@ -559,7 +559,7 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 	// todo: turn this into a utility function
 	// the quality must be followed by either another quality, a semicolon, a closing grouping symbol, an opening paren, or a colon
 	if (this->peek().value != ";" && this->peek().value != closing_symbol && this->peek().value != "(" && this->peek().value != ":") {
-		throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
+		throw CompilerException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
 	}
 
 	return qualities;
@@ -572,19 +572,19 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 	SymbolQuality to_return = NO_QUALITY;
 
 	// ensure the token is a kwd
-	if (quality_token.type == KEYWORD) {
+	if (quality_token.type == KEYWORD_LEX) {
 		// Use the unordered_map to find the quality
 		auto it = symbol_qualities::quality_strings.find(quality_token.value);
 		
 		if (it == symbol_qualities::quality_strings.end()) {
-			throw ParserException("Invalid qualifier", 0, quality_token.line_number);
+			throw CompilerException("Invalid qualifier", compiler_errors::EXPECTED_SYMBOL_QUALITY, quality_token.line_number);
 		}
 		else {
 			to_return = it->second;
 		}
 	}
 	else {
-		throw ParserException("Invalid qualifier", 0, quality_token.line_number);
+		throw CompilerException("Invalid qualifier", compiler_errors::EXPECTED_SYMBOL_QUALITY, quality_token.line_number);
 	}
 
 	return to_return;

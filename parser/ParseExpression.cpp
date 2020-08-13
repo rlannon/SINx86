@@ -113,18 +113,17 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	}
 	// if it is not an expression within a grouping symbol, it is parsed below
 	else if (is_literal(current_lex.type)) {
-		// todo: allow _ in integer and float literals (as a comma separator)
 		left = std::make_shared<Literal>(
 			type_deduction::get_type_from_lexeme(current_lex.type),
 			current_lex.value
 		);
 	}
-	else if (current_lex.type == IDENTIFIER) {
+	else if (current_lex.type == IDENTIFIER_LEX) {
 		// make an LValue expression
-		left = std::make_shared<LValue>(current_lex.value);
+		left = std::make_shared<Identifier>(current_lex.value);
 	}
 	// if we have a keyword to begin an expression (could be 'not' or an attribute selection like int:size)
-	else if (current_lex.type == KEYWORD) {
+	else if (current_lex.type == KEYWORD_LEX) {
 		if (current_lex.value == "not") {
 			// the logical not operator
 			this->next();
@@ -150,7 +149,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		if (current_lex.value == "@") {
 			current_lex = this->next();
 
-			if (current_lex.type == IDENTIFIER) {
+			if (current_lex.type == IDENTIFIER_LEX) {
 				// Same code as is in statement
 				std::vector<std::shared_ptr<Expression>> args;
 
@@ -167,7 +166,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				}
 
 				// assemble the value returning call so we can pass into maybe_binary
-				left = std::make_shared<ValueReturningFunctionCall>(std::make_shared<LValue>(current_lex.value, "func"), args);
+				left = std::make_shared<ValueReturningFunctionCall>(std::make_shared<Identifier>(current_lex.value), args);
 			}
 			// the "@" character must be followed by an identifier
 			else {
@@ -207,9 +206,27 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 
 		// eat the ampersand
 		this->next();
-		lexeme quality = this->next();
-		if (quality.value == "constexpr") {
-			is_const = true;
+		lexeme quality = this->peek();
+		if (quality.type == KEYWORD_LEX) {
+			// try getting a symbol quality
+			if (quality.value == "constexpr") {
+				this->next();
+				is_const = true;
+			}
+			else {
+				try {
+					symbol_qualities sq = get_postfix_qualities(grouping_symbol);
+				}
+				catch (CompilerException &e) {
+					throw CompilerException(
+						"Expected postfixed type qualifier", 
+						compiler_errors::EXPECTED_SYMBOL_QUALITY, 
+						this->current_token().line_number
+					);
+				}
+
+				// todo: update type information
+			}
 		} else {
 			this->back();
 			this->back();
@@ -275,7 +292,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 			lexeme operand = this->peek();
 			
 			// if the operand is a keyword, the & must not be intended to be the bitwise-and operator
-			if (operand.type == KEYWORD) {
+			if (operand.type == KEYWORD_LEX) {
 				this->back();	// move the iterator back
 				return left;	// return our left argument
 			}

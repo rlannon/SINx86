@@ -14,15 +14,18 @@ Generates code for evaluating an expression. This data will be loaded into regis
 // todo: create an expression evaluation class and give it access to compiler members?
 std::pair<std::string, size_t> compiler::evaluate_expression(
     std::shared_ptr<Expression> to_evaluate,
-    unsigned int line
+    unsigned int line,
+    DataType *type_hint
 ) {
     /*
 
     evaluate_expression
+    Generates code to evaluate a given Expression object
 
     This function will determine how many such objects must be freed in each expression so they can be properly handled by their parent expression. For example:
         @print("Found " + @itos(10) + " primes!\n");
-    We need to utilize a string returned by the function `itos`, but this string must have an RC of 1 when returned. After the call to print, this data becomes unreachable (as it will be copied into a new area of memory, the variable `s`).
+    We need to utilize a string returned by the function `itos`, but this string must have an RC of 1 when returned.
+    After the call to print, this data becomes unreachable (as it will be copied into a new area of memory, the variable `s`).
     As such, when we call `print`:
         * The binary expression `"Found " + @itos(10)` is evaluated
         * The delegate function to evaluate `itos` will see that it has something to free, returning <string, 1>; the address of this data will be preserved on the stack
@@ -30,6 +33,9 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         * The next concatenation with `<string buffer> + " primes!\n"` will be crafted, and since there is no temporary data to free, it will produce code as normal
 
     */
+
+    // todo: include a DataType field to hint at the appropriate type (for literal expressions)
+    // for example, if we are assigning like `alloc long int a: 1_000`, then we should ensure it treats the literal as a `long`, not regular, `int`
 
     std::stringstream evaluation_ss;
     size_t count = 0;
@@ -42,13 +48,13 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             Literal literal_exp = *dynamic_cast<Literal*>(to_evaluate.get());
 
             // dispatch to our evaluation function
-            evaluation_ss = this->evaluate_literal(literal_exp, line);
+            evaluation_ss = this->evaluate_literal(literal_exp, line, type_hint);
             break;
         }
-        case LVALUE:
+        case IDENTIFIER:
         {
             // get the lvalue
-            LValue lvalue_exp = *dynamic_cast<LValue*>(to_evaluate.get());
+            Identifier lvalue_exp = *dynamic_cast<Identifier*>(to_evaluate.get());
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_lvalue(lvalue_exp, line);
@@ -366,7 +372,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
     return std::make_pair<>(evaluation_ss.str(), count);
 }
 
-std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int line, DataType *type_hint) {
     /*
 
     evaluate_literal
@@ -378,14 +384,22 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
     @param  to_evaluate The literal expression we are evaluating
     @param  line    The line number of the expression (for error handling)
+    @param  type_hint   A hint about the proper data type for the literal expression
     @return A stringstream containing the generated code
 
     */
 
     std::stringstream eval_ss;
 
-    // act based on data type and width
-    DataType type = to_evaluate.get_data_type();
+    // act based on data type and width -- use type_hint if we have one
+    // todo: verify that the type hint is appropriate?
+    DataType type;
+    if (type_hint) {
+        type = *type_hint;
+    }
+    else {
+        type = to_evaluate.get_data_type();
+    }
 
     if (type.get_primary() == VOID) {
         // A void literal gets loaded into rax as 0
@@ -489,7 +503,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
     return eval_ss;
 }
 
-std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_lvalue(Identifier &to_evaluate, unsigned int line) {
     /*
 
     Generate code for evaluating an lvalue (a variable)

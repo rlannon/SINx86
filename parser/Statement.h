@@ -141,7 +141,7 @@ class Allocation : public Statement
 	// If we have an alloc-define statement, we will need:
 	bool initialized;	// whether the variable was defined upon allocation
 
-	std::shared_ptr<LValue> struct_name;	// structs will require a name
+	std::shared_ptr<Identifier> struct_name;	// structs will require a name
 
 	std::shared_ptr<Expression> initial_value;	// todo: use the parser to expand allocations with initial values into two statements
 public:
@@ -166,7 +166,7 @@ public:
 	std::shared_ptr<Expression> get_rvalue();
 
 	Assignment(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue);
-	Assignment(LValue lvalue, std::shared_ptr<Expression> rvalue);
+	Assignment(Identifier lvalue, std::shared_ptr<Expression> rvalue);
 	Assignment();
 };
 
@@ -257,7 +257,7 @@ public:
 
 class Call : public Statement
 {
-	std::shared_ptr<LValue> func;	// the function name
+	std::shared_ptr<Identifier> func;	// the function name
 	std::vector<std::shared_ptr<Expression>> args;	// arguments to the function
 public:
 	std::string get_func_name();
@@ -265,7 +265,7 @@ public:
 	std::shared_ptr<Expression> get_arg(size_t index);	// get one argument
 	std::vector<std::shared_ptr<Expression>> get_args();	// get all arguments
 
-	Call(std::shared_ptr<LValue> func, std::vector<std::shared_ptr<Expression>> args);
+	Call(std::shared_ptr<Identifier> func, std::vector<std::shared_ptr<Expression>> args);
 	Call();
 };
 
@@ -283,10 +283,10 @@ public:
 
 class FreeMemory : public Statement
 {
-	LValue to_free;
+	Identifier to_free;
 public:
-	LValue get_freed_memory();
+	Identifier get_freed_memory();
 
-	FreeMemory(LValue to_free);
+	FreeMemory(Identifier to_free);
 	FreeMemory();
 };

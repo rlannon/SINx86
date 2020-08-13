@@ -214,6 +214,8 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 		member_selection m(to_evaluate, this->structs, this->symbols, line);
 		eval_ss << m.evaluate(this->symbols, this->structs, line).str();
 	} else {
+		// todo: type hinting (for ensuring literals are appropriate)
+
 		// get the left and right branches
 		DataType left_type = get_expression_data_type(to_evaluate.get_left(), this->symbols, this->structs, line);
 		DataType right_type = get_expression_data_type(to_evaluate.get_right(), this->symbols, this->structs, line);
@@ -226,19 +228,15 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 		if (left_type.get_qualities().is_signed() != left_type.get_qualities().is_signed())
 			compiler_warning("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
 		
-		// also issue a warning if the types are different widths and the operator is bitwise
-		// width differences aren't a big deal for some operators, but they *do* make a difference for bitwise ones
-		if (
-			(left_type.get_width() != right_type.get_width()) &&
-			general_utilities::is_bitwise(to_evaluate.get_operator())
-		) {
-			compiler_warning("Width mismatch in bitwise operation", compiler_errors::WIDTH_MISMATCH, line);
+		// also issue a warning if the types are different widths
+		if (left_type.get_width() != right_type.get_width()) {
+			compiler_warning("Width mismatch", compiler_errors::WIDTH_MISMATCH, line);
 		}
 
 		// ensure the types are compatible before proceeding with evaluation
 		if (left_type.is_compatible(right_type)) {
 
-			// todo: ensure 16-byte stack alignment; this would allow us to use movdqa instead (and fit the System V ABI)
+			// todo: ensure 16-byte stack alignment? this would allow us to use movdqa instead (and fit the System V ABI)
 
 			// evaluate the left-hand side
 			auto lhs_pair = this->evaluate_expression(to_evaluate.get_left(), line);

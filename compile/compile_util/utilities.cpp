@@ -53,15 +53,15 @@ DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_ta
             type_information = literal->get_data_type();
             break;
         }
-        case LVALUE:
+        case IDENTIFIER:
 		{
             // look into the symbol table for an LValue
-            LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
+            Identifier *ident = dynamic_cast<Identifier*>(to_eval.get());
 			std::shared_ptr<symbol> sym;
 
 			try {
 				// get the symbol and return its type data
-				sym = symbols.find(lvalue->getValue());
+				sym = symbols.find(ident->getValue());
 			}
 			catch (std::exception& e) {
 				throw SymbolNotFoundException(line);
@@ -801,7 +801,7 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
                 dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
             }
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
-            dec_ss << "\t" << "call _sre_free" << std::endl;
+            dec_ss << call_sre_function("_sre_free");
         }
         // restore the status
         dec_ss << "\t" << "popfq" << std::endl;

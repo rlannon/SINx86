@@ -119,10 +119,11 @@ class compiler {
 	std::stringstream get_exp_address(std::shared_ptr<Expression> to_evaluate, reg r, unsigned int line);
 	std::pair<std::string, size_t> evaluate_expression(
 		std::shared_ptr<Expression> to_evaluate,
-		unsigned int line
+		unsigned int line,
+		DataType *type_hint = nullptr
 	);
-	std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line);
-	std::stringstream evaluate_lvalue(LValue &to_evaluate, unsigned int line);
+	std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line, DataType *type_hint = nullptr);
+	std::stringstream evaluate_lvalue(Identifier &to_evaluate, unsigned int line);
 	std::stringstream evaluate_indexed(Indexed &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
 	std::pair<std::string, size_t> evaluate_binary(Binary &to_evaluate, unsigned int line);

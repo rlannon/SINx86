@@ -88,6 +88,7 @@ namespace compiler_errors {
     // Parse errors
     const unsigned int INVALID_TOKEN = 400;
     const unsigned int BAD_LITERAL = 401;
+    const unsigned int EXPECTED_SYMBOL_QUALITY = 402;
     const unsigned int MISSING_SEMICOLON_ERROR = 404;
     const unsigned int MISSING_GROUPING_SYMBOL_ERROR = 405;
     const unsigned int MISSING_IDENTIFIER_ERROR = 406;
