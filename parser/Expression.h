@@ -75,11 +75,14 @@ public:
 
 class ListExpression : public Expression
 {
+	Type primary;
 	std::vector<std::shared_ptr<Expression>> list_members;
 public:
 	std::vector<std::shared_ptr<Expression>> get_list();
+	bool has_type_information() const override;
+	Type get_list_type() const;
 
-	ListExpression(std::vector<std::shared_ptr<Expression>> list_members);
+	ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type);
 	ListExpression();
 	~ListExpression();
 };

@@ -140,12 +140,28 @@ DataType expression_util::get_expression_data_type(
             // get list type
             ListExpression *init_list = dynamic_cast<ListExpression*>(to_eval.get());
             
-            // A list expression is a vector of other expressions, get the first item and pass it into this function recursively
-            DataType sub_data_type = expression_util::get_expression_data_type(init_list->get_list()[0], symbols, structs, line);
+            // iterate over the elements and get the data types of each
+            bool homogeneous = true;    // if homogeneous, we will set the type as array; else, tuple (tuple assignment checks each type against every other)
+            std::vector<DataType> contained_types;
+            for (auto item: init_list->get_list()) {
+                DataType dt = expression_util::get_expression_data_type(
+                    item,
+                    symbols,
+                    structs,
+                    line
+                );
+                contained_types.push_back(dt);
+                
+                // check the homogeneity of the list
+                if (homogeneous) {
+                    if (contained_types.front() != dt)
+                        homogeneous = false;
+                }
+            }
 
             // the subtype will be the current primary type, and the primary type will be array
-            type_information.set_subtype(sub_data_type);
-            type_information.set_primary(ARRAY);
+            type_information.set_contained_types(contained_types);
+            type_information.set_primary(homogeneous ? ARRAY : TUPLE);
             
             break;
         }

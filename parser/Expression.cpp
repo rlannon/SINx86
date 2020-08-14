@@ -228,12 +228,22 @@ bool AttributeSelection::is_attribute(std::string a) {
 
 // Lists
 
+bool ListExpression::has_type_information() const {
+	return true;
+}
+
+Type ListExpression::get_list_type() const {
+	return this->primary;
+}
+
 std::vector<std::shared_ptr<Expression>> ListExpression::get_list()
 {
 	return this->list_members;
 }
 
-ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members) : list_members(list_members)
+ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type) :
+	list_members(list_members),
+	primary(list_type)
 {
 	this->expression_type = LIST;
 }

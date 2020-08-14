@@ -69,18 +69,14 @@ size_t alloc_util::get_width(
 				width = sin_widths::PTR_WIDTH;
 			}
 			else {
-				throw CompilerException(
-					"The length of a non-dynamic array must be known at compile time (use a literal or a valid constexpr)",
-					compiler_errors::TYPE_VALIDITY_RULE_VIOLATION_ERROR,
-					line
-				);
+				throw NonConstArrayLengthException(line);
 			}
 		}
     }
     else if (alloc_data.get_primary() == TUPLE) {
         for (auto it = alloc_data.get_contained_types().begin(); it != alloc_data.get_contained_types().end(); it++) {
             if (it->get_width() == 0) {
-                width += get_width(*it, evaluator, structs, symbols, scope_name, scope_level, line);
+				width += get_width(*it, evaluator, structs, symbols, scope_name, scope_level, line);
             }
             else {
                 width += it->get_width();

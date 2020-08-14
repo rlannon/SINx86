@@ -106,37 +106,60 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             evaluation_ss << "\t" << "add r15, " << sin_widths::INT_WIDTH << std::endl;
 
             // now, iterate
-            for (auto m: le->get_list()) {
+            for (size_t i = 0; i < le->get_list().size(); i++) {
                 // first, make sure the type of this expression matches the list's subtype
+                auto m = le->get_list().at(i);
                 DataType member_type = expression_util::get_expression_data_type(m, this->symbols, this->structs, line);
                 
                 // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
-                
-                if (member_type == t.get_subtype()) {
-                    // evaluate the expression
-                    auto member_p = this->evaluate_expression(m, line);
-                    evaluation_ss << member_p.first;
-                    count += member_p.second;
+                if (t.get_primary() == ARRAY) {
+                    if (member_type == t.get_subtype()) {
+                        // evaluate the expression
+                        auto member_p = this->evaluate_expression(m, line);
+                        evaluation_ss << member_p.first;
+                        count += member_p.second;
 
-                    // store it in [r15 + offset]
-                    if (member_type.get_primary() == FLOAT) {
-                        std::string inst = member_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
-                        evaluation_ss << "\t" << inst << " [r15 + " << offset << "], xmm0" << std::endl;
+                        // store it in [r15 + offset]
+                        if (member_type.get_primary() == FLOAT) {
+                            std::string inst = member_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
+                            evaluation_ss << "\t" << inst << " [r15 + " << offset << "], xmm0" << std::endl;
+                        }
+                        else {
+                            std::string reg_name = register_usage::get_register_name(RAX, member_type);
+                            evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << reg_name << std::endl;
+                        }
+                        
+                        // update the offset within the list of the element to which we are writing
+                        offset += member_type.get_width();
                     }
                     else {
-                        std::string reg_name = register_usage::get_register_name(RAX, member_type);
-                        evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << reg_name << std::endl;
+                        throw CompilerException(
+                            "Type mismatch (arrays must be homogeneous)",
+                            compiler_errors::TYPE_ERROR,
+                            line
+                        );
                     }
-                    
-                    // update the offset within the list of the element to which we are writing
-                    offset += member_type.get_width();
                 }
                 else {
-                    throw CompilerException(
-                        "Type mismatch (lists must be homogeneous)",
-                        compiler_errors::TYPE_ERROR,
-                        line
-                    );
+                    /*
+
+                    todo: tuples
+                    index `t.get_contained_types()` with `i` -- this is the left hand type within the tuple
+                    this should be equal to `member_type`; if not, we have a type mismatch
+
+                    */
+
+                    DataType &lhs_type = t.get_contained_types().at(i);
+                    if (lhs_type == member_type) {
+                        // todo: tuple member evaluation
+                    }
+                    else {
+                        throw CompilerException(
+                            "Tuple type mismatch",
+                            compiler_errors::TYPE_ERROR,
+                            line
+                        );
+                    }
                 }
             }
 

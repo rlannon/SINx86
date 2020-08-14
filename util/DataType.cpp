@@ -280,6 +280,10 @@ void DataType::set_subtype(DataType new_subtype) {
 	}
 }
 
+void DataType::set_contained_types(std::vector<DataType> types_list) {
+	this->contained_types = types_list;
+}
+
 void DataType::set_array_length(size_t new_length) {
 	this->array_length = new_length;
 }

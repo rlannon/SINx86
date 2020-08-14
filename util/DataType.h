@@ -61,6 +61,7 @@ public:
 
 	void set_primary(Type new_primary);
 	void set_subtype(DataType new_subtype);
+	void set_contained_types(std::vector<DataType> types_list);
 
 	void set_array_length(size_t new_length);
 

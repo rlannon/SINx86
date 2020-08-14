@@ -88,6 +88,17 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			// as long as the next character is not a comma, we have more lexemes to parse
 			lexeme peeked = this->peek();
 			std::string list_grouping_symbol = current_lex.value;
+			Type list_type;
+			if (list_grouping_symbol == "(") {
+				list_type = TUPLE;
+			}
+			else if (list_grouping_symbol == "{") {
+				list_type = ARRAY;
+			}
+			else {
+				// todo: exception
+			}
+
 			while (peeked.value != get_closing_grouping_symbol(list_grouping_symbol)) {
 				this->next();	// skip the last character of the expression (on comma)
 				try {
@@ -113,7 +124,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				throw UnclosedGroupingSymbolError(this->current_token().line_number);
 			}
 
-			left = std::make_shared<ListExpression>(list_members);
+			left = std::make_shared<ListExpression>(list_members, list_type);
 			not_binary = true;	// list literals are not allowed to be a part of binary expressions because dynamically resizable arrays are not first class types
 		}
 		else {
