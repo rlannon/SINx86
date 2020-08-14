@@ -112,7 +112,7 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
     // if the struct was defined, throw an exception; otherwise, mark it as defined and update the struct_info object
 	if (!ok) {
         // if the width is known, it was already defined
-        auto s_info = this->structs.find(to_add.get_struct_name());
+        auto s_info = this->structs.find(to_add.get_struct_name(), line);
         if (s_info.is_width_known()) {
     		throw DuplicateDefinitionException(line);
         }
@@ -134,13 +134,11 @@ struct_info& compiler::get_struct_info(std::string struct_name, unsigned int lin
     @throws Throws an UndefinedException if the struct is not known
 
     */
+
+    // todo: delete this function
 	
 	// check to see whether our struct is in the table first
-	if (!this->structs.contains(struct_name)) {
-		throw UndefinedException(line);
-	}
-
-	return this->structs.find(struct_name);
+	return this->structs.find(struct_name, line);
 }
 
 std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature) {

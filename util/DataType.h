@@ -51,6 +51,7 @@ public:
 
 	Type get_primary() const;
 	DataType get_subtype() const;
+	std::vector<DataType> &get_contained_types();
 	bool has_subtype() const;
 	symbol_qualities get_qualities() const;
 	size_t get_array_length() const;

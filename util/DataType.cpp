@@ -259,6 +259,10 @@ DataType DataType::get_subtype() const {
 	return to_return;
 }
 
+std::vector<DataType> &DataType::get_contained_types() {
+	return this->contained_types;
+}
+
 bool DataType::has_subtype() const {
 	return !this->contained_types.empty();
 }

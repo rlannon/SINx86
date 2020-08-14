@@ -29,6 +29,7 @@ Copyright 2019 Riley Lannon
 #include "compile_util/constant_eval.h"
 #include "compile_util/expression_util.h"
 #include "compile_util/assign_util.h"
+#include "compile_util/alloc_util.h"
 
 class compiler {
     // The class containing our compiler

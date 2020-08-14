@@ -134,7 +134,7 @@ std::stringstream member_selection::evaluate(symbol_table &symbols, struct_table
 		}
 
 		// fetch the struct data of the previous symbol
-		struct_info& s = structs.find(t.get_struct_name());	// this function throws an exception if the struct hasn't been defined
+		struct_info& s = structs.find(t.get_struct_name(), line);	// this function throws an exception if the struct hasn't been defined
 		
 		// now, get the symbol for the struct member
 		symbol& member_data = s.get_member(current_node.get_name());
@@ -253,7 +253,7 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 	if (!structs.contains(t.get_struct_name())) {
 		throw SymbolNotFoundException(line);
 	}
-	struct_info& last_struct = structs.find(t.get_struct_name());
+	struct_info& last_struct = structs.find(t.get_struct_name(), line);
 
 	// check to see if the struct has been defined by checking whether its width is known
 	if (!last_struct.is_width_known()) {
