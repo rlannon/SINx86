@@ -81,6 +81,7 @@ namespace compiler_errors {
     const unsigned int WIDTH_MISMATCH = 242;
     const unsigned int POTENTIAL_DATA_LOSS = 243;
     const unsigned int SIGNATURE_MISMATCH = 250;
+    const unsigned int LIST_TYPE_MISMATCH = 253;
 
     // Internal errors
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;

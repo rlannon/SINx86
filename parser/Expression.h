@@ -80,7 +80,7 @@ class ListExpression : public Expression
 public:
 	std::vector<std::shared_ptr<Expression>> get_list();
 	bool has_type_information() const override;
-	Type get_list_type() const;
+	Type get_list_type() const;	// the list type that we parsed -- () yields TUPLE, {} yields ARRAY
 
 	ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type);
 	ListExpression();
