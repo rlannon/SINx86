@@ -18,6 +18,7 @@ void DataType::set_width() {
 		this->width = sin_widths::PTR_WIDTH;
 	}
 	else {
+		// All other types have different widths
 		if (this->primary == INT) {
 			// ints are usually 4 bytes wide (32-bit), but can be 2 bytes for a short or 8 for a long 
 
@@ -51,7 +52,22 @@ void DataType::set_width() {
 		} else if (this->primary == CHAR) {
 			// todo: determine whether it is ASCII or UTF-8
 			this->width = sin_widths::CHAR_WIDTH;
-		} 
+		} else if (this->primary == TUPLE) {
+			// tuple widths are known at compile time -- it is the sum of the widths of each of their contained types
+			// however, if they contain a struct or an array, we must defer the width evaluation until we have a struct table
+			this->width = 0;
+			auto it = this->contained_types.begin();
+			bool defer_width = false;
+			while (it != this->contained_types.end() && !defer_width) {
+				if (it->get_width() == 0) {	// types with unknown lengths have a width of 0
+					this->width = 0;
+					defer_width = true;
+				}
+				else {
+					this->width += it->get_width();
+				}
+			}
+		}
 		else {
 			/*
 
@@ -398,6 +414,17 @@ DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, s
 	}
 
 	// set the data width
+	this->set_width();
+}
+
+DataType::DataType(Type primary, std::vector<DataType> contained_types, symbol_qualities qualities):
+	primary(primary),
+	contained_types(contained_types),
+	qualities(qualities)
+{
+	// update the rest of our members
+	this->array_length = 0;
+	this->struct_name = "";
 	this->set_width();
 }
 

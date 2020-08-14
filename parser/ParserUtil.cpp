@@ -412,7 +412,10 @@ DataType Parser::get_type(std::string grouping_symbol)
 			throw ParserException("You must specify the size and type of an array (in that order)", 0, current_lex.line_number);
 		}
 	}
-	// otherwise, if it is not a pointer or an array,
+	else if (current_lex.value == "tuple") {
+		// tuples contain an arbitrarily long list of types
+	}
+	// otherwise, if it does not have a contained type, it is either a different type (keyword) or struct (identifier)
 	else if (current_lex.type == KEYWORD_LEX || current_lex.type == IDENTIFIER_LEX) {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {

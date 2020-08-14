@@ -78,6 +78,7 @@ public:
 	virtual bool must_initialize() const;
 
     DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp = nullptr, std::string struct_name = "");
+	DataType (Type primary, std::vector<DataType> contained_types, symbol_qualities qualities);
 	DataType(Type primary);
 	DataType(const DataType &ref);
 	DataType();
