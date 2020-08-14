@@ -76,17 +76,9 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		else if (this->peek().type == OPERATOR) {
 			return this->maybe_binary(temp, prec, grouping_symbol);
 		}
-		// if we had a comma, we need to treat this expression as a list expression
+		// if we had a comma, we need to parse a list
 		else if (this->peek().value == ",") {
-			// set this to false if any element is *not* const
-			is_const = true;
-
-			// create a copy of 'left' because 'left' will need to hold the list expression -- and contain the value currently in 'left'
-			std::vector<std::shared_ptr<Expression>> list_members = { temp };
-			left = nullptr;
-
-			// as long as the next character is not a comma, we have more lexemes to parse
-			lexeme peeked = this->peek();
+			// ensure we have a valid grouping symbol for our list and set the expression's primary type accordingly
 			std::string list_grouping_symbol = current_lex.value;
 			Type list_type;
 			if (list_grouping_symbol == "(") {
@@ -96,8 +88,22 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				list_type = ARRAY;
 			}
 			else {
-				// todo: exception
+				throw ParserException(
+					"Illegal list grouping symbol",
+					compiler_errors::INVALID_TYPE_SYNTAX,
+					this->current_token().line_number
+				);
 			}
+
+			// set this to false if any element is *not* const
+			is_const = true;
+
+			// create a copy of 'left' because 'left' will need to hold the list expression -- and contain the value currently in 'left'
+			std::vector<std::shared_ptr<Expression>> list_members = { temp };
+			left = nullptr;
+
+			// as long as the next character is not a comma, we have more lexemes to parse
+			lexeme peeked = this->peek();
 
 			while (peeked.value != get_closing_grouping_symbol(list_grouping_symbol)) {
 				this->next();	// skip the last character of the expression (on comma)
