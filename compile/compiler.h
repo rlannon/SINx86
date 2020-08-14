@@ -133,6 +133,18 @@ class compiler {
 	// process an included file
 	std::stringstream process_include(std::string include_filename, unsigned int line);
 public:
+	// Some magic numbers
+	static const std::string CONST_STRING_LABEL;
+	static const std::string LIST_LITERAL_LABEL;
+	static const std::string FLOAT_LITERAL_LABEL;
+	static const std::string ITE_LABEL;
+	static const std::string ITE_ELSE_LABEL;
+	static const std::string ITE_DONE_LABEL;
+	static const std::string WHILE_LABEL;
+	static const std::string WHILE_DONE_LABEL;
+	static const std::string SINGLE_PRECISION_MASK_LABEL;
+	static const std::string DOUBLE_PRECISION_MASK_LABEL;
+
     // the compiler's entry function
     void generate_asm(std::string filename);
 
