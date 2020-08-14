@@ -64,7 +64,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         auto lhs = dynamic_cast<Unary*>(exp.get());
         if (lhs->get_operator() == exp_operator::DEREFERENCE) {
             // ensure the expression has a pointer type; else, indirection is illegal
-            auto op_t = get_expression_data_type(lhs->get_operand(), symbols, structures, line);
+            auto op_t = expression_util::get_expression_data_type(lhs->get_operand(), symbols, structures, line);
             if (op_t.get_primary() == PTR) {
                 auto fetched = fetch_destination_operand(
                     lhs->get_operand(),
@@ -222,6 +222,7 @@ bool assign_utilities::requires_copy(DataType t) {
     return (
         t.get_primary() == STRING ||
         t.get_primary() == ARRAY ||
+        t.get_primary() == TUPLE ||
         t.get_primary() == STRUCT
     );
 }

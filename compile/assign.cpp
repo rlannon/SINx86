@@ -35,8 +35,8 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     );
 
     // get the data type of each expression
-    auto lhs_type = get_expression_data_type(a.get_lvalue(), this->symbols, this->structs, a.get_line_number());
-    auto rhs_type = get_expression_data_type(a.get_rvalue(), this->symbols, this->structs, a.get_line_number());
+    auto lhs_type = expression_util::get_expression_data_type(a.get_lvalue(), this->symbols, this->structs, a.get_line_number());
+    auto rhs_type = expression_util::get_expression_data_type(a.get_rvalue(), this->symbols, this->structs, a.get_line_number());
 
     std::stringstream handle_ss;
 
@@ -45,7 +45,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
         // make sure that the type is actually indexable/subscriptable
         auto idx = dynamic_cast<Indexed*>(a.get_lvalue().get());
         if (!is_subscriptable(
-                get_expression_data_type(
+                expression_util::get_expression_data_type(
                     idx->get_to_index(), 
                     this->symbols, 
                     this->structs,
@@ -93,7 +93,7 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
     */
 
     auto p = assign_utilities::fetch_destination_operand(sym, this->symbols, line, RBX, true);
-    auto rhs_type = get_expression_data_type(rvalue, this->symbols, this->structs, line);
+    auto rhs_type = expression_util::get_expression_data_type(rvalue, this->symbols, this->structs, line);
 
     reg src_reg = sym.get_data_type().get_primary() == FLOAT ? XMM0 : RAX;
 

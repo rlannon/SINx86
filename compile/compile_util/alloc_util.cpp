@@ -39,7 +39,7 @@ size_t alloc_util::get_width(
         // if we have an array length expression, and it's a constant, evaluate it
 		if (alloc_data.get_array_length_expression() != nullptr && alloc_data.get_array_length_expression()->is_const()) {
 			if (
-				get_expression_data_type(
+				expression_util::get_expression_data_type(
 					alloc_data.get_array_length_expression(),
 					symbols,
 					structs,

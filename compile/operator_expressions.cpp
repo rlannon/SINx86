@@ -28,7 +28,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	std::stringstream eval_ss;
 
 	// We need to know the data type in order to evaluate the expression properly
-	DataType unary_type = get_expression_data_type(to_evaluate.get_operand(), this->symbols, this->structs, line);
+	DataType unary_type = expression_util::get_expression_data_type(to_evaluate.get_operand(), this->symbols, this->structs, line);
 
 	// first, evaluate the expression we are modifying *unless* it is an ADDRESS operation
 	if (to_evaluate.get_operator() != ADDRESS) {
@@ -217,8 +217,8 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 		// todo: type hinting (for ensuring literals are appropriate)
 
 		// get the left and right branches
-		DataType left_type = get_expression_data_type(to_evaluate.get_left(), this->symbols, this->structs, line);
-		DataType right_type = get_expression_data_type(to_evaluate.get_right(), this->symbols, this->structs, line);
+		DataType left_type = expression_util::get_expression_data_type(to_evaluate.get_left(), this->symbols, this->structs, line);
+		DataType right_type = expression_util::get_expression_data_type(to_evaluate.get_right(), this->symbols, this->structs, line);
 
 		Type primary = left_type.get_primary();
 		size_t data_width = left_type.get_width();

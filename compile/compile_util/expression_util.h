@@ -20,4 +20,11 @@ namespace expression_util {
         reg r,
         unsigned int line
     );
+
+    DataType get_expression_data_type(
+        std::shared_ptr<Expression> to_eval,
+        symbol_table& symbols,
+        struct_table& structs,
+        unsigned int line
+    );
 }

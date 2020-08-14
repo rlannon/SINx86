@@ -25,7 +25,7 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
     if (exp->get_expression_type() == INDEXED) {
         // we need to adjust the value of 'r' by the index value
         auto i = dynamic_cast<Indexed*>(exp.get());
-        DataType idx_type = get_expression_data_type(i->get_to_index(), this->symbols, this->structs, line);
+        DataType idx_type = expression_util::get_expression_data_type(i->get_to_index(), this->symbols, this->structs, line);
 
         // if RCX is in use, preserve it -- we are using it for 'mul'
         if (this->reg_stack.peek().is_in_use(RCX)) {

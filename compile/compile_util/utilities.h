@@ -37,8 +37,6 @@ Our various compiler utilities
 
 std::string call_sincall_subroutine(std::string name);
 
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
-
 bool returns(StatementBlock to_check);
 
 bool is_valid_cast(DataType &old_type, DataType &new_type);

@@ -63,7 +63,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case INDEXED:
         {
             // get the address and dereference
-            DataType t = get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
+            DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
             evaluation_ss << this->get_exp_address(to_evaluate, RBX, line).str();
             evaluation_ss << "\t" << "mov " << register_usage::get_register_name(RAX, t) << ", [rbx]" << std::endl;
             break;
@@ -93,7 +93,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             }
 
             // get our type information
-            DataType t = get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
+            DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
             auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
             size_t offset = 0;
             
@@ -108,7 +108,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             // now, iterate
             for (auto m: le->get_list()) {
                 // first, make sure the type of this expression matches the list's subtype
-                DataType member_type = get_expression_data_type(m, this->symbols, this->structs, line);
+                DataType member_type = expression_util::get_expression_data_type(m, this->symbols, this->structs, line);
                 
                 // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
                 
@@ -147,6 +147,8 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             if (pushed_r15) {
                 evaluation_ss << "\t" << "pop r15" << std::endl;
             }
+
+            // todo: adapt this to properly handle tuple literals
 
             // finally, utilize the .bss section and the 'res' directive for our list
             std::string res_instruction;
@@ -235,7 +237,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             // ensure the type to which we are casting is valid
             if (DataType::is_valid_type(c->get_new_type())) {
                 // check to make sure the typecast itself is valid (follows the rules)
-                DataType old_type = get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
+                DataType old_type = expression_util::get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
                 if (is_valid_cast(old_type, c->get_new_type())) {
                     // if we are casting a literal integer or float to itself (but with a different width), create a new Literal
                     if (
@@ -271,7 +273,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case ATTRIBUTE:
         {
             auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
-            auto t = get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
+            auto t = expression_util::get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
             auto attr_p = this->evaluate_expression(attr->get_selected(), line);
             // we have a limited number of attributes
             if (attr->get_attribute() == LENGTH) {
@@ -678,7 +680,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     
     std::stringstream eval_ss;
 
-    DataType to_index_type = get_expression_data_type(to_evaluate.get_to_index(), this->symbols, this->structs, line);
+    DataType to_index_type = expression_util::get_expression_data_type(to_evaluate.get_to_index(), this->symbols, this->structs, line);
     if (is_subscriptable(to_index_type.get_primary())) {
         // todo: evaluate indexed
         eval_ss << "\t" << "; todo: subscripting" << std::endl;

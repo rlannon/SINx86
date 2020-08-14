@@ -18,10 +18,17 @@ This file contains the function/class declarations required for the compiler's c
 #include "symbol_table.h"
 #include "struct_table.h"
 #include "../../util/Exceptions.h"
-#include "../../parser/Statement.h"	// includes "Expression.h"
+#include "../../parser/Statement.h"	// includes "Expression.h""
 
-// forward-declare any functions from 'utilities'
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
+// must be forward-declared to avoid a circular dependency
+namespace expression_util {
+	DataType get_expression_data_type(
+		std::shared_ptr<Expression> to_eval,
+		symbol_table& symbols,
+		struct_table& structs,
+		unsigned int line
+	);
+}
 
 class compile_time_evaluator {
 	// data members
