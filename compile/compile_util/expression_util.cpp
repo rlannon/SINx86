@@ -159,10 +159,6 @@ DataType expression_util::get_expression_data_type(
                 }
             }
 
-            // the subtype will be the current primary type, and the primary type will be array
-            type_information.set_contained_types(contained_types);
-            type_information.set_primary(homogeneous ? ARRAY : TUPLE);
-
             if (!homogeneous && init_list->get_list_type() == ARRAY) {
                 throw CompilerException(
                     "Array list expressions must be homogeneous",
@@ -170,6 +166,10 @@ DataType expression_util::get_expression_data_type(
                     line
                 );
             }
+
+            // the subtype will be the current primary type, and the primary type will be array
+            type_information.set_contained_types(contained_types);
+            type_information.set_primary(init_list->get_list_type());
             
             break;
         }

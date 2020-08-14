@@ -96,14 +96,6 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
             auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
             size_t offset = 0;
-
-            if (le->get_list_type() != t.get_primary()) {
-                throw CompilerException(
-                    "List types do not match",
-                    compiler_errors::LIST_TYPE_MISMATCH,
-                    line
-                );
-            }
             
             // get the address in R15; write in the length
             evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
