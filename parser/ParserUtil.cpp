@@ -267,7 +267,7 @@ bool Parser::is_opening_grouping_symbol(std::string to_test)
 	Curly braces not included here because they are not considered grouping symbols like ( and [ -- they serve a different purpose
 
 	*/
-	return (to_test == "(" || to_test == "[");
+	return (to_test == "(" || to_test == "[" || to_test == "{");
 }
 
 const bool Parser::has_return(StatementBlock to_test)

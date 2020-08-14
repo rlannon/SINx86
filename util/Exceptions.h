@@ -309,6 +309,12 @@ public:
 	explicit MissingIdentifierError(const unsigned int &line);
 };
 
+class UnclosedGroupingSymbolError : public ParserException
+{
+public:
+	explicit UnclosedGroupingSymbolError(const unsigned int &line);
+};
+
 class UnexpectedKeywordError : public ParserException
 {
 public:

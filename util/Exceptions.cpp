@@ -387,6 +387,15 @@ UnexpectedKeywordError::UnexpectedKeywordError(std::string &offending_keyword, c
 	// Used when a keyword is found, but one is not expected
 }
 
+UnclosedGroupingSymbolError::UnclosedGroupingSymbolError(const unsigned int &line) :
+ParserException(
+	"Syntax error; unclosed grouping symbol",
+	compiler_errors::MISSING_GROUPING_SYMBOL_ERROR,
+	line
+) {
+	// super called
+}
+
 CallError::CallError(const unsigned int &line):
 	ParserException(
 		"Expected parens enclosing arguments in function call",
