@@ -359,6 +359,8 @@ DataType Parser::get_type(std::string grouping_symbol)
 	DataType new_var_subtype;
 	std::shared_ptr<Expression> array_length_exp = nullptr;
 	std::string struct_name = "";
+	bool subtype_is_list = false;
+	std::vector<DataType> subtypes;
 
 	if (current_lex.value == "ptr" || current_lex.value == "ref") {
 		// set the type
@@ -404,16 +406,73 @@ DataType Parser::get_type(std::string grouping_symbol)
 					new_var_subtype = this->parse_subtype("<");
 				}
 				else {
-					throw ParserException("The size of an array must be followed by the type", 0, current_lex.line_number);
+					throw CompilerException(
+						"The size of an array must be followed by the type",
+						compiler_errors::INVALID_TYPE_SYNTAX,
+						current_lex.line_number
+					);
 				}
 			}
 		}
 		else {
-			throw ParserException("You must specify the size and type of an array (in that order)", 0, current_lex.line_number);
+			throw CompilerException(
+				"Proper syntax is 'array< N, T >' where N an integer expression and T is the contained type",
+				compiler_errors::INVALID_TYPE_SYNTAX,
+				current_lex.line_number
+			);
 		}
 	}
 	else if (current_lex.value == "tuple") {
-		// tuples contain an arbitrarily long list of types
+		// tuples contain an arbitrarily long list of types separated by commas
+		new_var_type = TUPLE;
+		subtype_is_list = true;
+		if (this->peek().value == "<") {
+			this->next();
+			while (this->peek().type == KEYWORD_LEX) {
+				// get the type
+				this->next();
+				DataType sub = this->get_type();
+				subtypes.push_back(sub);
+
+				// check to see what needs to happen next
+				if (this->peek().value == ",") {
+					this->next();
+				}
+				else if (this->peek().value != ">") {
+					throw CompilerException(
+						"Expected type, comma, or closing angle bracket",
+						compiler_errors::INVALID_TYPE_SYNTAX,
+						this->current_token().line_number
+					);
+				}
+			}
+
+			if (this->peek().value == ">") {
+				this->next();
+			}
+			else{
+				throw CompilerException(
+					"Missing closing angle bracket for contained type",
+					compiler_errors::INVALID_TYPE_SYNTAX,
+					this->current_token().line_number
+				);
+			}
+
+			// give an error if the tuple is empty and a note if the tuple only has one subtype
+			if (subtypes.empty()) {
+				throw CompilerException(
+					"Tuples must list at least 1 contained type",
+					compiler_errors::INCOMPLETE_TYPE_ERROR,
+					current_lex.line_number
+				);
+			}
+			else if (subtypes.size() == 1) {
+				compiler_note("Unnecessary tuple (contains only one element)", current_lex.line_number);
+			}
+		}
+		else {
+			// todo: appropriate exception
+		}
 	}
 	// otherwise, if it does not have a contained type, it is either a different type (keyword) or struct (identifier)
 	else if (current_lex.type == KEYWORD_LEX || current_lex.type == IDENTIFIER_LEX) {
@@ -446,8 +505,14 @@ DataType Parser::get_type(std::string grouping_symbol)
 		);
 	}
 
-	// create the symbol type data
-	DataType symbol_type_data(new_var_type, new_var_subtype, qualities, array_length_exp, struct_name);
+	// create the symbol type data; if we have a list of subtypes, we need to use a different constructor than other types
+	DataType symbol_type_data;
+	if (subtype_is_list) {
+		symbol_type_data = DataType(new_var_type, subtypes, qualities);
+	}
+	else {
+		symbol_type_data = DataType(new_var_type, new_var_subtype, qualities, array_length_exp, struct_name);
+	}
 	return symbol_type_data;
 }
 

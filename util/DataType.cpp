@@ -66,6 +66,8 @@ void DataType::set_width() {
 				else {
 					this->width += it->get_width();
 				}
+
+				it++;
 			}
 		}
 		else {
