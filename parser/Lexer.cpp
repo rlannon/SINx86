@@ -368,17 +368,18 @@ lexeme Lexer::read_next() {
 			// this allows the string to be more readable for the programmer, but we don't want them in our end result
 			type = INT_LEX;
 			bool found_decimal = false;
-			for (auto it = num.begin(); it != num.end(); it++) {
-				if (*it != '_') {
-					value.push_back(*it);
-				}
-				else if (*it == '.') {
+			for (auto it = num.cbegin(); it != num.cend(); it++) {
+				if (*it == '.') {
 					// if we already found a decimal point, we want to throw an exception -- it's an invalid numeric literal
 					if (found_decimal) {
 						throw CompilerException("Invalid numeric literal", compiler_errors::BAD_LITERAL, current_line);
 					}
+					value.push_back(*it);
 					found_decimal = true;
 					type = FLOAT_LEX;
+				}
+				else if (*it != '_') {
+					value.push_back(*it);
 				}
 			}
 		}
