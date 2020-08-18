@@ -216,6 +216,23 @@ bool DataType::is_compatible(DataType to_compare) const
 			throw CompilerException("Expected subtype", 0, 0);
 		}
 	}
+	else if (this->primary == TUPLE && to_compare.get_primary() == TUPLE) {
+		// tuples must have the same number of elements, and in the same order, to be compatible
+		if (this->contained_types.size() == to_compare.contained_types.size()) {
+			compatible = true;
+			auto this_it = this->contained_types.begin();
+			auto comp_it = to_compare.contained_types.begin();
+			while (compatible && (this_it != this->contained_types.end()) && (comp_it != to_compare.contained_types.end())) {
+				if (this_it->is_compatible(*comp_it)) {
+					this_it++;
+					comp_it++;
+				}
+				else {
+					compatible = false;
+				}
+			}
+		}
+	}
 	else {
 		// primary types must be equal
 		// todo: generate warnings for width and sign differences
