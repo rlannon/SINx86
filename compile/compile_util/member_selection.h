@@ -25,7 +25,7 @@ class member_selection {
 	void append(symbol& to_add);
 
 	static member_selection create_unary_node(Unary& exp, struct_table& structs, symbol_table& symbols, unsigned int line);
-	static member_selection create_lvalue_node(Identifier& exp, struct_table& structs, symbol_table& symbols, unsigned int line, bool is_pointer=false);
+	static member_selection create_identifier_node(Identifier& exp, struct_table& structs, symbol_table& symbols, unsigned int line, bool is_pointer=false);
 public:
 	std::stringstream evaluate(symbol_table &symbols, struct_table &structs, unsigned int line);
 	static member_selection create_member_selection(Binary& exp, struct_table& structs, symbol_table& symbols, unsigned int line);

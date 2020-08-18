@@ -28,7 +28,7 @@ member_selection member_selection::create_unary_node(Unary& exp, struct_table& s
 		m = create_member_selection(*dynamic_cast<Binary*>(operand.get()), structs, symbols, line);
 	}
 	else if (operand->get_expression_type() == IDENTIFIER) {
-		m = create_lvalue_node(*dynamic_cast<Identifier*>(operand.get()), structs, symbols, line, exp.get_operator() == DEREFERENCE);
+		m = create_identifier_node(*dynamic_cast<Identifier*>(operand.get()), structs, symbols, line, exp.get_operator() == DEREFERENCE);
 	}
 	else {
 		throw CompilerException("Illegal expression in member selection", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
@@ -37,11 +37,11 @@ member_selection member_selection::create_unary_node(Unary& exp, struct_table& s
 	return m;
 }
 
-member_selection member_selection::create_lvalue_node(Identifier& exp, struct_table& structs, symbol_table& symbols, unsigned int line, bool is_pointer) {
+member_selection member_selection::create_identifier_node(Identifier& exp, struct_table& structs, symbol_table& symbols, unsigned int line, bool is_pointer) {
 	/*
 
-	creatE_lvalue_node
-	Creates a member_selection object from an lvalue
+	create_identifier_node
+	Creates a member_selection object from an identifier (symbol name)
 
 	*/
 	
@@ -51,18 +51,16 @@ member_selection member_selection::create_lvalue_node(Identifier& exp, struct_ta
 	symbol* left_sym = dynamic_cast<symbol*>(symbols.find(exp.getValue()).get());
 	auto t = left_sym->get_data_type();
 	if (
-		(!is_pointer && t.get_primary() != STRUCT) ||
-		(is_pointer && t.has_subtype() && t.get_subtype().get_primary() != STRUCT)
+		(!is_pointer && (t.get_primary() != STRUCT && t.get_primary() != TUPLE)) ||
+		(is_pointer && t.has_subtype() && (t.get_subtype().get_primary() != STRUCT) && (t.get_subtype().get_primary() != TUPLE))
 	) {
-		throw CompilerException("Expected left-hand argument of 'struct' type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
+		throw CompilerException("Expected left-hand argument of tuple or struct type", compiler_errors::STRUCT_TYPE_EXPECTED_ERROR, line);
 	}
 
 	// add the symbol to our list
 	m.append(*left_sym);
 	return m;
 }
-
-
 
 std::stringstream member_selection::evaluate(symbol_table &symbols, struct_table &structs, unsigned int line) {
 	/*
@@ -235,7 +233,7 @@ member_selection member_selection::create_member_selection(Binary &exp, struct_t
 	}
 	else if (exp.get_left()->get_expression_type() == IDENTIFIER) {
 		Identifier* left = dynamic_cast<Identifier*>(exp.get_left().get());
-		m = create_lvalue_node(*left, structs, symbols, line);
+		m = create_identifier_node(*left, structs, symbols, line);
 	}
 	else {
 		throw InvalidMemberSelectionOperator(line);
