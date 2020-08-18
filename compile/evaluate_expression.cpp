@@ -95,15 +95,38 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             // get our type information
             DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
             auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
-            size_t offset = 0;
-            
-            // get the address in R15; write in the length
-            evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
-            evaluation_ss << "\t" << "mov eax, " << le->get_list().size() << std::endl;
-            evaluation_ss << "\t" << "mov [r15], eax" << std::endl;
+            t.set_primary(le->get_list_type());
 
-            // increment the pointer by one dword
-            evaluation_ss << "\t" << "add r15, " << sin_widths::INT_WIDTH << std::endl;
+            size_t width = expression_util::get_width(
+                t,
+                this->evaluator,
+                this->structs,
+                this->symbols,
+                this->current_scope_name,
+                this->current_scope_level,
+                line
+            );  // todo: fix this
+           
+            /*
+
+            here, t supposedly has a width of 4GB -- it should be 4 bytes; figure out
+                * why it isn't updating the length here
+                * why it thinks the length is 4gb in both cases
+
+            */
+
+            size_t offset = 0;
+
+            // get the address in R15
+            evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
+            if (t.get_primary() == ARRAY) {
+                // write in the length if we have an array
+                evaluation_ss << "\t" << "mov eax, " << le->get_list().size() << std::endl;
+                evaluation_ss << "\t" << "mov [r15], eax" << std::endl;
+
+                // increment the pointer by one dword
+                evaluation_ss << "\t" << "add r15, " << sin_widths::INT_WIDTH << std::endl;
+            }
 
             // now, iterate
             for (size_t i = 0; i < le->get_list().size(); i++) {
@@ -112,55 +135,40 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                 DataType member_type = expression_util::get_expression_data_type(m, this->symbols, this->structs, line);
                 
                 // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
-                if (t.get_primary() == ARRAY) {
-                    if (member_type == t.get_subtype()) {
-                        // evaluate the expression
-                        auto member_p = this->evaluate_expression(m, line);
-                        evaluation_ss << member_p.first;
-                        count += member_p.second;
+                if (t.get_primary() == ARRAY && member_type != t.get_subtype()) {
+                    throw CompilerException(
+                        "Type mismatch (arrays must be homogeneous)",
+                        compiler_errors::TYPE_ERROR,
+                        line
+                    );
+                }
+                else if (t.get_primary() == TUPLE && (t.get_contained_types().at(i) != member_type)) {
+                    throw CompilerException(
+                        "Tuple type mismatch",
+                        compiler_errors::TYPE_ERROR,
+                        line
+                    );
+                }
 
-                        // store it in [r15 + offset]
-                        if (member_type.get_primary() == FLOAT) {
-                            std::string inst = member_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
-                            evaluation_ss << "\t" << inst << " [r15 + " << offset << "], xmm0" << std::endl;
-                        }
-                        else {
-                            std::string reg_name = register_usage::get_register_name(RAX, member_type);
-                            evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << reg_name << std::endl;
-                        }
-                        
-                        // update the offset within the list of the element to which we are writing
-                        offset += member_type.get_width();
-                    }
-                    else {
-                        throw CompilerException(
-                            "Type mismatch (arrays must be homogeneous)",
-                            compiler_errors::TYPE_ERROR,
-                            line
-                        );
-                    }
+                // todo: utilize type hinting for array assignment to ensure types match correctly
+
+                // evaluate the expression
+                auto member_p = this->evaluate_expression(m, line);
+                evaluation_ss << member_p.first;
+                count += member_p.second;
+
+                // store it in [r15 + offset]
+                if (member_type.get_primary() == FLOAT) {
+                    std::string inst = member_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
+                    evaluation_ss << "\t" << inst << " [r15 + " << offset << "], xmm0" << std::endl;
                 }
                 else {
-                    /*
-
-                    todo: tuples
-                    index `t.get_contained_types()` with `i` -- this is the left hand type within the tuple
-                    this should be equal to `member_type`; if not, we have a type mismatch
-
-                    */
-
-                    DataType &lhs_type = t.get_contained_types().at(i);
-                    if (lhs_type == member_type) {
-                        // todo: tuple member evaluation
-                    }
-                    else {
-                        throw CompilerException(
-                            "Tuple type mismatch",
-                            compiler_errors::TYPE_ERROR,
-                            line
-                        );
-                    }
+                    std::string reg_name = register_usage::get_register_name(RAX, member_type);
+                    evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << reg_name << std::endl;
                 }
+                
+                // update the offset within the list of the element to which we are writing
+                offset += member_type.get_width();
             }
 
             // move the list address into RAX
@@ -173,23 +181,28 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
             // todo: adapt this to properly handle tuple literals
 
-            // finally, utilize the .bss section and the 'res' directive for our list
-            std::string res_instruction;
-            size_t subtype_width = t.get_subtype().get_width();
-            if (subtype_width == 8) {
-                res_instruction = "resq";
-            }
-            else if (subtype_width == 4) {
-                res_instruction = "resd";
-            }
-            else if (subtype_width == 2) {
-                res_instruction = "resw";
+            if (t.get_primary() == ARRAY) {
+                // finally, utilize the .bss section and the 'res' directive for our list
+                std::string res_instruction;
+                size_t subtype_width = t.get_subtype().get_width();
+                if (subtype_width == 8) {
+                    res_instruction = "resq";
+                }
+                else if (subtype_width == 4) {
+                    res_instruction = "resd";
+                }
+                else if (subtype_width == 2) {
+                    res_instruction = "resw";
+                }
+                else {
+                    res_instruction = "resb";
+                }
+                this->bss_segment << list_label << ": resd 1" << std::endl; 
+                this->bss_segment << list_label << "_data: " << res_instruction << " " << le->get_list().size() << std::endl;
             }
             else {
-                res_instruction = "resb";
+                this->bss_segment << list_label << ": resb " << width << std::endl;
             }
-            this->bss_segment << list_label << ": resd 1" << std::endl; 
-            this->bss_segment << list_label << "_data: " << res_instruction << " " << le->get_list().size() << std::endl;
             
             break;
         }

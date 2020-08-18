@@ -152,7 +152,21 @@ std::stringstream compiler::assign(
         std::string src = register_usage::get_register_name(src_reg, lhs_type);
 
         // make the assignment
-        if (assign_utilities::requires_copy(lhs_type)) {
+        if (lhs_type.get_primary() == TUPLE) {
+            handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
+
+            // set up our registers/arguments
+            handle_assign << "\t" << "mov rsi, rax" << std::endl;
+            handle_assign << "\t" << "mov rdi, rbx" << std::endl;
+
+            // copy byte for byte
+            // todo: ensure array evaluation utilizes type hints so that the data is the appropriate number of bytes
+            handle_assign << "\t" << "mov rcx, " << lhs_type.get_width() << std::endl;
+            handle_assign << "\t" << "rep movsb" << std::endl;
+
+            handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
+        }
+        else if (assign_utilities::requires_copy(lhs_type)) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
 
             // set up our registers/arguments

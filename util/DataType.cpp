@@ -466,6 +466,7 @@ DataType::DataType()
 	this->primary = NONE;
 	this->qualities = symbol_qualities();	// no qualities to start
 	this->array_length = 0;
+	this->width = 0;
 	this->struct_name = "";
 	this->array_length_expression = nullptr;
 }

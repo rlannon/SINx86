@@ -30,7 +30,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 	std::stringstream allocation_ss;
 
 	DataType &alloc_data = alloc_stmt.get_type_information();
-	size_t data_width = alloc_util::get_width(
+	size_t data_width = expression_util::get_width(
 		alloc_data,
 		this->evaluator,
 		this->structs,
