@@ -210,9 +210,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 
 	// act based on the operator
 	if (to_evaluate.get_operator() == DOT) {
-		// create a member_selection object and evaluate it
-		member_selection m(to_evaluate, this->structs, this->symbols, line);
-		eval_ss << m.evaluate(this->symbols, this->structs, line).str();
+		eval_ss << expression_util::evaluate_member_selection(to_evaluate, this->symbols, this->structs, RAX, line).str();
 	} else {
 		// todo: type hinting (for ensuring literals are appropriate)
 

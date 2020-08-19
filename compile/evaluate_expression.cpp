@@ -208,34 +208,11 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case BINARY:
         {
-			// cast to Binary class and dispatch appropriately
+			// cast to Binary class and dispatch
 			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
-
-			// if we have a dot operator, use a separate function; it must be handled slightly differently than other binary expressions
-			if (bin_exp.get_operator() == exp_operator::DOT) {
-				// create the member_selection object from the expression so it can be evaluated
-				member_selection m = member_selection::create_member_selection(bin_exp, this->structs, this->symbols, line);
-
-				// before we evaluate it, check to see whether the struct was initialized; since individual members are not allocated, if *any* member is assigned, the symbol is considered initialized
-				if (!m.first().was_initialized())
-					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
-
-				// now, generate the code to get our data member
-				evaluation_ss << m.evaluate(this->symbols, this->structs, line).str();
-
-                // now, the address of our data is in RBX; dereference accordingly
-                if (can_pass_in_register(m.last().get_data_type())) {
-                    evaluation_ss << "\t" << "mov " << get_rax_name_variant(m.last().get_data_type(), line) << ", [rbx]" << std::endl;
-                } else {
-                    // if it can't pass in a register, move the pointer into RAX
-                    // todo: array and struct members
-                }
-			}
-			else {
-				auto bin_p = this->evaluate_binary(bin_exp, line);
-                evaluation_ss << bin_p.first;
-                count += bin_p.second;
-			}
+            auto bin_p = this->evaluate_binary(bin_exp, line);
+            evaluation_ss << bin_p.first;
+            count += bin_p.second;
 
             // todo: clean up binary operands here?
 

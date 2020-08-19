@@ -23,16 +23,21 @@ namespace compiler_errors {
     const unsigned int CONST_ASSIGNMENT_ERROR = 1;
     const unsigned int FINAL_ASSIGNMENT_ERROR = 2;
     const unsigned int DATA_WIDTH_ERROR = 3;
+    const unsigned int OUT_OF_BOUNDS = 4;
     const unsigned int UNKNOWN_LENGTH_ERROR = 5;
+    
     const unsigned int ALLOC_INIT_REQUIRED = 10;
 	const unsigned int CONST_ALLOCATION_ERROR = 11;	// constants must be initialized in their allocation
     const unsigned int NON_CONST_VALUE_ERROR = 12;
     const unsigned int REFERENCE_ALLOCATION_ERROR = 13; // references must also be initialized
     const unsigned int STATIC_MEMORY_INITIALIZATION_ERROR = 15;
+    
     const unsigned int DUPLICATE_SYMBOL_ERROR = 30; // The symbol already exists in that scope; cannot be redefined
 	const unsigned int DUPLICATE_DEFINITION_ERROR = 31;	// The definition for this resource was already found
-	const unsigned int NON_MODIFIABLE_LVALUE_ERROR = 40;	// left hand expressions in assignments must be modifiable-lvalues
+	
+    const unsigned int NON_MODIFIABLE_LVALUE_ERROR = 40;	// left hand expressions in assignments must be modifiable-lvalues
 	const unsigned int REFERENCED_BEFORE_ASSIGNMENT_ERROR = 41;	// all symbols must be assigned before they can be referenced safely
+    
     const unsigned int ILLEGAL_OPERATION_ERROR = 50;    // The statement is not allowed where it was found
     const unsigned int ILLEGAL_RETURN_ERROR = 51;   // Return statements must only occur within functions
 	const unsigned int NO_RETURN_ERROR = 52;	// used for when not all control paths in a function return a value
@@ -83,8 +88,10 @@ namespace compiler_errors {
     const unsigned int SIGNATURE_MISMATCH = 250;
     const unsigned int LIST_TYPE_MISMATCH = 253;
 
-    // Internal errors
+    // Internal errors, etc.
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;
+    const unsigned int TUPLE_MEMBER_SELECTION_ERROR = 301;
+    const unsigned int STRUCT_MEMBER_SELECTION_ERROR = 302;
 
     // Parse errors
     const unsigned int INVALID_TOKEN = 400;

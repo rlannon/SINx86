@@ -52,16 +52,108 @@ std::stringstream expression_util::get_exp_address(
     else if (exp->get_expression_type() == BINARY) {
         // create and evaluate a member_selection object
         auto b = dynamic_cast<Binary*>(exp.get());
-        member_selection m = member_selection::create_member_selection(*b, structs, symbols, line);
-        addr_ss << m.evaluate(symbols, structs, line).str();
-
-        // make sure the address goes into the register we selected (the 'evaluate' function returns the address of the member RBX)
-        if (r != RBX) {
-            addr_ss << "\t" << "mov " << r_name << ", rbx" << std::endl;
-        }
+        addr_ss << expression_util::evaluate_member_selection(*b, symbols, structs, r, line).str();
     }
 
     return addr_ss;
+}
+
+std::stringstream expression_util::evaluate_member_selection(
+    Binary &to_evaluate,
+    symbol_table &symbols,
+    struct_table &structs,
+    reg r,
+    unsigned int line
+) {
+    /*
+
+    evaluate_member_selection
+    Evaluates a dot operator expression (a simple binary)
+
+    */
+
+    std::stringstream eval_ss;
+
+    auto reg_name = register_usage::get_register_name(r);
+    DataType result_type;
+
+    // evaluate the lhs -- get the address of the lhs in RBX
+    auto lhs_type = expression_util::get_expression_data_type(to_evaluate.get_left(), symbols, structs, line);
+    eval_ss << expression_util::get_exp_address(to_evaluate.get_left(), symbols, structs, r, line).str();
+
+    // evaluate the rhs -- get the offset from the lhs type
+    if (lhs_type.get_primary() == STRUCT) {
+        auto lhs_struct = structs.find(lhs_type.get_struct_name(), line);
+        size_t member_offset = 0;
+
+        // structs must be accessed with an identifier -- other expression types are syntactically invalid
+        if (to_evaluate.get_right()->get_expression_type() != IDENTIFIER) {
+            throw CompilerException(
+                "Struct members must be accessed with an identifier",
+                compiler_errors::STRUCT_MEMBER_SELECTION_ERROR,
+                line
+            );
+        }
+
+        Identifier *id = dynamic_cast<Identifier*>(to_evaluate.get_right().get());
+        auto member = lhs_struct.get_member(id->getValue());
+        member_offset = member.get_offset();
+
+        eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
+        result_type = member.get_data_type();
+    }
+    else if (lhs_type.get_primary() == TUPLE) {
+        // get the offset for our index
+        size_t member_offset = 0;
+        if (to_evaluate.get_right()->get_expression_type() == LITERAL) {
+            Literal *lit = dynamic_cast<Literal*>(to_evaluate.get_right().get());
+            if (lit->get_data_type().get_primary() != INT) {
+                throw CompilerException(
+                    "Expected integer literal",
+                    compiler_errors::TUPLE_MEMBER_SELECTION_ERROR,
+                    line
+                );
+            }
+
+            unsigned long member_number = std::stoul(lit->get_value());
+            if (member_number < lhs_type.get_contained_types().size()) {
+                for (size_t i = 0; i < member_number; i++) {
+                    member_offset += lhs_type.get_contained_types().at(i).get_width();
+                }
+                result_type = lhs_type.get_contained_types().at(member_number);
+            }
+            else {
+                throw CompilerException(
+                    "Member out of bounds",
+                    compiler_errors::OUT_OF_BOUNDS,
+                    line
+                );
+            }
+        }
+        else {
+            throw CompilerException(
+                "Tuple members must be accessed with an integer literal",
+                compiler_errors::TUPLE_MEMBER_SELECTION_ERROR,
+                line
+            );
+        }
+
+        eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
+    }
+    else {
+        throw CompilerException(
+            "Expected left-hand expression of tuple or struct type",
+            compiler_errors::STRUCT_TYPE_EXPECTED_ERROR,
+            line
+        );
+    }
+
+    // pass the value in a register if we can
+    if (can_pass_in_register(result_type)) {
+        eval_ss << "\t" << "mov " << register_usage::get_register_name(r, result_type) << ", [" << reg_name << "]" << std::endl;
+    }
+
+    return eval_ss;
 }
 
 DataType expression_util::get_expression_data_type(
@@ -166,6 +258,13 @@ DataType expression_util::get_expression_data_type(
                     line
                 );
             }
+            else if (init_list->get_list_type() == ARRAY) {
+                size_t new_length = contained_types.size();
+                new_length *= contained_types.at(0).get_width();
+                new_length += sin_widths::INT_WIDTH;
+                
+                type_information.set_array_length(new_length);
+            }
 
             // the subtype will be the current primary type, and the primary type will be array
             type_information.set_contained_types(contained_types);
@@ -193,11 +292,42 @@ DataType expression_util::get_expression_data_type(
             */
 
             if (binary->get_operator() == exp_operator::DOT) {
-                // create a member_selection object for the expression
-                member_selection m(*binary, structs, symbols, line);
-
-                // now, just look at the data type of the last node
-                type_information = m.last().get_data_type();
+                std::cout << "found dot operator" << std::endl;
+                // get the data type of the left side to get the struct name or tuple type information
+                auto lhs_type = expression_util::get_expression_data_type(binary->get_left(), symbols, structs, line);
+                if (lhs_type.get_primary() == STRUCT) {
+                    std::cout << "\ttype is struct" << std::endl
+                        << "\tstruct name: " << lhs_type.get_struct_name() << std::endl;
+                    auto lhs_struct = structs.find(lhs_type.get_struct_name(), line);
+                    if (binary->get_right()->get_expression_type() == IDENTIFIER) {
+                        Identifier *r = dynamic_cast<Identifier*>(binary->get_right().get());
+                        std::cout << "\t\tmember name: " << r->getValue() << std::endl;
+                        type_information = lhs_struct.get_member(r->getValue()).get_data_type();
+                    }
+                    // todo: exception
+                }
+                else if (lhs_type.get_primary() == TUPLE) {
+                    std::cout << "\ttype is tuple" << std::endl;
+                    if (binary->get_right()->get_expression_type() == LITERAL) {
+                        Literal *r = dynamic_cast<Literal*>(binary->get_right().get());
+                        if (r->get_data_type().get_primary() == INT) {
+                            unsigned long index_value = std::stoul(r->get_value());
+                            if (index_value < lhs_type.get_contained_types().size()) {
+                                type_information = lhs_type.get_contained_types().at(index_value);
+                            }
+                            else {
+                                throw CompilerException("Tuple member selection out of bounds", compiler_errors::OUT_OF_BOUNDS, line);
+                            }
+                        }
+                        else {
+                            throw TypeException(line);
+                        }
+                    }
+                    // todo: exception
+                }
+                else {
+                    throw IllegalMemberSelectionType(line);
+                }
             } else {
                 // get both expression types
                 DataType left = expression_util::get_expression_data_type(binary->get_left(), symbols, structs, line);
@@ -348,6 +478,9 @@ size_t expression_util::get_width(
 				throw NonConstArrayLengthException(line);
 			}
 		}
+        else if (alloc_data.get_array_length() != 0) {
+            width = alloc_data.get_array_length();
+        }
 		else {
 			// if the length is not constant, check to see if we have a dynamic array; if not, then it's not legal
 			if (alloc_data.get_qualities().is_dynamic()) {

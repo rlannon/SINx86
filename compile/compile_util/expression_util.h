@@ -21,6 +21,14 @@ namespace expression_util {
         unsigned int line
     );
 
+    std::stringstream evaluate_member_selection(
+        Binary &to_evaluate,
+        symbol_table &symbols,
+        struct_table &structs,
+        reg r,
+        unsigned int line
+    );
+
     DataType get_expression_data_type(
         std::shared_ptr<Expression> to_eval,
         symbol_table& symbols,

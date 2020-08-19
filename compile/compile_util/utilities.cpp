@@ -175,7 +175,7 @@ bool can_pass_in_register(DataType to_check) {
     bool can_pass = false;
 
     Type primary = to_check.get_primary();
-    if (primary == ARRAY || primary == STRUCT) {
+    if (primary == ARRAY || primary == STRUCT || primary == TUPLE) {
         // if the type is dyamic, then we can -- we are really passing in a pointer into the function
         // todo: can we have static parameters?
         can_pass = to_check.get_qualities().is_dynamic();

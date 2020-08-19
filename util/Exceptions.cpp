@@ -52,6 +52,16 @@ InvalidMemberSelectionOperator::InvalidMemberSelectionOperator(unsigned int line
 	// super called
 }
 
+IllegalMemberSelectionType::IllegalMemberSelectionType(unsigned int line):
+	CompilerException(
+		"Illegal left-hand type in member selection expression",
+		compiler_errors::STRUCT_TYPE_EXPECTED_ERROR,
+		line
+	)
+{
+	// super called
+}
+
 UndefinedStructAccession::UndefinedStructAccession(unsigned int line):
 	CompilerException(
 		"Accessing member of declared struct is illegal",

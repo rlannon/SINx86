@@ -76,6 +76,9 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         addr_ss << "\t" << "call _sinl_rte_index_out_of_bounds" << std::endl;
         
         addr_ss << ".sinl_rtbounds_" << this->rtbounds_num << ":" << std::endl;
+
+        // todo: check to see if rdx is in use so the value can be preserved
+        addr_ss << "\t" << "mov edx, 0" << std::endl;
         addr_ss << "\t" << "mov ecx, " << idx_type.get_subtype().get_width() << std::endl;
         addr_ss << "\t" << "mul ecx" << std::endl;
 

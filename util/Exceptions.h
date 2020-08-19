@@ -56,6 +56,12 @@ public:
 	explicit InvalidMemberSelectionOperator(unsigned int line);
 };
 
+class IllegalMemberSelectionType: public CompilerException
+{
+public:
+	explicit IllegalMemberSelectionType(unsigned int line);
+};
+
 class UndefinedStructAccession: public CompilerException
 {
 public:

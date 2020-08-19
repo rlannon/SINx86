@@ -99,11 +99,12 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         if (lhs->get_operator() == DOT) {
             dest = "[rbx]";
             // todo: address for lea with dot selection?
-            member_selection m = member_selection::create_member_selection(*lhs, structures, symbols, line);
-            gen_code << m.evaluate(symbols, structures, line).str();
+            //member_selection m = member_selection::create_member_selection(*lhs, structures, symbols, line);
+            //gen_code << m.evaluate(symbols, structures, line).str();
+            expression_util::get_exp_address(exp, symbols, structures, r, line);
             
             // mark the symbol as initialized
-            m.last().set_initialized();
+            //m.last().set_initialized();
         }
         else {
             throw NonModifiableLValueException(line);
