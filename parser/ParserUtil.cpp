@@ -212,6 +212,7 @@ bool Parser::is_type(std::string lex_value)
 		"ptr",
 		"array",
 		"struct",
+		"tuple",
 		"void"
 	};
 
