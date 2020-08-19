@@ -48,6 +48,9 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			this->next();
 			return temp;
 		}
+		else if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
+			this->next();
+		}
 
 		// Otherwise, carry on parsing
 
@@ -73,7 +76,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			return temp;
 		}
 		// if our next character is an op_char, returning the expression would skip it, so we need to parse a binary using the expression in parens as our left expression
-		else if (this->peek().type == OPERATOR) {
+		else if (is_valid_operator(this->peek())) {
 			return this->maybe_binary(temp, prec, grouping_symbol);
 		}
 		// if we had a comma, we need to parse a list
