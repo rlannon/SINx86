@@ -26,7 +26,8 @@ namespace expression_util {
         symbol_table &symbols,
         struct_table &structs,
         reg r,
-        unsigned int line
+        unsigned int line,
+        bool dereference = true
     );
 
     DataType get_expression_data_type(
