@@ -2,7 +2,7 @@
 
 ## Tuples
 
-Tuples are a first-class type in SIN and are roughly equivalent to tuples in other languages. They are ordered list types, like arrays, but unlike arrays, tuples may be heterogeneous. They may contain any fixed-width type, meaning contained arrays must have `constexpr` widths. In this regard, they are similar to structs; they may have an arbitrary number of elements of any fixed-width type, but their fields are all anonymous. Instead of being referenced by name, they are referenced with an index value.
+Tuples are a first-class type in SIN and are roughly equivalent to tuples in other languages. They are ordered list types, like arrays, but unlike arrays, tuples may be heterogeneous. They may contain any fixed-width type, meaning contained arrays must have `constexpr` widths. In this regard, they are similar to structs; they may have an arbitrary number of elements of any fixed-width type, but their fields are all anonymous. Instead of being referenced by name, they are referenced with an index value (as with arrays).
 
 ### Creating a tuple
 

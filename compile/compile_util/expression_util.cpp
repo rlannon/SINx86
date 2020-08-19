@@ -100,7 +100,9 @@ std::stringstream expression_util::evaluate_member_selection(
         auto member = lhs_struct.get_member(id->getValue());
         member_offset = member.get_offset();
 
-        eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
+        if (member_offset > 0) {
+            eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
+        }
         result_type = member.get_data_type();
     }
     else if (lhs_type.get_primary() == TUPLE) {
@@ -139,7 +141,9 @@ std::stringstream expression_util::evaluate_member_selection(
             );
         }
 
-        eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
+        if (member_offset > 0) {
+            eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
+        }
     }
     else {
         throw CompilerException(
