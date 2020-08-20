@@ -12,13 +12,13 @@ def int main & long (alloc array<string> args &dynamic)
     alloc int l &long: 1_000_000;   // test separator parsing
     alloc int l2 &long: 1;
 
-    if (l = 1_000_000) {
-        @print("l is 1,000,000");
+    if (l = 1_000_000 as long int) {
+        @print("l is 1,000,000\n");
     }
 
     alloc long int to_return;
 
-    if ((l * 2 + l2 - 2_001_000) = -999) {
+    if ((l * 2 &long + l2 - 2_001_000 &long) = -999 &long) {
         @print("Works!\n");
         let to_return = 0;
     }
@@ -26,6 +26,14 @@ def int main & long (alloc array<string> args &dynamic)
         @print("Arithmetic error.\n");
         let to_return = 1;
     }
+
+    // test our syntactic sugar
+    let a *= 2;
+    let b += 3;
+    let l /= 2;
+
+    let l = 113;
+    let l2 %= 10;
 
     return to_return;
 }
