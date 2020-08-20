@@ -388,11 +388,13 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				// mult only allowed for int and float
 				if (primary == INT) {
 					// we have to decide between mul and imul instructions -- use imul if either of the operands is signed
+					auto rbx_name = register_usage::get_register_name(RBX, left_type);
+					eval_ss << "\t" << "mov " << register_usage::get_register_name(RDX, left_type) << ", 0" << std::endl;
 					if (is_signed) {
-						eval_ss << "\t" << "imul rbx" << std::endl;
+						eval_ss << "\t" << "imul " << rbx_name << std::endl;
 					}
 					else {
-						eval_ss << "\t" << "mul rbx" << std::endl;
+						eval_ss << "\t" << "mul " << rbx_name << std::endl;
 					}
 				}
 				else if (primary == FLOAT) {
@@ -413,14 +415,15 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				// div only allowed for int and float
 				if (primary == INT) {
 					// how we handle integer division depends on whether we are using signed or unsigned integers
-					eval_ss << "\t" << "mov rdx, 0" << std::endl;
+					auto rbx_name = register_usage::get_register_name(RBX, left_type);
+					eval_ss << "\t" << "mov " << register_usage::get_register_name(RDX, left_type) << ", 0" << std::endl;
 					if (is_signed) {
 						// use idiv
-						eval_ss << "\t" << "idiv rbx" << std::endl;
+						eval_ss << "\t" << "idiv " << rbx_name << std::endl;
 					}
 					else {
 						// use div
-						eval_ss << "\t" << "div rbx" << std::endl;
+						eval_ss << "\t" << "div " << rbx_name << std::endl;
 					}
 				}
 				else if (primary == FLOAT) {
@@ -441,9 +444,10 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				// modulo only allowed for int and float
 				if (primary == INT) {
 					// for modulo, we need to determine what should happen if we are using signed numbers
-					eval_ss << "\t" << "mov edx, 0" << std::endl;
-					eval_ss << "\t" << "div ebx" << std::endl;
-					eval_ss << "\t" << "mov eax, edx" << std::endl;
+					auto rdx_name = register_usage::get_register_name(RDX, left_type);
+					eval_ss << "\t" << "mov " << rdx_name << ", 0" << std::endl;
+					eval_ss << "\t" << "div " << register_usage::get_register_name(RBX, left_type) << std::endl;
+					eval_ss << "\t" << "mov " << register_usage::get_register_name(RAX, left_type) << ", " << rdx_name << std::endl;
 				}
 				else if (primary == FLOAT) {
 					// todo: implement modulo with floating-point numbers
