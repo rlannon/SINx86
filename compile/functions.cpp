@@ -309,7 +309,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             symbol param = formal_parameters[i];
 
             // first, ensure the types match
-            DataType arg_type = get_expression_data_type(arg, this->symbols, this->structs, line);
+            DataType arg_type = expression_util::get_expression_data_type(arg, this->symbols, this->structs, line);
             if (!arg_type.is_compatible(param.get_data_type())) {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
@@ -443,7 +443,7 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     std::stringstream ret_ss;
 
     // first, ensure that the return statement's data type is compatible with the signature
-    DataType return_type = get_expression_data_type(ret.get_return_exp(), this->symbols, this->structs, ret.get_line_number());
+    DataType return_type = expression_util::get_expression_data_type(ret.get_return_exp(), this->symbols, this->structs, ret.get_line_number());
     if (return_type.is_compatible(signature.get_data_type())) {
         // ensure we have a valid return type; we can't return local references
         if (signature.get_data_type().get_primary() == REFERENCE || signature.get_data_type().get_primary() == PTR) {
@@ -506,7 +506,7 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
     sincall_ss << "\t" << "push rax" << std::endl;
     
     // if we are returning a pointer or address, we need to increment the RC by one so it doesn't get freed completely
-    auto t = get_expression_data_type(
+    auto t = expression_util::get_expression_data_type(
         ret.get_return_exp(),
         this->symbols,
         this->structs,

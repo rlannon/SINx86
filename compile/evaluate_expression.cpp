@@ -14,15 +14,18 @@ Generates code for evaluating an expression. This data will be loaded into regis
 // todo: create an expression evaluation class and give it access to compiler members?
 std::pair<std::string, size_t> compiler::evaluate_expression(
     std::shared_ptr<Expression> to_evaluate,
-    unsigned int line
+    unsigned int line,
+    DataType *type_hint
 ) {
     /*
 
     evaluate_expression
+    Generates code to evaluate a given Expression object
 
     This function will determine how many such objects must be freed in each expression so they can be properly handled by their parent expression. For example:
         @print("Found " + @itos(10) + " primes!\n");
-    We need to utilize a string returned by the function `itos`, but this string must have an RC of 1 when returned. After the call to print, this data becomes unreachable (as it will be copied into a new area of memory, the variable `s`).
+    We need to utilize a string returned by the function `itos`, but this string must have an RC of 1 when returned.
+    After the call to print, this data becomes unreachable (as it will be copied into a new area of memory, the variable `s`).
     As such, when we call `print`:
         * The binary expression `"Found " + @itos(10)` is evaluated
         * The delegate function to evaluate `itos` will see that it has something to free, returning <string, 1>; the address of this data will be preserved on the stack
@@ -30,6 +33,9 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         * The next concatenation with `<string buffer> + " primes!\n"` will be crafted, and since there is no temporary data to free, it will produce code as normal
 
     */
+
+    // todo: include a DataType field to hint at the appropriate type (for literal expressions)
+    // for example, if we are assigning like `alloc long int a: 1_000`, then we should ensure it treats the literal as a `long`, not regular, `int`
 
     std::stringstream evaluation_ss;
     size_t count = 0;
@@ -42,22 +48,22 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             Literal literal_exp = *dynamic_cast<Literal*>(to_evaluate.get());
 
             // dispatch to our evaluation function
-            evaluation_ss = this->evaluate_literal(literal_exp, line);
+            evaluation_ss = this->evaluate_literal(literal_exp, line, type_hint);
             break;
         }
-        case LVALUE:
+        case IDENTIFIER:
         {
             // get the lvalue
-            LValue lvalue_exp = *dynamic_cast<LValue*>(to_evaluate.get());
+            Identifier lvalue_exp = *dynamic_cast<Identifier*>(to_evaluate.get());
 
             // dispatch to our evaluation function
-            evaluation_ss = this->evaluate_lvalue(lvalue_exp, line);
+            evaluation_ss = this->evaluate_identifier(lvalue_exp, line);
             break;
         }
         case INDEXED:
         {
             // get the address and dereference
-            DataType t = get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
+            DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
             evaluation_ss << this->get_exp_address(to_evaluate, RBX, line).str();
             evaluation_ss << "\t" << "mov " << register_usage::get_register_name(RAX, t) << ", [rbx]" << std::endl;
             break;
@@ -69,7 +75,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             // todo: would it be better to just iterate on an assignment and copy into the list? or is it better to use array_copy (as we are doing now)?
             
             // create our label
-            std::string list_label = "sinl_list_literal_" + std::to_string(this->list_literal_num);
+            std::string list_label = compiler::LIST_LITERAL_LABEL + std::to_string(this->list_literal_num);
             this->list_literal_num += 1;
 
             // preserve R15, as it will be used to keep track of where our list is
@@ -87,51 +93,82 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             }
 
             // get our type information
-            DataType t = get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
+            DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
             auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
-            size_t offset = 0;
-            
-            // get the address in R15; write in the length
-            evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
-            evaluation_ss << "\t" << "mov eax, " << le->get_list().size() << std::endl;
-            evaluation_ss << "\t" << "mov [r15], eax" << std::endl;
+            t.set_primary(le->get_list_type());
 
-            // increment the pointer by one dword
-            evaluation_ss << "\t" << "add r15, " << sin_widths::INT_WIDTH << std::endl;
+            size_t width = expression_util::get_width(
+                t,
+                this->evaluator,
+                this->structs,
+                this->symbols,
+                this->current_scope_name,
+                this->current_scope_level,
+                line
+            );  // todo: fix this
+           
+            /*
+
+            here, t supposedly has a width of 4GB -- it should be 4 bytes; figure out
+                * why it isn't updating the length here
+                * why it thinks the length is 4gb in both cases
+
+            */
+
+            size_t offset = 0;
+
+            // get the address in R15
+            evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
+            if (t.get_primary() == ARRAY) {
+                // write in the length if we have an array
+                evaluation_ss << "\t" << "mov eax, " << le->get_list().size() << std::endl;
+                evaluation_ss << "\t" << "mov [r15], eax" << std::endl;
+
+                // increment the pointer by one dword
+                evaluation_ss << "\t" << "add r15, " << sin_widths::INT_WIDTH << std::endl;
+            }
 
             // now, iterate
-            for (auto m: le->get_list()) {
+            for (size_t i = 0; i < le->get_list().size(); i++) {
                 // first, make sure the type of this expression matches the list's subtype
-                DataType member_type = get_expression_data_type(m, this->symbols, this->structs, line);
+                auto m = le->get_list().at(i);
+                DataType member_type = expression_util::get_expression_data_type(m, this->symbols, this->structs, line);
                 
                 // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
-                
-                if (member_type == *t.get_full_subtype()) {
-                    // evaluate the expression
-                    auto member_p = this->evaluate_expression(m, line);
-                    evaluation_ss << member_p.first;
-                    count += member_p.second;
-
-                    // store it in [r15 + offset]
-                    if (member_type.get_primary() == FLOAT) {
-                        std::string inst = member_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
-                        evaluation_ss << "\t" << inst << " [r15 + " << offset << "], xmm0" << std::endl;
-                    }
-                    else {
-                        std::string reg_name = register_usage::get_register_name(RAX, member_type);
-                        evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << reg_name << std::endl;
-                    }
-                    
-                    // update the offset within the list of the element to which we are writing
-                    offset += member_type.get_width();
-                }
-                else {
+                if (t.get_primary() == ARRAY && member_type != t.get_subtype()) {
                     throw CompilerException(
-                        "Type mismatch (lists must be homogeneous)",
+                        "Type mismatch (arrays must be homogeneous)",
                         compiler_errors::TYPE_ERROR,
                         line
                     );
                 }
+                else if (t.get_primary() == TUPLE && (t.get_contained_types().at(i) != member_type)) {
+                    throw CompilerException(
+                        "Tuple type mismatch",
+                        compiler_errors::TYPE_ERROR,
+                        line
+                    );
+                }
+
+                // todo: utilize type hinting for array assignment to ensure types match correctly
+
+                // evaluate the expression
+                auto member_p = this->evaluate_expression(m, line);
+                evaluation_ss << member_p.first;
+                count += member_p.second;
+
+                // store it in [r15 + offset]
+                if (member_type.get_primary() == FLOAT) {
+                    std::string inst = member_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
+                    evaluation_ss << "\t" << inst << " [r15 + " << offset << "], xmm0" << std::endl;
+                }
+                else {
+                    std::string reg_name = register_usage::get_register_name(RAX, member_type);
+                    evaluation_ss << "\t" << "mov [r15 + " << offset << "], " << reg_name << std::endl;
+                }
+                
+                // update the offset within the list of the element to which we are writing
+                offset += member_type.get_width();
             }
 
             // move the list address into RAX
@@ -142,56 +179,40 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                 evaluation_ss << "\t" << "pop r15" << std::endl;
             }
 
-            // finally, utilize the .bss section and the 'res' directive for our list
-            std::string res_instruction;
-            size_t subtype_width = t.get_full_subtype()->get_width();
-            if (subtype_width == 8) {
-                res_instruction = "resq";
-            }
-            else if (subtype_width == 4) {
-                res_instruction = "resd";
-            }
-            else if (subtype_width == 2) {
-                res_instruction = "resw";
+            // todo: adapt this to properly handle tuple literals
+
+            if (t.get_primary() == ARRAY) {
+                // finally, utilize the .bss section and the 'res' directive for our list
+                std::string res_instruction;
+                size_t subtype_width = t.get_subtype().get_width();
+                if (subtype_width == 8) {
+                    res_instruction = "resq";
+                }
+                else if (subtype_width == 4) {
+                    res_instruction = "resd";
+                }
+                else if (subtype_width == 2) {
+                    res_instruction = "resw";
+                }
+                else {
+                    res_instruction = "resb";
+                }
+                this->bss_segment << list_label << ": resd 1" << std::endl; 
+                this->bss_segment << list_label << "_data: " << res_instruction << " " << le->get_list().size() << std::endl;
             }
             else {
-                res_instruction = "resb";
+                this->bss_segment << list_label << ": resb " << width << std::endl;
             }
-            this->bss_segment << list_label << ": resd 1" << std::endl; 
-            this->bss_segment << list_label << "_data: " << res_instruction << " " << le->get_list().size() << std::endl;
             
             break;
         }
         case BINARY:
         {
-			// cast to Binary class and dispatch appropriately
+			// cast to Binary class and dispatch
 			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
-
-			// if we have a dot operator, use a separate function; it must be handled slightly differently than other binary expressions
-			if (bin_exp.get_operator() == exp_operator::DOT) {
-				// create the member_selection object from the expression so it can be evaluated
-				member_selection m = member_selection::create_member_selection(bin_exp, this->structs, this->symbols, line);
-
-				// before we evaluate it, check to see whether the struct was initialized; since individual members are not allocated, if *any* member is assigned, the symbol is considered initialized
-				if (!m.first().was_initialized())
-					throw ReferencedBeforeInitializationException(m.last().get_name(), line);
-
-				// now, generate the code to get our data member
-				evaluation_ss << m.evaluate(this->symbols, this->structs, line).str();
-
-                // now, the address of our data is in RBX; dereference accordingly
-                if (can_pass_in_register(m.last().get_data_type())) {
-                    evaluation_ss << "\t" << "mov " << get_rax_name_variant(m.last().get_data_type(), line) << ", [rbx]" << std::endl;
-                } else {
-                    // if it can't pass in a register, move the pointer into RAX
-                    // todo: array and struct members
-                }
-			}
-			else {
-				auto bin_p = this->evaluate_binary(bin_exp, line);
-                evaluation_ss << bin_p.first;
-                count += bin_p.second;
-			}
+            auto bin_p = this->evaluate_binary(bin_exp, line);
+            evaluation_ss << bin_p.first;
+            count += bin_p.second;
 
             // todo: clean up binary operands here?
 
@@ -229,7 +250,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             // ensure the type to which we are casting is valid
             if (DataType::is_valid_type(c->get_new_type())) {
                 // check to make sure the typecast itself is valid (follows the rules)
-                DataType old_type = get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
+                DataType old_type = expression_util::get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
                 if (is_valid_cast(old_type, c->get_new_type())) {
                     // if we are casting a literal integer or float to itself (but with a different width), create a new Literal
                     if (
@@ -265,7 +286,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case ATTRIBUTE:
         {
             auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
-            auto t = get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
+            auto t = expression_util::get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
             auto attr_p = this->evaluate_expression(attr->get_selected(), line);
             // we have a limited number of attributes
             if (attr->get_attribute() == LENGTH) {
@@ -318,7 +339,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                     // strings have a type width of 1, if it's an array we need to get the width
                     size_t type_width = 1;
                     if (t.get_primary() == ARRAY) {
-                        type_width = t.get_full_subtype()->get_width();
+                        type_width = t.get_subtype().get_width();
                     }
 
                     evaluation_ss << "\t" << "mov rbx, " << type_width << std::endl;
@@ -366,7 +387,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
     return std::make_pair<>(evaluation_ss.str(), count);
 }
 
-std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int line, DataType *type_hint) {
     /*
 
     evaluate_literal
@@ -378,14 +399,22 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
     @param  to_evaluate The literal expression we are evaluating
     @param  line    The line number of the expression (for error handling)
+    @param  type_hint   A hint about the proper data type for the literal expression
     @return A stringstream containing the generated code
 
     */
 
     std::stringstream eval_ss;
 
-    // act based on data type and width
-    DataType type = to_evaluate.get_data_type();
+    // act based on data type and width -- use type_hint if we have one
+    // todo: verify that the type hint is appropriate?
+    DataType type;
+    if (type_hint) {
+        type = *type_hint;
+    }
+    else {
+        type = to_evaluate.get_data_type();
+    }
 
     if (type.get_primary() == VOID) {
         // A void literal gets loaded into rax as 0
@@ -422,7 +451,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        std::string float_label = "sinl_fltc_" + std::to_string(this->fltc_num);
+        std::string float_label = compiler::FLOAT_LITERAL_LABEL + std::to_string(this->fltc_num);
         this->fltc_num += 1;
 
         // todo: check to see if the width was specified with a type suffix
@@ -471,7 +500,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        std::string name = "strc_" + std::to_string(this->strc_num);
+        std::string name = compiler::CONST_STRING_LABEL + std::to_string(this->strc_num);
 
         // actually reserve the data and enclose the string in backticks in case we have escaped characters
         this->rodata_segment << "\t" << name << "\t" << "dd " << to_evaluate.get_value().length() << ", `" << to_evaluate.get_value() << "`, 0" << std::endl;
@@ -489,7 +518,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
     return eval_ss;
 }
 
-std::stringstream compiler::evaluate_lvalue(LValue &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigned int line) {
     /*
 
     Generate code for evaluating an lvalue (a variable)
@@ -664,7 +693,7 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     
     std::stringstream eval_ss;
 
-    DataType to_index_type = get_expression_data_type(to_evaluate.get_to_index(), this->symbols, this->structs, line);
+    DataType to_index_type = expression_util::get_expression_data_type(to_evaluate.get_to_index(), this->symbols, this->structs, line);
     if (is_subscriptable(to_index_type.get_primary())) {
         // todo: evaluate indexed
         eval_ss << "\t" << "; todo: subscripting" << std::endl;

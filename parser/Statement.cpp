@@ -201,8 +201,8 @@ Assignment::Assignment(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expre
 	Assignment::statement_type = ASSIGNMENT;
 }
 
-Assignment::Assignment(LValue lvalue, std::shared_ptr<Expression> rvalue) : rvalue_ptr(rvalue) {
-	this->lvalue = std::make_shared<LValue>(lvalue);
+Assignment::Assignment(Identifier lvalue, std::shared_ptr<Expression> rvalue) : rvalue_ptr(rvalue) {
+	this->lvalue = std::make_shared<Identifier>(lvalue);
 	this->statement_type = ASSIGNMENT;
 }
 
@@ -369,7 +369,7 @@ std::vector<std::shared_ptr<Expression>> Call::get_args() {
 	return this->args;
 }
 
-Call::Call(std::shared_ptr<LValue> func, std::vector<std::shared_ptr<Expression>> args) : func(func), args(args) {
+Call::Call(std::shared_ptr<Identifier> func, std::vector<std::shared_ptr<Expression>> args) : func(func), args(args) {
 	Call::statement_type = CALL;
 }
 
@@ -396,11 +396,11 @@ InlineAssembly::InlineAssembly() {
 
 /*******************		FREE MEMORY CLASS		********************/
 
-LValue FreeMemory::get_freed_memory() {
+Identifier FreeMemory::get_freed_memory() {
 	return this->to_free;
 }
 
-FreeMemory::FreeMemory(LValue to_free) : to_free(to_free) {
+FreeMemory::FreeMemory(Identifier to_free) : to_free(to_free) {
 	FreeMemory::statement_type = FREE_MEMORY;
 }
 

@@ -52,6 +52,16 @@ InvalidMemberSelectionOperator::InvalidMemberSelectionOperator(unsigned int line
 	// super called
 }
 
+IllegalMemberSelectionType::IllegalMemberSelectionType(unsigned int line):
+	CompilerException(
+		"Illegal left-hand type in member selection expression",
+		compiler_errors::STRUCT_TYPE_EXPECTED_ERROR,
+		line
+	)
+{
+	// super called
+}
+
 UndefinedStructAccession::UndefinedStructAccession(unsigned int line):
 	CompilerException(
 		"Accessing member of declared struct is illegal",
@@ -385,6 +395,15 @@ UnexpectedKeywordError::UnexpectedKeywordError(std::string &offending_keyword, c
 	)
 {
 	// Used when a keyword is found, but one is not expected
+}
+
+UnclosedGroupingSymbolError::UnclosedGroupingSymbolError(const unsigned int &line) :
+ParserException(
+	"Syntax error; unclosed grouping symbol",
+	compiler_errors::MISSING_GROUPING_SYMBOL_ERROR,
+	line
+) {
+	// super called
 }
 
 CallError::CallError(const unsigned int &line):

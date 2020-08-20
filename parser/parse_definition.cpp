@@ -55,9 +55,18 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 
 	// Get the function name and verify it is of the correct type
 	lexeme func_name = this->next();
-	if (func_name.type == IDENTIFIER) {
+	if (func_name.type == IDENTIFIER_LEX) {
 		lexeme _peek = this->peek();
-		if (_peek.value == "(") {
+
+		// check to see if we have postfixed qualities
+		if (this->peek().value == "&") {
+			// eat the ampersand
+			this->next();
+			symbol_qualities postfixed = this->get_postfix_qualities();
+			func_type_data.add_qualities(postfixed);
+		}
+
+		if (this->peek().value == "(") {
 			this->next();
 			// Create our arguments vector and our StatementBlock variable
 			StatementBlock procedure;
@@ -66,7 +75,7 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 			if (this->peek().value != ")") {
 				this->next();
 				while (this->current_token().value != ")") {
-					args.push_back(this->parse_statement());
+					args.push_back(this->parse_statement(true));
 					this->next();
 
 					// if we have multiple arguments, current_token() will return a comma, but we don't want to advance twice in case we hit the closing paren; as a result, we only advance once more if there is a comma
@@ -79,14 +88,6 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 				this->next();	// skip the closing paren
 			}
 			// Args should be empty if we don't have any
-
-			// check to see if we have postfixed qualities
-			if (this->peek().value == "&") {
-				// eat the ampersand
-				this->next();
-				symbol_qualities postfixed = this->get_postfix_qualities();
-				func_type_data.add_qualities(postfixed);
-			}
 
 			// Get the calling convention
 			calling_convention call_con = Parser::get_calling_convention(func_type_data.get_qualities(), this->current_token().line_number);
@@ -152,7 +153,7 @@ std::shared_ptr<Statement> Parser::parse_struct_definition(lexeme current_lex) {
     StatementBlock procedure;
 
     lexeme struct_name = this->next();
-    if (struct_name.type == IDENTIFIER) {
+    if (struct_name.type == IDENTIFIER_LEX) {
         // The next lexeme should be a curly brace
         if (this->peek().value == "{") {
             this->next();   // eat the curly brace

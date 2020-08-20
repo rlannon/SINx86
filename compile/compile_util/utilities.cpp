@@ -26,209 +26,6 @@ std::string call_sincall_subroutine(std::string name) {
     return call_ss.str();
 }
 
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line) {
-    /*
-
-    get_expression_data_type
-    Evaluates the data type of an expression
-
-    @param  to_eval The expression we want to evaluate
-    @return A DataType object containing the type information
-
-    */
-
-	// todo: ensure that with floating-point expressions, if a double-precision float is used, the result has a width of DOUBLE_WIDTH
-    // todo: write function to handle evaluation of dot operator expressions
-   
-    DataType type_information;
-
-    // we will fetch the data type for the expression based on the expression type
-    exp_type expression_type = to_eval->get_expression_type();
-
-    switch (expression_type) {
-        case LITERAL:
-        {
-            // set base type data
-            Literal *literal = dynamic_cast<Literal*>(to_eval.get());
-            type_information = literal->get_data_type();
-            break;
-        }
-        case LVALUE:
-		{
-            // look into the symbol table for an LValue
-            LValue *lvalue = dynamic_cast<LValue*>(to_eval.get());
-			std::shared_ptr<symbol> sym;
-
-			try {
-				// get the symbol and return its type data
-				sym = symbols.find(lvalue->getValue());
-			}
-			catch (std::exception& e) {
-				throw SymbolNotFoundException(line);
-			}
-
-            // the expression type of a reference should be treated as its subtype
-            if (sym->get_data_type().get_primary() == REFERENCE) {
-                type_information = *sym->get_data_type().get_full_subtype();
-            }
-            else {
-                type_information = sym->get_data_type();
-            }
-
-            break;
-        }
-        case INDEXED:
-        {
-            Indexed *idx = dynamic_cast<Indexed*>(to_eval.get());
-            DataType t = get_expression_data_type(idx->get_to_index(), symbols, structs, line);
-            // we can index strings or arrays; if we index an array, we get the subtype, and if we index a string, we get a char
-            if (t.get_primary() == ARRAY) {
-                type_information = *t.get_full_subtype();
-            }
-            else if (t.get_primary() == STRING) {
-                type_information = DataType(
-                    Type::CHAR
-                );
-            }
-            break;
-        }
-        case LIST:
-        {
-            // get list type
-            ListExpression *init_list = dynamic_cast<ListExpression*>(to_eval.get());
-            
-            // A list expression is a vector of other expressions, get the first item and pass it into this function recursively
-            DataType sub_data_type = get_expression_data_type(init_list->get_list()[0], symbols, structs, line);
-
-            // the subtype will be the current primary type, and the primary type will be array
-            type_information.set_subtype(sub_data_type);
-            type_information.set_primary(ARRAY);
-            
-            break;
-        }
-        case BINARY:
-        {
-            // get the type of a binary expression
-            Binary *binary = dynamic_cast<Binary*>(to_eval.get());
-
-            /*
-
-            Binary expressions are a little more tricky because they can involve multiple operands of different types
-			Further, some operators (the (in)equality operators) return different types than their operands
-            Note, however, that dot operator expressions must be handled differently (via member_selection) than others because they require a bit more involvement.
-
-            We must get the types of the left and right operands and compare them. The qualifiers (including sizes) might change:
-                - If one operand is signed, and the other is unsigned, the result may or may not be signed; it will generate a 'signed/unsigned mismatch' warning
-                - The width will change to match the widest operand
-            
-            In order to determine these operand types, this function is called recursively
-
-            */
-
-            if (binary->get_operator() == exp_operator::DOT) {
-                // create a member_selection object for the expression
-                member_selection m(*binary, structs, symbols, line);
-
-                // now, just look at the data type of the last node
-                type_information = m.last().get_data_type();
-            } else {
-                // get both expression types
-                DataType left = get_expression_data_type(binary->get_left(), symbols, structs, line);
-                DataType right = get_expression_data_type(binary->get_right(), symbols, structs, line);
-
-                // ensure the types are compatible
-                if (left.is_compatible(right)) {
-                    // check for in/equality operators -- these will return booleans instead of the original type!
-                    exp_operator op = binary->get_operator();
-                    if (op == EQUAL || op == NOT_EQUAL || op == GREATER || op == GREATER_OR_EQUAL || op == LESS || op == LESS_OR_EQUAL) {
-                        type_information = DataType(BOOL, DataType(), symbol_qualities());
-                    }
-                    else {
-                        if (left.get_width() >= right.get_width()) {
-                            type_information = left;
-                        }
-                        else {
-                            type_information = right;
-                        }
-                    }
-                } else {
-                    throw TypeException(line);  // throw an exception if the types are not compatible with one another
-                }
-            }
-
-            break;
-        }
-        case UNARY:
-        {
-            // get the type of a unary expression
-            Unary *u = dynamic_cast<Unary*>(to_eval.get());
-
-            // Unary expressions contain an expression inside of them; call this function recursively using said expression as a parameter
-            type_information = get_expression_data_type(u->get_operand(), symbols, structs, line);
-
-            // if the operator is ADDRESS, we need to wrap the type information in a pointer
-            if (u->get_operator() == ADDRESS) {
-                auto full_subtype = std::make_shared<DataType>(type_information);
-                type_information = DataType(PTR);
-                type_information.set_subtype(full_subtype);
-            }
-            // if the operator is DEREFERENCE, we need to *remove* the pointer type
-            else if (u->get_operator() == DEREFERENCE) {
-                type_information = *type_information.get_full_subtype();
-            }
-
-            break;
-        }
-        case VALUE_RETURNING_CALL:
-        {
-            // look into the symbol table to get the return type of the function
-            ValueReturningFunctionCall *call_exp = dynamic_cast<ValueReturningFunctionCall*>(to_eval.get());
-			std::shared_ptr<symbol> sym = symbols.find(call_exp->get_func_name());
-
-            // ensure the symbol is a function symbol
-            if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
-                // get the function symbol
-                function_symbol *func_sym = dynamic_cast<function_symbol*>(sym.get());
-
-                // get the return type data
-                type_information = func_sym->get_data_type();
-            } else {
-                throw InvalidSymbolException(line);
-            }
-            break;
-        }
-        case CAST:
-        {
-            Cast *c = dynamic_cast<Cast*>(to_eval.get());
-            if (DataType::is_valid_type(c->get_new_type())) {
-                type_information = c->get_new_type();
-            }
-            else {
-                throw CompilerException("Attempt to cast to invalid type", compiler_errors::INVALID_CAST_ERROR, line);
-            }
-            break;
-        }
-        case ATTRIBUTE:
-        {
-            auto attr = dynamic_cast<AttributeSelection*>(to_eval.get());
-            // todo: should attributes always return integers?
-            type_information.set_primary(INT);
-            type_information.add_qualities(
-                std::vector<SymbolQuality>{
-                    CONSTANT,
-                    UNSIGNED
-                }
-            );
-            break;
-        }
-        default:
-            throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
-            break;
-    };
-
-    return type_information;
-}
-
 bool is_valid_cast(DataType &old_type, DataType &new_type) {
     /*
 
@@ -295,10 +92,29 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
             }
         }
         else {
-            if (old_type.get_width() == sin_widths::BOOL_WIDTH) {
+            /*
+
+            If we have a boolean, zero extend to RAX
+            If both types are signed, move with a sign extension
+                * If the old size is smaller than the new one, we need to use a movsx instruction
+                * If the new type is smaller or equal, we do nothing
+            If one of the types was signed and the other is not, we do nothing
+
+            */
+
+            if (old_type.get_primary() == BOOL) {
                 cast_ss << "\t" << "cmp al, 0" << std::endl;
                 cast_ss << "\t" << "setne al" << std::endl;
                 cast_ss << "\t" << "movzx rax, al" << std::endl;
+            }
+            else if (
+                (old_type.get_qualities().is_signed() && new_type.get_qualities().is_signed()) && 
+                (old_type.get_width() < new_type.get_width())
+            ) {
+                // we need to move with sign extension
+                cast_ss << "\t" << "movsx " 
+                    << register_usage::get_register_name(reg::RAX, new_type) << ", " 
+                    << register_usage::get_register_name(reg::RAX, old_type) << std::endl;
             }
             else {
                 compiler_note("Typecast appears to have no effect", line);
@@ -359,7 +175,7 @@ bool can_pass_in_register(DataType to_check) {
     bool can_pass = false;
 
     Type primary = to_check.get_primary();
-    if (primary == ARRAY || primary == STRUCT) {
+    if (primary == ARRAY || primary == STRUCT || primary == TUPLE) {
         // if the type is dyamic, then we can -- we are really passing in a pointer into the function
         // todo: can we have static parameters?
         can_pass = to_check.get_qualities().is_dynamic();
@@ -449,7 +265,7 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
                             definition.get_line_number()
                         )
                     );
-                    array_length = array_length * alloc->get_type_information().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+                    array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
                     alloc->get_type_information().set_array_length(array_length);
                     this_width = array_length;
                 }
@@ -730,7 +546,7 @@ std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
 
     copy_ss << get_address(src, reg::RSI) << std::endl;
     copy_ss << get_address(dest, reg::RDI) << std::endl;
-    copy_ss << "\t" << "mov ecx, " << src.get_data_type().get_full_subtype()->get_width() << std::endl;
+    copy_ss << "\t" << "mov ecx, " << src.get_data_type().get_subtype().get_width() << std::endl;
     copy_ss << call_sincall_subroutine("sinl_array_copy");
 
     // restore registers
@@ -801,7 +617,7 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
                 dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
             }
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
-            dec_ss << "\t" << "call _sre_free" << std::endl;
+            dec_ss << call_sre_function("_sre_free");
         }
         // restore the status
         dec_ss << "\t" << "popfq" << std::endl;

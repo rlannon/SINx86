@@ -30,7 +30,15 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 	std::stringstream allocation_ss;
 
 	DataType &alloc_data = alloc_stmt.get_type_information();
-	size_t data_width = alloc_data.get_width();
+	size_t data_width = expression_util::get_width(
+		alloc_data,
+		this->evaluator,
+		this->structs,
+		this->symbols,
+		this->current_scope_name,
+		this->current_scope_level,
+		alloc_stmt.get_line_number()
+	);
 
 	// the first thing we need to do it check to make sure the type was initialized, if required
 	if (alloc_data.get_primary() == STRUCT) {
@@ -65,54 +73,6 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 	// todo: array length needs to be determined for _all_ arrays
 	// where it can be determined at compile-time, this space must be reserved on the stack
 	// where this is not possible, evaluate the expression and pass it to sinl_array_alloc
-
-	// if the type is 'array', we need to evaluate the array width that was parsed earlier
-	if (alloc_data.get_primary() == ARRAY) {
-		// if we have an array length expression, and it's a constant, evaluate it
-		if (alloc_data.get_array_length_expression() != nullptr && alloc_data.get_array_length_expression()->is_const()) {
-			if (
-				get_expression_data_type(
-					alloc_data.get_array_length_expression(),
-					this->symbols,
-					this->structs,
-					alloc_stmt.get_line_number()
-				).get_primary() == INT)
-			{
-				// pass the expression to our expression evaluator to get the array width
-				// todo: compile-time evaluation
-				// todo: set alloc_data::array_length
-				alloc_data.set_array_length(stoul(
-					this->evaluator.evaluate_expression(
-						alloc_data.get_array_length_expression(),
-						this->current_scope_name,
-						this->current_scope_level,
-						alloc_stmt.get_line_number()
-					)));
-				data_width = alloc_data.get_array_length() * alloc_data.get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
-			}
-			else {
-				throw NonConstArrayLengthException(alloc_stmt.get_line_number());
-			}
-		}
-		else {
-			// if the length is not constant, check to see if we have a dynamic array; if not, then it's not legal
-			if (alloc_data.get_qualities().is_dynamic()) {
-				alloc_data.set_array_length(0);
-				data_width = sin_widths::PTR_WIDTH;
-			}
-			else {
-				throw CompilerException(
-					"The length of a non-dynamic array must be known at compile time (use a literal or a valid constexpr)",
-					compiler_errors::TYPE_VALIDITY_RULE_VIOLATION_ERROR,
-					alloc_stmt.get_line_number()
-				);
-			}
-		}
-	}
-	else if (alloc_data.get_primary() == STRUCT) {
-		struct_info &info = this->get_struct_info(alloc_data.get_struct_name(), alloc_stmt.get_line_number());
-		data_width = info.get_width();
-	}
 
 	// allocate the variable if our type was valid
 	if (DataType::is_valid_type(alloc_data)) {
@@ -170,7 +130,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 			// since arrays must contain a known-width type, we can just get the width of the subtype
 			if (allocated.get_data_type().get_primary() == ARRAY)
-				w = allocated.get_data_type().get_full_subtype()->get_width();
+				w = allocated.get_data_type().get_subtype().get_width();
 			
 			char width_suffix;
 			if (w == sin_widths::BOOL_WIDTH) {
@@ -276,7 +236,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				to_subtract = s.get_width();
 			}
 			else if (allocated.get_data_type().get_primary() == ARRAY && !allocated.get_data_type().get_qualities().is_dynamic()) {
-				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_full_subtype()->get_width() + sin_widths::INT_WIDTH;
+				to_subtract = allocated.get_data_type().get_array_length() * allocated.get_data_type().get_subtype().get_width() + sin_widths::INT_WIDTH;
 				
 				// write the array length onto the stack
 				allocation_ss << "\t" << "mov eax, " << allocated.get_data_type().get_array_length() << std::endl;

@@ -10,7 +10,19 @@ Contains the implementations of the functions to parse expressions.
 
 #include "Parser.h"
 
-std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string grouping_symbol, bool not_binary, bool omit_equals) {
+std::shared_ptr<Expression> Parser::parse_expression(
+	size_t prec,
+	std::string grouping_symbol,
+	bool not_binary,
+	bool omit_equals
+) {
+	/*
+
+	parse_expression
+	Parses an expression
+
+	*/
+
 	lexeme current_lex = this->current_token();
 
 	// Create a pointer to our first value
@@ -28,8 +40,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 	if (is_opening_grouping_symbol(current_lex.value)) {
 		grouping_symbol = current_lex.value;
 		this->next();
-		left = this->parse_expression(0, grouping_symbol);
-		this->next();
+		auto temp = this->parse_expression(0, grouping_symbol);	// utilize a 'temp' variable in case we have a list
 
 		/*
 
@@ -38,8 +49,12 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		as having the expression 3 = 0, which is not correct
 
 		*/
-		if (this->current_token().value == "]" && not_binary) {
-			return left;
+		if (this->peek().value == "]" && not_binary) {
+			this->next();
+			return temp;
+		}
+		else if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
+			this->next();
 		}
 
 		// Otherwise, carry on parsing
@@ -49,6 +64,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			this->next();
 
 			// if we have "constexpr" next, then parse it; else, move back
+			// todo: quality overrides
 			if (this->peek().value == "constexpr") {
 				this->next();
 				is_const = true;
@@ -58,52 +74,75 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		}
 
 		// now, if we had prefixed _or_ postfixed 'constexpr', set the const value
-		if (is_const) left->set_const();
+		if (is_const) temp->set_const();
 
-		// if our next character is a semicolon or closing paren, then we should just return the expression we just parsed
-		if (this->peek().value == ";" || this->peek().value == get_closing_grouping_symbol(grouping_symbol) || this->peek().value == "{") {
-			return left;
+		// if our next character is a closing paren, then we should just return the expression we just parsed
+		if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
+			return temp;
 		}
 		// if our next character is an op_char, returning the expression would skip it, so we need to parse a binary using the expression in parens as our left expression
-		else if (this->peek().type == OPERATOR) {
-			return this->maybe_binary(left, prec, grouping_symbol);
+		else if (is_valid_operator(this->peek())) {
+			return this->maybe_binary(temp, prec, grouping_symbol);
 		}
-	}
-	// list expressions (array literals) have to be handled slightly differently than other expressions
-	else if (current_lex.value == "{") {
-		std::vector<std::shared_ptr<Expression>> list_members = {};
-		
-		// set this to false if any element is *not* const
-		is_const = true;
-
-		// as long as the next token is a comma, we have elements to parse
-		lexeme peeked = this->peek();
-		while (peeked.value != "}") {
-			this->next();	// skip the last character of the expression
-			try {
-				auto elem = this->parse_expression(prec, "{");
-				if (!elem->is_const())
-					is_const = false;
-				
-				list_members.push_back(elem);
+		// if we had a comma, we need to parse a list
+		else if (this->peek().value == ",") {
+			// ensure we have a valid grouping symbol for our list and set the expression's primary type accordingly
+			std::string list_grouping_symbol = current_lex.value;
+			Type list_type;
+			if (list_grouping_symbol == "(") {
+				list_type = TUPLE;
 			}
-			catch (std::exception &e) {
-				throw CompilerException(
-					"Unexpected token while parsing list expression",
-					compiler_errors::INVALID_TOKEN,
+			else if (list_grouping_symbol == "{") {
+				list_type = ARRAY;
+			}
+			else {
+				throw ParserException(
+					"Illegal list grouping symbol",
+					compiler_errors::INVALID_TYPE_SYNTAX,
 					this->current_token().line_number
 				);
 			}
-			peeked = this->peek();
-		}
-		this->next();
 
-		// once we escape the loop, we must find a closing curly brace
-		if (this->peek().value == ";") {
-			left = std::make_shared<ListExpression>(list_members);
+			// set this to false if any element is *not* const
+			is_const = true;
+
+			// create a copy of 'left' because 'left' will need to hold the list expression -- and contain the value currently in 'left'
+			std::vector<std::shared_ptr<Expression>> list_members = { temp };
+			left = nullptr;
+
+			// as long as the next character is not a comma, we have more lexemes to parse
+			lexeme peeked = this->peek();
+
+			while (peeked.value != get_closing_grouping_symbol(list_grouping_symbol)) {
+				this->next();	// skip the last character of the expression (on comma)
+				try {
+					auto elem = this->parse_expression(prec, list_grouping_symbol);
+					if (!elem->is_const())
+						is_const = false;
+					
+					list_members.push_back(elem);
+				}
+				catch (std::exception &e) {
+					throw ParserException(
+						"Unexpected token while parsing list expression",
+						compiler_errors::INVALID_TOKEN,
+						this->current_token().line_number
+					);
+				}
+				peeked = this->peek();
+			}
+			this->next();
+
+			// once we escape the loop, we must find a closing grouping symbol
+			if (this->current_token().value != get_closing_grouping_symbol(list_grouping_symbol)) {
+				throw UnclosedGroupingSymbolError(this->current_token().line_number);
+			}
+
+			left = std::make_shared<ListExpression>(list_members, list_type);
+			not_binary = true;	// list literals are not allowed to be a part of binary expressions because dynamically resizable arrays are not first class types
 		}
 		else {
-			throw MissingSemicolonError(this->current_token().line_number);
+			throw InvalidTokenException(this->peek().value, this->peek().line_number);
 		}
 	}
 	// if expressions are separated by commas, continue parsing the next one
@@ -118,12 +157,12 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			current_lex.value
 		);
 	}
-	else if (current_lex.type == IDENTIFIER) {
+	else if (current_lex.type == IDENTIFIER_LEX) {
 		// make an LValue expression
-		left = std::make_shared<LValue>(current_lex.value);
+		left = std::make_shared<Identifier>(current_lex.value);
 	}
 	// if we have a keyword to begin an expression (could be 'not' or an attribute selection like int:size)
-	else if (current_lex.type == KEYWORD) {
+	else if (current_lex.type == KEYWORD_LEX) {
 		if (current_lex.value == "not") {
 			// the logical not operator
 			this->next();
@@ -149,7 +188,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		if (current_lex.value == "@") {
 			current_lex = this->next();
 
-			if (current_lex.type == IDENTIFIER) {
+			if (current_lex.type == IDENTIFIER_LEX) {
 				// Same code as is in statement
 				std::vector<std::shared_ptr<Expression>> args;
 
@@ -166,7 +205,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 				}
 
 				// assemble the value returning call so we can pass into maybe_binary
-				left = std::make_shared<ValueReturningFunctionCall>(std::make_shared<LValue>(current_lex.value, "func"), args);
+				left = std::make_shared<ValueReturningFunctionCall>(std::make_shared<Identifier>(current_lex.value), args);
 			}
 			// the "@" character must be followed by an identifier
 			else {
@@ -178,7 +217,7 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 			exp_operator unary_op = Parser::get_unary_operator(current_lex.value);
 			if (unary_op == NO_OP) {
 				// throw exception -- invalid unary op
-				throw CompilerException(
+				throw ParserException(
 					"'" + current_lex.value + "' is not a valid unary operator",
 					compiler_errors::OPERATOR_TYPE_ERROR,
 					current_lex.line_number
@@ -200,17 +239,47 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 		throw InvalidTokenException(this->peek().value, this->peek().line_number);
 	}
 
-	// peek ahead at the next symbol; we may have a postfixed constexpr quality
+	// peek ahead at the next symbol; we may have a postfixed quality for constexpr or a quality override
 	if (this->peek().value == "&") {
+		// todo: allow type quality overrides
+
 		// eat the ampersand
 		this->next();
-		lexeme quality = this->next();
-		if (quality.value == "constexpr") {
-			is_const = true;
+		lexeme quality = this->peek();
+		if (quality.type == KEYWORD_LEX) {
+			// try getting a symbol quality
+			if (quality.value == "constexpr") {
+				this->next();
+				is_const = true;
+			}
+			else {
+				symbol_qualities sq;
+				try {
+					sq = get_postfix_qualities(grouping_symbol);
+				}
+				catch (std::exception &e) {
+					throw ParserException(
+						"Expected postfixed type qualifier", 
+						compiler_errors::EXPECTED_SYMBOL_QUALITY, 
+						this->current_token().line_number
+					);
+				}
+
+				// if this expression has known type information at the parse stage, we can utilize this -- else, we need a typecast
+				if (left->has_type_information()) {
+					left->override_qualities(sq);
+				}
+				else {
+					throw ParserException(
+						"Expressions of this type may not utilize quality overrides; use a proper typecast instead",
+						compiler_errors::UNEXPECTED_SYMBOL_QUALITY,
+						this->current_token().line_number
+					);
+				}
+			}
 		} else {
 			this->back();
 			this->back();
-			// throw IllegalQualityException(quality.value, quality.line_number);
 		}
 
 		// do not advance token; we use 'peek' in maybe_binary
@@ -221,21 +290,31 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 
 	// Use the maybe_binary function to determine whether we need to return a binary expression or a simple expression
 
-	// always start it at 0; the first time it is called, it will be 0, as nothing will have been passed to parse_expression, but will be updated to the appropriate precedence level each time after. This results in a binary tree that shows the proper order of operations
+	// always start it at 0; the first time it is called, it will be 0, as nothing will have been passed to parse_expression, but will be updated to the appropriate precedence level each time after
+	// This results in a binary tree that shows the proper order of operations
 	if (not_binary) {
 		return left;
 	}
 	else {
-		if (this->peek().value == "=" && omit_equals) {
+		// check to see if we have a valid operator
+		exp_operator peek_op = this->read_operator(true);
+		if (
+			(is_valid_copy_assignment_operator(peek_op) || is_valid_move_assignment_operator(peek_op))
+			&& omit_equals
+		) {
 			return left;
 		}
-		else {
-			return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
-		}
+		
+		return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
 	}
 }
 
-std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol, bool omit_equals) {
+std::shared_ptr<Expression> Parser::maybe_binary(
+	std::shared_ptr<Expression> left,
+	size_t my_prec,
+	std::string grouping_symbol,
+	bool omit_equals
+) {
 	/*
 
 	maybe_binary
@@ -257,15 +336,17 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	*/
 
 	lexeme next = this->peek();
-
-	// if the next character is a semicolon, another end paren, or a comma, return
-	if (next.value == ";" || next.value == get_closing_grouping_symbol(grouping_symbol) || next.value == "," || (next.value == "=" && omit_equals)) {
+	if (
+		next.value == ";" || 
+		next.value == get_closing_grouping_symbol(grouping_symbol) || 
+		next.value == "," || 
+		(next.value == "=" && omit_equals)
+	) {
 		return left;
 	}
-	// Otherwise, if we have a valid operator
 	else if (is_valid_operator(next)) {
 		// get the operator
-		exp_operator op = translate_operator(next.value);
+		auto op = this->read_operator(true);
 
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
 		if (op == BIT_AND) {
@@ -273,7 +354,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 			lexeme operand = this->peek();
 			
 			// if the operand is a keyword, the & must not be intended to be the bitwise-and operator
-			if (operand.type == KEYWORD) {
+			if (operand.type == KEYWORD_LEX) {
 				this->back();	// move the iterator back
 				return left;	// return our left argument
 			}
@@ -284,12 +365,13 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 		
 		// parse the binary expression as usual
 		// get the next op_char's data
-		size_t his_prec = get_precedence(next.value, next.line_number);
+		size_t his_prec = get_precedence(op, next.line_number);
 
 		// If the next operator is of a higher precedence than ours, we may need to parse a second binary expression first
 		if (his_prec > my_prec) {
-			this->next();	// go to the next character in our stream (the op_char)
-			this->next();	// go to the character after the op char
+			// we peeked the operator before, so now we should skip over it
+			this->read_operator(false);
+			this->next();
 
 			std::shared_ptr<Expression> to_check = nullptr;
 
@@ -301,7 +383,14 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 			}
 			else {
 				// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
-				auto right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+				auto right = this->maybe_binary(
+					this->parse_expression(
+						his_prec, grouping_symbol, false, omit_equals
+					),
+					his_prec,
+					grouping_symbol,
+					omit_equals
+				);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
 				// Create the binary expression
 				auto binary = std::make_shared<Binary>(left, right, op);	// "next" still contains the op_char; we haven't updated it yet
@@ -340,4 +429,58 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	else {
 		throw InvalidTokenException(next.value, next.line_number);
 	}
+}
+
+std::shared_ptr<Binary> Parser::create_compound_assignment_rvalue(
+	std::shared_ptr<Expression> left,
+	std::shared_ptr<Expression> right,
+	exp_operator op
+) {
+	/*
+
+	create_compound_assignment_rvalue
+
+	This function is used to expand a statement like:
+		let a *= b;
+	into its full form,
+		let a = a * b;
+	This simply creates a binary expression from the two parts where the rvalue is the right side and the lvalue is the left.
+	This will also translate the compound operator (e.g., MULT_EQUAL to MULT)
+
+	*/
+
+	exp_operator arithmetic_op;
+	switch (op)
+	{
+	case PLUS_EQUAL:
+		arithmetic_op = PLUS;
+		break;
+	case MINUS_EQUAL:
+		arithmetic_op = MINUS;
+		break;
+	case MULT_EQUAL:
+		arithmetic_op = MULT;
+		break;
+	case DIV_EQUAL:
+		arithmetic_op = DIV;
+		break;
+	case MOD_EQUAL:
+		arithmetic_op = MODULO;
+		break;
+	case AND_EQUAL:
+		arithmetic_op = BIT_AND;
+		break;
+	case OR_EQUAL:
+		arithmetic_op = BIT_OR;
+		break;
+	case XOR_EQUAL:
+		arithmetic_op = BIT_XOR;
+		break;
+	
+	default:
+		arithmetic_op = NO_OP;
+		break;
+	}
+
+	return std::make_shared<Binary>(left, right, arithmetic_op);
 }

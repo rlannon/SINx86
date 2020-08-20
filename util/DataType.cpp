@@ -18,6 +18,7 @@ void DataType::set_width() {
 		this->width = sin_widths::PTR_WIDTH;
 	}
 	else {
+		// All other types have different widths
 		if (this->primary == INT) {
 			// ints are usually 4 bytes wide (32-bit), but can be 2 bytes for a short or 8 for a long 
 
@@ -51,7 +52,24 @@ void DataType::set_width() {
 		} else if (this->primary == CHAR) {
 			// todo: determine whether it is ASCII or UTF-8
 			this->width = sin_widths::CHAR_WIDTH;
-		} 
+		} else if (this->primary == TUPLE) {
+			// tuple widths are known at compile time -- it is the sum of the widths of each of their contained types
+			// however, if they contain a struct or an array, we must defer the width evaluation until we have a struct table
+			this->width = 0;
+			auto it = this->contained_types.begin();
+			bool defer_width = false;
+			while (it != this->contained_types.end() && !defer_width) {
+				if (it->get_width() == 0) {	// types with unknown lengths have a width of 0
+					this->width = 0;
+					defer_width = true;
+				}
+				else {
+					this->width += it->get_width();
+				}
+
+				it++;
+			}
+		}
 		else {
 			/*
 
@@ -83,7 +101,7 @@ DataType& DataType::operator=(const DataType &right)
 	// Move assignment operator
 	if (this != &right) {
 		this->primary = right.primary;
-		this->subtype = right.subtype;
+		this->contained_types = right.contained_types;
 		this->qualities = right.qualities;
 		this->array_length = right.array_length;
 		this->struct_name = right.struct_name;
@@ -98,13 +116,11 @@ bool DataType::operator==(const DataType& right) const
 {
 	bool primary_match = this->primary == right.primary;
 	bool subtype_match = true;
-	if (this->subtype != nullptr && right.subtype != nullptr) {
-		DataType &left_subtype = *this->subtype.get();
-		DataType &right_subtype = *right.subtype.get();
-		subtype_match = left_subtype == right_subtype;
+	if (!this->contained_types.empty() && !right.contained_types.empty()) {
+		subtype_match = this->contained_types == right.contained_types;
 	}
 	else
-		subtype_match = this->subtype == right.subtype;
+		subtype_match = this->contained_types == right.contained_types;
 	bool qualities_match = this->qualities == right.qualities;
 
 	return primary_match && subtype_match && qualities_match;
@@ -113,16 +129,6 @@ bool DataType::operator==(const DataType& right) const
 bool DataType::operator!=(const DataType& right) const
 {
 	return !this->operator==(right);
-}
-
-bool DataType::operator==(const Type right[2])
-{
-	return (this->primary == right[0]) && (*this->subtype == right[1]);
-}
-
-bool DataType::operator!=(const Type right[2])
-{
-	return (this->primary != right[0]) || (*this->subtype != right[1]);
 }
 
 bool DataType::operator==(const Type right)
@@ -183,31 +189,48 @@ bool DataType::is_compatible(DataType to_compare) const
 	}
 	else if (this->primary == PTR && to_compare.get_primary() == PTR) {
 		// call is_compatible on the subtypes and ensure the type promotion is legal
-		if (this->subtype && to_compare.subtype) {
-			compatible = this->subtype->is_compatible(
-				*to_compare.get_full_subtype()
-			) && is_valid_type_promotion(this->subtype->qualities, to_compare.subtype->qualities);
+		if (!this->contained_types.empty() && !to_compare.contained_types.empty()) {
+			compatible = this->get_subtype().is_compatible(
+				to_compare.get_subtype()
+			) && is_valid_type_promotion(this->get_subtype().qualities, to_compare.get_subtype().qualities);
 		} else {
 			throw CompilerException("Expected subtype", 0, 0);	// todo: ptr and array should _always_ have subtypes
 		}
 	}
 	else if (this->primary == REFERENCE) {
 		// if we have a reference type, compare the reference subtype to to_compare
-		if (this->subtype) {
-			compatible = this->subtype->is_compatible(to_compare);
+		if (!this->contained_types.empty()) {
+			compatible = this->get_subtype().is_compatible(to_compare);
 		}
 		else {
 			throw CompilerException("Expected subtype", 0, 0);
 		}
 	}
 	else if (this->primary == ARRAY && to_compare.get_primary() == ARRAY) {
-		if (this->subtype) {
-			compatible = this->subtype->is_compatible(
-				*to_compare.get_full_subtype()
+		if (!this->contained_types.empty()) {
+			compatible = this->get_subtype().is_compatible(
+				to_compare.get_subtype()
 			);
 		}
 		else {
 			throw CompilerException("Expected subtype", 0, 0);
+		}
+	}
+	else if (this->primary == TUPLE && to_compare.get_primary() == TUPLE) {
+		// tuples must have the same number of elements, and in the same order, to be compatible
+		if (this->contained_types.size() == to_compare.contained_types.size()) {
+			compatible = true;
+			auto this_it = this->contained_types.begin();
+			auto comp_it = to_compare.contained_types.begin();
+			while (compatible && (this_it != this->contained_types.end()) && (comp_it != to_compare.contained_types.end())) {
+				if (this_it->is_compatible(*comp_it)) {
+					this_it++;
+					comp_it++;
+				}
+				else {
+					compatible = false;
+				}
+			}
 		}
 	}
 	else {
@@ -227,15 +250,6 @@ Type DataType::get_primary() const
 	return this->primary;
 }
 
-Type DataType::get_subtype() const
-{
-	if (this->subtype) {
-		return this->subtype->get_primary();
-	} else {
-		return NONE;
-	}
-}
-
 symbol_qualities DataType::get_qualities() const {
 	return this->qualities;
 }
@@ -252,9 +266,22 @@ std::shared_ptr<Expression> DataType::get_array_length_expression() const {
 	return this->array_length_expression;
 }
 
-std::shared_ptr<DataType> DataType::get_full_subtype() const {
-	// static_cast to a subtype does not work; we need a function to return the entire shared pointer
-	return this->subtype;
+DataType DataType::get_subtype() const {
+	DataType to_return(NONE);
+	
+	if (!this->contained_types.empty()) {
+		to_return = this->contained_types[0];
+	}
+
+	return to_return;
+}
+
+std::vector<DataType> &DataType::get_contained_types() {
+	return this->contained_types;
+}
+
+bool DataType::has_subtype() const {
+	return !this->contained_types.empty();
 }
 
 void DataType::set_primary(Type new_primary) {
@@ -262,11 +289,16 @@ void DataType::set_primary(Type new_primary) {
 }
 
 void DataType::set_subtype(DataType new_subtype) {
-	this->subtype = std::make_shared<DataType>(new_subtype);
+	if (!this->contained_types.empty()) {
+		this->contained_types[0] = new_subtype;
+	}
+	else {
+		this->contained_types.push_back(new_subtype);
+	}
 }
 
-void DataType::set_subtype(std::shared_ptr<DataType> new_subtype) {
-	this->subtype = new_subtype;
+void DataType::set_contained_types(std::vector<DataType> types_list) {
+	this->contained_types = types_list;
 }
 
 void DataType::set_array_length(size_t new_length) {
@@ -384,23 +416,21 @@ bool DataType::must_initialize() const {
 
 DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp, std::string struct_name) :
     primary(primary),
-	subtype(nullptr),
     qualities(qualities),
 	array_length_expression(array_length_exp),
 	struct_name(struct_name)
 {
+	// create the vector with our subtype
+	// if we have a string type, set the subtype to CHAR
+	if (primary == STRING) {
+		subtype = DataType(CHAR);
+	}
+
+	this->contained_types = { subtype };
+
 	// the array length will be evaluated by the compiler; start at 0
 	this->array_length = 0;
-
-	// if the subtype has a type of NONE, then the subtype should be a nullptr; otherwise, construct an object
-	if (subtype.get_primary() != NONE) {
-		this->subtype = std::make_shared<DataType>(subtype);
-	}
-	// otherwise, if we have a string type, set the subtype to CHAR
-	else if (primary == STRING) {
-		this->subtype = std::make_shared<DataType>(CHAR);
-	}
-
+	
     // if the type is int, set signed to true if it is not unsigned
 	if (primary == INT && !this->qualities.is_unsigned()) {
 		this->qualities.add_quality(SIGNED);
@@ -411,6 +441,17 @@ DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, s
 	}
 
 	// set the data width
+	this->set_width();
+}
+
+DataType::DataType(Type primary, std::vector<DataType> contained_types, symbol_qualities qualities):
+	primary(primary),
+	contained_types(contained_types),
+	qualities(qualities)
+{
+	// update the rest of our members
+	this->array_length = 0;
+	this->struct_name = "";
 	this->set_width();
 }
 
@@ -429,7 +470,7 @@ DataType::DataType(Type primary) :
 
 DataType::DataType(const DataType &ref) {
 	this->primary = ref.primary;
-	this->subtype = ref.subtype;
+	this->contained_types = ref.contained_types;
 	this->qualities = ref.qualities;
 	this->array_length = ref.array_length;
 	this->array_length_expression = ref.array_length_expression;
@@ -440,14 +481,13 @@ DataType::DataType(const DataType &ref) {
 DataType::DataType()
 {
 	this->primary = NONE;
-	this->subtype = nullptr;
 	this->qualities = symbol_qualities();	// no qualities to start
 	this->array_length = 0;
+	this->width = 0;
 	this->struct_name = "";
 	this->array_length_expression = nullptr;
 }
 
 DataType::~DataType()
 {
-	this->subtype = nullptr;
 }

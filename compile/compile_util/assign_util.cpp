@@ -46,9 +46,9 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     bool in_register;
 
     // generate code based on the expression type
-    if (exp->get_expression_type() == LVALUE) {
+    if (exp->get_expression_type() == IDENTIFIER) {
         // get the symbol information
-        auto lhs = dynamic_cast<LValue*>(exp.get());
+        auto lhs = dynamic_cast<Identifier*>(exp.get());
         auto sym = symbols.find(lhs->getValue());
         auto p = fetch_destination_operand(*sym, symbols, line, r, is_initialization);
         dest = p.dest_location;
@@ -64,7 +64,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         auto lhs = dynamic_cast<Unary*>(exp.get());
         if (lhs->get_operator() == exp_operator::DEREFERENCE) {
             // ensure the expression has a pointer type; else, indirection is illegal
-            auto op_t = get_expression_data_type(lhs->get_operand(), symbols, structures, line);
+            auto op_t = expression_util::get_expression_data_type(lhs->get_operand(), symbols, structures, line);
             if (op_t.get_primary() == PTR) {
                 auto fetched = fetch_destination_operand(
                     lhs->get_operand(),
@@ -98,12 +98,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         auto lhs = dynamic_cast<Binary*>(exp.get());
         if (lhs->get_operator() == DOT) {
             dest = "[rbx]";
-            // todo: address for lea with dot selection?
-            member_selection m = member_selection::create_member_selection(*lhs, structures, symbols, line);
-            gen_code << m.evaluate(symbols, structures, line).str();
-            
-            // mark the symbol as initialized
-            m.last().set_initialized();
+            gen_code << expression_util::get_exp_address(exp, symbols, structures, r, line).str();
         }
         else {
             throw NonModifiableLValueException(line);
@@ -222,6 +217,7 @@ bool assign_utilities::requires_copy(DataType t) {
     return (
         t.get_primary() == STRING ||
         t.get_primary() == ARRAY ||
+        t.get_primary() == TUPLE ||
         t.get_primary() == STRUCT
     );
 }

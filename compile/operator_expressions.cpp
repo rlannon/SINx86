@@ -28,7 +28,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	std::stringstream eval_ss;
 
 	// We need to know the data type in order to evaluate the expression properly
-	DataType unary_type = get_expression_data_type(to_evaluate.get_operand(), this->symbols, this->structs, line);
+	DataType unary_type = expression_util::get_expression_data_type(to_evaluate.get_operand(), this->symbols, this->structs, line);
 
 	// first, evaluate the expression we are modifying *unless* it is an ADDRESS operation
 	if (to_evaluate.get_operator() != ADDRESS) {
@@ -149,7 +149,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 		// ensure we are dereferencing a pointer
 		if (unary_type.get_primary() == PTR) {
 			// the address is already in RAX, so we just need to dereference (according to the type width)
-			DataType pointed_to_type = *unary_type.get_full_subtype();	// we need to know what type the pointer points to in order to get the correct register
+			DataType pointed_to_type = unary_type.get_subtype();	// we need to know what type the pointer points to in order to get the correct register
 			std::string rax_name = get_rax_name_variant(pointed_to_type, line);
 			eval_ss << "\t" << "mov " << rax_name << ", [rax]" << std::endl;
 		}
@@ -210,13 +210,13 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 
 	// act based on the operator
 	if (to_evaluate.get_operator() == DOT) {
-		// create a member_selection object and evaluate it
-		member_selection m(to_evaluate, this->structs, this->symbols, line);
-		eval_ss << m.evaluate(this->symbols, this->structs, line).str();
+		eval_ss << expression_util::evaluate_member_selection(to_evaluate, this->symbols, this->structs, RAX, line).str();
 	} else {
+		// todo: type hinting (for ensuring literals are appropriate)
+
 		// get the left and right branches
-		DataType left_type = get_expression_data_type(to_evaluate.get_left(), this->symbols, this->structs, line);
-		DataType right_type = get_expression_data_type(to_evaluate.get_right(), this->symbols, this->structs, line);
+		DataType left_type = expression_util::get_expression_data_type(to_evaluate.get_left(), this->symbols, this->structs, line);
+		DataType right_type = expression_util::get_expression_data_type(to_evaluate.get_right(), this->symbols, this->structs, line);
 
 		Type primary = left_type.get_primary();
 		size_t data_width = left_type.get_width();
@@ -226,19 +226,15 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 		if (left_type.get_qualities().is_signed() != left_type.get_qualities().is_signed())
 			compiler_warning("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
 		
-		// also issue a warning if the types are different widths and the operator is bitwise
-		// width differences aren't a big deal for some operators, but they *do* make a difference for bitwise ones
-		if (
-			(left_type.get_width() != right_type.get_width()) &&
-			general_utilities::is_bitwise(to_evaluate.get_operator())
-		) {
-			compiler_warning("Width mismatch in bitwise operation", compiler_errors::WIDTH_MISMATCH, line);
+		// also issue a warning if the types are different widths
+		if (left_type.get_width() != right_type.get_width()) {
+			compiler_warning("Width mismatch", compiler_errors::WIDTH_MISMATCH, line);
 		}
 
 		// ensure the types are compatible before proceeding with evaluation
 		if (left_type.is_compatible(right_type)) {
 
-			// todo: ensure 16-byte stack alignment; this would allow us to use movdqa instead (and fit the System V ABI)
+			// todo: ensure 16-byte stack alignment? this would allow us to use movdqa instead (and fit the System V ABI)
 
 			// evaluate the left-hand side
 			auto lhs_pair = this->evaluate_expression(to_evaluate.get_left(), line);
@@ -392,11 +388,13 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				// mult only allowed for int and float
 				if (primary == INT) {
 					// we have to decide between mul and imul instructions -- use imul if either of the operands is signed
+					auto rbx_name = register_usage::get_register_name(RBX, left_type);
+					eval_ss << "\t" << "mov " << register_usage::get_register_name(RDX, left_type) << ", 0" << std::endl;
 					if (is_signed) {
-						eval_ss << "\t" << "imul rbx" << std::endl;
+						eval_ss << "\t" << "imul " << rbx_name << std::endl;
 					}
 					else {
-						eval_ss << "\t" << "mul rbx" << std::endl;
+						eval_ss << "\t" << "mul " << rbx_name << std::endl;
 					}
 				}
 				else if (primary == FLOAT) {
@@ -417,14 +415,15 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				// div only allowed for int and float
 				if (primary == INT) {
 					// how we handle integer division depends on whether we are using signed or unsigned integers
-					eval_ss << "\t" << "mov rdx, 0" << std::endl;
+					auto rbx_name = register_usage::get_register_name(RBX, left_type);
+					eval_ss << "\t" << "mov " << register_usage::get_register_name(RDX, left_type) << ", 0" << std::endl;
 					if (is_signed) {
 						// use idiv
-						eval_ss << "\t" << "idiv rbx" << std::endl;
+						eval_ss << "\t" << "idiv " << rbx_name << std::endl;
 					}
 					else {
 						// use div
-						eval_ss << "\t" << "div rbx" << std::endl;
+						eval_ss << "\t" << "div " << rbx_name << std::endl;
 					}
 				}
 				else if (primary == FLOAT) {
@@ -445,9 +444,10 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				// modulo only allowed for int and float
 				if (primary == INT) {
 					// for modulo, we need to determine what should happen if we are using signed numbers
-					eval_ss << "\t" << "mov edx, 0" << std::endl;
-					eval_ss << "\t" << "div ebx" << std::endl;
-					eval_ss << "\t" << "mov eax, edx" << std::endl;
+					auto rdx_name = register_usage::get_register_name(RDX, left_type);
+					eval_ss << "\t" << "mov " << rdx_name << ", 0" << std::endl;
+					eval_ss << "\t" << "div " << register_usage::get_register_name(RBX, left_type) << std::endl;
+					eval_ss << "\t" << "mov " << register_usage::get_register_name(RAX, left_type) << ", " << rdx_name << std::endl;
 				}
 				else if (primary == FLOAT) {
 					// todo: implement modulo with floating-point numbers

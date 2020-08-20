@@ -56,6 +56,12 @@ public:
 	explicit InvalidMemberSelectionOperator(unsigned int line);
 };
 
+class IllegalMemberSelectionType: public CompilerException
+{
+public:
+	explicit IllegalMemberSelectionType(unsigned int line);
+};
+
 class UndefinedStructAccession: public CompilerException
 {
 public:
@@ -307,6 +313,12 @@ class MissingIdentifierError : public ParserException
 {
 public:
 	explicit MissingIdentifierError(const unsigned int &line);
+};
+
+class UnclosedGroupingSymbolError : public ParserException
+{
+public:
+	explicit UnclosedGroupingSymbolError(const unsigned int &line);
 };
 
 class UnexpectedKeywordError : public ParserException

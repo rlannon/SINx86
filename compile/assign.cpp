@@ -35,8 +35,8 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     );
 
     // get the data type of each expression
-    auto lhs_type = get_expression_data_type(a.get_lvalue(), this->symbols, this->structs, a.get_line_number());
-    auto rhs_type = get_expression_data_type(a.get_rvalue(), this->symbols, this->structs, a.get_line_number());
+    auto lhs_type = expression_util::get_expression_data_type(a.get_lvalue(), this->symbols, this->structs, a.get_line_number());
+    auto rhs_type = expression_util::get_expression_data_type(a.get_rvalue(), this->symbols, this->structs, a.get_line_number());
 
     std::stringstream handle_ss;
 
@@ -45,7 +45,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
         // make sure that the type is actually indexable/subscriptable
         auto idx = dynamic_cast<Indexed*>(a.get_lvalue().get());
         if (!is_subscriptable(
-                get_expression_data_type(
+                expression_util::get_expression_data_type(
                     idx->get_to_index(), 
                     this->symbols, 
                     this->structs,
@@ -93,7 +93,7 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
     */
 
     auto p = assign_utilities::fetch_destination_operand(sym, this->symbols, line, RBX, true);
-    auto rhs_type = get_expression_data_type(rvalue, this->symbols, this->structs, line);
+    auto rhs_type = expression_util::get_expression_data_type(rvalue, this->symbols, this->structs, line);
 
     reg src_reg = sym.get_data_type().get_primary() == FLOAT ? XMM0 : RAX;
 
@@ -142,7 +142,7 @@ std::stringstream compiler::assign(
         }
 
         // evaluate the rvalue, then the destination (lvalue)
-        auto handle_p = this->evaluate_expression(rvalue, line);
+        auto handle_p = this->evaluate_expression(rvalue, line, &lhs_type); // ensure we give evaluate_expression the lhs type as a hint
         handle_assign << handle_p.first;
         bool do_free = handle_p.second > 0;
         
@@ -152,7 +152,21 @@ std::stringstream compiler::assign(
         std::string src = register_usage::get_register_name(src_reg, lhs_type);
 
         // make the assignment
-        if (assign_utilities::requires_copy(lhs_type)) {
+        if (lhs_type.get_primary() == TUPLE) {
+            handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
+
+            // set up our registers/arguments
+            handle_assign << "\t" << "mov rsi, rax" << std::endl;
+            handle_assign << "\t" << "mov rdi, rbx" << std::endl;
+
+            // copy byte for byte
+            // todo: ensure array evaluation utilizes type hints so that the data is the appropriate number of bytes
+            handle_assign << "\t" << "mov rcx, " << lhs_type.get_width() << std::endl;
+            handle_assign << "\t" << "rep movsb" << std::endl;
+
+            handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
+        }
+        else if (assign_utilities::requires_copy(lhs_type)) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
 
             // set up our registers/arguments
@@ -164,7 +178,7 @@ std::stringstream compiler::assign(
 
             // if we have an array, we don't need to worry about the address changing (they are never resized by array_copy)
             if (lhs_type.get_primary() == ARRAY) {
-                handle_assign << "\t" << "mov ecx, " << lhs_type.get_full_subtype()->get_width() << std::endl;
+                handle_assign << "\t" << "mov ecx, " << lhs_type.get_subtype().get_width() << std::endl;
                 proc_name = "sinl_array_copy";
             }
             // strings are different; they are automatically resized and so string_copy will return an address

@@ -25,7 +25,7 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
     if (exp->get_expression_type() == INDEXED) {
         // we need to adjust the value of 'r' by the index value
         auto i = dynamic_cast<Indexed*>(exp.get());
-        DataType idx_type = get_expression_data_type(i->get_to_index(), this->symbols, this->structs, line);
+        DataType idx_type = expression_util::get_expression_data_type(i->get_to_index(), this->symbols, this->structs, line);
 
         // if RCX is in use, preserve it -- we are using it for 'mul'
         if (this->reg_stack.peek().is_in_use(RCX)) {
@@ -73,10 +73,13 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         addr_ss << "\t" << "jg .sinl_rtbounds_" << this->rtbounds_num << std::endl;
 
         // if we were out of bounds, call the appropriate function
-        addr_ss << "\t" << "call sinl_rte_index_out_of_bounds" << std::endl;
+        addr_ss << "\t" << "call _sinl_rte_index_out_of_bounds" << std::endl;
         
         addr_ss << ".sinl_rtbounds_" << this->rtbounds_num << ":" << std::endl;
-        addr_ss << "\t" << "mov ecx, " << idx_type.get_full_subtype()->get_width() << std::endl;
+
+        // todo: check to see if rdx is in use so the value can be preserved
+        addr_ss << "\t" << "mov edx, 0" << std::endl;
+        addr_ss << "\t" << "mov ecx, " << idx_type.get_subtype().get_width() << std::endl;
         addr_ss << "\t" << "mul ecx" << std::endl;
 
         if (this->reg_stack.peek().is_in_use(RCX)) {
@@ -116,8 +119,8 @@ std::stringstream compiler::get_address_of(Unary &u, reg r, unsigned int line) {
         addr_ss << "mov " << register_usage::get_register_name(r) << ", rbx" << std::endl;
         this->reg_stack.peek().clear(r);  // now we can use RBX again
     }
-    else if (u.get_operand()->get_expression_type() == LVALUE) {
-        LValue* target = dynamic_cast<LValue*>(u.get_operand().get());
+    else if (u.get_operand()->get_expression_type() == IDENTIFIER) {
+        Identifier* target = dynamic_cast<Identifier*>(u.get_operand().get());
         
         // look up the symbol; obtain the address based on its memory location
         std::shared_ptr<symbol> s = this->lookup(target->getValue(), line);

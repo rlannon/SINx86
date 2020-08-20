@@ -11,6 +11,17 @@ Copyright 2019 Riley Lannon
 
 #include "compiler.h"
 
+const std::string compiler::CONST_STRING_LABEL = "sinl_strc_";
+const std::string compiler::LIST_LITERAL_LABEL = "sinl_list_";
+const std::string compiler::FLOAT_LITERAL_LABEL = "sinl_fltc_";
+const std::string compiler::ITE_LABEL = ".sinl_ite_";
+const std::string compiler::ITE_ELSE_LABEL = ".sinl_ite_else_";
+const std::string compiler::ITE_DONE_LABEL = ".sinl_ite_done_";
+const std::string compiler::WHILE_LABEL = ".sinl_while_";
+const std::string compiler::WHILE_DONE_LABEL = ".sinl_while_done_";
+const std::string compiler::SINGLE_PRECISION_MASK_LABEL = "sinl_sp_mask";
+const std::string compiler::DOUBLE_PRECISION_MASK_LABEL = "sinl_dp_mask";
+
 std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
     /*
 
@@ -112,7 +123,7 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
     // if the struct was defined, throw an exception; otherwise, mark it as defined and update the struct_info object
 	if (!ok) {
         // if the width is known, it was already defined
-        auto s_info = this->structs.find(to_add.get_struct_name());
+        auto s_info = this->structs.find(to_add.get_struct_name(), line);
         if (s_info.is_width_known()) {
     		throw DuplicateDefinitionException(line);
         }
@@ -134,13 +145,11 @@ struct_info& compiler::get_struct_info(std::string struct_name, unsigned int lin
     @throws Throws an UndefinedException if the struct is not known
 
     */
+
+    // todo: delete this function
 	
 	// check to see whether our struct is in the table first
-	if (!this->structs.contains(struct_name)) {
-		throw UndefinedException(line);
-	}
-
-	return this->structs.find(struct_name);
+	return this->structs.find(struct_name, line);
 }
 
 std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature) {
@@ -225,14 +234,14 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             // todo: count
             
             compile_ss << "\t" << "cmp al, 1" << std::endl;
-            compile_ss << "\t" << "jne .sinl_ite_else_" << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
+            compile_ss << "\t" << "jne " << compiler::ITE_ELSE_LABEL << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
 			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
-			compile_ss << "\t" << "jmp .sinl_ite_done_" << current_scope_num << std::endl;
-			compile_ss << ".sinl_ite_else_" << current_scope_num << ":" << std::endl;
+			compile_ss << "\t" << "jmp " << compiler::ITE_DONE_LABEL << current_scope_num << std::endl;
+			compile_ss << compiler::ITE_ELSE_LABEL << current_scope_num << ":" << std::endl;
             
 			// compile the branch, if one exists
 			if (ite->get_else_branch().get()) {
@@ -240,7 +249,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			}
 
 			// clean-up
-			compile_ss << ".sinl_ite_done_" << current_scope_num << ":" << std::endl;
+			compile_ss << compiler::ITE_DONE_LABEL << current_scope_num << ":" << std::endl;
 			break;
 		}
 		case WHILE_LOOP:
@@ -252,17 +261,17 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             this->scope_block_num += 1;
             auto condition_p = this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number());
 
-            compile_ss << ".sinl_while_" << current_block_num << ":" << std::endl;
+            compile_ss << compiler::WHILE_LABEL << current_block_num << ":" << std::endl;
             compile_ss << condition_p.first;
             // todo: count
             compile_ss << "\t" << "cmp al, 1" << std::endl;
-            compile_ss << "\t" << "jne .sinl_while_done_" << current_block_num << std::endl;
+            compile_ss << "\t" << "jne " << compiler::WHILE_DONE_LABEL << current_block_num << std::endl;
 
             // compile the loop body
             compile_ss << this->compile_statement(while_stmt->get_branch(), signature).str();
-            compile_ss << "\t" << "jmp .sinl_while_" << current_block_num << std::endl;
+            compile_ss << "\t" << "jmp " << compiler::WHILE_LABEL << current_block_num << std::endl;
 
-            compile_ss << ".sinl_while_done_" << current_block_num << ":" << std::endl;
+            compile_ss << compiler::WHILE_DONE_LABEL << current_block_num << ":" << std::endl;
             break;
         }
         case FUNCTION_DEFINITION:
@@ -624,8 +633,9 @@ void compiler::generate_asm(std::string filename) {
 
 		// next, the .rodata
 		outfile << "section .rodata" << std::endl;
-		outfile << "\t" << "sp_mask dd 0x80000000" << std::endl;	// we have bitmasks for single- and double-precision floats; they should be read-only
-		outfile << "\t" << "dp_mask dq 0x8000000000000000" << std::endl;	// todo: do we really need this? or is there an easier way to flip the sign?
+        // todo: should we utilize equ here instead?
+		outfile << "\t" << compiler::SINGLE_PRECISION_MASK_LABEL << " dd 0x80000000" << std::endl;	// we have bitmasks for single- and double-precision floats; they should be read-only
+		outfile << "\t" << compiler::DOUBLE_PRECISION_MASK_LABEL << " dq 0x8000000000000000" << std::endl;	// todo: do we really need this? or is there an easier way to flip the sign?
 		outfile << this->rodata_segment.str() << std::endl;
 
         // next, the .data section

@@ -38,7 +38,7 @@ bool struct_table::contains(std::string name) {
 	return (it != this->structs.end());
 }
 
-struct_info& struct_table::find(std::string name) {
+struct_info& struct_table::find(std::string name, unsigned int line) {
 	/*
 	
 	find
@@ -49,7 +49,7 @@ struct_info& struct_table::find(std::string name) {
 	std::unordered_map<std::string, struct_info>::iterator it = this->structs.find(name);
 
 	if (it == this->structs.end()) {
-		throw std::exception();	// todo: specialized exception?
+		throw UndefinedException(line);
 	}
 	
 	return it->second;
