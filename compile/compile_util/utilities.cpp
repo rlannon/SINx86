@@ -125,7 +125,7 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
         if (old_type.get_primary() == FLOAT) {
             if (old_type.get_width() < new_type.get_width()) {
                 // old < new; convert scalar single to scalar double
-                cast_ss << "\t" << "cvtsstsd xmm0, xmm0" << std::endl;
+                cast_ss << "\t" << "cvtss2sd xmm0, xmm0" << std::endl;
             }
             else if (old_type.get_width() > new_type.get_width()) {
                 // old > new; convert scalar double to scalar single

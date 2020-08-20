@@ -63,11 +63,11 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 
 			// the floating-point expression to negate will already be in the XMM0 register; act based on width
 			if (unary_type.get_width() == sin_widths::FLOAT_WIDTH) {
-				eval_ss << "movss xmm1, [sinl_sp_mask]" << std::endl;
+				eval_ss << "movss xmm1, [" << compiler::SINGLE_PRECISION_MASK_LABEL << "]" << std::endl;
 				eval_ss << "xorps xmm0, xmm1" << std::endl;
 			}
 			else if (unary_type.get_width() == sin_widths::DOUBLE_WIDTH) {
-				eval_ss << "movsd xmm1, [sinl_dp_mask]" << std::endl;
+				eval_ss << "movsd xmm1, [" << compiler::DOUBLE_PRECISION_MASK_LABEL << "]" << std::endl;
 				eval_ss << "xorpd xmm0, xmm1" << std::endl;
 			}
 			else {
@@ -244,7 +244,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			if (left_type.get_primary() == FLOAT) {
 				// "push" xmm0 ('push xmm0' is not allowed)
 				eval_ss << "\t" << "sub rsp, 16" << std::endl;
-				eval_ss << "\t" << "movdqu dqword [rsp], xmm0" << std::endl;
+				eval_ss << "\t" << "movdqu [rsp], xmm0" << std::endl;
 			}
 			else {
 				eval_ss << "\t" << "push rax" << std::endl;	// x64 only lets us push 64-bit registers
@@ -274,7 +274,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				eval_ss << "\t" << ((right_type.get_width() == sin_widths::DOUBLE_WIDTH) ? "movsd" : "movss") << " xmm1, xmm0" << std::endl;
 
 				// "pop" xmm0 (as 'pop xmm0' is not allowed)
-				eval_ss << "\t" << "movdqu xmm0, dqword [rsp]" << std::endl;
+				eval_ss << "\t" << "movdqu xmm0, [rsp]" << std::endl;
 				eval_ss << "\t" << "add rsp, 16" << std::endl;
 
 				// if the left type is single-precision, but right type is double, we need to convert it to double (if assigning to float, may result in loss of data); this is not considered an 'implicit conversion' by the compiler because both are floating-point types, and requisite width conversions are allowed
@@ -464,7 +464,8 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					eval_ss << "\t" << "and rax, rbx" << std::endl;
 				}
 				else if (primary == FLOAT) {
-					// todo: floats with bitwise operators
+					// todo: bitwise operations on floats
+					// these are scalar values, but the sse instructions work on packed versions
 				}
 				else {
 					throw UndefinedOperatorError("bitwise-and", line);
@@ -611,6 +612,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 
 				// to determine whether the comparison requires unsigned operation
 				bool requires_unsigned = false;
+				std::string fp_suffix;	// will change the instruction based on single-/double-precision
 
 				// how we compare is dependent on the type
 				if (left_type.get_primary() == STRING) {
@@ -635,8 +637,16 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					}
 				}
 				else if (left_type.get_primary() == FLOAT) {
-					// todo: equivalency operators with floating-point numbers
-				} else {
+					// SSE has instructions for this -- use the pseudo ops
+					
+					if (data_width == sin_widths::FLOAT_WIDTH) {
+						fp_suffix = "ss";
+					}
+					else {
+						fp_suffix = "sd";
+					}
+				}
+				else {
 					// if we have two unsigned variables, use unsigned comparison
 					requires_unsigned = left_type.get_qualities().is_unsigned() && right_type.get_qualities().is_unsigned();
 					
@@ -646,6 +656,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				
 				// a variable to hold our instruction mnemonic
 				std::string instruction = "";
+				std::string fp_instruction = "";
 
 				// todo: we could write a simple utility function to get a string for the equality based on an operator (e.g., turning EQUAL into 'e' or LESS OR EQUAL to 'le'), assuming we need to use it more than once
 				// todo: use seta/setb/setna/setnb/setae/setbe for unsigned comparisons (both operands unsigned)
@@ -654,21 +665,29 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				switch (to_evaluate.get_operator()) {
 				case exp_operator::EQUAL:
 					instruction = "sete";
+					fp_instruction = "cmpeq";
 					break;
 				case exp_operator::NOT_EQUAL:
 					instruction = "setne";
+					fp_instruction = "cmpneq";
 					break;
 				case exp_operator::GREATER:
 					instruction = "setg";
+					// no sse instruction; must invert
+					fp_instruction = "cmple";
 					break;
 				case exp_operator::LESS:
 					instruction = "setl";
+					fp_instruction = "cmplt";
 					break;
 				case exp_operator::GREATER_OR_EQUAL:
 					instruction = "setge";
+					// no sse instruction; must invert
+					fp_instruction = "cmplt";
 					break;
 				case exp_operator::LESS_OR_EQUAL:
 					instruction = "setle";
+					fp_instruction = "cmple";
 					break;
 				default:
 					// if the parser didn't catch a 'no operator', throw the exception here -- we have no more valid operators
@@ -676,8 +695,34 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					break;
 				}
 
-				// set al accordingly
-				eval_ss << "\t" << instruction << " al" << std::endl;
+				// floating-point SSE comparisons must be handled very differently than integral comparisons
+				if (primary == FLOAT) {
+					if (to_evaluate.get_operator() == GREATER) {
+						// greater is really an inverted less or equal
+						eval_ss << "\t" << fp_instruction << fp_suffix << " xmm1, xmm0" << std::endl;
+						eval_ss << "\t" << "mov" << fp_suffix << " xmm0, xmm1" << std::endl;
+					}
+					else if (to_evaluate.get_operator() == GREATER_OR_EQUAL) {
+						// greater or equal is really an inverted less than
+						eval_ss << "\t" << fp_instruction << fp_suffix << " xmm1, xmm0" << std::endl;
+						eval_ss << "\t" << "mov" << fp_suffix << " xmm0, xmm1" << std::endl;
+					}
+					else {
+						// all other comparisons can be performed normally
+						eval_ss << "\t" << fp_instruction << fp_suffix << " xmm0, xmm1" << std::endl;
+					}
+
+					// now, xmm0 contains the mask -- 0xffffffff if the result was 'true', else 0x0
+					eval_ss << "\t" << "sub rsp, " << ((data_width == sin_widths::FLOAT_WIDTH) ? 4 : 8) << std::endl;
+					eval_ss << "\t" << "mov" << fp_suffix << " [rsp], xmm0" << std::endl;
+					eval_ss << "\t" << "mov " << ((data_width == sin_widths::FLOAT_WIDTH) ? "eax" : "rax") << ", [rsp]" << std::endl;
+					eval_ss << "\t" << "and rax, 1" << std::endl;
+					eval_ss << "\t" << "add rsp, " << ((data_width == sin_widths::FLOAT_WIDTH) ? 4 : 8) << std::endl;
+				}
+				else {
+					// set al accordingly
+					eval_ss << "\t" << instruction << " al" << std::endl;
+				}
 			}
 		}
 		else {
