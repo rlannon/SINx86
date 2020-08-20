@@ -10,7 +10,12 @@ Contains the implementations of the functions to parse expressions.
 
 #include "Parser.h"
 
-std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string grouping_symbol, bool not_binary, bool omit_equals) {
+std::shared_ptr<Expression> Parser::parse_expression(
+	size_t prec,
+	std::string grouping_symbol,
+	bool not_binary,
+	bool omit_equals
+) {
 	/*
 
 	parse_expression
@@ -285,21 +290,43 @@ std::shared_ptr<Expression> Parser::parse_expression(size_t prec, std::string gr
 
 	// Use the maybe_binary function to determine whether we need to return a binary expression or a simple expression
 
-	// always start it at 0; the first time it is called, it will be 0, as nothing will have been passed to parse_expression, but will be updated to the appropriate precedence level each time after. This results in a binary tree that shows the proper order of operations
+	// always start it at 0; the first time it is called, it will be 0, as nothing will have been passed to parse_expression, but will be updated to the appropriate precedence level each time after
+	// This results in a binary tree that shows the proper order of operations
 	if (not_binary) {
 		return left;
 	}
 	else {
-		if (this->peek().value == "=" && omit_equals) {
-			return left;
+		// check to see if we have a valid operator
+		if (is_valid_operator(this->peek())) {
+			this->next();
+			if (this->peek().value == "=") {
+				exp_operator combined_op = Parser::make_compound_operator(this->current_token(), this->peek());
+				if (
+					(is_valid_copy_assignment_operator(combined_op) || is_valid_move_assignment_operator(combined_op))
+					&& omit_equals
+				) {
+					this->back();
+					return left;
+				}
+				else {
+					this->back();
+				}
+			}
+			else {
+				this->back();
+			}
 		}
-		else {
-			return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
-		}
+		
+		return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
 	}
 }
 
-std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol, bool omit_equals) {
+std::shared_ptr<Expression> Parser::maybe_binary(
+	std::shared_ptr<Expression> left,
+	size_t my_prec,
+	std::string grouping_symbol,
+	bool omit_equals
+) {
 	/*
 
 	maybe_binary
@@ -367,7 +394,14 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 			}
 			else {
 				// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
-				auto right = this->maybe_binary(this->parse_expression(his_prec, grouping_symbol), his_prec, grouping_symbol, omit_equals);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
+				auto right = this->maybe_binary(
+					this->parse_expression(
+						his_prec, grouping_symbol, false, omit_equals
+					),
+					his_prec,
+					grouping_symbol,
+					omit_equals
+				);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
 				// Create the binary expression
 				auto binary = std::make_shared<Binary>(left, right, op);	// "next" still contains the op_char; we haven't updated it yet
@@ -406,4 +440,58 @@ std::shared_ptr<Expression> Parser::maybe_binary(std::shared_ptr<Expression> lef
 	else {
 		throw InvalidTokenException(next.value, next.line_number);
 	}
+}
+
+std::shared_ptr<Binary> Parser::create_compound_assignment_rvalue(
+	std::shared_ptr<Expression> left,
+	std::shared_ptr<Expression> right,
+	exp_operator op
+) {
+	/*
+
+	create_compound_assignment_rvalue
+
+	This function is used to expand a statement like:
+		let a *= b;
+	into its full form,
+		let a = a * b;
+	This simply creates a binary expression from the two parts where the rvalue is the right side and the lvalue is the left.
+	This will also translate the compound operator (e.g., MULT_EQUAL to MULT)
+
+	*/
+
+	exp_operator arithmetic_op;
+	switch (op)
+	{
+	case PLUS_EQUAL:
+		arithmetic_op = PLUS;
+		break;
+	case MINUS_EQUAL:
+		arithmetic_op = MINUS;
+		break;
+	case MULT_EQUAL:
+		arithmetic_op = MULT;
+		break;
+	case DIV_EQUAL:
+		arithmetic_op = DIV;
+		break;
+	case MOD_EQUAL:
+		arithmetic_op = MODULO;
+		break;
+	case AND_EQUAL:
+		arithmetic_op = BIT_AND;
+		break;
+	case OR_EQUAL:
+		arithmetic_op = BIT_OR;
+		break;
+	case XOR_EQUAL:
+		arithmetic_op = BIT_XOR;
+		break;
+	
+	default:
+		arithmetic_op = NO_OP;
+		break;
+	}
+
+	return std::make_shared<Binary>(left, right, arithmetic_op);
 }

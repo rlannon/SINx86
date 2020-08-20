@@ -490,14 +490,23 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 
 	// now, "lvalue" should hold the proper variable reference for the assignment
 	// get the operator character, make sure it's an equals sign
-	lexeme _operator = this->next();
-	if (_operator.value == "=") {
+	lexeme op_lex = this->next();
+	exp_operator op = translate_operator(op_lex.value);
+	if (op != EQUAL) {
+		op = make_compound_operator(op_lex, this->next());
+	}
+
+	if (is_valid_copy_assignment_operator(op)) {
 		// if the next lexeme is not a semicolon and the next lexeme's line number is the same as the current lexeme's line number, we are ok
 		if ((this->peek().value != ";") && (this->peek().line_number == current_lex.line_number)) {
 			// create a shared_ptr for our rvalue expression
 			std::shared_ptr<Expression> rvalue;
 			this->next();
 			rvalue = this->parse_expression();
+
+			if (op != EQUAL) {
+				rvalue = Parser::create_compound_assignment_rvalue(lvalue, rvalue, op);
+			}
 
 			assign = std::make_shared<Assignment>(lvalue, rvalue);
 			assign->set_line_number(current_lex.line_number);
@@ -507,6 +516,10 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 		else {
 			throw ParserException("Expected expression", 0, current_lex.line_number);
 		}
+	}
+	else if (is_valid_move_assignment_operator(op)) {
+		// todo: move assignment
+		throw CompilerException("Move assignment currently not supported", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, op_lex.line_number);
 	}
 	else {
 		throw ParserException("Unrecognized token.", 0, current_lex.line_number);

@@ -98,13 +98,42 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 
 const exp_operator Parser::translate_operator(std::string op_string) {
 	// try and find the operator
-	std::unordered_map<std::string, exp_operator>::const_iterator it = Parser::op_strings.find(op_string);
+	auto it = Parser::op_strings.find(op_string);
 	if (it == Parser::op_strings.end()) {
 		return NO_OP;
 	}
 	else {
 		return it->second;
 	}
+}
+
+const exp_operator Parser::make_compound_operator(lexeme l, lexeme r) {
+	// using two lexemes, forms one operator if it can
+	exp_operator op = NO_OP;
+	if (is_valid_operator(l) && is_valid_operator(r)) {
+		std::string op_string = l.value + r.value;
+		op = translate_operator(op_string);
+	}
+	
+	return op;
+}
+
+const bool Parser::is_valid_copy_assignment_operator(exp_operator op) {
+	return (
+		op == EQUAL ||
+		op == PLUS_EQUAL ||
+		op == MINUS_EQUAL ||
+		op == MULT_EQUAL ||
+		op == DIV_EQUAL ||
+		op == MOD_EQUAL ||
+		op == AND_EQUAL ||
+		op == OR_EQUAL ||
+		op == XOR_EQUAL
+	);
+}
+
+const bool Parser::is_valid_move_assignment_operator(exp_operator op) {
+	return (op == LEFT_ARROW || op == RIGHT_ARROW);
 }
 
 const size_t Parser::get_precedence(std::string symbol, size_t line) {
