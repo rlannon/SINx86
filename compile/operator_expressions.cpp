@@ -496,7 +496,67 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					throw UndefinedOperatorError("bitwise-xor", line);
 				}
 			}
-			// bitwise not is a unary operator
+			else if (
+				to_evaluate.get_operator() == exp_operator::RIGHT_SHIFT ||
+				to_evaluate.get_operator() == exp_operator::LEFT_SHIFT
+			) {
+				// get the instruction; if we have a signed value, we utilize arithmetic shifts, and if we have unsigned values, we use logical shifts
+				std::string instruction;
+				if (to_evaluate.get_operator() == RIGHT_SHIFT) {
+					if (left_type.get_qualities().is_signed()) {
+						instruction = "sar";
+					}
+					else {
+						instruction = "shr";
+					}
+				}
+				else {
+					if (left_type.get_qualities().is_signed()) {
+						instruction = "sal";
+					}
+					else {
+						instruction = "shl";
+					}
+				}
+
+
+				// we must utilize the CL register for shifts
+				eval_ss << "\t" << "mov cl, bl" << std::endl;
+
+				// bit shifts can work on integral types
+				if (primary == INT || primary == PTR || primary == CHAR) {
+					if (left_type.get_qualities().is_signed()) {
+						compiler_warning(
+							"The sign will be retained when shifting bits of a signed type",
+							compiler_errors::BITSHIFT_RESULT,
+							line
+						);
+					}
+					eval_ss << "\t" << instruction << " " << register_usage::get_register_name(RAX, left_type) << ", cl" << std::endl;
+				}
+				else if (primary == BOOL) {
+					// boolean shifts might have weird effects
+					compiler_warning(
+						"Bit shifting a boolean may have no effect or invert the value",
+						compiler_errors::BITSHIFT_RESULT,
+						line
+					);
+					eval_ss << "\t" << instruction << " al, cl" << std::endl;
+				}
+				else if (primary == FLOAT) {
+					// floating point shifts might have weird effects; specify they must be integral
+					throw CompilerException(
+						"Bit shifting operators must utilize integral types",
+						compiler_errors::UNDEFINED_OPERATOR_ERROR,
+						line
+					);
+				}
+				else {
+					// undefined for this type
+					throw UndefinedOperatorError("bitshift", line);
+				}
+			}
+			// note that bitwise not is a unary operator
 
 			/*
 
