@@ -13,6 +13,7 @@ def unsigned int pow(alloc unsigned int base, alloc unsigned int n) {
 
     while (i < n) {
         let val = val * base;
+        let i = i + 1;
     }
 
     return val;
@@ -28,9 +29,10 @@ def unsigned int main() {
     let x = (*p)[2];
 
     alloc unsigned int i: 0;
-    while (i < my_static_array:len) {
+    while (i < my_arr:len) {
         alloc int j: 0;
-        let my_static_array[i] = @pow(2, i);
+        let my_arr[i] = @pow(2, i);
+        let i = i + 1;
     }
 
     if (x * binary_numbers[8] = 256) {

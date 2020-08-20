@@ -27,7 +27,7 @@ class Expression;	// since 'DataType' uses 'shared_ptr<Expression>' to track arr
 class DataType
 {
 	Type primary;	// always has a primary type
-	std::shared_ptr<DataType> subtype;	// may or may not have a subtype; nullptr if no subtype is present
+	std::vector<DataType> contained_types;	// tuples can have multiple contained types; will be empty if no subtype exists
 
 	symbol_qualities qualities;	// the qualities of the symbol (const, signed, etc.)
 	size_t array_length;	// if it's an array, track the length
@@ -46,25 +46,22 @@ public:
 	bool operator==(const DataType& right) const;
 	bool operator!=(const DataType& right) const;
 
-	bool operator==(const Type right[2]);
-	bool operator!=(const Type right[2]);
-
 	bool operator==(const Type right);
 	bool operator!=(const Type right);
 
 	Type get_primary() const;
-	Type get_subtype() const;
+	DataType get_subtype() const;
+	std::vector<DataType> &get_contained_types();
+	bool has_subtype() const;
 	symbol_qualities get_qualities() const;
 	size_t get_array_length() const;
 	std::string get_struct_name() const;
 
 	std::shared_ptr<Expression> get_array_length_expression() const;
 
-	std::shared_ptr<DataType> get_full_subtype() const;
-
 	void set_primary(Type new_primary);
 	void set_subtype(DataType new_subtype);
-	void set_subtype(std::shared_ptr<DataType> new_subtype);
+	void set_contained_types(std::vector<DataType> types_list);
 
 	void set_array_length(size_t new_length);
 
@@ -83,6 +80,7 @@ public:
 	virtual bool must_initialize() const;
 
     DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp = nullptr, std::string struct_name = "");
+	DataType (Type primary, std::vector<DataType> contained_types, symbol_qualities qualities);
 	DataType(Type primary);
 	DataType(const DataType &ref);
 	DataType();

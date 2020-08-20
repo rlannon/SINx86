@@ -5,7 +5,13 @@
 
 
 const bool is_literal(lexeme_type candidate_type) {
-	if (candidate_type == INT_LEX || candidate_type == FLOAT_LEX || candidate_type == BOOL_LEX || candidate_type == STRING_LEX) {
+	if (
+		candidate_type == INT_LEX || 
+		candidate_type == FLOAT_LEX || 
+		candidate_type == BOOL_LEX || 
+		candidate_type == STRING_LEX ||
+		candidate_type == CHAR_LEX
+	) {
 		return true;
 	}
 	else {
@@ -30,6 +36,14 @@ void Expression::set_const()
 	this->_const = true;
 }
 
+void Expression::override_qualities(symbol_qualities sq) {
+	// base class override symbol qualities
+	// todo: datatype for base?
+}
+
+bool Expression::has_type_information() const {
+	return false;
+}
 
 Expression::Expression(exp_type expression_type) : expression_type(expression_type) {
 	this->_const = false;	// all expressions default to being non-const
@@ -54,6 +68,15 @@ DataType Literal::get_data_type() {
 
 std::string Literal::get_value() {
 	return this->value;
+}
+
+void Literal::override_qualities(symbol_qualities sq) {
+	// update the data type (for postfixed quality overrides)
+	this->type.add_qualities(sq);	// todo: ensure the type override is valid
+}
+
+bool Literal::has_type_information() const {
+	return true;
 }
 
 Literal::Literal(Type data_type, std::string value, Type subtype) : value(value) {
@@ -94,36 +117,21 @@ Literal::Literal() {
 }
 
 
-std::string LValue::getValue() {
+std::string Identifier::getValue() {
 	return this->value;
 }
 
-std::string LValue::getLValueType() {
-	return this->LValue_Type;
-}
-
-void LValue::setValue(std::string new_value) {
+void Identifier::setValue(std::string new_value) {
 	this->value = new_value;
 }
 
-void LValue::setLValueType(std::string new_lvalue_type) {
-	this->LValue_Type = new_lvalue_type;
+Identifier::Identifier(std::string value) : value(value) {
+	Identifier::expression_type = IDENTIFIER;
 }
 
-LValue::LValue(std::string value, std::string LValue_Type) : value(value) {
-	LValue::expression_type = LVALUE;
-	LValue::LValue_Type = LValue_Type;
-}
-
-LValue::LValue(std::string value) : value(value) {
-	LValue::expression_type = LVALUE;
-	LValue::LValue_Type = "var";
-}
-
-LValue::LValue() {
-	LValue::expression_type = LVALUE;
-	LValue::value = "";
-	LValue::LValue_Type = "var";
+Identifier::Identifier() {
+	Identifier::expression_type = IDENTIFIER;
+	Identifier::value = "";
 }
 
 
@@ -220,12 +228,22 @@ bool AttributeSelection::is_attribute(std::string a) {
 
 // Lists
 
+bool ListExpression::has_type_information() const {
+	return true;
+}
+
+Type ListExpression::get_list_type() const {
+	return this->primary;
+}
+
 std::vector<std::shared_ptr<Expression>> ListExpression::get_list()
 {
 	return this->list_members;
 }
 
-ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members) : list_members(list_members)
+ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type) :
+	list_members(list_members),
+	primary(list_type)
 {
 	this->expression_type = LIST;
 }
@@ -305,7 +323,7 @@ Unary::Unary() {
 
 // Parsing function calls
 
-std::shared_ptr<LValue> ValueReturningFunctionCall::get_name() {
+std::shared_ptr<Identifier> ValueReturningFunctionCall::get_name() {
 	return this->name;
 }
 
@@ -325,7 +343,7 @@ int ValueReturningFunctionCall::get_args_size() {
 	return this->args.size();
 }
 
-ValueReturningFunctionCall::ValueReturningFunctionCall(std::shared_ptr<LValue> name, std::vector<std::shared_ptr<Expression>> args) : name(name), args(args) {
+ValueReturningFunctionCall::ValueReturningFunctionCall(std::shared_ptr<Identifier> name, std::vector<std::shared_ptr<Expression>> args) : name(name), args(args) {
 	ValueReturningFunctionCall::expression_type = VALUE_RETURNING_CALL;
 }
 
@@ -333,21 +351,6 @@ ValueReturningFunctionCall::ValueReturningFunctionCall() {
 	ValueReturningFunctionCall::expression_type = VALUE_RETURNING_CALL;
 }
 
-
-
-// sizeof expressions
-
-DataType SizeOf::get_type() {
-	return this->to_check;
-}
-
-SizeOf::SizeOf(DataType to_check) : to_check(to_check) {
-	this->expression_type = SIZE_OF;
-}
-
-SizeOf::SizeOf() {
-	this->expression_type = SIZE_OF;
-}
 
 std::shared_ptr<Expression> Indexed::get_index_value()
 {

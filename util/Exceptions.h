@@ -56,6 +56,12 @@ public:
 	explicit InvalidMemberSelectionOperator(unsigned int line);
 };
 
+class IllegalMemberSelectionType: public CompilerException
+{
+public:
+	explicit IllegalMemberSelectionType(unsigned int line);
+};
+
 class UndefinedStructAccession: public CompilerException
 {
 public:
@@ -260,6 +266,12 @@ public:
 	explicit IllegalIndirectionException(unsigned int line);
 };
 
+class TypeNotSubscriptableException : public CompilerException
+{
+public:
+	explicit TypeNotSubscriptableException(unsigned int line);
+};
+
 // todo: allow warning and note codes?
 
 // sometimes, we want to print an error message, but we don't need to stop compilation
@@ -301,6 +313,12 @@ class MissingIdentifierError : public ParserException
 {
 public:
 	explicit MissingIdentifierError(const unsigned int &line);
+};
+
+class UnclosedGroupingSymbolError : public ParserException
+{
+public:
+	explicit UnclosedGroupingSymbolError(const unsigned int &line);
 };
 
 class UnexpectedKeywordError : public ParserException

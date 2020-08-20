@@ -25,6 +25,7 @@ Note that the Lexer class does /not/ parse source files; it simply puts those fi
 #include <exception>
 
 #include "lexeme.h"
+#include "../util/Exceptions.h"
 
 class Lexer
 {
@@ -99,6 +100,7 @@ class Lexer
 	void read_lexeme();
 
 	std::string read_string();
+	std::string read_char();
 	std::string read_ident();	// read the full identifier
 
 public:

@@ -1,0 +1,76 @@
+// primes.sin
+// A very naive prime calculation in SIN
+
+// declare/define some sinstdlib functions, as the library isn't finished
+
+decl void print(decl string s);
+
+def string itos(alloc int n) {
+    // a very simple itos implementation
+    alloc string s: "";
+    alloc unsigned int i: 1;
+
+    alloc array<10, char> characters: {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+
+    while (n > 0) {
+        // get the remainder (single digit)
+        alloc int remainder: n % 10;
+
+        // append the character; update n
+        let s = s + characters[remainder];
+        let n = n / 10;
+    }
+
+    alloc string to_return: "";
+    let i = s:len;
+    while (i > 0) {
+        let to_return = to_return + s[i - 1];
+        let i = i - 1;
+    }
+
+    return to_return;
+}
+
+def bool is_prime(alloc unsigned int candidate) {
+    // is_prime
+
+    alloc bool prime: true;
+    if (candidate < 2) {
+        let prime = false;
+    }
+    else if (candidate = 2) {
+        let prime = true;
+    }
+    else {
+        alloc int i: 2 &unsigned;
+        while (i < candidate and prime) {
+            if (candidate % i = 0) {
+                let prime = false;
+            }
+            else {
+                let i = i + 1;
+            }
+        }
+    }
+
+    return prime;
+}
+
+def int main(alloc dynamic array<string> args) {
+    // calculate the first 1000 primes
+    alloc unsigned int i: 1;
+    alloc unsigned int count: 0;
+    while (i < 1000) {
+        if (@is_prime(i)) {
+            let count = count + 1;
+            @print(@itos(i) + ", ");
+        }
+
+        let i = i + 1;
+    }
+    @print("\n");
+    @print("Found " + @itos(count) + " primes\n");
+    @print("Done.\n");
+
+    return 0;
+}

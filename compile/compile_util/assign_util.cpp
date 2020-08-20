@@ -7,7 +7,19 @@ Copyright 2020 Riley Lannon
 
 #include "assign_util.h"
 
-std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
+assign_utilities::destination_information::destination_information(
+    std::string dest_location,
+    std::string fetch_instructions,
+    std::string address_for_lea,
+    bool in_register
+) {
+    this->dest_location = dest_location;
+    this->fetch_instructions = fetch_instructions;
+    this->address_for_lea = address_for_lea;
+    this->in_register = in_register;
+}
+
+assign_utilities::destination_information assign_utilities::fetch_destination_operand(
     std::shared_ptr<Expression> exp,
     symbol_table &symbols,
     struct_table &structures,
@@ -30,15 +42,19 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
 
     std::string dest;
     std::stringstream gen_code;
+    std::string address_for_lea;
+    bool in_register;
 
     // generate code based on the expression type
-    if (exp->get_expression_type() == LVALUE) {
+    if (exp->get_expression_type() == IDENTIFIER) {
         // get the symbol information
-        auto lhs = dynamic_cast<LValue*>(exp.get());
+        auto lhs = dynamic_cast<Identifier*>(exp.get());
         auto sym = symbols.find(lhs->getValue());
         auto p = fetch_destination_operand(*sym, symbols, line, r, is_initialization);
-        dest = p.first;
-        gen_code << p.second;
+        dest = p.dest_location;
+        address_for_lea = p.address_for_lea;
+        in_register = p.in_register;
+        gen_code << p.fetch_instructions;
 
         // marks the symbol as initialized
         sym->set_initialized();
@@ -48,7 +64,7 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
         auto lhs = dynamic_cast<Unary*>(exp.get());
         if (lhs->get_operator() == exp_operator::DEREFERENCE) {
             // ensure the expression has a pointer type; else, indirection is illegal
-            auto op_t = get_expression_data_type(lhs->get_operand(), symbols, structures, line);
+            auto op_t = expression_util::get_expression_data_type(lhs->get_operand(), symbols, structures, line);
             if (op_t.get_primary() == PTR) {
                 auto fetched = fetch_destination_operand(
                     lhs->get_operand(),
@@ -63,10 +79,12 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
                 
                 // add the fetched code from the recursive call to this one
                 dest = "[rbx]";
-                gen_code << fetched.second;
+                address_for_lea = fetched.dest_location;
+                gen_code << fetched.fetch_instructions;
+                in_register = fetched.in_register;
                 
                 // now, add an instruction to move the previously fetched destination into RBX
-                gen_code << "\t" << "mov rbx, " << fetched.first << std::endl;
+                gen_code << "\t" << "mov rbx, " << fetched.dest_location << std::endl;
             }
             else {
                 throw IllegalIndirectionException(line);
@@ -80,11 +98,7 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
         auto lhs = dynamic_cast<Binary*>(exp.get());
         if (lhs->get_operator() == DOT) {
             dest = "[rbx]";
-            member_selection m = member_selection::create_member_selection(*lhs, structures, symbols, line);
-            gen_code << m.evaluate(symbols, structures, line).str();
-            
-            // mark the symbol as initialized
-            m.last().set_initialized();
+            gen_code << expression_util::get_exp_address(exp, symbols, structures, r, line).str();
         }
         else {
             throw NonModifiableLValueException(line);
@@ -104,11 +118,11 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
     else {
         throw NonModifiableLValueException(line);
     }
-
-    return std::make_pair<>(dest, gen_code.str());
+    
+    return destination_information(dest, gen_code.str(), address_for_lea, in_register);
 }
 
-std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
+assign_utilities::destination_information assign_utilities::fetch_destination_operand(
     symbol &sym,
     symbol_table &symbols,\
     unsigned int line,
@@ -124,6 +138,8 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
 
     std::string dest;
     std::stringstream gen_code;
+    std::string address_for_lea;
+    bool in_register = false;
 
     auto dt = sym.get_data_type();
 
@@ -140,16 +156,23 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
     else {
         if (dt.get_qualities().is_static()) {
             dest = "[rbx]";
+            address_for_lea = "[" + sym.get_name() + "]";
             gen_code << "\t" << "lea rbx, [" << sym.get_name() << "]" << std::endl;
         }
         else {
             // we will need the stack location no matter what
             std::string location;
-            if (sym.get_offset() < 0) {
-                location = "[rbp + " + std::to_string(-sym.get_offset()) + "]";
+            if (sym.get_register() == NO_REGISTER) {
+                if (sym.get_offset() < 0) {
+                    location = "[rbp + " + std::to_string(-sym.get_offset()) + "]";
+                }
+                else {
+                    location = "[rbp - " + std::to_string(sym.get_offset()) + "]";
+                }
             }
             else {
-                location = "[rbp - " + std::to_string(sym.get_offset()) + "]";
+                in_register = true;
+                location = register_usage::get_register_name(sym.get_register(), sym.get_data_type());
             }
 
             // if we have a reference type, we need to dereference under the hood
@@ -163,16 +186,24 @@ std::pair<std::string, std::string> assign_utilities::fetch_destination_operand(
             }
             else if (requires_copy(sym.get_data_type())) {
                 // if we don't have a string but we do require a copy, use lea
+                // but if that value is in a register, just use mov
                 dest = "[rbx]";
-                gen_code << "\t" << "lea rbx, " << location << std::endl;
+                if (!in_register) {
+                    gen_code << "\t" << "lea rbx, " << location << std::endl;
+                }
+                else {
+                    gen_code << "\t" << "mov rbx, " << location << std::endl;
+                }
             }
             else {
                 dest = location;
             }
+
+            address_for_lea = location;
         }
     }
 
-    return std::make_pair<>(dest, gen_code.str());
+    return destination_information(dest, gen_code.str(), address_for_lea, in_register);
 }
 
 bool assign_utilities::requires_copy(DataType t) {
@@ -186,6 +217,7 @@ bool assign_utilities::requires_copy(DataType t) {
     return (
         t.get_primary() == STRING ||
         t.get_primary() == ARRAY ||
+        t.get_primary() == TUPLE ||
         t.get_primary() == STRUCT
     );
 }

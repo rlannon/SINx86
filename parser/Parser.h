@@ -31,6 +31,7 @@ Note that:
 #include "../util/Exceptions.h"	// ParserException
 #include "../util/DataType.h"	// type information
 #include "../util/general_utilities.h"
+#include "../util/EnumeratedTypes.h"
 
 class Parser
 {
@@ -47,6 +48,10 @@ class Parser
 
 	// translates an operator character into an exp_operator type
 	static const exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
+	static const exp_operator make_compound_operator(lexeme l, lexeme r);
+	static const bool is_valid_copy_assignment_operator(exp_operator op);
+	static const bool is_valid_move_assignment_operator(exp_operator op);
+	exp_operator read_operator(bool peek);
 
 	// our operator and precedence handlers
 	static const std::unordered_map<std::string, exp_operator> op_strings;
@@ -87,7 +92,7 @@ class Parser
 	std::shared_ptr<Statement> parse_include(lexeme current_lex);
 	std::shared_ptr<Statement> parse_declaration(lexeme current_lex, bool is_function_parameter = false);
 	std::shared_ptr<Statement> parse_ite(lexeme current_lex);
-	std::shared_ptr<Statement> parse_allocation(lexeme current_lex);
+	std::shared_ptr<Statement> parse_allocation(lexeme current_lex, bool is_function_parameter = false);
 	std::shared_ptr<Statement> parse_assignment(lexeme current_lex);
 	std::shared_ptr<Statement> parse_return(lexeme current_lex);
 	std::shared_ptr<Statement> parse_while(lexeme current_lex);
@@ -105,8 +110,23 @@ class Parser
 	put default argument here because we call "parse_expression" in "maybe_binary"; as a reuslt, "his_prec" appears as if it is being passed to the next maybe_binary, but isn't because we parse an expression before we parse the binary, meaning my_prec gets set to 0, and not to his_prec as it should
 	Note we also have a 'not_binary' flag here; if the expression is indexed, we may not want to have a binary expression parsed
 	*/
-	std::shared_ptr<Expression> parse_expression(size_t prec=0, std::string grouping_symbol = "(", bool not_binary = false, bool omit_equals = false);
-	std::shared_ptr<Expression> maybe_binary(std::shared_ptr<Expression> left, size_t my_prec, std::string grouping_symbol = "(", bool omit_equals = false);	// check to see if we need to fashion a binary expression
+	std::shared_ptr<Expression> parse_expression(
+		size_t prec=0,
+		std::string grouping_symbol = "(",
+		bool not_binary = false,
+		bool omit_equals = false
+	);
+	std::shared_ptr<Expression> maybe_binary(
+		std::shared_ptr<Expression> left,
+		size_t my_prec,
+		std::string grouping_symbol = "(",
+		bool omit_equals = false
+	);	// check to see if we need to fashion a binary expression
+	static std::shared_ptr<Binary> create_compound_assignment_rvalue(
+		std::shared_ptr<Expression> left,
+		std::shared_ptr<Expression> right,
+		exp_operator op
+	);
 public:
 	// our entry function
 	StatementBlock create_ast();

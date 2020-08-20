@@ -19,7 +19,6 @@ Copyright 2019 Riley Lannon
 #include "symbol.h"
 #include "function_symbol.h"
 #include "struct_info.h"
-#include "compile_util/member_selection.h"
 #include "../parser/Parser.h"
 #include "compile_util/utilities.h"
 #include "compile_util/symbol_table.h"
@@ -28,6 +27,7 @@ Copyright 2019 Riley Lannon
 
 #include "compile_util/constant_eval.h"
 #include "compile_util/expression_util.h"
+#include "compile_util/assign_util.h"
 
 class compiler {
     // The class containing our compiler
@@ -57,6 +57,7 @@ class compiler {
 
 	// We need to track the number for string constants, if/else blocks, etc.
 	size_t strc_num;
+	size_t strcmp_num;
 	size_t fltc_num;
 	size_t list_literal_num;
 	size_t scope_block_num;
@@ -82,8 +83,19 @@ class compiler {
 
 	// assignments
 	std::stringstream handle_assignment(Assignment &aw);
-	std::stringstream handle_alloc_init(symbol &sym, std::shared_ptr<Expression> rvalue, unsigned int line);
-	std::stringstream assign(DataType lhs_type, DataType &rhs_type, std::pair<std::string, std::string> dest, std::shared_ptr<Expression> rvalue, unsigned int line);
+	std::stringstream handle_alloc_init(
+		symbol &sym,
+		std::shared_ptr<Expression> rvalue,
+		unsigned int line
+	);
+	std::stringstream assign(
+		DataType lhs_type,
+		DataType &rhs_type,
+		assign_utilities::destination_information dest,
+		std::shared_ptr<Expression> rvalue,
+		unsigned int line,
+		bool is_alloc_init = false
+	);
 
 	// todo: handle assignments for char, float, etc.
 
@@ -93,7 +105,7 @@ class compiler {
 	// functions
 	std::stringstream define_function(FunctionDefinition definition);
 
-	template<typename T> std::stringstream call_function(T to_call, unsigned int line, bool allow_void = true);
+	template<typename T> std::pair<std::string, size_t> call_function(T to_call, unsigned int line, bool allow_void = true);
 	std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
 	std::stringstream system_v_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
 	std::stringstream win64_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
@@ -104,18 +116,33 @@ class compiler {
 
 	// utilities that require compiler's data members
 	std::stringstream get_exp_address(std::shared_ptr<Expression> to_evaluate, reg r, unsigned int line);
-	std::stringstream evaluate_expression(std::shared_ptr<Expression> to_evaluate, unsigned int line);
-	std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line);
-	std::stringstream evaluate_lvalue(LValue &to_evaluate, unsigned int line);
+	std::pair<std::string, size_t> evaluate_expression(
+		std::shared_ptr<Expression> to_evaluate,
+		unsigned int line,
+		DataType *type_hint = nullptr
+	);
+	std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line, DataType *type_hint = nullptr);
+	std::stringstream evaluate_identifier(Identifier &to_evaluate, unsigned int line);
 	std::stringstream evaluate_indexed(Indexed &to_evaluate, unsigned int line);
-	std::stringstream evaluate_sizeof(SizeOf &to_evaluate, unsigned int line);
 	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line);
-	std::stringstream evaluate_binary(Binary &to_evaluate, unsigned int line);
+	std::pair<std::string, size_t> evaluate_binary(Binary &to_evaluate, unsigned int line);
 	std::stringstream get_address_of(Unary &u, reg r, unsigned int line);
 
 	// process an included file
 	std::stringstream process_include(std::string include_filename, unsigned int line);
 public:
+	// Some magic numbers
+	static const std::string CONST_STRING_LABEL;
+	static const std::string LIST_LITERAL_LABEL;
+	static const std::string FLOAT_LITERAL_LABEL;
+	static const std::string ITE_LABEL;
+	static const std::string ITE_ELSE_LABEL;
+	static const std::string ITE_DONE_LABEL;
+	static const std::string WHILE_LABEL;
+	static const std::string WHILE_DONE_LABEL;
+	static const std::string SINGLE_PRECISION_MASK_LABEL;
+	static const std::string DOUBLE_PRECISION_MASK_LABEL;
+
     // the compiler's entry function
     void generate_asm(std::string filename);
 

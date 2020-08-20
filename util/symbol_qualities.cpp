@@ -27,17 +27,17 @@ const std::unordered_map<std::string, SymbolQuality> symbol_qualities::quality_s
 
 bool symbol_qualities::operator==(const symbol_qualities& right) const {
 	return (
-		this->long_q == right.long_q &&
-		this->short_q == right.short_q &&
-		this->signed_q == right.signed_q &&
-		this->unsigned_q == right.unsigned_q &&
-		this->const_q == right.const_q &&
-		this->final_q == right.final_q &&
-		this->dynamic_q == right.dynamic_q &&
-		this->extern_q == right.extern_q &&
-		this->c64_con == right.c64_con &&
-		this->windows_con == right.windows_con &&
-		this->sincall_con == right.sincall_con
+		(this->long_q == right.long_q) &&
+		(this->short_q == right.short_q) &&
+		(this->signed_q == right.signed_q) &&
+		(this->unsigned_q == right.unsigned_q) &&
+		(this->const_q == right.const_q) &&
+		(this->final_q == right.final_q) &&
+		(this->dynamic_q == right.dynamic_q) &&
+		(this->extern_q == right.extern_q) &&
+		(this->c64_con == right.c64_con) &&
+		(this->windows_con == right.windows_con) &&
+		(this->sincall_con == right.sincall_con)
 	);
 }
 
@@ -109,6 +109,7 @@ void symbol_qualities::add_qualities(symbol_qualities to_add) {
 	// combines two SymbolQualities objects
 
 	// todo: refactor how qualities are stored in SymbolQualities so that we can simplify this
+	// todo: quality conflict exceptions
 
 	if (to_add.is_const()) this->add_quality(CONSTANT);
 	if (to_add.is_final()) this->add_quality(FINAL);
@@ -181,16 +182,16 @@ void symbol_qualities::add_quality(SymbolQuality to_add)
 symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities)
 {
 	// start with our default values
-	const_q = false;
-	final_q = false;
-	static_q = false;
-	dynamic_q = false;
-	signed_q = false;
-	unsigned_q = false;
-	sincall_con = false;
-	c64_con = false;
-	windows_con = false;
-	extern_q = false;
+	this->const_q = false;
+	this->final_q = false;
+	this->static_q = false;
+	this->dynamic_q = false;
+	this->signed_q = false;
+	this->unsigned_q = false;
+	this->sincall_con = false;
+	this->c64_con = false;
+	this->windows_con = false;
+	this->extern_q = false;
 
 	// todo: there must be a better way of doing this
 
@@ -260,6 +261,7 @@ symbol_qualities::symbol_qualities(bool is_const, bool is_static, bool is_dynami
 	if (this->const_q) {
 		this->dynamic_q = false;
 	}
+	this->final_q = false;
 
 	// if both long and short are set, generate a warning
 	if (this->long_q && this->short_q) {
@@ -270,6 +272,10 @@ symbol_qualities::symbol_qualities(bool is_const, bool is_static, bool is_dynami
 		this->long_q = false;
 		this->short_q = false;
 	}
+
+	this->sincall_con = false;
+	this->c64_con = false;
+	this->windows_con = false;
 }
 
 symbol_qualities::symbol_qualities()

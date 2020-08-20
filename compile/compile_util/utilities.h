@@ -27,7 +27,6 @@ Our various compiler utilities
 #include "../../util/stack.h"
 #include "../../util/data_widths.h"
 #include "../struct_info.h"
-#include "member_selection.h"
 
 #include "constant_eval.h"
 
@@ -35,11 +34,13 @@ Our various compiler utilities
 
 // todo: put these in their own namespace
 
-DataType get_expression_data_type(std::shared_ptr<Expression> to_eval, symbol_table& symbols, struct_table& structs, unsigned int line);
+std::string call_sincall_subroutine(std::string name);
 
 bool returns(StatementBlock to_check);
 
 bool is_valid_cast(DataType &old_type, DataType &new_type);
+
+bool is_subscriptable(Type t);
 
 std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line);
 
@@ -70,3 +71,4 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
 std::stringstream call_sre_free(symbol& s);
 std::stringstream call_sre_add_ref(symbol& s);
 std::stringstream call_sre_mam_util(symbol& s, std::string func_name);
+std::string call_sre_function(std::string func_name);

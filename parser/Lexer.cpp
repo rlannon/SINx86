@@ -11,16 +11,14 @@ The implementation of the lexer
 #include "Lexer.h"
 
 // The list of language keywords
-const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "const", 
+const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "char", "const", 
 "constexpr", "c64", "decl", "def", "dynamic", "else", "extern", "final", "float", "free", "if", "include", "int", 
 "len", "let", "long", "not", "null", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "size", 
-"sizeof", "static", "string", "struct", "unsigned", "var", "void", "while", "windows", "xor" };
+"static", "string", "struct", "tuple", "unsigned", "var", "void", "while", "windows", "xor" };
 
 // Our regular expressions
 const std::string Lexer::punc_exp = R"([',;\[\]\{\}\(\)])";	// expression for punctuation
-const std::string Lexer::op_exp = R"(
-	(\->)|[\.\+\-\*/%=\&\|\^<>\$\?!@#:]|(\+=|)|(\-=)|(\*=)|(/=)|(%=)|(&=)|(\|=)|(\^=)
-	)";	// expression for operations
+const std::string Lexer::op_exp = R"([\.\+\-\*/%=\&\|\^<>\$\?!~@#:])";	// expression for operations
 const std::string Lexer::id_exp = "[_0-9a-zA-Z]";	// expression for interior id letters
 const std::string Lexer::bool_exp = "[(true)|(false)]";
 
@@ -123,7 +121,7 @@ bool Lexer::is_letter(char ch) {
 }
 
 bool Lexer::is_number(char ch) {
-	if (match_character(ch, "[0-9\\.]")) {
+	if (match_character(ch, "[0-9\\._]")) {
 		return true;
 	}
 	else {
@@ -343,27 +341,44 @@ lexeme Lexer::read_next() {
 			type = lexeme_type::STRING_LEX;
 			value = this->read_string();
 		}
+		else if (ch == '\'') {
+			type = lexeme_type::CHAR_LEX;
+			value = this->read_char();
+		}
 		else if (this->is_id_start(ch)) {
 			value = this->read_while(&this->is_id);
 			if (this->is_keyword(value)) {
-				type = KEYWORD;
+				type = KEYWORD_LEX;
 			}
 			else if (this->is_boolean(value)) {
 				type = BOOL_LEX;
 			}
 			else {
-				type = IDENTIFIER;
+				type = IDENTIFIER_LEX;
 			}
 		}
 		else if (this->is_digit(ch)) {
-			value = this->read_while(&this->is_number);	// get the number
+			// todo: allow 0x and 0b prefixes -- check the next character here (currently only allows base 10)
 
-			// Now we must test whether the number we got is an int or a float
-			if (std::regex_search(value, std::regex("\\."))) {
-				type = FLOAT_LEX;
-			}
-			else {
-				type = INT_LEX;
+			std::string num = this->read_while(&this->is_number);	// get the number
+
+			// finally, iterate over the string and add all non-underscored characters to the value
+			// this allows the string to be more readable for the programmer, but we don't want them in our end result
+			type = INT_LEX;
+			bool found_decimal = false;
+			for (auto it = num.cbegin(); it != num.cend(); it++) {
+				if (*it == '.') {
+					// if we already found a decimal point, we want to throw an exception -- it's an invalid numeric literal
+					if (found_decimal) {
+						throw CompilerException("Invalid numeric literal", compiler_errors::BAD_LITERAL, current_line);
+					}
+					value.push_back(*it);
+					found_decimal = true;
+					type = FLOAT_LEX;
+				}
+				else if (*it != '_') {
+					value.push_back(*it);
+				}
 			}
 		}
 		else if (this->is_punc(ch)) {
@@ -419,13 +434,13 @@ void Lexer::read_lexeme() {
 
 std::string Lexer::read_string() {
 	std::string str = "";	// start with an empty string for the message
-	this->stream->get();	// skip the initial quote in the string
+	this->next();	// skip the initial quote in the string
 
 	bool escaped = false;	// initialized our "escaped" identifier to false
 	bool string_done = false;
 
 	while (!this->eof() && !string_done) {
-		char ch = this->stream->get();	// get the character
+		char ch = this->next();	// get the character
 
 		if (escaped) {	// if we have escaped the character
 			str += ch;
@@ -444,6 +459,40 @@ std::string Lexer::read_string() {
 	}
 
 	return str;
+}
+
+std::string Lexer::read_char() {
+	/*
+
+	read_char
+	Reads a char literal
+
+	SIN char literals are structured like C characters; any ASCII character (hopefully UTF-8 support will be added someday) enclosed between single quotes.
+	Since these characters may be escaped, they can be up to two C chars inside the single quotes; e.g., '\0'.
+	In SIN, an empty char ('') is equivalent to '\0'.
+	
+	Note that here we will be giving the string representation of the character. So a newline will read as \ character, n character, not the actual newline character. This is because we are going to be supplying this information to NASM, so we want the string itself.
+
+	*/
+
+	std::string to_return = "";
+	this->next();
+	
+	while (this->peek() != '\'') {
+		to_return.append(
+			1, this->next()
+		);
+	}
+
+	// if we had '', it should be interpreted as null
+	if (to_return.length() == 0) {
+		to_return = "\\0";
+	}
+
+	// eat the ' character
+	this->next();
+
+	return to_return;
 }
 
 std::string Lexer::read_ident() {

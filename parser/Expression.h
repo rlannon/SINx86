@@ -30,8 +30,11 @@ protected:
 public:
 	bool is_const();
 	void set_const();
-	exp_type get_expression_type();	// tells us whether it's a literal, lvalue, binary...
-	//Expression(std::string type);
+	exp_type get_expression_type();
+
+	virtual void override_qualities(symbol_qualities sq);
+	virtual bool has_type_information() const;
+
 	Expression(exp_type expression_type);
 	Expression();
 
@@ -48,36 +51,38 @@ public:
 	void set_type(DataType t);
 	DataType get_data_type();
 	std::string get_value();
+
+	void override_qualities(symbol_qualities sq) override;
+	bool has_type_information() const override;
+
 	Literal(Type data_type, std::string value, Type subtype = NONE);
 	Literal(DataType t, std::string value);
 	Literal();
 };
 
-// LValue -- a variable
-class LValue : public Expression
+// Identifier -- a variable name, function name, etc.
+class Identifier : public Expression
 {
 protected:
 	std::string value;	// the name of the variable
-	std::string LValue_Type;	// the type -- var, var_dereferenced, or var_address
 public:
 	std::string getValue();
-	std::string getLValueType();
-
 	void setValue(std::string new_value);
-	void setLValueType(std::string new_lvalue_type);
-
-	LValue(std::string value, std::string LValue_Type);
-	LValue(std::string value);
-	LValue();
+	
+	Identifier(std::string value);
+	Identifier();
 };
 
 class ListExpression : public Expression
 {
+	Type primary;
 	std::vector<std::shared_ptr<Expression>> list_members;
 public:
 	std::vector<std::shared_ptr<Expression>> get_list();
+	bool has_type_information() const override;
+	Type get_list_type() const;	// the list type that we parsed -- () yields TUPLE, {} yields ARRAY
 
-	ListExpression(std::vector<std::shared_ptr<Expression>> list_members);
+	ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type);
 	ListExpression();
 	~ListExpression();
 };
@@ -148,30 +153,17 @@ public:
 
 class ValueReturningFunctionCall : public Expression
 {
-	std::shared_ptr<LValue> name;
+	std::shared_ptr<Identifier> name;
 	std::vector<std::shared_ptr<Expression>> args;
 public:
-	std::shared_ptr<LValue> get_name();
+	std::shared_ptr<Identifier> get_name();
 	std::string get_func_name();
 	std::vector<std::shared_ptr<Expression>> get_args();
 	std::shared_ptr<Expression> get_arg(int i);
 	int get_args_size();
 
-	ValueReturningFunctionCall(std::shared_ptr<LValue> name, std::vector<std::shared_ptr<Expression>> args);
+	ValueReturningFunctionCall(std::shared_ptr<Identifier> name, std::vector<std::shared_ptr<Expression>> args);
 	ValueReturningFunctionCall();
-};
-
-
-// sizeof expressions
-
-class SizeOf : public Expression
-{
-	DataType to_check;	// because the sizeof expression could be a struct, the typename will be stored as a string
-public:
-	DataType get_type();
-
-	SizeOf(DataType to_check);
-	SizeOf();
 };
 
 // typecasting expressions

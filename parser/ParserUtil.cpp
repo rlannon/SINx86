@@ -96,15 +96,68 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{SCOPE_RESOLUTION, 30}
 });
 
+exp_operator Parser::read_operator(bool peek) {
+	// reads an operator from the lex stream
+	exp_operator op;
+	lexeme l = this->next();
+	if (is_valid_operator(this->peek())) {
+		op = translate_operator(l.value + this->next().value);
+		if (op == NO_OP) {
+			this->back();
+			op = translate_operator(l.value);
+		}
+		else if (peek) {
+			this->back();
+		}
+	}
+	else {
+		op = translate_operator(l.value);
+	}
+
+	if (peek)
+		this->back();
+
+	return op;
+}
+
 const exp_operator Parser::translate_operator(std::string op_string) {
 	// try and find the operator
-	std::unordered_map<std::string, exp_operator>::const_iterator it = Parser::op_strings.find(op_string);
+	auto it = Parser::op_strings.find(op_string);
 	if (it == Parser::op_strings.end()) {
 		return NO_OP;
 	}
 	else {
 		return it->second;
 	}
+}
+
+const exp_operator Parser::make_compound_operator(lexeme l, lexeme r) {
+	// using two lexemes, forms one operator if it can
+	exp_operator op = NO_OP;
+	if (is_valid_operator(l) && is_valid_operator(r)) {
+		std::string op_string = l.value + r.value;
+		op = translate_operator(op_string);
+	}
+	
+	return op;
+}
+
+const bool Parser::is_valid_copy_assignment_operator(exp_operator op) {
+	return (
+		op == EQUAL ||
+		op == PLUS_EQUAL ||
+		op == MINUS_EQUAL ||
+		op == MULT_EQUAL ||
+		op == DIV_EQUAL ||
+		op == MOD_EQUAL ||
+		op == AND_EQUAL ||
+		op == OR_EQUAL ||
+		op == XOR_EQUAL
+	);
+}
+
+const bool Parser::is_valid_move_assignment_operator(exp_operator op) {
+	return (op == LEFT_ARROW || op == RIGHT_ARROW);
 }
 
 const size_t Parser::get_precedence(std::string symbol, size_t line) {
@@ -202,18 +255,30 @@ bool Parser::is_type(std::string lex_value)
 
 	// todo: is there a better way to do this? using a map might not be worth it because there are so few elements
 
-	size_t num_types = 9;
-	std::string type_strings[] = { "int", "bool", "string", "float", "raw", "ptr", "array", "struct", "void" };
+	std::vector<std::string> types = {
+		"int",
+		"bool",
+		"string",
+		"char",
+		"float",
+		"raw",
+		"ptr",
+		"array",
+		"struct",
+		"tuple",
+		"void"
+	};
 
 	// iterate through our list of type names
 	size_t i = 0;
 	bool found = false;
-
-	while (i < num_types && !found) {
-		if (lex_value == type_strings[i]) {
+	auto it = types.begin();
+	while (it != types.end() && !found) {
+		if (lex_value == *it) {
 			found = true;
-		} else {
-			i++;
+		}
+		else {
+			it++;
 		}
 	}
 
@@ -256,7 +321,7 @@ bool Parser::is_opening_grouping_symbol(std::string to_test)
 	Curly braces not included here because they are not considered grouping symbols like ( and [ -- they serve a different purpose
 
 	*/
-	return (to_test == "(" || to_test == "[");
+	return (to_test == "(" || to_test == "[" || to_test == "{");
 }
 
 const bool Parser::has_return(StatementBlock to_test)
@@ -348,6 +413,8 @@ DataType Parser::get_type(std::string grouping_symbol)
 	DataType new_var_subtype;
 	std::shared_ptr<Expression> array_length_exp = nullptr;
 	std::string struct_name = "";
+	bool subtype_is_list = false;
+	std::vector<DataType> subtypes;
 
 	if (current_lex.value == "ptr" || current_lex.value == "ref") {
 		// set the type
@@ -376,7 +443,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 			this->next();	// eat the angle bracket
 
 			// if the next value is a keyword, we can leave array_length_exp as a nullptr
-			if (this->peek().type == KEYWORD) {
+			if (this->peek().type == KEYWORD_LEX) {
 				new_var_subtype = this->parse_subtype("<");
 			} else {
 				// parse an expression to obtain the array length; the _current lexeme_ should be the first lexeme of the expression		
@@ -393,16 +460,76 @@ DataType Parser::get_type(std::string grouping_symbol)
 					new_var_subtype = this->parse_subtype("<");
 				}
 				else {
-					throw ParserException("The size of an array must be followed by the type", 0, current_lex.line_number);
+					throw CompilerException(
+						"The size of an array must be followed by the type",
+						compiler_errors::INVALID_TYPE_SYNTAX,
+						current_lex.line_number
+					);
 				}
 			}
 		}
 		else {
-			throw ParserException("You must specify the size and type of an array (in that order)", 0, current_lex.line_number);
+			throw CompilerException(
+				"Proper syntax is 'array< N, T >' where N an integer expression and T is the contained type",
+				compiler_errors::INVALID_TYPE_SYNTAX,
+				current_lex.line_number
+			);
 		}
 	}
-	// otherwise, if it is not a pointer or an array,
-	else if (current_lex.type == KEYWORD || current_lex.type == IDENTIFIER) {
+	else if (current_lex.value == "tuple") {
+		// tuples contain an arbitrarily long list of types separated by commas
+		new_var_type = TUPLE;
+		subtype_is_list = true;
+		if (this->peek().value == "<") {
+			this->next();
+			while (this->peek().type == KEYWORD_LEX) {
+				// get the type
+				this->next();
+				DataType sub = this->get_type();
+				subtypes.push_back(sub);
+
+				// check to see what needs to happen next
+				if (this->peek().value == ",") {
+					this->next();
+				}
+				else if (this->peek().value != ">") {
+					throw CompilerException(
+						"Expected type, comma, or closing angle bracket",
+						compiler_errors::INVALID_TYPE_SYNTAX,
+						this->current_token().line_number
+					);
+				}
+			}
+
+			if (this->peek().value == ">") {
+				this->next();
+			}
+			else{
+				throw CompilerException(
+					"Missing closing angle bracket for contained type",
+					compiler_errors::INVALID_TYPE_SYNTAX,
+					this->current_token().line_number
+				);
+			}
+
+			// give an error if the tuple is empty and a note if the tuple only has one subtype
+			if (subtypes.empty()) {
+				throw CompilerException(
+					"Tuples must list at least 1 contained type",
+					compiler_errors::INCOMPLETE_TYPE_ERROR,
+					current_lex.line_number
+				);
+			}
+			else if (subtypes.size() == 1) {
+				compiler_note("Unnecessary tuple (contains only one element)", current_lex.line_number);
+			}
+		}
+		else {
+			// todo: appropriate exception
+		}
+	}
+	// otherwise, if it does not have a contained type, it is either a different type (keyword) or struct (identifier)
+	else if (current_lex.type == KEYWORD_LEX || current_lex.type == IDENTIFIER_LEX) {
 		// if we have an int, but we haven't pushed back signed/unsigned, default to signed
 		if (current_lex.value == "int") {
 			// if our symbol doesn't have signed or unsigned, set, it must be signed by default
@@ -417,7 +544,7 @@ DataType Parser::get_type(std::string grouping_symbol)
 		// if we have a struct, make a note of the name
 		if (new_var_type == STRUCT) {
 			// if we didn't have a valid type name, but it was a keyword, then throw an exception -- the keyword used was not a valid type identifier
-			if (current_lex.type == KEYWORD) {
+			if (current_lex.type == KEYWORD_LEX) {
 				throw ParserException(("Invalid type specifier '" + current_lex.value + "'"), 0, current_lex.line_number);
 			}
 
@@ -432,8 +559,14 @@ DataType Parser::get_type(std::string grouping_symbol)
 		);
 	}
 
-	// create the symbol type data
-	DataType symbol_type_data(new_var_type, new_var_subtype, qualities, array_length_exp, struct_name);
+	// create the symbol type data; if we have a list of subtypes, we need to use a different constructor than other types
+	DataType symbol_type_data;
+	if (subtype_is_list) {
+		symbol_type_data = DataType(new_var_type, subtypes, qualities);
+	}
+	else {
+		symbol_type_data = DataType(new_var_type, new_var_subtype, qualities, array_length_exp, struct_name);
+	}
 	return symbol_type_data;
 }
 
@@ -492,7 +625,7 @@ symbol_qualities Parser::get_prefix_qualities(std::string grouping_symbol) {
 
 	// loop until we don't have a quality token, at which point we should return the qualities object
 	lexeme current = this->current_token();
-	while (current.type == KEYWORD && !is_type(current.value)) {
+	while (current.type == KEYWORD_LEX && !is_type(current.value)) {
 		// get the current quality and add it to our qualities object
 		try {
 			qualities.add_quality(get_quality(current));
@@ -533,7 +666,7 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 
 	// continue parsing our SymbolQualities until we hit a semicolon, at which point we will trigger the 'done' flag
 	bool done = false;
-	while (this->peek().type == KEYWORD && !done) {
+	while (this->peek().type == KEYWORD_LEX) {
 		lexeme quality_token = this->next();	// get the token for the quality
 		SymbolQuality quality = this->get_quality(quality_token);	// use our 'get_quality' function to get the SymbolQuality based on the token
 
@@ -542,15 +675,6 @@ symbol_qualities Parser::get_postfix_qualities(std::string grouping_symbol)
 			qualities.add_quality(quality);
 		} catch (CompilerException &e) {
 			throw QualityConflictException(quality_token.value, quality_token.line_number);
-		}
-
-		// the quality must be followed by either another quality, a semicolon, a closing grouping symbol, or a curly brace
-		if (this->peek().value == ";" || this->peek().value == closing_symbol || this->peek().value == "{") {
-			done = true;
-		}
-		// there's an error if the next token is not a keyword and also not a semicolon
-		else if (this->peek().type != KEYWORD) {
-			throw ParserException("Expected ';' or symbol qualifier in expression", 0, this->peek().line_number);
 		}
 	}
 
@@ -564,19 +688,19 @@ SymbolQuality Parser::get_quality(lexeme quality_token)
 	SymbolQuality to_return = NO_QUALITY;
 
 	// ensure the token is a kwd
-	if (quality_token.type == KEYWORD) {
+	if (quality_token.type == KEYWORD_LEX) {
 		// Use the unordered_map to find the quality
 		auto it = symbol_qualities::quality_strings.find(quality_token.value);
 		
 		if (it == symbol_qualities::quality_strings.end()) {
-			throw ParserException("Invalid qualifier", 0, quality_token.line_number);
+			throw CompilerException("Invalid qualifier", compiler_errors::EXPECTED_SYMBOL_QUALITY, quality_token.line_number);
 		}
 		else {
 			to_return = it->second;
 		}
 	}
 	else {
-		throw ParserException("Invalid qualifier", 0, quality_token.line_number);
+		throw CompilerException("Invalid qualifier", compiler_errors::EXPECTED_SYMBOL_QUALITY, quality_token.line_number);
 	}
 
 	return to_return;

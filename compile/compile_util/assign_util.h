@@ -18,7 +18,22 @@ Utilities for assignment -- specifically, tools to determine the source and dest
 #include "expression_util.h"
 
 namespace assign_utilities {
-    std::pair<std::string, std::string> fetch_destination_operand(
+    struct destination_information
+    {
+        std::string dest_location;
+        std::string fetch_instructions;
+        std::string address_for_lea;    // if we need 'lea' (e.g., for strings), we should track the pointer here
+        bool in_register;
+
+        destination_information(
+            std::string dest_location,
+            std::string fetch_instructions,
+            std::string address_for_lea = "",
+            bool in_register=false
+        );
+    };
+
+    destination_information fetch_destination_operand(
         std::shared_ptr<Expression> exp,
         symbol_table &symbols,
         struct_table &structures,
@@ -28,7 +43,7 @@ namespace assign_utilities {
         reg r = RBX,
         bool is_initialization = false
     );
-    std::pair<std::string, std::string> fetch_destination_operand(
+    destination_information fetch_destination_operand(
         symbol &sym,
         symbol_table &symbols,
         unsigned int line,
