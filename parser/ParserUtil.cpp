@@ -96,6 +96,30 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{SCOPE_RESOLUTION, 30}
 });
 
+exp_operator Parser::read_operator(bool peek) {
+	// reads an operator from the lex stream
+	exp_operator op;
+	lexeme l = this->next();
+	if (is_valid_operator(this->peek())) {
+		op = translate_operator(l.value + this->next().value);
+		if (op == NO_OP) {
+			this->back();
+			op = translate_operator(l.value);
+		}
+		else if (peek) {
+			this->back();
+		}
+	}
+	else {
+		op = translate_operator(l.value);
+	}
+
+	if (peek)
+		this->back();
+
+	return op;
+}
+
 const exp_operator Parser::translate_operator(std::string op_string) {
 	// try and find the operator
 	auto it = Parser::op_strings.find(op_string);

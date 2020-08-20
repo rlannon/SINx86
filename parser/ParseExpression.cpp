@@ -297,24 +297,12 @@ std::shared_ptr<Expression> Parser::parse_expression(
 	}
 	else {
 		// check to see if we have a valid operator
-		if (is_valid_operator(this->peek())) {
-			this->next();
-			if (this->peek().value == "=") {
-				exp_operator combined_op = Parser::make_compound_operator(this->current_token(), this->peek());
-				if (
-					(is_valid_copy_assignment_operator(combined_op) || is_valid_move_assignment_operator(combined_op))
-					&& omit_equals
-				) {
-					this->back();
-					return left;
-				}
-				else {
-					this->back();
-				}
-			}
-			else {
-				this->back();
-			}
+		exp_operator peek_op = this->read_operator(true);
+		if (
+			(is_valid_copy_assignment_operator(peek_op) || is_valid_move_assignment_operator(peek_op))
+			&& omit_equals
+		) {
+			return left;
 		}
 		
 		return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
@@ -358,7 +346,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 	}
 	else if (is_valid_operator(next)) {
 		// get the operator
-		exp_operator op = translate_operator(next.value);
+		auto op = this->read_operator(true);
 
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
 		if (op == BIT_AND) {
@@ -377,12 +365,13 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 		
 		// parse the binary expression as usual
 		// get the next op_char's data
-		size_t his_prec = get_precedence(next.value, next.line_number);
+		size_t his_prec = get_precedence(op, next.line_number);
 
 		// If the next operator is of a higher precedence than ours, we may need to parse a second binary expression first
 		if (his_prec > my_prec) {
-			this->next();	// go to the next character in our stream (the op_char)
-			this->next();	// go to the character after the op char
+			// we peeked the operator before, so now we should skip over it
+			this->read_operator(false);
+			this->next();
 
 			std::shared_ptr<Expression> to_check = nullptr;
 

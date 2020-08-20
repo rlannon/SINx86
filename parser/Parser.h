@@ -51,6 +51,7 @@ class Parser
 	static const exp_operator make_compound_operator(lexeme l, lexeme r);
 	static const bool is_valid_copy_assignment_operator(exp_operator op);
 	static const bool is_valid_move_assignment_operator(exp_operator op);
+	exp_operator read_operator(bool peek);
 
 	// our operator and precedence handlers
 	static const std::unordered_map<std::string, exp_operator> op_strings;
