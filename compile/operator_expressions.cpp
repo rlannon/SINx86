@@ -62,16 +62,13 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 			*/
 
 			// the floating-point expression to negate will already be in the XMM0 register; act based on width
-			if (unary_type.get_width() == sin_widths::FLOAT_WIDTH) {
-				eval_ss << "movss xmm1, [" << compiler::SINGLE_PRECISION_MASK_LABEL << "]" << std::endl;
-				eval_ss << "xorps xmm0, xmm1" << std::endl;
-			}
-			else if (unary_type.get_width() == sin_widths::DOUBLE_WIDTH) {
+			if (unary_type.get_width() == sin_widths::DOUBLE_WIDTH) {
 				eval_ss << "movsd xmm1, [" << compiler::DOUBLE_PRECISION_MASK_LABEL << "]" << std::endl;
 				eval_ss << "xorpd xmm0, xmm1" << std::endl;
 			}
 			else {
-				// todo: width exception? or should 'half' type just be converted to single-precision automatically and generate a warning?
+				eval_ss << "movss xmm1, [" << compiler::SINGLE_PRECISION_MASK_LABEL << "]" << std::endl;
+				eval_ss << "xorps xmm0, xmm1" << std::endl;
 			}
 		}
 		else if (unary_type.get_primary() == INT) {
@@ -90,16 +87,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 			}
 
 			// the expression is in RAX; check the width to get which register size to use
-			std::string register_name;
-			if (unary_type.get_width() == sin_widths::SHORT_WIDTH) {
-				register_name = "ax";
-			}
-			else if (unary_type.get_width() == sin_widths::INT_WIDTH) {
-				register_name = "eax";
-			}
-			else {
-				register_name = "rax";
-			}
+			std::string register_name = register_usage::get_register_name(RAX, unary_type);
 
 			// perform two's complement on A with the 'neg' instruction
 			eval_ss << "\t" << "neg " << register_name << std::endl;
@@ -115,7 +103,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 		// expression must be a boolean
 
 		if (unary_type.get_primary() == BOOL) {
-			// XOR against a bitmask of 0xFF, as a boolean checks for zero or non-zero, not 1 or 0
+			// XOR against a bitmask of 0xFF, as a boolean checks for zero or non-zero, not necessarily 1 or 0
 			// a boolean will be in al
 			eval_ss << "\t" << "mov ah, 0xFF" << std::endl;
 			eval_ss << "\t" << "xor al, ah" << std::endl;
@@ -128,15 +116,16 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	}
 	case exp_operator::BIT_NOT:
 	{
-		// expression does not have to be a boolean, it can be any fixed-width type in RAX
+		// expression does not have to be a boolean -- can be integral as well
 
-		if (unary_type.get_primary() != STRING && unary_type.get_primary() != ARRAY && unary_type.get_primary() != STRUCT) {
+		if (unary_type.get_primary() == INT || unary_type.get_primary() == CHAR || unary_type.get_primary() == BOOL) {
 			// simply use the x86 NOT instruction
-			eval_ss << "\t" << "not rax" << std::endl;
+			eval_ss << "\t" << "not " << register_usage::get_register_name(RAX, unary_type) << std::endl;
 		}
 		else {
 			throw UnaryTypeNotSupportedError(line);
 		}
+		break;
 	}
 	case exp_operator::ADDRESS:
 	{
@@ -222,6 +211,16 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 		size_t data_width = left_type.get_width();
 		bool is_signed = left_type.get_qualities().is_signed() || right_type.get_qualities().is_signed();
 
+		// check for half-precision type once here instead of repeating this call multiple times in source later
+		if (primary == FLOAT) {
+			if (
+				(left_type.get_width() == sin_widths::HALF_WIDTH) ||
+				(right_type.get_primary() == FLOAT && right_type.get_width() == sin_widths::HALF_WIDTH)
+			) {
+				half_precision_not_supported_warning(line);
+			}
+		}
+
 		// issue a warning for signed/unsigned mismatch if applicable
 		if (left_type.get_qualities().is_signed() != left_type.get_qualities().is_signed())
 			compiler_warning("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
@@ -279,13 +278,15 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 
 				// if the left type is single-precision, but right type is double, we need to convert it to double (if assigning to float, may result in loss of data); this is not considered an 'implicit conversion' by the compiler because both are floating-point types, and requisite width conversions are allowed
 				if (left_type.get_width() != right_type.get_width()) {
-					if (left_type.get_width() == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "cvtss2sd xmm0, xmm0" << std::endl;	// todo: is this a valid instruction?
-						data_width = sin_widths::DOUBLE_WIDTH;	// ensure the expression is marked as double-precision for eventual operation code generation
-					}
-					else {
+					// if the lhs is a double, convert rhs to double; if rhs is a double, convert lhs to a double
+					if (left_type.get_width() == sin_widths::DOUBLE_WIDTH) {
 						eval_ss << "\t" << "cvtss2sd xmm1, xmm1" << std::endl;	// convert scalar single to scalar double, taking the value from xmm1 and storing it back in xmm1
 					}
+					else {
+						eval_ss << "\t" << "cvtss2sd xmm0, xmm0" << std::endl;
+					}
+
+					data_width = sin_widths::DOUBLE_WIDTH;	// ensure the expression is marked as double-precision for eventual operation code generation
 				}
 			}
 			else {
@@ -320,11 +321,11 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					break;
 				case FLOAT:
 					// single- and double-precision floats use different SSE instructions
-					if (data_width == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "addss xmm0, xmm1" << std::endl;	// add scalar single
+					if (data_width == sin_widths::DOUBLE_WIDTH) {
+						eval_ss << "\t" << "addsd xmm0, xmm1" << std::endl;	// add scalar double
 					}
 					else {
-						eval_ss << "\t" << "addsd xmm0, xmm1" << std::endl;	// add scalar double
+						eval_ss << "\t" << "addss xmm0, xmm1" << std::endl;	// add scalar single
 					}
 					break;
 				case STRING:
@@ -371,11 +372,11 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					break;
 				case FLOAT:
 					// single- and double-precision floats use different SSE instructions
-					if (data_width == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "subss xmm0, xmm1" << std::endl;
+					if (data_width == sin_widths::DOUBLE_WIDTH) {
+						eval_ss << "\t" << "subsd xmm0, xmm1" << std::endl;
 					}
 					else {
-						eval_ss << "\t" << "subsd xmm0, xmm1" << std::endl;
+						eval_ss << "\t" << "subss xmm0, xmm1" << std::endl;
 					}
 					break;
 				default:
@@ -398,11 +399,11 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					}
 				}
 				else if (primary == FLOAT) {
-					if (data_width == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "mulss xmm0, xmm1" << std::endl;
+					if (data_width == sin_widths::DOUBLE_WIDTH) {
+						eval_ss << "\t" << "mulsd xmm0, xmm1" << std::endl;
 					}
 					else {
-						eval_ss << "\t" << "mulsd xmm0, xmm1" << std::endl;
+						eval_ss << "\t" << "mulss xmm0, xmm1" << std::endl;
 					}
 				}
 				else {
@@ -428,11 +429,11 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				}
 				else if (primary == FLOAT) {
 					// which instruction depends on the width of the values; in either case, we are operating on scalar values (not packed)
-					if (data_width == sin_widths::FLOAT_WIDTH) {
-						eval_ss << "\t" << "divss xmm0, xmm1" << std::endl;
+					if (data_width == sin_widths::DOUBLE_WIDTH) {
+						eval_ss << "\t" << "divsd xmm0, xmm1" << std::endl;
 					}
 					else {
-						eval_ss << "\t" << "divsd xmm0, xmm1" << std::endl;
+						eval_ss << "\t" << "divss xmm0, xmm1" << std::endl;
 					}
 				}
 				else {
@@ -457,44 +458,22 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				}
 			}
 
-			// Bitwise operators; these may use int or float
-			else if (to_evaluate.get_operator() == exp_operator::BIT_AND)
-			{
-				if (primary == INT) {
-					eval_ss << "\t" << "and rax, rbx" << std::endl;
-				}
-				else if (primary == FLOAT) {
-					// todo: bitwise operations on floats
-					// these are scalar values, but the sse instructions work on packed versions
-				}
-				else {
-					throw UndefinedOperatorError("bitwise-and", line);
-				}
-			}
-			else if (to_evaluate.get_operator() == exp_operator::BIT_OR)
-			{
-				// same procedure as bitwise-and
-				if (primary == INT) {
-					eval_ss << "\t" << "or rax, rbx" << std::endl;
-				}
-				else if (primary == FLOAT) {
-					// todo: floats with bitwise operators
+			// Bitwise operators; these may use integral types
+			else if (
+				(to_evaluate.get_operator() == exp_operator::BIT_AND) ||
+				(to_evaluate.get_operator() == exp_operator::BIT_OR) ||
+				(to_evaluate.get_operator() == exp_operator::BIT_XOR)
+			) {
+				std::string inst =
+					(to_evaluate.get_operator() == BIT_AND) ? "and" :
+					(to_evaluate.get_operator() == BIT_OR) ? "or" : "xor";
+				
+				if (primary == INT || primary == CHAR || primary == PTR) {
+					eval_ss << "\t" << inst << " " << register_usage::get_register_name(RAX, left_type)
+						<< ", " << register_usage::get_register_name(RBX, right_type) << std::endl;
 				}
 				else {
-					throw UndefinedOperatorError("bitwise-or", line);
-				}
-			}
-			else if (to_evaluate.get_operator() == exp_operator::BIT_XOR)
-			{
-				// bitwise xor
-				if (primary == INT) {
-					eval_ss << "\t" << "xor rax, rbx" << std::endl;
-				}
-				else if (left_type.get_primary() == FLOAT) {
-					// todo: floats with bitwise operators
-				}
-				else {
-					throw UndefinedOperatorError("bitwise-xor", line);
+					throw UndefinedOperatorError("bitwise-" + inst, line);
 				}
 			}
 			else if (
@@ -520,8 +499,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					}
 				}
 
-
-				// we must utilize the CL register for shifts
+				// we must utilize the CL register for shift value (or immediate)
 				eval_ss << "\t" << "mov cl, bl" << std::endl;
 
 				// bit shifts can work on integral types
@@ -610,6 +588,8 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 
 				*/
 
+				// todo: comparisons can be optimized further, especially when context is taken into account
+
 				// to determine whether the comparison requires unsigned operation
 				bool requires_unsigned = false;
 				std::string fp_suffix;	// will change the instruction based on single-/double-precision
@@ -639,11 +619,11 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				else if (left_type.get_primary() == FLOAT) {
 					// SSE has instructions for this -- use the pseudo ops
 					
-					if (data_width == sin_widths::FLOAT_WIDTH) {
-						fp_suffix = "ss";
+					if (data_width == sin_widths::DOUBLE_WIDTH) {
+						fp_suffix = "sd";
 					}
 					else {
-						fp_suffix = "sd";
+						fp_suffix = "ss";
 					}
 				}
 				else {
@@ -713,11 +693,11 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					}
 
 					// now, xmm0 contains the mask -- 0xffffffff if the result was 'true', else 0x0
-					eval_ss << "\t" << "sub rsp, " << ((data_width == sin_widths::FLOAT_WIDTH) ? 4 : 8) << std::endl;
+					eval_ss << "\t" << "sub rsp, " << ((data_width == sin_widths::DOUBLE_WIDTH) ? 8 : 4) << std::endl;
 					eval_ss << "\t" << "mov" << fp_suffix << " [rsp], xmm0" << std::endl;
-					eval_ss << "\t" << "mov " << ((data_width == sin_widths::FLOAT_WIDTH) ? "eax" : "rax") << ", [rsp]" << std::endl;
+					eval_ss << "\t" << "mov " << ((data_width == sin_widths::DOUBLE_WIDTH) ? "rax" : "eax") << ", [rsp]" << std::endl;
 					eval_ss << "\t" << "and rax, 1" << std::endl;
-					eval_ss << "\t" << "add rsp, " << ((data_width == sin_widths::FLOAT_WIDTH) ? 4 : 8) << std::endl;
+					eval_ss << "\t" << "add rsp, " << ((data_width == sin_widths::DOUBLE_WIDTH) ? 8 : 4) << std::endl;
 				}
 				else {
 					// set al accordingly

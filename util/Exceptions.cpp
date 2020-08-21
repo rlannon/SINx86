@@ -333,6 +333,14 @@ void compiler_warning(std::string message, unsigned int code, unsigned int line_
 	std::cout << "**** Compiler Warning W" << code << ": " << message << " (at or near line " << line_number << ")" << std::endl;
 }
 
+void half_precision_not_supported_warning(unsigned int line) {
+	compiler_warning(
+		"Found unsupported 16-bit half-precision floating point number; utilizing 32-bit single-precision instead",
+		compiler_errors::DATA_WIDTH_ERROR,
+		line
+	);
+}
+
 void compiler_note(std::string message, unsigned int line_number) {
 	std::cout << "**** Note: " << message << " (line " << line_number << ")" << std::endl;
 }
