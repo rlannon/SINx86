@@ -46,6 +46,8 @@ def int main & long (alloc array<string> args &dynamic)
 
     alloc float f3 &long;
     let f3 = f1 as long float + 1234.56789 &long;
+    alloc float result;
+    let result = f1 * 30 as float + f2;
 
     return to_return;
 }
