@@ -545,6 +545,12 @@ void compiler::generate_asm(std::string filename) {
 		this->text_segment << this->compile_ast(ast).str();
 
 		std::cout << "Consolidating code..." << std::endl;
+
+        // add 'extern' for every symbol that needs it
+        for (std::string s: this->externals) {
+            this->text_segment << "extern " << s << std::endl;
+        }
+
         // now, we want to see if we have a function 'main' in the symbol table; if so, we need to set it up and call it
         try {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
@@ -573,11 +579,6 @@ void compiler::generate_asm(std::string filename) {
             std::vector<std::shared_ptr<Expression>> cmd_args = {};
             for (symbol s: main_symbol.get_formal_parameters()) {
                 // todo: get argument
-            }
-
-            // add 'extern' for every symbol that needs it
-            for (std::string s: this->externals) {
-                this->text_segment << "extern " << s << std::endl;
             }
 
             // insert our wrapper for the program
