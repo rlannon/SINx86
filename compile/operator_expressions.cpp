@@ -222,11 +222,19 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 		}
 
 		// issue a warning for signed/unsigned mismatch if applicable
-		if (left_type.get_qualities().is_signed() != left_type.get_qualities().is_signed())
+		if (
+			(primary == INT) &&
+			(left_type.get_qualities().is_signed() != right_type.get_qualities().is_signed())
+		) {
 			compiler_warning("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
+		}
 		
+		// todo: generalize check for width mismatch warning
 		// also issue a warning if the types are different widths
-		if (left_type.get_width() != right_type.get_width()) {
+		if (
+			(left_type.get_width() != right_type.get_width()) &&
+			!(primary == STRING && right_type.get_primary() == CHAR)
+		) {
 			compiler_warning("Width mismatch", compiler_errors::WIDTH_MISMATCH, line);
 		}
 
@@ -332,7 +340,10 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				{
 					/*
 
-					string concatenation (passes pointer to string to SRE function)
+					string concatenation 
+					
+					If the right hand type is a string:
+					passes pointer to string to SRE function
 					
 					SRE routine parameters are:
 						RSI - ptr<string> left
@@ -340,19 +351,40 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					Returns
 						ptr<string> - points to the location of the resultant string
 					
+					If the right hand type is a char:
+						* Increment the string length
+						* Replace the null byte with the char and append a new null byte
+					
 					*/
 
-					eval_ss << push_used_registers(this->reg_stack.peek(), true).str();
+					if (right_type.get_primary() == STRING) {
+						eval_ss << push_used_registers(this->reg_stack.peek(), true).str();
 
-					std::string routine_name = (right_type.get_primary() == CHAR) ? "sinl_string_append" : "sinl_string_concat";
-					eval_ss << "\t" << "mov rsi, rax" << std::endl;
-					eval_ss << "\t" << "mov rdi, rbx" << std::endl;
+						std::string routine_name = (right_type.get_primary() == CHAR) ? "sinl_string_append" : "sinl_string_concat";
+						eval_ss << "\t" << "mov rsi, rax" << std::endl;
+						eval_ss << "\t" << "mov rdi, rbx" << std::endl;
 
-					eval_ss << call_sincall_subroutine(routine_name);
-					eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
-					
-					count += 1;	// string concatenation and appendment allocate resources
-					eval_ss << "\t" << "push rax" << std::endl;
+						eval_ss << call_sincall_subroutine(routine_name);
+						eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+						
+						count += 1;	// string concatenation and appendment allocate resources
+						eval_ss << "\t" << "push rax" << std::endl;
+					}
+					else if (right_type.get_primary() == CHAR) {
+						eval_ss << push_used_registers(this->reg_stack.peek(), true).str();
+
+						eval_ss << "\t" << "mov rsi, rax" << std::endl;
+						eval_ss << "\t" << "mov eax, [rax]" << std::endl
+							<< "\t" << "mov [rsi + rax], bl" << std::endl;
+						eval_ss << "\t" << "inc dword [rsi]" << std::endl;
+						eval_ss << "\t" << "mov eax, [rsi]" << std::endl
+							<< "\t" << "mov [rsi + rax], byte 0" << std::endl;
+
+						eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+					}
+					else {
+						throw UndefinedOperatorError("concatenation", line);
+					}
 					
 					break;
 				}

@@ -109,4 +109,7 @@ namespace compiler_errors {
     const unsigned int UNSAFE_OPERATION = 501;
     const unsigned int BITSHIFT_RESULT = 502;
     const unsigned int MAIN_SIGNATURE = 505;    // 'main' should return an integer and have one argument
+
+    // Note codes (not necessarily warnings, but alerts)
+    const unsigned int NO_EFFECT = 900;
 };

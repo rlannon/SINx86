@@ -61,7 +61,10 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
 
     std::stringstream cast_ss;
 
-    if (new_type.get_primary() == BOOL) {
+    if (old_type == new_type) {
+        compiler_note("Typecast appears to have no effect", line);  // todo: allow code
+    }
+    else if (new_type.get_primary() == BOOL) {
         if (old_type.get_primary() == FLOAT) {
             // use the SSE comparison functions
             std::string instruction = (old_type.get_qualities().is_long()) ? "cmpsd" : "cmpss";
@@ -99,6 +102,9 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
                 * If the old size is smaller than the new one, we need to use a movsx instruction
                 * If the new type is smaller or equal, we do nothing
             If one of the types was signed and the other is not, we do nothing
+            
+            If the types are the same, warn that the cast has no effect;
+            if they are not, but we don't need to do anything, the cast is useful for type checking purposes
 
             */
 
@@ -116,9 +122,6 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
                     << register_usage::get_register_name(reg::RAX, new_type) << ", " 
                     << register_usage::get_register_name(reg::RAX, old_type) << std::endl;
             }
-            else {
-                compiler_note("Typecast appears to have no effect", line);
-            }
         }
     }
     else if (new_type.get_primary() == FLOAT) {
@@ -130,10 +133,6 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
             else if (old_type.get_width() > new_type.get_width()) {
                 // old > new; convert scalar double to scalar single
                 cast_ss << "\t" << "cvtsd2ss xmm0, xmm0" << std::endl;
-            }
-            else {
-                // don't do anything if they're the same type; issue a note (not a warning)
-                compiler_note("Typecast appears to have no effect", line);
             }
         }
         else {

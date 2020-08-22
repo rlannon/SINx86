@@ -27,6 +27,8 @@ The purpose of the Exceptions files is to implement the various custom exception
 
 */
 
+// todo: include file information in exception
+
 class CompilerException : public std::exception
 {
 protected:

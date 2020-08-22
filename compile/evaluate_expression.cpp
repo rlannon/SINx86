@@ -567,7 +567,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                 if (sym.get_data_type().get_qualities().is_static()) {
                     // static memory can be looked up by name -- variables are in the .bss, .data, or .rodata section
                     eval_ss << "\t" << "lea rax, [" << sym.get_name() << "]" << std::endl;
-                    eval_ss << "\t" << "mov " << reg_string << ", rax" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", [rax]" << std::endl;
                 } 
                 else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory
