@@ -194,7 +194,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 
 	*/
 
-	// todo: type hinting to ensure literals don't always generate type and width mismatches
+	// todo: type hinting to ensure literals don't always generate type and width mismatches when used with unsigned long/short integers
 
 	std::stringstream eval_ss;
 	size_t count = 0;
@@ -494,6 +494,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					eval_ss << "\t" << "mov " << register_usage::get_register_name(RAX, left_type) << ", " << rdx_name << std::endl;
 				}
 				else if (primary == FLOAT) {
+					// todo: ensure we are using an xmm register that's not currently in use to hold some other data
 					// the mod operator will follow the IEEE x REM y standard, yielding the result (x - (x/y)*y)
 					auto fp_suffix = (data_width == sin_widths::DOUBLE_WIDTH) ? "sd" : "ss";
 					eval_ss << "\t" << "mov" << fp_suffix << " xmm2, xmm0" << std::endl;
