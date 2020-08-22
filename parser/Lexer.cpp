@@ -255,6 +255,8 @@ lexeme Lexer::read_next() {
 		return next_lexeme;
 	}
 
+	// todo: overhaul comments (return null lexeme if we have a comment, or maybe just have some sort of iteration)
+
 	if (ch == '/') {	// if we have a slash, we may have a comment
 		ch = this->next();	// advance one character
 

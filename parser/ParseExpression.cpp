@@ -279,7 +279,6 @@ std::shared_ptr<Expression> Parser::parse_expression(
 			}
 		} else {
 			this->back();
-			this->back();
 		}
 
 		// do not advance token; we use 'peek' in maybe_binary

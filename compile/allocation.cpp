@@ -123,7 +123,6 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 		else if (alloc_data.get_qualities().is_static()) {
 			data_width = 0;	// takes up no space on the stack
 			allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
-			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// we need to determine the width suffix (db, dw, resb, resw, etc)
 			size_t w = allocated.get_data_type().get_width();
@@ -212,6 +211,10 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// static, non-const, uninitialized data
 				this->bss_segment << alloc_instruction.str() << std::endl;
 			}
+
+			// add the symbol to the table
+			if (alloc_stmt.was_initialized()) allocated.set_initialized();
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
 		}
 		else {
 			// must be automatic memory

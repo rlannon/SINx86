@@ -308,7 +308,7 @@ std::string Parser::get_closing_grouping_symbol(std::string beginning_symbol)
 		return ">";
 	}
 	else {
-		throw ParserException("Invalid grouping symbol in expression!", compiler_errors::INVALID_TOKEN, 0);
+		throw ParserException("Invalid grouping symbol in expression", compiler_errors::INVALID_TOKEN, 0);
 		return "";
 	}
 }
