@@ -45,12 +45,16 @@ bool Expression::has_type_information() const {
 	return false;
 }
 
+bool Expression::was_overridden() const {
+	return this->overridden;
+}
+
 Expression::Expression(exp_type expression_type) : expression_type(expression_type) {
 	this->_const = false;	// all expressions default to being non-const
+	this->overridden = false;
 }
 
 Expression::Expression(): Expression(EXPRESSION_GENERAL) {
-	// call specialized constructor with default value
 }
 
 Expression::~Expression() {
@@ -79,9 +83,7 @@ bool Literal::has_type_information() const {
 	return true;
 }
 
-Literal::Literal(Type data_type, std::string value, Type subtype) : value(value) {
-	this->expression_type = LITERAL;
-
+Literal::Literal(Type data_type, std::string value, Type subtype) : Expression(LITERAL), value(value) {
     // symbol qualities for our DataType object
     bool const_q = true;
     bool long_q = false;
@@ -106,13 +108,12 @@ Literal::Literal(Type data_type, std::string value, Type subtype) : value(value)
 	this->type = DataType(data_type, subtype, qualities);
 }
 
-Literal::Literal(DataType t, std::string value) {
+Literal::Literal(DataType t, std::string value): Expression(LITERAL) {
 	this->type = t;
 	this->value = value;
 }
 
-Literal::Literal() {
-	this->expression_type = LITERAL;
+Literal::Literal(): Expression(LITERAL) {
 	this->type = DataType();
 }
 
@@ -125,13 +126,10 @@ void Identifier::setValue(std::string new_value) {
 	this->value = new_value;
 }
 
-Identifier::Identifier(std::string value) : value(value) {
-	Identifier::expression_type = IDENTIFIER;
+Identifier::Identifier(std::string value) : Expression(IDENTIFIER), value(value) {
 }
 
-Identifier::Identifier() {
-	Identifier::expression_type = IDENTIFIER;
-	Identifier::value = "";
+Identifier::Identifier(): Identifier("") {
 }
 
 
@@ -150,9 +148,9 @@ DataType &AttributeSelection::get_data_type() {
 }
 
 AttributeSelection::AttributeSelection(std::shared_ptr<Expression> selected, std::string attribute_name):
+	Expression(ATTRIBUTE),
 	selected(selected)
 {
-	this->expression_type = ATTRIBUTE;
 	this->attrib = to_attribute(attribute_name);
 
 	// set the type
@@ -173,13 +171,12 @@ AttributeSelection::AttributeSelection(std::shared_ptr<Expression> selected, std
 	this->t.get_qualities().add_quality(FINAL);
 }
 
-AttributeSelection::AttributeSelection(std::shared_ptr<Binary> to_deconstruct)
+AttributeSelection::AttributeSelection(std::shared_ptr<Binary> to_deconstruct): Expression(ATTRIBUTE)
 {
 	// Construct an 'AttributeSelection' object from a Binary expression
 	
 	// as long as we have a valid binary expression, continue
-	if (to_deconstruct->get_right()->get_expression_type() == KEYWORD_EXP) {	
-		this->expression_type = ATTRIBUTE;
+	if (to_deconstruct->get_right()->get_expression_type() == KEYWORD_EXP) {
 		this->selected = to_deconstruct->get_left();
 		auto right = dynamic_cast<KeywordExpression*>(to_deconstruct->get_right().get());
 		this->attrib = to_attribute(right->get_keyword());
@@ -242,15 +239,13 @@ std::vector<std::shared_ptr<Expression>> ListExpression::get_list()
 }
 
 ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type) :
+	Expression(LIST),
 	list_members(list_members),
 	primary(list_type)
 {
-	this->expression_type = LIST;
 }
 
-ListExpression::ListExpression() {
-	this->expression_type = LIST;
-	this->list_members = {};
+ListExpression::ListExpression(): ListExpression({}, NONE) {
 }
 
 ListExpression::~ListExpression() {
@@ -268,9 +263,9 @@ DataType &KeywordExpression::get_type() {
 }
 
 KeywordExpression::KeywordExpression(std::string keyword):
+	Expression(KEYWORD_EXP),
 	keyword(keyword)
 {
-	this->expression_type = KEYWORD_EXP;
 }
 
 KeywordExpression::KeywordExpression(DataType t):
@@ -291,13 +286,20 @@ exp_operator Binary::get_operator() {
 	return this->op;
 }
 
-Binary::Binary(std::shared_ptr<Expression> left_exp, std::shared_ptr<Expression> right_exp, exp_operator op) : left_exp(left_exp), right_exp(right_exp), op(op) {
-	Binary::expression_type = BINARY;
+Binary::Binary(
+	std::shared_ptr<Expression> left_exp,
+	std::shared_ptr<Expression> right_exp,
+	exp_operator op
+):
+	Expression(BINARY),
+	left_exp(left_exp),
+	right_exp(right_exp),
+	op(op)
+{
 }
 
-Binary::Binary() {
+Binary::Binary(): Expression(BINARY) {
 	Binary::op = NO_OP;	// initialized to no_op so we don't ever run into uninitialized variables
-	Binary::expression_type = BINARY;
 }
 
 
@@ -310,13 +312,11 @@ std::shared_ptr<Expression> Unary::get_operand() {
 	return this->operand;
 }
 
-Unary::Unary(std::shared_ptr<Expression> operand, exp_operator op) : operand(operand), op(op) {
-	Unary::expression_type = UNARY;
+Unary::Unary(std::shared_ptr<Expression> operand, exp_operator op) : Expression(UNARY), operand(operand), op(op) {
 }
 
-Unary::Unary() {
-	Unary::op = NO_OP;	// initialize to no_op so we don't ever try to access uninitialized data
-	Unary::expression_type = UNARY;
+Unary::Unary(): Expression(UNARY) {
+	this->op = NO_OP;
 }
 
 
@@ -343,12 +343,17 @@ int ValueReturningFunctionCall::get_args_size() {
 	return this->args.size();
 }
 
-ValueReturningFunctionCall::ValueReturningFunctionCall(std::shared_ptr<Identifier> name, std::vector<std::shared_ptr<Expression>> args) : name(name), args(args) {
-	ValueReturningFunctionCall::expression_type = VALUE_RETURNING_CALL;
+ValueReturningFunctionCall::ValueReturningFunctionCall(
+	std::shared_ptr<Identifier> name,
+	std::vector<std::shared_ptr<Expression>> args
+): 
+	Expression(VALUE_RETURNING_CALL),
+	name(name), 
+	args(args) 
+{
 }
 
-ValueReturningFunctionCall::ValueReturningFunctionCall() {
-	ValueReturningFunctionCall::expression_type = VALUE_RETURNING_CALL;
+ValueReturningFunctionCall::ValueReturningFunctionCall(): Expression(VALUE_RETURNING_CALL) {
 }
 
 
@@ -362,16 +367,14 @@ std::shared_ptr<Expression> Indexed::get_to_index()
 	return this->to_index;
 }
 
-Indexed::Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value)
+Indexed::Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value): Expression(INDEXED)
 {
 	this->to_index = to_index;
 	this->index_value = index_value;
-	this->expression_type = INDEXED;
 }
 
-Indexed::Indexed()
+Indexed::Indexed(): Indexed(nullptr, nullptr)
 {
-	this->expression_type = INDEXED;
 }
 
 std::shared_ptr<Expression> Cast::get_exp() {
@@ -382,16 +385,14 @@ DataType& Cast::get_new_type() {
 	return this->new_type;
 }
 
-Cast::Cast(std::shared_ptr<Expression> to_cast, DataType new_type) {
-	this->expression_type = CAST;
+Cast::Cast(std::shared_ptr<Expression> to_cast, DataType new_type): Expression(CAST) {
 	this->to_cast = to_cast;
 	this->new_type = new_type;
 }
 
-Cast::Cast(std::shared_ptr<Binary> b) {
+Cast::Cast(std::shared_ptr<Binary> b): Expression(CAST) {
 	if (b->get_operator() == TYPECAST && b->get_right()->get_expression_type() == KEYWORD_EXP) {
 		auto* kw = dynamic_cast<KeywordExpression*>(b->get_right().get());
-		this->expression_type = CAST;
 		this->to_cast = b->get_left();
 		this->new_type = kw->get_type();
 	}

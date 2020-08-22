@@ -26,6 +26,7 @@ class Expression
 {
 protected:
 	bool _const;	// if we have the 'constexpr' keyword, this will be set
+	bool overridden;
 	exp_type expression_type;	// replace "string type" with "exp_type expression_type"
 public:
 	bool is_const();
@@ -34,6 +35,7 @@ public:
 
 	virtual void override_qualities(symbol_qualities sq);
 	virtual bool has_type_information() const;
+	bool was_overridden() const;
 
 	Expression(exp_type expression_type);
 	Expression();
