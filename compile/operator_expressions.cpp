@@ -194,6 +194,8 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 
 	*/
 
+	// todo: type hinting to ensure literals don't always generate type and width mismatches
+
 	std::stringstream eval_ss;
 	size_t count = 0;
 
@@ -201,11 +203,20 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 	if (to_evaluate.get_operator() == DOT) {
 		eval_ss << expression_util::evaluate_member_selection(to_evaluate, this->symbols, this->structs, RAX, line).str();
 	} else {
-		// todo: type hinting (for ensuring literals are appropriate)
-
 		// get the left and right branches
-		DataType left_type = expression_util::get_expression_data_type(to_evaluate.get_left(), this->symbols, this->structs, line);
-		DataType right_type = expression_util::get_expression_data_type(to_evaluate.get_right(), this->symbols, this->structs, line);
+
+		DataType left_type = expression_util::get_expression_data_type(
+			to_evaluate.get_left(),
+			this->symbols,
+			this->structs,
+			line
+		);
+		DataType right_type = expression_util::get_expression_data_type(
+			to_evaluate.get_right(),
+			this->symbols,
+			this->structs,
+			line
+		);
 
 		Type primary = left_type.get_primary();
 		size_t data_width = left_type.get_width();
@@ -483,7 +494,13 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					eval_ss << "\t" << "mov " << register_usage::get_register_name(RAX, left_type) << ", " << rdx_name << std::endl;
 				}
 				else if (primary == FLOAT) {
-					// todo: implement modulo with floating-point numbers
+					// the mod operator will follow the IEEE x REM y standard, yielding the result (x - (x/y)*y)
+					auto fp_suffix = (data_width == sin_widths::DOUBLE_WIDTH) ? "sd" : "ss";
+					eval_ss << "\t" << "mov" << fp_suffix << " xmm2, xmm0" << std::endl;
+					eval_ss << "\t" << "div" << fp_suffix << " xmm0, xmm1" << std::endl;
+					eval_ss << "\t" << "mul" << fp_suffix << " xmm0, xmm1" << std::endl;
+					eval_ss << "\t" << "sub" << fp_suffix << " xmm2, xmm0" << std::endl;
+					eval_ss << "\t" << "mov" << fp_suffix << " xmm0, xmm2" << std::endl;	// todo: verify
 				}
 				else {
 					throw UndefinedOperatorError("modulo", line);

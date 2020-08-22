@@ -34,8 +34,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
     */
 
-    // todo: include a DataType field to hint at the appropriate type (for literal expressions)
-    // for example, if we are assigning like `alloc long int a: 1_000`, then we should ensure it treats the literal as a `long`, not regular, `int`
+    // todo: proper type hitns -- e.g., if we are assigning like `alloc long int a: 1_000`, then we should ensure it treats the literal as a `long`, not regular, `int`
 
     std::stringstream evaluation_ss;
     size_t count = 0;
