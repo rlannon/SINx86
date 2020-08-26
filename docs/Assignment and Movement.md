@@ -12,7 +12,7 @@ Assignment in SIN is performed with the `let` keyword. For example,
 
     let x = y;
 
-copies the value in `y` to the location `x`. This is important -- `let` *copies* data. As such, something like:
+copies the value in `y` to the location `x`. This is important -- `let` *always copies* data. As such, something like:
 
     alloc array<3, int> my_arr: { 0, 1, 2 };
     alloc array<int> s2 &dynamic;
@@ -42,11 +42,13 @@ There are a few assignment operators you may use with `let`:
 | `|=` | Bit-OR of LHS and RHS | `let a = a | b` |
 | `^=` | Bit-XOR of LHS by RHS | `let a = a ^ b` |
 
+These compound operators are only supported with assignment; you cannot utilize them as equality operators (e.g., something like `if (a += b)` is illegal).
+
 ### Movement
 
 _Note: not yet implemented in SIN._
 
-Sometimes, we want to *move* data instead of *copy* it, especially if we have large dynamically-allocated objects. For non-references and non-dynamic data, this ultimately copies the data, but if we are utilizing references or dynamic memory, we can move the data by copying its reference into a new location. For example:
+Sometimes, we want to *move* data instead of *copy* it, especially if we have large dynamically-allocated objects. For non-references and non-dynamic data, this is equivalent to assignment wit `let`, but if we are utilizing references or dynamic memory, we can move the data by copying its reference into a new location. For example:
 
     construct some_large_struct s (10, 20, 30) &dynamic;    // dynamically allocate and initialize a struct
     alloc some_large_struct a_copy &dynamic;
@@ -62,7 +64,7 @@ Further, it must be noted that `move` may only be used with modifiable-lvalues; 
 
     move 30 -> a;   // illegal; cannot move literal
     move a * 2 -> b;    // illegal; cannot move arithmetic binary expression
-    move a -> b;    // legal; arguments are both lvalues
+    move a -> b;    // legal; arguments are both modifiable-lvalues
     move a -> c.x;  // legal; member selection returns a modifiable-lvalue
     move x -> *p;   // valid; moves symbol to modifiable-lvalue
 
@@ -81,7 +83,7 @@ Sometimes, there is no difference between using `let` and using `move` on data. 
     alloc int b;
     move a -> b;
 
-Since `a` and `b` are not references, `move` is equivalent to `let`, and performs a copy.
+Since `a` and `b` are not references, `move` is equivalent to `let` and performs a copy.
 
 Where the difference between them comes in is when using things like dynamic arrays, as `let` allows data to be copied between arrays while `move` allows the reference to be moved and array to be, in effect, reallocated. For example:
 
@@ -90,4 +92,4 @@ Where the difference between them comes in is when using things like dynamic arr
     let b = a;  // copy the elements into the new array
     move b -> a;    // move the array, updating the reference
 
-In the above code sample, we first allocate an array of 10 elements and initialize it. This array is `dynamic`, meaning it can be reallocated. We then allocate a larger dynamic array, `b`, and copy all of the elements from `a` into it. Once this reference is copied, the reference count for the original chunk of data allocated by `a` hits 0, making it inaccessible, resulting in it being cleaned up by the SRE [Memory Allocation Manager](Memory%20Allocation%20Manager.md). Now, `a` and `b` refer to the same resource. This is not possible by using references alone, as a reference may not be updated.
+In the above code sample, we first allocate an array of 10 elements and initialize it. This array is `dynamic`, meaning it is dynamically-sized. We then allocate a larger dynamic array, `b`, and copy all of the elements from `a` into it. Once this reference is copied, `a` and `b` refer to the same resource. This is not possible by using references alone, as a reference may not be updated.
