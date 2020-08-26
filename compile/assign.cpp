@@ -71,11 +71,6 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
         
         p.fetch_instructions = overwrite.str();
     }
-    
-    // we need to adjust our reference counts for pointers
-    if (lhs_type.get_primary() == PTR) {
-        // todo: pointer rcs
-    }
 
     handle_ss << this->assign(lhs_type, rhs_type, p, a.get_rvalue(), a.get_line_number()).str();
 
@@ -134,7 +129,7 @@ std::stringstream compiler::assign(
 
     if (lhs_type.is_compatible(rhs_type)) {
         // first, call sre_free on the lhs if we have a pointer
-        if (lhs_type.get_primary() == PTR) {
+        if (lhs_type.get_primary() == PTR && !is_alloc_init) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
             handle_assign << call_sre_function("_sre_free");

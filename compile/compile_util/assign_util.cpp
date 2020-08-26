@@ -150,7 +150,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     else if (dt.get_qualities().is_const() && !is_initialization) {
         throw ConstAssignmentException(line);
     }
-    else if (dt.get_qualities().is_final() && sym.was_initialized()) {
+    else if (dt.get_qualities().is_final() && !is_initialization && sym.was_initialized()) {    // functions require parameters to be marked as initialized, so include the initialization param here to avoid errors in the call
         throw FinalAssignmentException(line);
     }
     else {

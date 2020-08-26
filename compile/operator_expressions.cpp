@@ -41,7 +41,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	switch (to_evaluate.get_operator()) {
 	case exp_operator::UNARY_PLUS:
 	{
-		// does nothing but is allowed; generates a note stating as such
+		// does nothing but is allowed; generates a note stating as much
 		compiler_note("Note the unary plus operator has no effect", line);
 		break;
 	}
@@ -194,7 +194,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 		3. Generate code: add eax, ebx
 
 	*/
-	
+
 	std::stringstream eval_ss;
 	size_t count = 0;
 

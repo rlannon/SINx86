@@ -306,7 +306,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
             std::shared_ptr<Expression> arg = args[i];
-            symbol param = formal_parameters[i];
+            symbol &param = formal_parameters[i];
 
             // first, ensure the types match
             DataType arg_type = expression_util::get_expression_data_type(arg, this->symbols, this->structs, line);
@@ -316,11 +316,17 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             }
             
             // evaluate the expression and pass it in the appropriate manner
-            auto arg_p = this->evaluate_expression(arg, line);
+            auto arg_p = this->evaluate_expression(arg, line, &arg_type);
             sincall_ss << arg_p.first;
 
             std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
-            auto destination_operand = assign_utilities::fetch_destination_operand(param, this->symbols, line);
+            auto destination_operand = assign_utilities::fetch_destination_operand(
+                param, 
+                this->symbols, 
+                line,
+                RBX,
+                true
+            );
             bool copy_constructed = true;
 
             // get the offset (rsp+) for this parameter
@@ -330,21 +336,20 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 param_offset += sin_widths::PTR_WIDTH;
             }
 
+            // if the parameter is marked as dynamic, we need to request a new resource from the SRE
+            if (param.get_data_type().get_qualities().is_dynamic()) {
+                // todo: dynamic parameters
+            }
+
             // if we had a dynamic or string type, we have to construct it regardless (pass by value)
             if (param.get_data_type().get_primary() == STRING) {
                 // to construct a string, we load the address where the parameter wil be stored into rdi
                 sincall_ss << "\t" << "lea rdi, [rsp + " << param_offset << "]" << std::endl;
-                
-                // preserve the source string so we can free it *if* we need to adjust its RC
-                // if (adjust_rc) {
-                //     sincall_ss << "\t" << "push rax" << std::endl;
-                // }
-                
                 sincall_ss << "\t" << "mov rsi, rax" << std::endl;
                 sincall_ss << call_sincall_subroutine("sinl_string_copy_construct") << std::endl;
             }
-            else if (param.get_data_type().get_qualities().is_dynamic()) {
-                // todo: construct other types
+            else if (arg_type.get_qualities().is_dynamic()) {
+                // todo: copy-construct other types
             }
             else {
                 copy_constructed = false;
@@ -358,7 +363,6 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 param_offset -= sin_widths::PTR_WIDTH;
             }
 
-            // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
             // if the symbol has a register, pass it there; else, push it
             if (param.get_register() == NO_REGISTER) {
                 if (copy_constructed) {
@@ -376,6 +380,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 this->reg_stack.peek().set(param.get_register());
                 sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << reg_name << std::endl;
             }
+
+            param.set_initialized();
         }
         // todo: default values
 
