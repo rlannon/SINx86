@@ -106,3 +106,5 @@ When we initialize a `proc` object as an anonymous function, _this rule still ap
 This is perfectly legal SIN _despite the fact_ that no arguments were ever supplied to `divides`; `proc` objects are _always_ guaranteed to be callable without arguments because type construction rules apply. In this case, following the construction rules for `int`, the call to `divides` is effectively:
 
     @divides(0, 0);
+
+because an `int` will always be default-constructed to zero.

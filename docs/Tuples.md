@@ -2,7 +2,7 @@
 
 ## Tuples
 
-Tuples are a first-class type in SIN and are roughly equivalent to tuples in other languages. They are ordered list types, like arrays, but unlike arrays, tuples may be heterogeneous. They may contain any fixed-width type, meaning contained arrays must have `constexpr` widths. In this regard, they are similar to structs; they may have an arbitrary number of elements of any fixed-width type, but their fields are all anonymous. Instead of being referenced by name, they are referenced with an index value (as with arrays).
+Tuples are a first-class type in SIN and are roughly equivalent to tuples in other languages. They are ordered list types, like arrays, but unlike arrays, tuples may be heterogeneous. They may contain any fixed-width type, meaning contained arrays must have `constexpr` widths or be marked as `dynamic`. In this regard, they are similar to structs; they may have an arbitrary number of elements of any fixed-width type, but their fields are all anonymous. Instead of being referenced by name, they are referenced with an index value.
 
 ### Creating a tuple
 
@@ -22,10 +22,11 @@ In such a case, each type within the tuple list must be the same as the type wit
 
 ### Accessing a tuple's members
 
-Tuple member accession is done with the _dot operator_ and an integer literal like in Rust, not the index operator with an integer expression like in Python. For example:
+Tuple member accession is done with the _dot operator_ and an integer literal like in Rust, not the index operator with an integer expression as in Python. For example:
 
     alloc int i: tup.0; // OK
     alloc float f: tup[1];  // syntax error; tuple may not be indexed with the [] operator
+    alloc int a: tup.2[0];  // OK
 
 This allows compile-time bounds- and type- checks on tuple members. As a result, the tuple does not contain a word indicating its length in memory because its length and size are known at compile time.
 

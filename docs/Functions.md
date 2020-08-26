@@ -49,8 +49,8 @@ Functions may return data of any type, though the following qualities on return 
 | Quality | Legality | Reason |
 | ------- | -------- | ------ |
 | `static` | Illegal | Return values are always temporary values returned in a register or on the stack, and as such, a storage specifier on a return type does not make sense |
-| `dynamic` | Illegal |Same reason as for `static` |
-| `final` | Legal | The keyword does nothing in this context due to the nature of return values being temporary, computed values (functions may return `final` and `const` data, and a `final` data may be initialized with variables, unlike constants) |
-| `const` | Legal | Due to the compilation and runtime overhead associated with functions, the programmer should consider using a named `static` constant instead |
+| `dynamic` | Illegal | Same reason as for `static` |
+| `final` | Legal | The keyword does little in this context due to the nature of return values being temporary, computed values. However, this specifier is important when used with pointers and references. |
+| `const` | Illegal | Subroutines may have side effects that make it impossible to compute them at compile time, which is what the `const` keyword specifies |
 
 All width- and sign- modifying qualities are allowed in accordance with normal type rules.
