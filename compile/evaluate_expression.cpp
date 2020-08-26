@@ -150,11 +150,18 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                         line
                     );
                 }
+                
+                // adjust the type hint
+                DataType hinted_type;
+                DataType *to_pass = nullptr;
+                try {
+                    hinted_type = type_hint->get_contained_types().at(i);
+                    to_pass = &hinted_type;
+                } catch (std::exception &e) {
+                    to_pass = nullptr;
+                }
 
-                // todo: utilize type hinting for array assignment to ensure types match correctly
-
-                // evaluate the expression
-                auto member_p = this->evaluate_expression(m, line, type_hint);
+                auto member_p = this->evaluate_expression(m, line, to_pass);
                 evaluation_ss << member_p.first;
                 count += member_p.second;
 

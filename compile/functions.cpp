@@ -338,7 +338,13 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
             // if the parameter is marked as dynamic, we need to request a new resource from the SRE
             if (param.get_data_type().get_qualities().is_dynamic()) {
-                // todo: dynamic parameters
+                if (param.get_data_type().get_primary() == STRING || param.get_data_type().get_primary() == ARRAY) {
+                    // todo: initial lengths for strings and arrays -- we will allocate space based on the parameter's width
+                }
+                else {
+                    // all other types have a known, fixed width
+                    sincall_ss << "\t" << "mov rdi, 0" << std::endl;
+                }
             }
 
             // if we had a dynamic or string type, we have to construct it regardless (pass by value)
