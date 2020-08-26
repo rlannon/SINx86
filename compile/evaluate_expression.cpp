@@ -34,7 +34,9 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
     */
 
-    // todo: proper type hitns -- e.g., if we are assigning like `alloc long int a: 1_000`, then we should ensure it treats the literal as a `long`, not regular, `int`
+    // todo: proper type hints -- e.g., if we are assigning like `alloc long int a: 1_000`, then we should ensure it treats the literal as a `long`, not regular, `int`
+    // although literal 1000 could fit in a long int, we need to ensure that the sign is extended properly
+    // this could be done in the assignment tool, automatically sign-extending 32-bit integers to 64-bit
 
     std::stringstream evaluation_ss;
     size_t count = 0;
@@ -152,7 +154,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                 // todo: utilize type hinting for array assignment to ensure types match correctly
 
                 // evaluate the expression
-                auto member_p = this->evaluate_expression(m, line);
+                auto member_p = this->evaluate_expression(m, line, type_hint);
                 evaluation_ss << member_p.first;
                 count += member_p.second;
 
@@ -209,7 +211,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         {
 			// cast to Binary class and dispatch
 			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
-            auto bin_p = this->evaluate_binary(bin_exp, line);
+            auto bin_p = this->evaluate_binary(bin_exp, line, type_hint);
             evaluation_ss << bin_p.first;
             count += bin_p.second;
 
@@ -220,7 +222,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case UNARY:
         {
 			Unary unary_exp = *dynamic_cast<Unary*>(to_evaluate.get());
-			evaluation_ss << this->evaluate_unary(unary_exp, line).str();
+			evaluation_ss << this->evaluate_unary(unary_exp, line, type_hint).str();
             // todo: clean up unary?
             break;
         }
@@ -262,11 +264,11 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                         contained->set_type(c->get_new_type());
 
                         // now, evaluate
-                        evaluation_ss << this->evaluate_expression(contained, line).first;
+                        evaluation_ss << this->evaluate_expression(contained, line, type_hint).first;
                     }
                     else {
                         // to perform the typecast, we must first evaluate the expression to be casted
-                        auto cast_p = this->evaluate_expression(c->get_exp(), line);
+                        auto cast_p = this->evaluate_expression(c->get_exp(), line, type_hint);
                         evaluation_ss << cast_p.first;
 
                         // now, use the utility function to actually cast the type
@@ -286,7 +288,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         {
             auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
             auto t = expression_util::get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
-            auto attr_p = this->evaluate_expression(attr->get_selected(), line);
+            auto attr_p = this->evaluate_expression(attr->get_selected(), line, type_hint);
             // we have a limited number of attributes
             if (attr->get_attribute() == LENGTH) {
                 /*

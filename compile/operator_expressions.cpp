@@ -11,7 +11,7 @@ Note that SIN does *not* support the arrow operator as syntactic sugar; you must
 
 #include "compiler.h"
 
-std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line, DataType *type_hint) {
 	/*
 
 	evaluate_unary
@@ -19,6 +19,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 
 	@param  to_evaluate The unary expression we are evaluating
 	@param  line    The line number where the expression occurs
+	@param	type_hint	Type hinting for the contained expression -- it might be a literal
 	@return A stringstream containing the generated code
 
 	*/
@@ -32,7 +33,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 
 	// first, evaluate the expression we are modifying *unless* it is an ADDRESS operation
 	if (to_evaluate.get_operator() != ADDRESS) {
-		auto addr_p = this->evaluate_expression(to_evaluate.get_operand(), line);
+		auto addr_p = this->evaluate_expression(to_evaluate.get_operand(), line, type_hint);
 		eval_ss << addr_p.first;
 	}
 
@@ -156,7 +157,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	return eval_ss;
 }
 
-std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, unsigned int line) {
+std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, unsigned int line, DataType *type_hint) {
 	/*
 
 	evaluate_binary
@@ -193,9 +194,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 		3. Generate code: add eax, ebx
 
 	*/
-
-	// todo: type hinting to ensure literals don't always generate type and width mismatches when used with unsigned long/short integers
-
+	
 	std::stringstream eval_ss;
 	size_t count = 0;
 
@@ -255,7 +254,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			// todo: ensure 16-byte stack alignment? this would allow us to use movdqa instead (and fit the System V ABI)
 
 			// evaluate the left-hand side
-			auto lhs_pair = this->evaluate_expression(to_evaluate.get_left(), line);
+			auto lhs_pair = this->evaluate_expression(to_evaluate.get_left(), line, type_hint);
 			eval_ss << lhs_pair.first;
 			count += lhs_pair.second;
 
@@ -274,7 +273,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			}
 
 			// evaluate the right-hand side
-			auto rhs_pair = this->evaluate_expression(to_evaluate.get_right(), line);
+			auto rhs_pair = this->evaluate_expression(to_evaluate.get_right(), line, type_hint);
 			eval_ss << rhs_pair.first;
 			count += rhs_pair.second;
 
