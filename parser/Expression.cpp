@@ -5,17 +5,15 @@
 
 
 const bool is_literal(lexeme_type candidate_type) {
-	if (
-		candidate_type == INT_LEX || 
-		candidate_type == FLOAT_LEX || 
-		candidate_type == BOOL_LEX || 
-		candidate_type == STRING_LEX ||
-		candidate_type == CHAR_LEX
-	) {
-		return true;
-	}
-	else {
-		return false;
+	switch(candidate_type) {
+		case INT_LEX:
+		case FLOAT_LEX:
+		case BOOL_LEX:
+		case STRING_LEX:
+		case CHAR_LEX:
+			return true;
+		default:
+			return false;
 	}
 }
 
@@ -89,22 +87,9 @@ Literal::Literal(Type data_type, std::string value, Type subtype) : Expression(L
     bool long_q = false;
     bool short_q = false;
     bool signed_q = true;
-    
-    // If we have an integer, check the value to see if we have a long int
-    if (data_type == INT) {
-        long val = std::stol(value);
-
-        if (val >= 0x100000000) {
-            long_q = true;
-        }
-
-        // todo: handle long/short for signed numbers?
-    }
 
     // set our symbol qualities
     symbol_qualities qualities(const_q, false, false, signed_q, !signed_q, long_q, short_q);  // literals are always considered const
-
-    // todo: set long/short qualities for ints and floats
 	this->type = DataType(data_type, subtype, qualities);
 }
 
@@ -159,12 +144,12 @@ AttributeSelection::AttributeSelection(std::shared_ptr<Expression> selected, std
 		INT,
 		NONE,
 		symbol_qualities(
-			false,
-			false,
-			false,
-			false,
-			true
-		)
+			false,	// not const
+			false,	// not static
+			false,	// not dynamic
+			false,	// not signed
+			true	// is unsigned
+		)	// not long, short, or extern
 	);
 
 	// all attributes are final; they are not necessarily known at compile time, but they are not directly modifiable
