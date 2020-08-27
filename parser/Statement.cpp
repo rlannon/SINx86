@@ -210,6 +210,13 @@ Assignment::Assignment() {
 	Assignment::statement_type = ASSIGNMENT;
 }
 
+// Movements
+
+Movement::Movement(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue) :
+	Assignment(lvalue, rvalue)
+{
+	this->statement_type = MOVEMENT;
+}
 
 
 /*******************	RETURN STATEMENT CLASS		********************/

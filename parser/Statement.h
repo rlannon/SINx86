@@ -170,6 +170,13 @@ public:
 	Assignment();
 };
 
+class Movement : public Assignment
+{
+	// Similar to an assignment, but should be marked as a movement
+public:
+	Movement(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue);
+};
+
 class ReturnStatement : public Statement
 {
 	std::shared_ptr<Expression> return_exp;
