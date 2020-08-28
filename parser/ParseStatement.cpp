@@ -110,6 +110,9 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		else if (current_lex.value == "let") {
 			stmt = this->parse_assignment(current_lex);
 		}
+		else if (current_lex.value == "move") {
+			stmt = this->parse_move(current_lex);
+		}
 		// Parse a return statement
 		else if (current_lex.value == "return") {
 			stmt = this->parse_return(current_lex);
@@ -482,17 +485,59 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 		}
 	}
 	else if (is_valid_move_assignment_operator(op)) {
-		// todo: move assignment
-		throw CompilerException("Move assignment currently not supported", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, op_lex.line_number);
+		throw ParserException("Move assignment operator not supported with 'let'", compiler_errors::OPERATOR_TYPE_ERROR, op_lex.line_number);
 	}
 	else {
 		throw ParserException("Unrecognized token.", 0, current_lex.line_number);
 	}
 }
 
+std::shared_ptr<Statement> Parser::parse_move(lexeme current_lex)
+{
+	/*
+
+	parse_move
+	Parses a 'move' statement
+
+	*/
+
+	std::shared_ptr<Statement> stmt = nullptr;
+	this->next();
+	
+	// get the lhs
+	auto lhs = this->parse_expression();
+	
+	// get the op
+	auto op = this->read_operator(false);
+	if (is_valid_move_assignment_operator(op)) {
+		// get the rhs
+		auto rhs = this->parse_expression();
+
+		if (this->peek().value != ";") {
+			throw MissingSemicolonError(this->current_token().line_number);
+		}
+
+		// todo: ensure that we are only moving modifiable-lvalues (should this be done in the compiler class?)
+		
+		if (op == LEFT_ARROW) {
+			// rhs is rvalue (the value)
+			stmt = std::make_shared<Movement>(lhs, rhs);
+		}
+		else {
+			// lhs is rvalue (the value)
+			stmt = std::make_shared<Movement>(rhs, lhs);
+		}
+	}
+	else {
+		throw ParserException("Expected move assignment operator", compiler_errors::OPERATOR_TYPE_ERROR, current_lex.line_number);
+	}
+
+	return stmt;
+}
+
 std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt(nullptr);
+	std::shared_ptr<Statement> stmt = nullptr;
 	this->next();	// go to the expression
 
 	// if the current token is a semicolon, return a Literal Void
