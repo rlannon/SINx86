@@ -279,22 +279,20 @@ public:
 
 class InlineAssembly : public Statement
 {
-	std::string asm_type;
-public:
-	std::string get_asm_type();
-
 	std::string asm_code;
+public:
+	std::string get_asm_code();
 
-	InlineAssembly(std::string asm_type, std::string asm_code);
+	InlineAssembly(std::string asm_code);
 	InlineAssembly();
 };
 
 class FreeMemory : public Statement
 {
-	Identifier to_free;
+	std::shared_ptr<Expression> to_free;
 public:
-	Identifier get_freed_memory();
+	std::shared_ptr<Expression> get_freed_memory();
 
-	FreeMemory(Identifier to_free);
+	FreeMemory(std::shared_ptr<Expression> to_free);
 	FreeMemory();
 };

@@ -401,31 +401,30 @@ Call::Call(): Statement(CALL) {
 
 /*******************		INLINE ASM CLASS		********************/
 
-std::string InlineAssembly::get_asm_type()
+std::string InlineAssembly::get_asm_code()
 {
-	return this->asm_type;
+	return this->asm_code;
 }
 
-InlineAssembly::InlineAssembly(std::string assembly_type, std::string asm_code) : 
+InlineAssembly::InlineAssembly(std::string asm_code) : 
 	Statement(INLINE_ASM),
-	asm_type(assembly_type),
 	asm_code(asm_code)
 {
 }
 
 InlineAssembly::InlineAssembly():
-	InlineAssembly("", "")
+	InlineAssembly("")
 {
 }
 
 
 /*******************		FREE MEMORY CLASS		********************/
 
-Identifier FreeMemory::get_freed_memory() {
+std::shared_ptr<Expression> FreeMemory::get_freed_memory() {
 	return this->to_free;
 }
 
-FreeMemory::FreeMemory(Identifier to_free):
+FreeMemory::FreeMemory(std::shared_ptr<Expression> to_free):
 	Statement(FREE_MEMORY),
 	to_free(to_free)
 {
