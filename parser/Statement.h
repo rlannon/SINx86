@@ -40,6 +40,7 @@ public:
 	void set_line_number(unsigned int line_number);
 
 	Statement();
+	Statement(stmt_type statement_type);
 	Statement(stmt_type statement_type, unsigned int line_number);
 	virtual ~Statement();
 };
