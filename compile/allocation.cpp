@@ -101,6 +101,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 			// allocate dynamic memory with a call to _sre_request_resource
 			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
+			allocation_ss << "\t" << "mov rsi, 0" << std::endl;
 			allocation_ss << call_sre_function("_sre_request_resource");
 
 			// restore used registers
