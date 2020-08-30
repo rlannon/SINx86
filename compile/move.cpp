@@ -62,6 +62,8 @@ std::stringstream compiler::handle_move(Movement &m) {
                 this->current_scope_level,
                 m.get_line_number()
             );
+            // todo: this doesn't actually get the proper address in RBX
+            // it uses a mov when an lea would be more appropriate
 
             move_ss << this->move(
                 lvalue_type,
@@ -110,19 +112,25 @@ std::stringstream compiler::move(
 
     // if the types are compatible, copy the reference
     if (lvalue_type.is_compatible(rvalue_type)) {
+        // evaluate the rvalue
+        auto handle_p = this->evaluate_expression(rvalue, line);
+        move_ss << handle_p.first;
+        move_ss << "\t" << "lea rbx, " << dest.address_for_lea << std::endl;
+        this->reg_stack.peek().set(RBX);
+
         // first, free the value at the reference
         move_ss << push_used_registers(this->reg_stack.peek(), false).str();
         move_ss << "\t" << "mov rdi, [rbx]" << std::endl;
         move_ss << call_sre_function("_sre_free");
         move_ss << pop_used_registers(this->reg_stack.peek(), false).str();
 
-        move_ss << dest.fetch_instructions;
-        move_ss << "\t" << "mov " << dest.dest_location << ", rax" << std::endl;
+        move_ss << "\t" << "mov [rbx], rax" << std::endl;
+        this->reg_stack.peek().clear(RBX);
 
         // now add a reference to the new value
         move_ss << push_used_registers(this->reg_stack.peek(), true).str();
         move_ss << "\t" << "mov rdi, rax" << std::endl;
-        move_ss << call_sre_function("_sre_free");
+        move_ss << call_sre_function("_sre_add_ref");
         move_ss << pop_used_registers(this->reg_stack.peek(), true).str();
     }
     else {
