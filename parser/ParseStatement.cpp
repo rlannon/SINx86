@@ -91,7 +91,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 			this->next();
 			auto to_free = this->parse_expression();
-			stmt = std::make_shared<InlineAssembly>(to_free);
+			stmt = std::make_shared<FreeMemory>(to_free);
 			stmt->set_line_number(current_lex.line_number);
 		}
 		// parse a declaration
@@ -511,6 +511,7 @@ std::shared_ptr<Statement> Parser::parse_move(lexeme current_lex)
 	auto op = this->read_operator(false);
 	if (is_valid_move_assignment_operator(op)) {
 		// get the rhs
+		this->next();
 		auto rhs = this->parse_expression();
 
 		if (this->peek().value != ";") {
