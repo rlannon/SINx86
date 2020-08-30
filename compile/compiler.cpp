@@ -203,6 +203,12 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compile_ss << this->allocate(*alloc_stmt).str() << std::endl;
             break;
         }
+        case MOVEMENT:
+        {
+            Movement *move_stmt = dynamic_cast<Movement*>(s.get());
+            compile_ss << this->handle_move(*move_stmt).str() << std::endl;
+            break;
+        }
         case ASSIGNMENT:
         {
             Assignment *assign_stmt = dynamic_cast<Assignment*>(s.get());
@@ -362,6 +368,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             break;
         }
         default:
+            throw CompilerException("This statement type is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s->get_line_number());
             break;
     };
 

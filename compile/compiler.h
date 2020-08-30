@@ -82,7 +82,8 @@ class compiler {
 	std::stringstream allocate(Allocation alloc_stmt);
 
 	// assignments
-	std::stringstream handle_assignment(Assignment &aw);
+	std::stringstream handle_assignment(Assignment &a);	// copy assignment
+	std::stringstream handle_move(Movement &m);	// move assignment
 	std::stringstream handle_alloc_init(
 		symbol &sym,
 		std::shared_ptr<Expression> rvalue,
@@ -95,6 +96,13 @@ class compiler {
 		std::shared_ptr<Expression> rvalue,
 		unsigned int line,
 		bool is_alloc_init = false
+	);
+	std::stringstream move(
+		DataType &lvalue_type,
+		DataType &rvalue_type,
+		assign_utilities::destination_information dest,
+		std::shared_ptr<Expression> rvalue,
+		unsigned int line
 	);
 
 	// todo: handle assignments for char, float, etc.
