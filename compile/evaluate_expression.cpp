@@ -608,8 +608,13 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     }
 
                     // get the dereferenced pointer in A
-                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
-                    eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
+                    if (sym.get_data_type().get_primary() == STRING) {
+                        eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                    }
+                    else {
+                        eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                        eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
+                    }
 
                     // if we had to push a register, restore it
                     if (reg_pushed) {
