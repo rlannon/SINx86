@@ -298,8 +298,8 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
 
 // Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
-template function_symbol create_function_symbol(FunctionDefinition, bool=true, bool=true);
-template function_symbol create_function_symbol(Declaration, bool=true, bool=true);
+template function_symbol create_function_symbol(FunctionDefinition, bool, bool);
+template function_symbol create_function_symbol(Declaration, bool, bool);
 template <typename T>
 function_symbol create_function_symbol(T def, bool mangle, bool defined) {
     /*

@@ -1,0 +1,17 @@
+// sample.sin
+// A test file for our compiler
+
+def struct point {
+	alloc int x;
+	alloc int y;
+}
+
+def void main(alloc int argc) {
+	alloc point p;
+	let p.x = 10;
+	let p.y = 20;
+	alloc int x: p.x;
+	alloc int y: p.y;
+
+	return void;
+}

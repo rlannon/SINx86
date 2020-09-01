@@ -43,7 +43,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     std::string dest;
     std::stringstream gen_code;
     std::string address_for_lea;
-    bool in_register;
+    bool in_register = false;
 
     // generate code based on the expression type
     if (exp->get_expression_type() == IDENTIFIER) {
