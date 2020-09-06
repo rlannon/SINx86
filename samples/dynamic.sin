@@ -1,0 +1,18 @@
+// dynamic.sin
+// test of the 'dynamic' keyword
+
+def int main(alloc array<string> args) {
+    alloc int a &dynamic: 10;
+    alloc int b;
+    let b = a;
+    
+    alloc dynamic array<3, int> my_arr;
+    let my_arr = {1, 2, 3};
+    
+    alloc dynamic array<5, int &long> long_arr: {1000 &long, 2000 &long, 3000 &long};
+
+    alloc int my_arr_length &unsigned: my_arr:len;
+    alloc int long_arr_length &unsigned: long_arr:len;
+
+    return 0;
+}

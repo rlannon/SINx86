@@ -590,7 +590,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     r = this->reg_stack.peek().get_available_register(sym.get_data_type().get_primary());
                     if (r == NO_REGISTER) {
                         // since no register is available, use rsi
-                        // if it contains a symbol, just 
+                        // if it contains a symbol, store it back in the stack and mark it as not in a register
                         symbol *contained = this->reg_stack.peek().get_contained_symbol(RSI);
                         reg_used = "rsi";
                         if (contained == nullptr) {

@@ -102,7 +102,7 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
         );
     }
     // todo: we can utilize the copy construction method for alloc-init when used with dynamic types
-    
+
     return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
 }
 

@@ -90,11 +90,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
-			// dynamic allocation
+			// dynamic allocation -- ensure we pass PTR_WIDTH in for the width (as it will affect the stack offset)
 			allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
-			
-			// add the symbol and move RSP further into the stack, by the width of a pointer
-			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// push registers currently in use
 			allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
@@ -120,6 +117,17 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			if (alloc_data.get_qualities().is_static()) {
 				throw CompilerException("Use of 'static' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
 			}
+
+			// ensure we handle alloc-init for dynamic objects
+			if (alloc_stmt.was_initialized()) {
+				auto initial_value = alloc_stmt.get_initial_value();
+				allocation_ss << this->handle_alloc_init(allocated, initial_value, alloc_stmt.get_line_number()).str();
+
+				allocated.set_initialized();
+			}
+
+			// add the symbol
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
 		}
 		else if (alloc_data.get_qualities().is_static()) {
 			data_width = 0;	// takes up no space on the stack

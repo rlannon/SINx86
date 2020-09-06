@@ -444,7 +444,7 @@ size_t expression_util::get_width(
 
     size_t width = 0;
 
-    if (alloc_data.get_width() != 0) {  // todo: the error is caused here because it is equal to MAX(size_t)
+    if (alloc_data.get_width() != 0) {
         width = alloc_data.get_width();
     }
     else if (alloc_data.get_primary() == STRUCT) {
