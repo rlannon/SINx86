@@ -90,7 +90,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
-			// dynamic allocation
+			// dynamic allocation -- ensure we pass PTR_WIDTH in for the width (as it will affect the stack offset)
 			allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
 
 			// push registers currently in use
