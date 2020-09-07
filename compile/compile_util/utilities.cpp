@@ -616,7 +616,7 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
                 dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
             }
             dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
-            dec_ss << call_sre_function("_sre_free");
+            dec_ss << call_sre_function(magic_numbers::SRE_FREE);
         }
         // restore the status
         dec_ss << "\t" << "popfq" << std::endl;
@@ -636,7 +636,7 @@ std::stringstream call_sre_free(symbol& s) {
 
     */
 
-    return call_sre_mam_util(s, "_sre_free");
+    return call_sre_mam_util(s, magic_numbers::SRE_FREE);
 }
 
 std::stringstream call_sre_add_ref(symbol& s) {
@@ -647,7 +647,7 @@ std::stringstream call_sre_add_ref(symbol& s) {
 
     */
 
-    return call_sre_mam_util(s, "_sre_add_ref");
+    return call_sre_mam_util(s, magic_numbers::SRE_ADD_REF);
 }
 
 std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {

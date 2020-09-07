@@ -76,7 +76,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             // todo: would it be better to just iterate on an assignment and copy into the list? or is it better to use array_copy (as we are doing now)?
             
             // create our label
-            std::string list_label = compiler::LIST_LITERAL_LABEL + std::to_string(this->list_literal_num);
+            std::string list_label = magic_numbers::LIST_LITERAL_LABEL + std::to_string(this->list_literal_num);
             this->list_literal_num += 1;
 
             // preserve R15, as it will be used to keep track of where our list is
@@ -382,7 +382,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         evaluation_ss << "\t" << "mov r13, rax" << std::endl;
         for (size_t i = 1; i < count; i++) {
             evaluation_ss << "\t" << "pop rdi" << std::endl;
-            evaluation_ss << call_sre_function("_sre_free");
+            evaluation_ss << call_sre_function(magic_numbers::SRE_FREE);
         }
         evaluation_ss << "\t" << "push r12" << std::endl;
         evaluation_ss << "\t" << "mov rax, r13" << std::endl;
@@ -459,7 +459,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        std::string float_label = compiler::FLOAT_LITERAL_LABEL + std::to_string(this->fltc_num);
+        std::string float_label = magic_numbers::FLOAT_LITERAL_LABEL + std::to_string(this->fltc_num);
         this->fltc_num += 1;
 
         // todo: check to see if the width was specified with a type suffix
@@ -508,7 +508,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        std::string name = compiler::CONST_STRING_LABEL + std::to_string(this->strc_num);
+        std::string name = magic_numbers::CONST_STRING_LABEL + std::to_string(this->strc_num);
 
         // actually reserve the data and enclose the string in backticks in case we have escaped characters
         this->rodata_segment << "\t" << name << "\t" << "dd " << to_evaluate.get_value().length() << ", `" << to_evaluate.get_value() << "`, 0" << std::endl;

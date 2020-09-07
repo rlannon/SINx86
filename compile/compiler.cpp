@@ -11,17 +11,6 @@ Copyright 2019 Riley Lannon
 
 #include "compiler.h"
 
-const std::string compiler::CONST_STRING_LABEL = "sinl_strc_";
-const std::string compiler::LIST_LITERAL_LABEL = "sinl_list_";
-const std::string compiler::FLOAT_LITERAL_LABEL = "sinl_fltc_";
-const std::string compiler::ITE_LABEL = ".sinl_ite_";
-const std::string compiler::ITE_ELSE_LABEL = ".sinl_ite_else_";
-const std::string compiler::ITE_DONE_LABEL = ".sinl_ite_done_";
-const std::string compiler::WHILE_LABEL = ".sinl_while_";
-const std::string compiler::WHILE_DONE_LABEL = ".sinl_while_done_";
-const std::string compiler::SINGLE_PRECISION_MASK_LABEL = "sinl_sp_mask";
-const std::string compiler::DOUBLE_PRECISION_MASK_LABEL = "sinl_dp_mask";
-
 std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
     /*
 
@@ -234,14 +223,14 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             // todo: count
             
             compile_ss << "\t" << "cmp al, 1" << std::endl;
-            compile_ss << "\t" << "jne " << compiler::ITE_ELSE_LABEL << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
+            compile_ss << "\t" << "jne " << magic_numbers::ITE_ELSE_LABEL << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
 			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
-			compile_ss << "\t" << "jmp " << compiler::ITE_DONE_LABEL << current_scope_num << std::endl;
-			compile_ss << compiler::ITE_ELSE_LABEL << current_scope_num << ":" << std::endl;
+			compile_ss << "\t" << "jmp " << magic_numbers::ITE_DONE_LABEL << current_scope_num << std::endl;
+			compile_ss << magic_numbers::ITE_ELSE_LABEL << current_scope_num << ":" << std::endl;
             
 			// compile the branch, if one exists
 			if (ite->get_else_branch().get()) {
@@ -249,7 +238,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 			}
 
 			// clean-up
-			compile_ss << compiler::ITE_DONE_LABEL << current_scope_num << ":" << std::endl;
+			compile_ss << magic_numbers::ITE_DONE_LABEL << current_scope_num << ":" << std::endl;
 			break;
 		}
 		case WHILE_LOOP:
@@ -261,17 +250,17 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             this->scope_block_num += 1;
             auto condition_p = this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number());
 
-            compile_ss << compiler::WHILE_LABEL << current_block_num << ":" << std::endl;
+            compile_ss << magic_numbers::WHILE_LABEL << current_block_num << ":" << std::endl;
             compile_ss << condition_p.first;
             // todo: count
             compile_ss << "\t" << "cmp al, 1" << std::endl;
-            compile_ss << "\t" << "jne " << compiler::WHILE_DONE_LABEL << current_block_num << std::endl;
+            compile_ss << "\t" << "jne " << magic_numbers::WHILE_DONE_LABEL << current_block_num << std::endl;
 
             // compile the loop body
             compile_ss << this->compile_statement(while_stmt->get_branch(), signature).str();
-            compile_ss << "\t" << "jmp " << compiler::WHILE_LABEL << current_block_num << std::endl;
+            compile_ss << "\t" << "jmp " << magic_numbers::WHILE_LABEL << current_block_num << std::endl;
 
-            compile_ss << compiler::WHILE_DONE_LABEL << current_block_num << ":" << std::endl;
+            compile_ss << magic_numbers::WHILE_DONE_LABEL << current_block_num << ":" << std::endl;
             break;
         }
         case FUNCTION_DEFINITION:
@@ -582,8 +571,8 @@ void compiler::generate_asm(std::string filename) {
             }
 
             // insert our wrapper for the program
-            this->text_segment << "global _main" << std::endl;
-            this->text_segment << "_main:" << std::endl;
+            this->text_segment << "global " << magic_numbers::MAIN_LABEL << std::endl;
+            this->text_segment << magic_numbers::MAIN_LABEL << ":" << std::endl;
 
             // call SRE init function (takes no parameters) -- ensure 16-byte stack alignment
             this->text_segment << "\t" << "mov rax, rsp" << std::endl
@@ -591,7 +580,7 @@ void compiler::generate_asm(std::string filename) {
                 << "\t" << "push rax" << std::endl
                 << "\t" << "sub rsp, 8" << std::endl
                 << "\t" << "mov rax, 0" << std::endl
-                << "\t" << "call _sre_init" << std::endl
+                << "\t" << "call " << magic_numbers::SRE_INIT << std::endl
                 << "\t" << "add rsp, 8" << std::endl
                 << "\t" << "pop rsp" << std::endl;
 
@@ -604,7 +593,7 @@ void compiler::generate_asm(std::string filename) {
                 << "\t" << "and rsp, -0x10" << std::endl
                 << "\t" << "push rax" << std::endl
                 << "\t" << "sub rsp, 8" << std::endl
-                << "\t" << "call _sre_clean" << std::endl
+                << "\t" << "call " << magic_numbers::SRE_CLEAN << std::endl
                 << "\t" << "add rsp, 8" << std::endl
                 << "\t" << "pop rsp" << std::endl;
 
@@ -634,9 +623,10 @@ void compiler::generate_asm(std::string filename) {
 
 		// next, the .rodata
 		outfile << "section .rodata" << std::endl;
-        // todo: should we utilize equ here instead?
-		outfile << "\t" << compiler::SINGLE_PRECISION_MASK_LABEL << " dd 0x80000000" << std::endl;	// we have bitmasks for single- and double-precision floats; they should be read-only
-		outfile << "\t" << compiler::DOUBLE_PRECISION_MASK_LABEL << " dq 0x8000000000000000" << std::endl;	// todo: do we really need this? or is there an easier way to flip the sign?
+
+        // we have bitmasks for single- and double-precision floats; they should be read-only
+		outfile << "\t" << magic_numbers::SINGLE_PRECISION_MASK_LABEL << " dd 0x80000000" << std::endl;
+		outfile << "\t" << magic_numbers::DOUBLE_PRECISION_MASK_LABEL << " dq 0x8000000000000000" << std::endl;	// todo: do we really need this? or is there an easier way to flip the sign?
 		outfile << this->rodata_segment.str() << std::endl;
 
         // next, the .data section

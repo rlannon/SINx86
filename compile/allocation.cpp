@@ -98,7 +98,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 			// allocate dynamic memory with a call to _sre_request_resource
 			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
-			allocation_ss << call_sre_function("_sre_request_resource");
+			allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
 
 			// restore used registers
 			allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
@@ -337,7 +337,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 					// if we had a reference to an integer, we need to free it
 					if (alloc_p.second) {
 						allocation_ss << "\t" << "pop rdi" << std::endl;
-						allocation_ss << call_sre_function("_sre_free");
+						allocation_ss << call_sre_function(magic_numbers::SRE_FREE);
 					}
 				}
 				else if (m->get_data_type().must_initialize()) {

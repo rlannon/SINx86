@@ -64,11 +64,11 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 
 			// the floating-point expression to negate will already be in the XMM0 register; act based on width
 			if (unary_type.get_width() == sin_widths::DOUBLE_WIDTH) {
-				eval_ss << "movsd xmm1, [" << compiler::DOUBLE_PRECISION_MASK_LABEL << "]" << std::endl;
+				eval_ss << "movsd xmm1, [" << magic_numbers::DOUBLE_PRECISION_MASK_LABEL << "]" << std::endl;
 				eval_ss << "xorpd xmm0, xmm1" << std::endl;
 			}
 			else {
-				eval_ss << "movss xmm1, [" << compiler::SINGLE_PRECISION_MASK_LABEL << "]" << std::endl;
+				eval_ss << "movss xmm1, [" << magic_numbers::SINGLE_PRECISION_MASK_LABEL << "]" << std::endl;
 				eval_ss << "xorps xmm0, xmm1" << std::endl;
 			}
 		}

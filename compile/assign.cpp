@@ -132,7 +132,7 @@ std::stringstream compiler::assign(
         if (lhs_type.get_primary() == PTR && !is_alloc_init) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
-            handle_assign << call_sre_function("_sre_free");
+            handle_assign << call_sre_function(magic_numbers::SRE_FREE);
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
 
@@ -224,7 +224,7 @@ std::stringstream compiler::assign(
         ) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
-            handle_assign << call_sre_function("_sre_add_ref");
+            handle_assign << call_sre_function(magic_numbers::SRE_ADD_REF);
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
 
@@ -233,7 +233,7 @@ std::stringstream compiler::assign(
             handle_assign << "\t" << "pop rax" << std::endl;
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, rax" << std::endl;
-            handle_assign << call_sre_function("_sre_free");
+            handle_assign << call_sre_function(magic_numbers::SRE_FREE);
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
     }

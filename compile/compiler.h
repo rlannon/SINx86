@@ -28,8 +28,16 @@ Copyright 2019 Riley Lannon
 #include "compile_util/constant_eval.h"
 #include "compile_util/expression_util.h"
 #include "compile_util/assign_util.h"
+#include "compile_util/magic_numbers.h"
 
 class compiler {
+    /*
+
+    compiler
+    The code generator class for the compiler project
+
+    */
+
     // The class containing our compiler
 	std::string filename;
 	std::string file_path;
@@ -131,18 +139,6 @@ class compiler {
 	// process an included file
 	std::stringstream process_include(std::string include_filename, unsigned int line);
 public:
-	// Some magic numbers
-	static const std::string CONST_STRING_LABEL;
-	static const std::string LIST_LITERAL_LABEL;
-	static const std::string FLOAT_LITERAL_LABEL;
-	static const std::string ITE_LABEL;
-	static const std::string ITE_ELSE_LABEL;
-	static const std::string ITE_DONE_LABEL;
-	static const std::string WHILE_LABEL;
-	static const std::string WHILE_DONE_LABEL;
-	static const std::string SINGLE_PRECISION_MASK_LABEL;
-	static const std::string DOUBLE_PRECISION_MASK_LABEL;
-
     // the compiler's entry function
     void generate_asm(std::string filename);
 
