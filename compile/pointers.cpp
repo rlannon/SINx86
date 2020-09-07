@@ -73,7 +73,7 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         addr_ss << "\t" << "jg .sinl_rtbounds_" << this->rtbounds_num << std::endl;
 
         // if we were out of bounds, call the appropriate function
-        addr_ss << "\t" << "call _sinl_rte_index_out_of_bounds" << std::endl;
+        addr_ss << "\t" << "call " << magic_numbers::SINL_RTE_OUT_OF_BOUNDS << std::endl;
         
         addr_ss << ".sinl_rtbounds_" << this->rtbounds_num << ":" << std::endl;
 

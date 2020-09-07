@@ -31,6 +31,7 @@ Our various compiler utilities
 #include "constant_eval.h"
 
 #include "../../util/general_utilities.h"
+#include "magic_numbers.h"
 
 // todo: put these in their own namespace
 
