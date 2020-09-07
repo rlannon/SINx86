@@ -519,68 +519,6 @@ std::string get_address(symbol &s, reg r) {
     return address_info;
 }
 
-std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs) {
-    /*
-
-    copy_array
-    Calls the SRE function 'sinl_array_copy' to copy array from src to dest
-
-    The SRE parameters are:
-        ptr<array> src
-        ptr<array> dest
-    and the function uses the SINCALL calling convention
-
-    */
-
-	std::stringstream copy_ss;
-    
-    // push the registers that are in use (subroutine returns void, so we don't need to ignore A and B)
-    copy_ss << push_used_registers(regs).str();
-
-    copy_ss << get_address(src, reg::RSI) << std::endl;
-    copy_ss << get_address(dest, reg::RDI) << std::endl;
-    copy_ss << "\t" << "mov ecx, " << src.get_data_type().get_subtype().get_width() << std::endl;
-    copy_ss << call_sincall_subroutine("sinl_array_copy");
-
-    // restore registers
-    copy_ss << pop_used_registers(regs).str();
-    
-	return copy_ss;
-}
-
-std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs) {
-    /*
-
-    copy_string
-    Calls the SRE function to copy one string to another
-
-    The SRE parameters are:
-        ptr<string> src
-        ptr<string> dest
-    It returns the address of the new destination string in RAX
-
-    */
-
-    std::stringstream copy_ss;
-
-    // preserve registers in use, ignoring RAX and RBX -- this will save values into memory appropriately
-    copy_ss << push_used_registers(regs, true).str();
-
-    // get the pointers
-    copy_ss << get_address(src, RSI) << std::endl;
-    copy_ss << get_address(dest, RDI) << std::endl;
-    copy_ss << call_sincall_subroutine("sinl_string_copy");
-
-    // restore registers -- note this does not move values back into registers that were moved into memory!
-    copy_ss << pop_used_registers(regs, true).str();
-
-    // update the address
-    copy_ss << get_address(dest, RBX) << std::endl;
-    copy_ss << "\t" << "mov [rbx], rax" << std::endl;
-
-    return copy_ss;
-}
-
 std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string scope, unsigned int level, bool is_function) {
     /*
 

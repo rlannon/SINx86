@@ -296,6 +296,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
             auto t = expression_util::get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
             auto attr_p = this->evaluate_expression(attr->get_selected(), line, type_hint);
+
             // we have a limited number of attributes
             if (attr->get_attribute() == LENGTH) {
                 /*
@@ -608,7 +609,12 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     }
 
                     // get the dereferenced pointer in A
-                    if (sym.get_data_type().get_primary() == STRING) {
+                    if (
+                        sym.get_data_type().get_primary() == STRING ||
+                        sym.get_data_type().get_primary() == ARRAY || 
+                        sym.get_data_type() == STRUCT || 
+                        sym.get_data_type().get_primary() == TUPLE
+                    ) {
                         eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
                     }
                     else {
