@@ -90,6 +90,16 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
+            // if we have a const here, throw an exception -- constants may not be dynamic
+			if (alloc_data.get_qualities().is_const()) {
+				throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
+			}
+
+			// if we have static, that should also generate an error
+			if (alloc_data.get_qualities().is_static()) {
+				throw CompilerException("Use of 'static' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
+			}
+
 			// dynamic allocation -- ensure we pass PTR_WIDTH in for the width (as it will affect the stack offset)
 			allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
 
@@ -108,15 +118,26 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			allocation_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
 
-			// if we have a const here, throw an exception -- constants may not be dynamic
-			if (alloc_data.get_qualities().is_const()) {
-				throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
-			}
+            // if we have an array, we need to initialize its length
+            if (alloc_data.get_primary() == ARRAY) {
+                // if we have a const length, we can use the array_length memeber; else, we need to evaluate the expression for the length
+                if (alloc_data.get_array_length_expression()->is_const()) {
+                    allocation_ss << "\t" << "mov ebx, " << alloc_data.get_array_length() << std::endl;
+                }
+                else if (alloc_data.get_array_length_expression()) {
+                    allocation_ss << "\t" << "push rax" << std::endl;
+                    // todo: push used registers?
+                    allocation_ss << this->evaluate_expression(alloc_data.get_array_length_expression(), alloc_stmt.get_line_number()).first << std::endl;
+                    allocation_ss << "\t" << "pop rbx" << std::endl;
+                }
+                else {
+                    // if there was no array length expression, the length is zero -- write it in to be safe
+                    allocation_ss << "\t" << "mov ebx, 0" << std::endl;
+                }
 
-			// if we have static, that should also generate an error
-			if (alloc_data.get_qualities().is_static()) {
-				throw CompilerException("Use of 'static' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
-			}
+                // RAX contains the address, and ebx contains the length dword
+                allocation_ss << "\t" << "mov [rax], ebx" << std::endl;
+            }
 
 			// ensure we handle alloc-init for dynamic objects
 			if (alloc_stmt.was_initialized()) {
