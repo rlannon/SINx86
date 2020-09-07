@@ -11,84 +11,85 @@ Implementation of the DataType class
 #include "DataType.h"
 
 void DataType::set_width() {
-	// Sets the width of the type based on its primary type and symbol qualities
+	/*
 	
-	// The width of all dynamic memory is PTR_WIDTH
-	if (this->qualities.is_dynamic()) {
+	set_width
+	Sets the width of the DataType object based on its type and qualities
+
+	Note that this function will not set the type width to PTR_WIDTH for dynamic types; it will use the regular width, and the compiler will adjust for dynamic types where needed.
+	
+	*/
+	
+	// All other types have different widths
+	if (this->primary == INT) {
+		// ints are usually 4 bytes wide (32-bit), but can be 2 bytes for a short or 8 for a long 
+
+		if (this->qualities.is_long()) {
+			this->width = sin_widths::LONG_WIDTH;
+		} else if (this->qualities.is_short()) {
+			this->width = sin_widths::SHORT_WIDTH;
+		} else {
+			this->width = sin_widths::INT_WIDTH;
+		}
+	} else if (this->primary == FLOAT) {
+		// floats can also use the long and short keywords -- a long float is the same as a double, a short float is the same as a half
+
+		if (this->qualities.is_long()) {
+			this->width = sin_widths::DOUBLE_WIDTH;
+		} else if (this->qualities.is_short()) {
+			this->width = sin_widths::HALF_WIDTH;	// line number information, for the time being, will be caught wherever this type is used
+			compiler_warning(
+				"16-bit half-precision floats are not supported by the SIN compiler at this time; using 32-bit single-precision instead",
+				compiler_errors::DATA_WIDTH_ERROR,
+				0	// todo: line number information
+			);
+		} else {
+			this->width = sin_widths::FLOAT_WIDTH;
+		}
+	} else if (this->primary == BOOL) {
+		// bools are only a byte wide
+		this->width = sin_widths::BOOL_WIDTH;
+	} else if (this->primary == PTR || this->primary == REFERENCE) {
+		// because we are compiling to x86_64, pointers and references should be 64-bit
 		this->width = sin_widths::PTR_WIDTH;
+	} else if (this->primary == STRING) {
+		// since strings are all implemented as pointers, they have widths of 8 bytes
+		// (they always point to dynamic memory, but syntactically don't behave like pointers)
+		this->width = sin_widths::PTR_WIDTH;
+	} else if (this->primary == CHAR) {
+		// todo: determine whether it is ASCII or UTF-8
+		this->width = sin_widths::CHAR_WIDTH;
+	} else if (this->primary == TUPLE) {
+		// tuple widths are known at compile time -- it is the sum of the widths of each of their contained types
+		// however, if they contain a struct or an array, we must defer the width evaluation until we have a struct table
+		this->width = 0;
+		auto it = this->contained_types.begin();
+		bool defer_width = false;
+		while (it != this->contained_types.end() && !defer_width) {
+			if (it->get_width() == 0) {	// types with unknown lengths have a width of 0
+				this->width = 0;
+				defer_width = true;
+			}
+			else {
+				this->width += it->get_width();
+			}
+
+			it++;
+		}
 	}
 	else {
-		// All other types have different widths
-		if (this->primary == INT) {
-			// ints are usually 4 bytes wide (32-bit), but can be 2 bytes for a short or 8 for a long 
+		/*
 
-			if (this->qualities.is_long()) {
-				this->width = sin_widths::LONG_WIDTH;
-			} else if (this->qualities.is_short()) {
-				this->width = sin_widths::SHORT_WIDTH;
-			} else {
-				this->width = sin_widths::INT_WIDTH;
-			}
-		} else if (this->primary == FLOAT) {
-			// floats can also use the long and short keywords -- a long float is the same as a double, a short float is the same as a half
-
-			if (this->qualities.is_long()) {
-				this->width = sin_widths::DOUBLE_WIDTH;
-			} else if (this->qualities.is_short()) {
-				this->width = sin_widths::HALF_WIDTH;	// line number information, for the time being, will be caught wherever this type is used
-				compiler_warning(
-					"16-bit half-precision floats are not supported by the SIN compiler at this time; using 32-bit single-precision instead",
-					compiler_errors::DATA_WIDTH_ERROR,
-					0	// todo: line number information
-				);
-			} else {
-				this->width = sin_widths::FLOAT_WIDTH;
-			}
-		} else if (this->primary == BOOL) {
-			// bools are only a byte wide
-			this->width = sin_widths::BOOL_WIDTH;
-		} else if (this->primary == PTR || this->primary == REFERENCE) {
-			// because we are compiling to x86_64, pointers and references should be 64-bit
-			this->width = sin_widths::PTR_WIDTH;
-		} else if (this->primary == STRING) {
-			// since strings are all implemented as pointers, they have widths of 8 bytes
-			// (they always point to dynamic memory, but syntactically don't behave like pointers)
-			this->width = sin_widths::PTR_WIDTH;
-		} else if (this->primary == CHAR) {
-			// todo: determine whether it is ASCII or UTF-8
-			this->width = sin_widths::CHAR_WIDTH;
-		} else if (this->primary == TUPLE) {
-			// tuple widths are known at compile time -- it is the sum of the widths of each of their contained types
-			// however, if they contain a struct or an array, we must defer the width evaluation until we have a struct table
-			this->width = 0;
-			auto it = this->contained_types.begin();
-			bool defer_width = false;
-			while (it != this->contained_types.end() && !defer_width) {
-				if (it->get_width() == 0) {	// types with unknown lengths have a width of 0
-					this->width = 0;
-					defer_width = true;
-				}
-				else {
-					this->width += it->get_width();
-				}
-
-				it++;
-			}
-		}
-		else {
-			/*
-
-			Everything else should use 0:
-				void	-	a void type is literally nothing
-				array	-	do not have defined widths, it depends on the array and its subtype
-				struct	-	require the compiler to look for the width in the struct table
+		Everything else should use 0:
+			void	-	a void type is literally nothing
+			array	-	do not have defined widths, it depends on the array and its subtype
+			struct	-	require the compiler to look for the width in the struct table
 			
-			While it is possible to calculate the width of arrays and structs if all of that information is known at compile time, it is possible that a struct member would only be known to the compiler through the "decl" keyword, in which case it would be impossible to know the width when the allocation was occurring.
+		While it is possible to calculate the width of arrays and structs if all of that information is known at compile time, it is possible that a struct member would only be known to the compiler through the "decl" keyword, in which case it would be impossible to know the width when the allocation was occurring.
 
-			*/
+		*/
 
-			this->width = 0;
-		}
+		this->width = 0;
 	}
 }
 

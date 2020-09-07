@@ -221,3 +221,51 @@ bool assign_utilities::requires_copy(DataType t) {
         t.get_primary() == STRUCT
     );
 }
+
+bool assign_utilities::is_valid_move_expression(std::shared_ptr<Expression> exp) {
+    /*
+
+    is_valid_move_expression
+    Determines whether the given expression may be used in a move statement
+
+    Move expressions must be modifiable-lvalues, meaning they can be:
+        * Identifiers
+        * Binary expressions using the dot operator
+        * Unary expressions using the dereference operator
+        * Indexed expressions
+    They can't be const, though they may be final (though assignment to initialized final data is still illegal)
+
+    */
+
+    bool is_valid;
+
+    if (
+        exp->get_expression_type() == LITERAL ||
+        exp->get_expression_type() == VALUE_RETURNING_CALL
+    ) {
+        is_valid = false;
+    }
+    else if (exp->get_expression_type() == BINARY) {
+        auto b = dynamic_cast<Binary*>(exp.get());
+        if (b->get_operator() == DOT) {
+            is_valid = true;
+        }
+        else {
+            is_valid = false;
+        }
+    }
+    else if (exp->get_expression_type() == UNARY) {
+        auto u = dynamic_cast<Unary*>(exp.get());
+        if (u->get_operator() == DEREFERENCE) {
+            is_valid = true;
+        }
+        else {
+            is_valid = false;
+        }
+    }
+    else {
+        is_valid = true;
+    }
+
+    return is_valid;
+}

@@ -94,6 +94,7 @@ class Parser
 	std::shared_ptr<Statement> parse_ite(lexeme current_lex);
 	std::shared_ptr<Statement> parse_allocation(lexeme current_lex, bool is_function_parameter = false);
 	std::shared_ptr<Statement> parse_assignment(lexeme current_lex);
+	std::shared_ptr<Statement> parse_move(lexeme current_lex);
 	std::shared_ptr<Statement> parse_return(lexeme current_lex);
 	std::shared_ptr<Statement> parse_while(lexeme current_lex);
 

@@ -40,6 +40,7 @@ public:
 	void set_line_number(unsigned int line_number);
 
 	Statement();
+	Statement(stmt_type statement_type);
 	Statement(stmt_type statement_type, unsigned int line_number);
 	virtual ~Statement();
 };
@@ -170,6 +171,13 @@ public:
 	Assignment();
 };
 
+class Movement : public Assignment
+{
+	// Similar to an assignment, but should be marked as a movement
+public:
+	Movement(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue);
+};
+
 class ReturnStatement : public Statement
 {
 	std::shared_ptr<Expression> return_exp;
@@ -271,22 +279,20 @@ public:
 
 class InlineAssembly : public Statement
 {
-	std::string asm_type;
-public:
-	std::string get_asm_type();
-
 	std::string asm_code;
+public:
+	std::string get_asm_code();
 
-	InlineAssembly(std::string asm_type, std::string asm_code);
+	InlineAssembly(std::string asm_code);
 	InlineAssembly();
 };
 
 class FreeMemory : public Statement
 {
-	Identifier to_free;
+	std::shared_ptr<Expression> to_free;
 public:
-	Identifier get_freed_memory();
+	std::shared_ptr<Expression> get_freed_memory();
 
-	FreeMemory(Identifier to_free);
+	FreeMemory(std::shared_ptr<Expression> to_free);
 	FreeMemory();
 };

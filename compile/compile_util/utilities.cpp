@@ -194,7 +194,7 @@ std::string get_rax_name_variant(DataType t, unsigned int line) {
 	
 	*/
 
-	std::string reg_string = "";
+	std::string reg_string = "rax";
 
 	if (t.get_width() == sin_widths::BOOL_WIDTH) {
 		reg_string = "al";
@@ -204,12 +204,6 @@ std::string get_rax_name_variant(DataType t, unsigned int line) {
 	}
 	else if (t.get_width() == sin_widths::INT_WIDTH) {
 		reg_string = "eax";
-	}
-	else if (t.get_width() == sin_widths::PTR_WIDTH) {
-		reg_string = "rax";
-	}
-	else {
-		throw CompilerException("Invalid data width for symbol", compiler_errors::DATA_WIDTH_ERROR, line);
 	}
 
 	return reg_string;

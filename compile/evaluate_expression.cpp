@@ -590,7 +590,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     r = this->reg_stack.peek().get_available_register(sym.get_data_type().get_primary());
                     if (r == NO_REGISTER) {
                         // since no register is available, use rsi
-                        // if it contains a symbol, just 
+                        // if it contains a symbol, store it back in the stack and mark it as not in a register
                         symbol *contained = this->reg_stack.peek().get_contained_symbol(RSI);
                         reg_used = "rsi";
                         if (contained == nullptr) {
@@ -608,8 +608,13 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     }
 
                     // get the dereferenced pointer in A
-                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
-                    eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
+                    if (sym.get_data_type().get_primary() == STRING) {
+                        eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                    }
+                    else {
+                        eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                        eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
+                    }
 
                     // if we had to push a register, restore it
                     if (reg_pushed) {

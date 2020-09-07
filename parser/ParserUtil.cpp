@@ -90,7 +90,7 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{ADDRESS, 20},
 	{DEREFERENCE, 20},
 	{ATTRIBUTE_SELECTION, 23},
-	{CONTROL_TRANSFER, 25},
+	{CONTROL_TRANSFER, 24},
 	{DOT, 25},
 	{INDEX, 25},
 	{SCOPE_RESOLUTION, 30}
