@@ -158,8 +158,15 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			size_t w = allocated.get_data_type().get_width();
 
 			// since arrays must contain a known-width type, we can just get the width of the subtype
-			if (allocated.get_data_type().get_primary() == ARRAY)
-				w = allocated.get_data_type().get_subtype().get_width();
+			if (allocated.get_data_type().get_primary() == ARRAY) {
+                const DataType &subtype = allocated.get_data_type().get_subtype();
+                if (subtype.get_qualities().is_dynamic()) {
+                    w = sin_widths::PTR_WIDTH;
+                }
+                else {
+				    w = subtype.get_width();
+                }
+            }
 			
 			char width_suffix;
 			if (w == sin_widths::BOOL_WIDTH) {
