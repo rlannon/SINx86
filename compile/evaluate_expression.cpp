@@ -417,12 +417,11 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
     // act based on data type and width -- use type_hint if we have one
     // todo: verify that the type hint is appropriate?
-    DataType type;
+    DataType type = to_evaluate.get_data_type();
     if (type_hint) {
-        type = *type_hint;
-    }
-    else {
-        type = to_evaluate.get_data_type();
+        // We only want to change the type if we have the same primary type -- the type hint is to serve as a hint about *qualities* of a type
+        if (type_hint->get_primary() == type.get_primary())
+            type = *type_hint;
     }
 
     if (type.get_primary() == VOID) {

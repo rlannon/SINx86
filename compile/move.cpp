@@ -11,7 +11,6 @@ Contains the function for handling move assignments
 #include "compiler.h"
 
 
-
 std::stringstream compiler::handle_move(Movement &m) {
     /*
 
