@@ -528,6 +528,8 @@ std::shared_ptr<Statement> Parser::parse_move(lexeme current_lex)
 			// lhs is rvalue (the value)
 			stmt = std::make_shared<Movement>(rhs, lhs);
 		}
+
+        stmt->set_line_number(current_lex.line_number);
 	}
 	else {
 		throw ParserException("Expected move assignment operator", compiler_errors::OPERATOR_TYPE_ERROR, current_lex.line_number);

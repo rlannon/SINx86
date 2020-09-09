@@ -78,7 +78,7 @@ std::stringstream compiler::handle_move(Movement &m) {
     }
     else {
         throw CompilerException(
-            "Illegal expression in move assignment; expression must be a modifiable-lvalue",
+            "Illegal expression in move assignment; expressions must both be modifiable-lvalues",
             compiler_errors::ILLEGAL_MOVE_ASSIGNMENT_EXPRESSION,
             m.get_line_number()
         );

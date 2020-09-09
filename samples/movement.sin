@@ -35,5 +35,13 @@ def int main(alloc array<string> args &dynamic) {
     move second_array -> my_array;
     @print("my_array now contains " + @itos(my_array:len) + " elements\n");
 
+    // demonstrate that some moves are just copies
+    alloc int i: 10;
+    alloc int n;
+    move n <- i;
+
+    // this line will give an error -- expressions must both be modifiable-lvalues
+    // move 30 -> i;
+
     return 0;
 }
