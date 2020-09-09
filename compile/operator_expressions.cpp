@@ -361,40 +361,21 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					Returns
 						ptr<string> - points to the location of the resultant string
 					
-					If the right hand type is a char:
-						* Increment the string length
-						* Replace the null byte with the char and append a new null byte
+					If the right hand type is a char, RDI will contain the character to append instead of a pointer to another string. The function that is called will also be sinl_string_append, not sinl_string_concat.
 					
 					*/
 
-					if (right_type.get_primary() == STRING) {
-						eval_ss << push_used_registers(this->reg_stack.peek(), true).str();
+                    eval_ss << push_used_registers(this->reg_stack.peek(), true).str();
 
-						std::string routine_name = (right_type.get_primary() == CHAR) ? "sinl_string_append" : "sinl_string_concat";
-						eval_ss << "\t" << "mov rsi, rax" << std::endl;
-						eval_ss << "\t" << "mov rdi, rbx" << std::endl;
+                    std::string routine_name = (right_type.get_primary() == CHAR) ? "sinl_string_append" : "sinl_string_concat";
+                    eval_ss << "\t" << "mov rsi, rax" << std::endl;
+                    eval_ss << "\t" << "mov rdi, rbx" << std::endl;
 
-						eval_ss << call_sincall_subroutine(routine_name);
-						eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
-						
-						count += 1;	// string concatenation and appendment allocate resources
-						eval_ss << "\t" << "push rax" << std::endl;
-					}
-					else if (right_type.get_primary() == CHAR) {
-						eval_ss << push_used_registers(this->reg_stack.peek(), true).str();
-
-						eval_ss << "\t" << "mov rsi, rax" << std::endl;
-						eval_ss << "\t" << "mov eax, [rax]" << std::endl
-							<< "\t" << "mov [rsi + rax], bl" << std::endl;
-						eval_ss << "\t" << "inc dword [rsi]" << std::endl;
-						eval_ss << "\t" << "mov eax, [rsi]" << std::endl
-							<< "\t" << "mov [rsi + rax], byte 0" << std::endl;
-
-						eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
-					}
-					else {
-						throw UndefinedOperatorError("concatenation", line);
-					}
+                    eval_ss << call_sincall_subroutine(routine_name);
+                    eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+                    
+                    count += 1;	// string concatenation and appendment allocate resources
+                    eval_ss << "\t" << "push rax" << std::endl;
 					
 					break;
 				}
