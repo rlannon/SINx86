@@ -1,0 +1,39 @@
+// movement.sin
+// tests the move keyword
+
+decl void print(decl string s &final);
+decl string itos(decl int i);
+
+def int main(alloc array<string> args &dynamic) {
+    // An example of move with strings
+    alloc string s: "Hello, world";
+    alloc string s2;
+
+    @print("s: " + s + "\n");
+
+    move s -> s2;
+    let s2 = "Hi friends.";
+
+    @print("s: " + s + "\n");
+    @print("s2: " + s2 + "\n");
+
+    // An example of move that results in divergent references
+    let s = "Hello, world!";
+    move s -> s2;
+    let s2 = s2 + " How are you doing today?";
+
+    @print("new s: " + s + "\n");
+    @print("new s2: " + s2 + "\n");
+
+    // an example of movement with arrays for resizing
+    alloc array<5, int> my_array &dynamic: {1, 2, 3, 4, 5};
+    @print("my_array contains " + @itos(my_array:len) + " elements\n");
+
+    // move the new array into the old array
+    alloc array<10, int> second_array &dynamic;
+    let second_array = my_array;
+    move second_array -> my_array;
+    @print("my_array now contains " + @itos(my_array:len) + " elements\n");
+
+    return 0;
+}
