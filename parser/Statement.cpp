@@ -332,7 +332,7 @@ Definition::~Definition() {
 
 /*******************	FUNCTION DEFINITION CLASS		********************/
 
-DataType FunctionDefinition::get_type_information()
+DataType &FunctionDefinition::get_type_information()
 {
 	return this->return_type;
 }

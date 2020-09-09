@@ -541,7 +541,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
     std::stringstream eval_ss;
 
     // get the symbol for the lvalue; make sure it was initialized
-    symbol &sym = *(this->lookup(to_evaluate.getValue(), line).get());
+    symbol &sym = *this->lookup(to_evaluate.getValue(), line);
 	if (!sym.was_initialized())
 		throw ReferencedBeforeInitializationException(sym.get_name(), line);
     

@@ -11,7 +11,7 @@ Copyright 2019 Riley Lannon
 
 #include "compiler.h"
 
-std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
+symbol *compiler::lookup(std::string name, unsigned int line) {
     /*
 
     lookup
@@ -35,7 +35,7 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
 		throw SymbolNotFoundException(line);
 	}
 
-	return to_return;
+	return to_return.get();
 }
 
 // we need to specify which classes can be used for our <typename T> since it's implemented in a separate file
@@ -293,9 +293,45 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 		{
 			StructDefinition *def_stmt = dynamic_cast<StructDefinition*>(s.get());
 
+            // first, define the struct
 			struct_info defined = define_struct(*def_stmt, this->evaluator);
+            
+            // now we can add the struct to the table
 			this->add_struct(defined, s->get_line_number());
 
+            // now, if we had any member functions, we have to define them as well
+            // update the scope name
+            auto prev_name = this->current_scope_name;
+            auto prev_level = this->current_scope_level;
+            this->current_scope_name = defined.get_struct_name();
+            this->current_scope_level += 1;
+
+            for (auto member_s: def_stmt->get_procedure()->statements_list) {
+                if (member_s->get_statement_type() == FUNCTION_DEFINITION) {
+                    auto func_def = dynamic_cast<FunctionDefinition*>(member_s.get());
+                    auto func_sym = defined.get_member(func_def->get_name());
+                    if (func_sym->get_symbol_type() == FUNCTION_SYMBOL) {
+                        function_symbol *f = dynamic_cast<function_symbol*>(func_sym);
+                        compile_ss << this->define_function(
+                            *f,
+                            *func_def->get_procedure().get(),
+                            func_def->get_line_number()
+                        ).str();
+                    }
+                    else {
+                        throw CompilerException(
+                            "Expected to find member function",
+                            compiler_errors::INVALID_SYMBOL_TYPE_ERROR,
+                            func_def->get_line_number()
+                        );
+                    }
+                }
+            }
+
+            // restore the scope name
+            this->current_scope_name = prev_name;
+            this->current_scope_level = prev_level;
+            
 			break;
 		}
         case CALL:

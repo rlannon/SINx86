@@ -228,7 +228,7 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
     std::string struct_name = definition.get_name();
 
     // iterate through our definition statements and create symbols for all struct members
-    std::vector<symbol> members;
+    std::vector<std::shared_ptr<symbol>> members;
     size_t current_offset = 0;
     for (std::shared_ptr<Statement> s: definition.get_procedure()->statements_list) {
         size_t this_width = 0;
@@ -276,12 +276,32 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
             // to do this, the function might have to be moved out of "utilities" and into "compiler"
 
             // add that symbol to our vector
-            members.push_back(sym);
+            members.push_back(std::make_shared<symbol>(sym));
 
             // update the data offset
             // todo: handle struct and array members
             current_offset += this_width;
-        } else {
+        }
+        else if (s->get_statement_type() == DECLARATION) {
+            Declaration *decl = dynamic_cast<Declaration*>(s.get());
+            if (decl->is_function()) {
+                function_symbol f_sym = create_function_symbol(*decl, true, true, struct_name, 1, true);
+            }
+            else {
+                // todo: other declarations
+            }
+        }
+        else if (s->get_statement_type() == FUNCTION_DEFINITION) {
+            // cast and define the function
+            FunctionDefinition *def = dynamic_cast<FunctionDefinition*>(s.get());
+            function_symbol f_sym = create_function_symbol(*def, true, true, struct_name, 1, true);
+            members.push_back(std::make_shared<function_symbol>(f_sym));
+        }
+        else if (s->get_statement_type() == STRUCT_DEFINITION) {
+            // todo: sub-structs
+            throw CompilerException("This feature (structs within structs) is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s->get_line_number());
+        }
+        else {
             throw StructDefinitionException(definition.get_line_number());
         }
     }
@@ -292,10 +312,10 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
 
 // Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
-template function_symbol create_function_symbol(FunctionDefinition, bool, bool);
-template function_symbol create_function_symbol(Declaration, bool, bool);
+template function_symbol create_function_symbol(FunctionDefinition, bool, bool, std::string, unsigned int, bool);
+template function_symbol create_function_symbol(Declaration, bool, bool, std::string, unsigned int, bool);
 template <typename T>
-function_symbol create_function_symbol(T def, bool mangle, bool defined) {
+function_symbol create_function_symbol(T def, bool mangle, bool defined, std::string scope_name, unsigned int scope_level, bool is_method) {
     /*
 
     create_function_symbol
@@ -308,35 +328,122 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined) {
 
     */
 
-    std::string scope_name = def.get_name();
-    unsigned int scope_level = 1;
+    std::string inner_scope_name = def.get_name();
+    unsigned int inner_scope_level = scope_level + 1;
     size_t stack_offset = 0;
 
     // construct our formal parameters
     std::vector<symbol> formal_parameters;
 
+    // if we have a nonstatic method, we need to make sure the first parameter is 'ref<T> this' (unless it was provided -- in which case, validate)
+    bool has_this_parameter = false;
+    symbol this_parameter(
+        "this",
+        inner_scope_name,
+        inner_scope_level,
+        DataType(
+            REFERENCE,  // Default type for 'this' is ref< T >
+            DataType(
+                STRUCT,
+                DataType(),
+                symbol_qualities(),
+                nullptr,
+                scope_name
+            ),
+            symbol_qualities()
+        ),
+        0,
+        true,
+        def.get_line_number()
+    );
+    this_parameter.set_as_parameter();
+    this_parameter.set_initialized();
+
+    if (
+        is_method && 
+        !def.get_type_information().get_qualities().is_static()
+        && def.get_formal_parameters().empty()
+    ) {
+        formal_parameters.push_back(this_parameter);
+        has_this_parameter = true;
+    }
+
     // now, determine which registers can hold which parameters
-    for (std::shared_ptr<Statement> param: def.get_formal_parameters()) {
+    for (size_t i = 0; i < def.get_formal_parameters().size(); i++) {
+        // get the parameter
+        auto param = def.get_formal_parameters().at(i);
+
         // create the symbol based on our statement
         symbol param_sym;
 
         // cast to the appropriate symbol type
         if (param->get_statement_type() == DECLARATION) {
             Declaration *param_decl = dynamic_cast<Declaration*>(param.get());
-            param_sym = generate_symbol(*param_decl, param_decl->get_type_information().get_width(), scope_name, scope_level, stack_offset);
+            param_sym = generate_symbol(
+                *param_decl,
+                param_decl->get_type_information().get_width(),
+                inner_scope_name,
+                inner_scope_level,
+                stack_offset
+            );
         } else if (param->get_statement_type() == ALLOCATION) {
             Allocation *param_alloc = dynamic_cast<Allocation*>(param.get());
             DataType t = param_alloc->get_type_information();
-            param_sym = generate_symbol(*param_alloc, t.get_width(), scope_name, scope_level, stack_offset);
+            param_sym = generate_symbol(
+                *param_alloc,
+                t.get_width(),
+                inner_scope_name,
+                inner_scope_level,
+                stack_offset
+            );
         } else {
             // todo: remove? these errors should be caught by the parser
             throw CompilerException("Invalid statement type in function signature", compiler_errors::ILLEGAL_OPERATION_ERROR, def.get_line_number());
+        }
+
+        // ensure the first parameter is 'this' if we need it
+        if (i == 0 && is_method && !has_this_parameter) {
+            // ensure we have a typename of 'this', make sure it's the right type
+            if (param_sym.get_name() == "this") {
+                auto t = param_sym.get_data_type();
+                if (
+                    (
+                        t.get_primary() == REFERENCE 
+                        || t.get_primary() == PTR
+                    ) 
+                    && t.get_subtype() == STRUCT 
+                    && t.get_struct_name() == scope_name
+                ) {
+                    has_this_parameter = true;
+                }
+                else {
+                    throw CompilerException(
+                        "Expected 'this' parameter to have type of ptr< " + scope_name + " > or ref< " + scope_name + " >",
+                        compiler_errors::INCORRECT_THIS_TYPE,
+                        def.get_line_number()
+                    );
+                }
+            }
+            else if (!def.get_type_information().get_qualities().is_static()) {
+                // we need to add a 'this' parameter if it's a nonstatic method
+                formal_parameters.push_back(this_parameter);
+                has_this_parameter = true;
+            }
         }
 
         // make sure it's marked as a paramter and marked as initialized (so that we don't get errors about uninitialized data in the function)
         param_sym.set_as_parameter();
         param_sym.set_initialized();
         formal_parameters.push_back(param_sym);
+    }
+
+    // now, if we have a 'this' parameter and it's a static method, it's an error
+    if (has_this_parameter && def.get_type_information().get_qualities().is_static()) {           
+        throw CompilerException(
+            "Cannot have 'this' parameter for static member functions",
+            compiler_errors::ILLEGAL_THIS_PARAMETER,
+            def.get_line_number()
+        );
     }
 
     // construct the object
@@ -346,6 +453,8 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined) {
         name,
         def.get_type_information(),
         formal_parameters,
+        scope_name,
+        scope_level,
         def.get_calling_convention(),
         defined,
         def.get_line_number()

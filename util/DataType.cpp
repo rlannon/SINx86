@@ -420,7 +420,14 @@ bool DataType::must_initialize() const {
 	return init_required;
 }
 
-DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp, std::string struct_name) :
+DataType::DataType
+(
+    Type primary,
+    DataType subtype,
+    symbol_qualities qualities,
+    std::shared_ptr<Expression> array_length_exp,
+    std::string struct_name
+):
     primary(primary),
     qualities(qualities),
 	array_length_expression(array_length_exp),
@@ -432,7 +439,7 @@ DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, s
 		subtype = DataType(CHAR);
 	}
 
-	this->contained_types = { subtype };
+	this->contained_types.push_back(subtype);
 
 	// the array length will be evaluated by the compiler; start at 0
 	this->array_length = 0;

@@ -40,8 +40,10 @@ public:
     function_symbol(
         std::string function_name, 
         DataType return_type, 
-        std::vector<symbol> formal_parameters, 
-        calling_convention call_con = SINCALL, 
+        std::vector<symbol> formal_parameters,
+        std::string scope_name,
+        unsigned int scope_level,
+        calling_convention call_con = SINCALL,
         bool defined = true,
         unsigned int line_defined = 0
     );

@@ -63,6 +63,22 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
 
 std::stringstream compiler::define_function(FunctionDefinition definition) {
     /*
+    
+    define_function
+    An overloaded version to define a function with a definition statement
+    
+    */
+
+    function_symbol func_sym = create_function_symbol(definition);
+    return this->define_function(
+        func_sym,
+        *definition.get_procedure().get(),
+        definition.get_line_number()
+    );
+}
+
+std::stringstream compiler::define_function(function_symbol func_sym, StatementBlock prog, unsigned int line) {
+    /*
 
     define_function
     Generates the code for a function definition
@@ -89,12 +105,9 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     size_t previous_max_offset = this->max_offset;
 
     // update the scope information
-    this->current_scope_name = definition.get_name();
-    this->current_scope_level = 1;
+    this->current_scope_name = func_sym.get_name();
+    this->current_scope_level += 1;
     this->max_offset = 0;
-
-    // construct the symbol for the function -- everything is offloaded to the utility
-    function_symbol func_sym = create_function_symbol(definition);
 
     // check to see if the symbol already exists in the table and is undefined -- if so, we need to add 'global'
     bool marked_extern = false; // to ensure we don't mark it as global twice if the declared function is 'extern'
@@ -103,7 +116,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
         if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
             auto declared_sym = dynamic_cast<function_symbol*>(sym.get());
             if (sym->is_defined()) {
-                throw DuplicateDefinitionException(definition.get_line_number());
+                throw DuplicateDefinitionException(line);
             }
             else {
                 // check to ensure signatures match
@@ -113,7 +126,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
                     throw CompilerException(
                         "Function signature does not match that of declaration",
                         compiler_errors::SIGNATURE_MISMATCH,
-                        definition.get_line_number()
+                        line
                     );
                 }
 
@@ -131,13 +144,13 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
             throw CompilerException(
                 "Attempt to redefine \"" + func_sym.get_name() + "\" as a function",
                 compiler_errors::DUPLICATE_SYMBOL_ERROR,
-                definition.get_line_number()
+                line
             );
         }
     }
     else {
         // add the symbol to the table
-        this->add_symbol(func_sym, definition.get_line_number());
+        this->add_symbol(func_sym, line);
     }
 
     // if the function is marked as 'extern', ensure it is global
@@ -150,7 +163,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     std::set<reg> arg_regs;
     for (symbol &sym: func_sym.get_formal_parameters()) {
         // add the parameter symbol to the table
-        this->add_symbol(sym, definition.get_line_number());
+        this->add_symbol(sym, line);
         
 		// if r was passed in a register, then we must add it to arg_regs
 		reg r = sym.get_register();
@@ -172,7 +185,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     this->max_offset += sin_widths::PTR_WIDTH;
 
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
-    procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
+    procedure_ss = this->compile_ast(prog, std::make_shared<function_symbol>(func_sym));
 
     // now, put everything together in definition_ss by adding procedure_ss onto the end
     definition_ss << procedure_ss.str() << std::endl;
@@ -216,7 +229,7 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     size_t count = 0;
 
     // first, look up the function
-    std::shared_ptr<symbol> sym = this->lookup(call.get_func_name(), line);
+    symbol *sym = this->lookup(call.get_func_name(), line);
 
     // if the function returns a reference type, we need to increment the count
     if (sym->get_data_type().is_reference_type()) {
@@ -226,7 +239,7 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     // ensure we have a function
     if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
         // cast to the correct type
-        function_symbol func_sym = *dynamic_cast<function_symbol*>(sym.get());
+        function_symbol func_sym = *dynamic_cast<function_symbol*>(sym);
 
         // if we aren't allowing a void return type, then throw an exception if the primary type is void
         if (!allow_void && func_sym.get_data_type().get_primary() == VOID) {
@@ -238,14 +251,26 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
             // SIN calling convention
             call_ss << this->sincall(func_sym, call.get_args(), line).str(); // todo: return this function's result directly?
 		}
-		/*else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
-			// todo: System V
+		else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
+			throw CompilerException(
+                "System V calling convention (AMD64) currently unsupported",
+                compiler_errors::UNSUPPORTED_ERROR,
+                line
+            );
 		}
         else if (func_sym.get_calling_convention() == calling_convention::WIN_64) {
-            // todo: Windows x86-64
-        }*/
+            throw CompilerException(
+                "Windows 64-bit calling convention currently unsupported",
+                compiler_errors::UNSUPPORTED_ERROR,
+                line
+            );
+        }
 		else {
-            throw CompilerException("Other calling conventions not supported at this time", 0, line);
+            throw CompilerException(
+                "Other calling conventions not supported at this time",
+                compiler_errors::UNSUPPORTED_ERROR,
+                line
+            );
         }
 
         // now, the function's return value (or pointer to the return value) is in RAX or XMM0, depending on the type -- the compiler always expects return values here regardless of calling convention

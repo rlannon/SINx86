@@ -59,7 +59,7 @@ void symbol_table::erase(node to_erase) {
 	}
 }
 
-std::string symbol_table::get_mangled_name(std::string org) {
+std::string symbol_table::get_mangled_name(std::string org, std::string scope_name) {
 	/*
 
 	get_mangled_name
@@ -69,7 +69,7 @@ std::string symbol_table::get_mangled_name(std::string org) {
 
 	*/
 
-	return "SIN_" + org;
+    return "SIN_" + (scope_name == "global" ? "" : scope_name) + org;
 }
 
 bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {

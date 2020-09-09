@@ -42,15 +42,17 @@ register_usage function_symbol::get_arg_regs() {
 function_symbol::function_symbol(
 	std::string function_name, 
 	DataType return_type, 
-	std::vector<symbol> formal_parameters, 
+	std::vector<symbol> formal_parameters,
+    std::string scope_name,
+    unsigned int scope_level, 
 	calling_convention call_con, 
 	bool defined,
 	unsigned int line_defined
 ) :
 	symbol(
 		function_name,
-		"global", 
-		0, 
+		scope_name, 
+		scope_level, 
 		return_type, 
 		0,
 		defined,
@@ -166,7 +168,7 @@ function_symbol::function_symbol(
 }
 
 function_symbol::function_symbol() :
-function_symbol("", NONE, {}) {
+function_symbol("", NONE, {}, "global", 0) {
     // delegate to specialized constructor
 }
 

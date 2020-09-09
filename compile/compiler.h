@@ -56,7 +56,7 @@ class compiler {
     stack<register_usage> reg_stack;    // a stack for tracking which registers are in use in a given scope
 
     symbol_table symbols;    // todo: dynamically allocate?
-	std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
+	symbol *lookup(std::string name, unsigned int line);   // look up a symbol's name
     template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
 
 	struct_table structs;
@@ -120,6 +120,7 @@ class compiler {
 
 	// functions
 	std::stringstream define_function(FunctionDefinition definition);
+    std::stringstream define_function(function_symbol func_sym, StatementBlock prog, unsigned int line);
 
 	template<typename T> std::pair<std::string, size_t> call_function(T to_call, unsigned int line, bool allow_void = true);
 	std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);

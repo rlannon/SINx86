@@ -19,7 +19,7 @@ std::string struct_info::get_struct_name() const
 	return this->struct_name;
 }
 
-symbol& struct_info::get_member(std::string name)
+symbol *struct_info::get_member(std::string name)
 {
 	/*
 	
@@ -28,20 +28,23 @@ symbol& struct_info::get_member(std::string name)
 	
 	*/
 
+    symbol *s = nullptr;
 	try {
 		std::shared_ptr<symbol> sym = this->members.find(name);
-		return *sym;
-	}
+        s = sym.get();
+    }
 	catch (std::exception& e) {
 		throw SymbolNotFoundException(0);	// todo: line number?
 	}
+
+    return s;
 }
 
 size_t struct_info::get_width() const {
 	return this->struct_width;
 }
 
-struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned int line) {
+struct_info::struct_info(std::string name, std::vector<std::shared_ptr<symbol>> members, unsigned int line) {
     /*
     
         struct_info
@@ -60,17 +63,17 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
     this->struct_width = 0;
     this->width_known = true;
 
-    for (symbol s: members) {
+    for (auto s: members) {
         try {
-            this->members.insert(std::make_shared<symbol>(s));
+            this->members.insert(s);
 
-            size_t sym_width = s.get_data_type().get_width();
+            size_t sym_width = s->get_data_type().get_width();
             if (sym_width == 0) {
-				if (s.get_data_type().get_qualities().is_dynamic()) {
+				if (s->get_data_type().get_qualities().is_dynamic()) {
 					sym_width = sin_widths::PTR_WIDTH;
 				}
-                else if (s.get_data_type().get_primary() == ARRAY) {
-                    sym_width = s.get_data_type().get_array_length();
+                else if (s->get_data_type().get_primary() == ARRAY) {
+                    sym_width = s->get_data_type().get_array_length();
                 }
 				else {
 					this->width_known = false;	// todo: should this throw an error?

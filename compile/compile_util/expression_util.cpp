@@ -98,12 +98,12 @@ std::stringstream expression_util::evaluate_member_selection(
 
         Identifier *id = dynamic_cast<Identifier*>(to_evaluate.get_right().get());
         auto member = lhs_struct.get_member(id->getValue());
-        member_offset = member.get_offset();
+        member_offset = member->get_offset();
 
         if (member_offset > 0) {
             eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
         }
-        result_type = member.get_data_type();
+        result_type = member->get_data_type();
     }
     else if (lhs_type.get_primary() == TUPLE) {
         // get the offset for our index
@@ -303,7 +303,7 @@ DataType expression_util::get_expression_data_type(
                     auto lhs_struct = structs.find(lhs_type.get_struct_name(), line);
                     if (binary->get_right()->get_expression_type() == IDENTIFIER) {
                         Identifier *r = dynamic_cast<Identifier*>(binary->get_right().get());
-                        type_information = lhs_struct.get_member(r->getValue()).get_data_type();
+                        type_information = lhs_struct.get_member(r->getValue())->get_data_type();
                     }
                     // todo: exception
                 }

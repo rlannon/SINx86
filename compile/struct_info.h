@@ -26,13 +26,13 @@ class struct_info {
     size_t struct_width;
 public:
     std::string get_struct_name() const;   // get the struct's name
-    symbol& get_member(std::string name);    // get the member with a given name
+    symbol *get_member(std::string name);    // get the member with a given name
     size_t get_width() const;   // get the struct's width (0 if unknown)
     bool is_width_known() const;    // whether the width of the struct is known
 
     std::vector<std::shared_ptr<symbol>> get_all_members();
 
-    struct_info(std::string struct_name, std::vector<symbol> members, unsigned int line);
+    struct_info(std::string struct_name, std::vector<std::shared_ptr<symbol>> members, unsigned int line);
     struct_info(std::string struct_name);
     struct_info();
     ~struct_info();

@@ -41,7 +41,7 @@ class symbol_table {
 	void erase(node to_erase);
 public:
 	// public member functions
-	static std::string get_mangled_name(std::string org);
+	static std::string get_mangled_name(std::string org, std::string scope_name = "global");
 	
 	bool insert(std::shared_ptr<symbol> to_insert);
 

@@ -20,6 +20,7 @@ Codes fall into the following categories:
 
 namespace compiler_errors {
     // Illegal operations
+    const unsigned int UNSUPPORTED_ERROR = 0;
     const unsigned int CONST_ASSIGNMENT_ERROR = 1;
     const unsigned int FINAL_ASSIGNMENT_ERROR = 2;
     const unsigned int DATA_WIDTH_ERROR = 3;
@@ -47,8 +48,10 @@ namespace compiler_errors {
     const unsigned int INVALID_UNARY_OPERATOR_ERROR = 55;   // if the operator given for a unary is not a valid unary operator
     const unsigned int UNARY_TYPE_NOT_SUPPORTED = 56;   // if the unary operator is not supported with a given type
 	const unsigned int UNDEFINED_OPERATOR_ERROR = 57;	// the operator used is undefined for the data type
+    
     const unsigned int ILLEGAL_ADDRESS_OF_ARGUMENT = 61;    // the address-of operator may only be used with lvalues and member selection binary expressions
     const unsigned int ILLEGAL_INDIRECTION = 62;    // the * operator may only be used with pointer types
+    const unsigned int ILLEGAL_THIS_PARAMETER = 65;
 
     const unsigned int SELF_CONTAINMENT_ERROR = 71; // a struct may not contain an instance of itself
 
@@ -84,6 +87,7 @@ namespace compiler_errors {
     const unsigned int INVALID_CAST_ERROR = 213;
     const unsigned int NOT_SUBSCRIPTABLE_ERROR = 214;   // only strings and arrays may use []
     const unsigned int RETURN_MISMATCH_ERROR = 215; // a function's return type does not match its signature
+    const unsigned int INCORRECT_THIS_TYPE = 219;
 
 	const unsigned int TYPE_VALIDITY_RULE_VIOLATION_ERROR = 220;	// SIN has strict type validity rules, and one or more were violated
 	const unsigned int STRUCT_TYPE_EXPECTED_ERROR = 225;	// to use the dot operator, the left-hand expression must be 'struct' type
