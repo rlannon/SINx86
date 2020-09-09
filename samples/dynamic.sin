@@ -1,7 +1,7 @@
 // dynamic.sin
 // test of the 'dynamic' keyword
 
-def int main(alloc array<string> args) {
+def int main(alloc array<string> args &dynamic) {
     alloc int a &dynamic: 10;
     alloc int b;
     let b = a;

@@ -51,4 +51,5 @@ namespace assign_utilities {
         bool is_initialization = false
     );
     bool requires_copy(DataType t);
+    bool is_valid_move_expression(std::shared_ptr<Expression> exp);
 };

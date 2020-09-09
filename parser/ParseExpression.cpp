@@ -347,6 +347,11 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 		// get the operator
 		auto op = this->read_operator(true);
 
+		// if the operator is LEFT_ARROW or RIGHT_ARROW, it's not a binary expression -- they're for movement only
+		if (op == LEFT_ARROW || op == RIGHT_ARROW) {
+			return left;
+		}
+
 		// if the operator is '&', it could be used for bitwise-and OR for postfixed symbol qualities; if the token following is a keyword, it cannot be bitwise-and
 		if (op == BIT_AND) {
 			this->next();	// advance the iterator so we can see what comes after the ampersand

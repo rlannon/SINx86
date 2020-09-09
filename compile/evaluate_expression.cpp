@@ -296,6 +296,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
             auto t = expression_util::get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
             auto attr_p = this->evaluate_expression(attr->get_selected(), line, type_hint);
+
             // we have a limited number of attributes
             if (attr->get_attribute() == LENGTH) {
                 /*
@@ -416,12 +417,11 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
     // act based on data type and width -- use type_hint if we have one
     // todo: verify that the type hint is appropriate?
-    DataType type;
+    DataType type = to_evaluate.get_data_type();
     if (type_hint) {
-        type = *type_hint;
-    }
-    else {
-        type = to_evaluate.get_data_type();
+        // We only want to change the type if we have the same primary type -- the type hint is to serve as a hint about *qualities* of a type
+        if (type_hint->get_primary() == type.get_primary())
+            type = *type_hint;
     }
 
     if (type.get_primary() == VOID) {
@@ -590,7 +590,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     r = this->reg_stack.peek().get_available_register(sym.get_data_type().get_primary());
                     if (r == NO_REGISTER) {
                         // since no register is available, use rsi
-                        // if it contains a symbol, just 
+                        // if it contains a symbol, store it back in the stack and mark it as not in a register
                         symbol *contained = this->reg_stack.peek().get_contained_symbol(RSI);
                         reg_used = "rsi";
                         if (contained == nullptr) {
@@ -608,8 +608,18 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     }
 
                     // get the dereferenced pointer in A
-                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
-                    eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
+                    if (
+                        sym.get_data_type().get_primary() == STRING ||
+                        sym.get_data_type().get_primary() == ARRAY || 
+                        sym.get_data_type() == STRUCT || 
+                        sym.get_data_type().get_primary() == TUPLE
+                    ) {
+                        eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                    }
+                    else {
+                        eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                        eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
+                    }
 
                     // if we had to push a register, restore it
                     if (reg_pushed) {

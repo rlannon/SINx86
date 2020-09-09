@@ -40,65 +40,42 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		}
 		// parse inline assembly
 		else if (current_lex.value == "asm") {
-			lexeme next = this->next();
+			if (this->peek().value == "{") {
+				this->next();
 
-			if (next.value == "<") {
-				lexeme asm_type = this->next();
-				if (asm_type.type == IDENTIFIER_LEX) {
-					std::string asm_architecture = asm_type.value;
+				// TODO: figure out how to implement line breaks in asm
 
-					if (this->peek().value == ">") {
-						this->next();
+				// continue reading values into a stringstream until we hit another curly brace
+				bool end_asm = false;
+				std::stringstream asm_code;
+
+				lexeme asm_data = this->next();
+				unsigned int current_line = asm_data.line_number;
+				
+				while (!end_asm) {
+					// if we have advanced in line number, add a newline 
+					if (asm_data.line_number > current_line) {
+						asm_code << std::endl;
+						current_line = asm_data.line_number;	// update 'current_line' -- if we advance lines from here, we will add a newline at the top of the next loop
+					}
+
+					if (asm_data.value == "}") {
+						end_asm = true;
 					}
 					else {
-						throw ParserException("Need closing angle bracket around asm type", 000, current_lex.line_number);
-					}
+						asm_code << asm_data.value;
 
-					if (this->peek().value == "{") {
-						this->next();
-
-						// TODO: figure out how to implement line breaks in asm
-
-						// continue reading values into a stringstream until we hit another curly brace
-						bool end_asm = false;
-						std::stringstream asm_code;
-
-						lexeme asm_data = this->next();
-						unsigned int current_line = asm_data.line_number;
-						
-						while (!end_asm) {
-							// if we have advanced in line number, add a newline 
-							if (asm_data.line_number > current_line) {
-								asm_code << std::endl;
-								current_line = asm_data.line_number;	// update 'current_line' -- if we advance lines from here, we will add a newline at the top of the next loop
-							}
-
-							if (asm_data.value == "}") {
-								end_asm = true;
-							}
-							else {
-								asm_code << asm_data.value;
-
-								// put a space after idents, but not if a colon follows; also put spaces before semicolons
-								if (((asm_data.type == IDENTIFIER_LEX) && (this->peek().value != ":")) || (this->peek().value == ";")) {
-									asm_code << " ";
-								}
-								// advance to the next token, but ONLY if we haven't hit the closing curly brace
-								asm_data = this->next();
-							}
+						// put a space after idents, but not if a colon follows; also put spaces before semicolons
+						if (((asm_data.type == IDENTIFIER_LEX) && (this->peek().value != ":")) || (this->peek().value == ";")) {
+							asm_code << " ";
 						}
-
-						stmt = std::make_shared<InlineAssembly>(asm_architecture, asm_code.str());
-						stmt->set_line_number(current_lex.line_number);	// sets the line number for errors to the ASM block start; any ASM errors will be made known in the assembler
+						// advance to the next token, but ONLY if we haven't hit the closing curly brace
+						asm_data = this->next();
 					}
 				}
-				else {
-					throw ParserException("Inline assembly must include the target architecture!", 000, current_lex.line_number);
-				}
-			}
-			else {
-				// syntax error; 'asm' must be followed by the type
-				throw ParserException("Inline assembly must include the target architecture (syntax is 'asm< target >{ ... }'", 000, current_lex.line_number);
+
+				stmt = std::make_shared<InlineAssembly>(asm_code.str());
+				stmt->set_line_number(current_lex.line_number);	// sets the line number for errors to the ASM block start; any ASM errors will be made known in the assembler
 			}
 		}
 		// parse a "free" statement
@@ -106,29 +83,16 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 			/*
 
 			The syntax for a free statement is:
-				free <identifier>;
+				free <expression>;
 			
-			Since free is not a function, but a keyword, unlike C; it is more like the C++ 'delete'
+			Since free is not a function, but a keyword, unlike C, it is more like the C++ 'delete'
 
 			*/
 
-			if (this->peek().type == IDENTIFIER_LEX) {
-				current_lex = this->next();
-
-				// make sure we end the statement correctly
-				if (this->peek().value == ";") {
-					this->next();
-
-					Identifier to_free(current_lex.value);
-					stmt = std::make_shared<FreeMemory>(to_free);
-				}
-				else {
-					throw MissingSemicolonError(current_lex.line_number);
-				}
-			}
-			else {
-				throw ParserException("Expected identifier after 'free'", 0, current_lex.line_number);
-			}
+			this->next();
+			auto to_free = this->parse_expression();
+			stmt = std::make_shared<FreeMemory>(to_free);
+			stmt->set_line_number(current_lex.line_number);
 		}
 		// parse a declaration
 		else if (current_lex.value == "decl") {
@@ -145,6 +109,9 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		// Parse an assignment
 		else if (current_lex.value == "let") {
 			stmt = this->parse_assignment(current_lex);
+		}
+		else if (current_lex.value == "move") {
+			stmt = this->parse_move(current_lex);
 		}
 		// Parse a return statement
 		else if (current_lex.value == "return") {
@@ -518,17 +485,62 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 		}
 	}
 	else if (is_valid_move_assignment_operator(op)) {
-		// todo: move assignment
-		throw CompilerException("Move assignment currently not supported", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, op_lex.line_number);
+		throw ParserException("Move assignment operator not supported with 'let'", compiler_errors::OPERATOR_TYPE_ERROR, op_lex.line_number);
 	}
 	else {
 		throw ParserException("Unrecognized token.", 0, current_lex.line_number);
 	}
 }
 
+std::shared_ptr<Statement> Parser::parse_move(lexeme current_lex)
+{
+	/*
+
+	parse_move
+	Parses a 'move' statement
+
+	*/
+
+	std::shared_ptr<Statement> stmt = nullptr;
+	this->next();
+	
+	// get the lhs
+	auto lhs = this->parse_expression();
+	
+	// get the op
+	auto op = this->read_operator(false);
+	if (is_valid_move_assignment_operator(op)) {
+		// get the rhs
+		this->next();
+		auto rhs = this->parse_expression();
+
+		if (this->peek().value != ";") {
+			throw MissingSemicolonError(this->current_token().line_number);
+		}
+
+		// todo: ensure that we are only moving modifiable-lvalues (should this be done in the compiler class?)
+		
+		if (op == LEFT_ARROW) {
+			// rhs is rvalue (the value)
+			stmt = std::make_shared<Movement>(lhs, rhs);
+		}
+		else {
+			// lhs is rvalue (the value)
+			stmt = std::make_shared<Movement>(rhs, lhs);
+		}
+
+        stmt->set_line_number(current_lex.line_number);
+	}
+	else {
+		throw ParserException("Expected move assignment operator", compiler_errors::OPERATOR_TYPE_ERROR, current_lex.line_number);
+	}
+
+	return stmt;
+}
+
 std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt(nullptr);
+	std::shared_ptr<Statement> stmt = nullptr;
 	this->next();	// go to the expression
 
 	// if the current token is a semicolon, return a Literal Void

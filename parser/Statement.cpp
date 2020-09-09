@@ -33,6 +33,10 @@ Statement::Statement() {
 	this->scope_name = "global";
 }
 
+Statement::Statement(stmt_type statement_type) {
+	this->statement_type = statement_type;
+}
+
 Statement::Statement(stmt_type statement_type, unsigned int line_number) : statement_type(statement_type), line_number(line_number) {
 	
 }
@@ -59,8 +63,7 @@ StatementBlock ScopedBlock::get_statements() {
 	return this->statements;
 }
 
-ScopedBlock::ScopedBlock(StatementBlock statements) {
-	this->statement_type = SCOPE_BLOCK;
+ScopedBlock::ScopedBlock(StatementBlock statements): Statement(SCOPE_BLOCK) {
 	this->statements = statements;
 }
 
@@ -72,12 +75,10 @@ std::string Include::get_filename() {
 	return this->filename;
 }
 
-Include::Include(std::string filename) : filename(filename) {
-	this->statement_type = INCLUDE;
+Include::Include(std::string filename) : Statement(INCLUDE), filename(filename) {
 }
 
-Include::Include() {
-	this->statement_type = INCLUDE;
+Include::Include(): Include("") {
 }
 
 /*******************		DECLARATION CLASS		********************/
@@ -116,6 +117,7 @@ calling_convention Declaration::get_calling_convention() const {
 
 // Constructors
 Declaration::Declaration(DataType type, std::string var_name, std::shared_ptr<Expression> initial_value, bool is_function, bool is_struct, std::vector<std::shared_ptr<Statement>> formal_parameters) :
+	Statement(DECLARATION),
 	type(type),
 	name(var_name),
 	initial_value(initial_value),
@@ -123,7 +125,6 @@ Declaration::Declaration(DataType type, std::string var_name, std::shared_ptr<Ex
 	struct_definition(is_struct),
 	formal_parameters(formal_parameters)
 {
-	this->statement_type = DECLARATION;
 	this->call_con = SINCALL;
 }
 
@@ -171,18 +172,17 @@ std::shared_ptr<Expression> Allocation::get_initial_value()
 }
 
 Allocation::Allocation(DataType type_information, std::string value, bool initialized, std::shared_ptr<Expression> initial_value) :
+	Statement(ALLOCATION),
 	type_information(type_information),
 	value(value),
 	initialized(initialized),
 	initial_value(initial_value)
 {
-	Allocation::statement_type = ALLOCATION;
 }
 
-Allocation::Allocation() {
+Allocation::Allocation(): Statement(ALLOCATION) {
 	Allocation::type_information = type_information;
 	Allocation::initialized = false;
-	Allocation::statement_type = ALLOCATION;
 }
 
 
@@ -197,19 +197,32 @@ std::shared_ptr<Expression> Assignment::get_rvalue() {
 	return this->rvalue_ptr;
 }
 
-Assignment::Assignment(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue) : lvalue(lvalue), rvalue_ptr(rvalue) {
-	Assignment::statement_type = ASSIGNMENT;
+Assignment::Assignment(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue) : 
+	Statement(ASSIGNMENT),
+	lvalue(lvalue), 
+	rvalue_ptr(rvalue) 
+{
 }
 
-Assignment::Assignment(Identifier lvalue, std::shared_ptr<Expression> rvalue) : rvalue_ptr(rvalue) {
+Assignment::Assignment(Identifier lvalue, std::shared_ptr<Expression> rvalue) : 
+	Statement(ASSIGNMENT),
+	rvalue_ptr(rvalue)
+{
 	this->lvalue = std::make_shared<Identifier>(lvalue);
-	this->statement_type = ASSIGNMENT;
 }
 
-Assignment::Assignment() {
-	Assignment::statement_type = ASSIGNMENT;
+Assignment::Assignment():
+	Assignment(nullptr, nullptr)
+{
 }
 
+// Movements
+
+Movement::Movement(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue) :
+	Assignment(lvalue, rvalue)
+{
+	this->statement_type = MOVEMENT;	// since we call the assignment constructor, we need to override the statement type
+}
 
 
 /*******************	RETURN STATEMENT CLASS		********************/
@@ -220,13 +233,15 @@ std::shared_ptr<Expression> ReturnStatement::get_return_exp() {
 }
 
 
-ReturnStatement::ReturnStatement(std::shared_ptr<Expression> exp_ptr) {
-	ReturnStatement::statement_type = RETURN_STATEMENT;
+ReturnStatement::ReturnStatement(std::shared_ptr<Expression> exp_ptr):
+	Statement(RETURN_STATEMENT)
+{
 	ReturnStatement::return_exp = exp_ptr;
 }
 
-ReturnStatement::ReturnStatement() {
-	ReturnStatement::statement_type = RETURN_STATEMENT;
+ReturnStatement::ReturnStatement():
+	ReturnStatement(nullptr)
+{
 }
 
 
@@ -245,22 +260,22 @@ std::shared_ptr<Statement> IfThenElse::get_else_branch() {
 	return this->else_branch;
 }
 
-IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr) {
-	IfThenElse::statement_type = IF_THEN_ELSE;
+IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr):
+	Statement(IF_THEN_ELSE)
+{
 	IfThenElse::condition = condition_ptr;
 	IfThenElse::if_branch = if_branch_ptr;
 	IfThenElse::else_branch = else_branch_ptr;
 }
 
-IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr) {
-	IfThenElse::statement_type = IF_THEN_ELSE;
-	IfThenElse::condition = condition_ptr;
-	IfThenElse::if_branch = if_branch_ptr;
-	IfThenElse::else_branch = nullptr;
+IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr):
+	IfThenElse(condition_ptr, if_branch_ptr, nullptr)
+{
 }
 
-IfThenElse::IfThenElse() {
-	IfThenElse::statement_type = IF_THEN_ELSE;
+IfThenElse::IfThenElse():
+	Statement(IF_THEN_ELSE)
+{
 }
 
 
@@ -277,11 +292,14 @@ std::shared_ptr<Statement> WhileLoop::get_branch()
 	return WhileLoop::branch;
 }
 
-WhileLoop::WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch) : condition(condition), branch(branch) {
-	WhileLoop::statement_type = WHILE_LOOP;
+WhileLoop::WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch) : 
+	Statement(WHILE_LOOP),
+	condition(condition),
+	branch(branch)
+{
 }
 
-WhileLoop::WhileLoop() {
+WhileLoop::WhileLoop(): Statement(WHILE_LOOP) {
 }
 
 
@@ -296,6 +314,7 @@ std::shared_ptr<StatementBlock> Definition::get_procedure() {
 }
 
 Definition::Definition(std::string name, std::shared_ptr<StatementBlock> procedure):
+	Statement(),
 	name(name),
 	procedure(procedure)
 {
@@ -369,41 +388,48 @@ std::vector<std::shared_ptr<Expression>> Call::get_args() {
 	return this->args;
 }
 
-Call::Call(std::shared_ptr<Identifier> func, std::vector<std::shared_ptr<Expression>> args) : func(func), args(args) {
-	Call::statement_type = CALL;
+Call::Call(std::shared_ptr<Identifier> func, std::vector<std::shared_ptr<Expression>> args) : 
+	Statement(CALL),
+	func(func),
+	args(args)
+{
 }
 
-Call::Call() {
-	Call::statement_type = CALL;
+Call::Call(): Statement(CALL) {
 }
 
 
 /*******************		INLINE ASM CLASS		********************/
 
-std::string InlineAssembly::get_asm_type()
+std::string InlineAssembly::get_asm_code()
 {
-	return this->asm_type;
+	return this->asm_code;
 }
 
-InlineAssembly::InlineAssembly(std::string assembly_type, std::string asm_code) : asm_type(assembly_type), asm_code(asm_code) {
-	InlineAssembly::statement_type = INLINE_ASM;
+InlineAssembly::InlineAssembly(std::string asm_code) : 
+	Statement(INLINE_ASM),
+	asm_code(asm_code)
+{
 }
 
-InlineAssembly::InlineAssembly() {
-	InlineAssembly::statement_type = INLINE_ASM;
+InlineAssembly::InlineAssembly():
+	InlineAssembly("")
+{
 }
 
 
 /*******************		FREE MEMORY CLASS		********************/
 
-Identifier FreeMemory::get_freed_memory() {
+std::shared_ptr<Expression> FreeMemory::get_freed_memory() {
 	return this->to_free;
 }
 
-FreeMemory::FreeMemory(Identifier to_free) : to_free(to_free) {
-	FreeMemory::statement_type = FREE_MEMORY;
+FreeMemory::FreeMemory(std::shared_ptr<Expression> to_free):
+	Statement(FREE_MEMORY),
+	to_free(to_free)
+{
 }
 
-FreeMemory::FreeMemory() {
-	FreeMemory::statement_type = FREE_MEMORY;
+FreeMemory::FreeMemory(): Statement(FREE_MEMORY)
+{
 }

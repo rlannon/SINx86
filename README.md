@@ -68,9 +68,11 @@ To build projects, the following steps should be followed:
 * Ensure `make` is installed
 * Build the SRE using the provided makefile
 * Build the compiler using the provided makefile
-* Build all requisite `.sin` files for your project using `sinx86`
-* Assemble them using `nasm` -- for ecxample, `nasm -f <format> <path to assembly file>`, optionally specifying the `.o` files with the `-o` option and allowing debug symbols with the `-g` option. Since all object files ultimately get linked by GCC, you could probably use ELF (`-f elf64`) on any system for the intermediate object files because they're not executable by themselves.
-* Link with G++ using `g++ <list object files> -L <path to SRE> -l SRE`, again optionally specifying the outfile with `-o`
+* Build all requisite `.sin` files for your project using the compiler
+* Assemble them using `nasm` -- for example, `nasm -f <format> <path to assembly file> -i <path to SRE asm folder>`, optionally specifying the `.o` files with the `-o` option and allowing debug symbols with the `-g` option.
+  * You should utilize `-f macho64` on macOS and `-f elf64` on Linux. This project has not been tested on Windows, though the compiler builds and produces assembly files.
+  * You should specify the path to the SRE's `src/asm` folder with the `-i` option. This is because the compiler uses macros defined in an SRE file that will not be located by NASM if the include path is not given.
+* Link with G++ using `g++ <list object files> -L <path to SRE> -l SRE`, again optionally specifying the outfile with `-o` (default is `a.out`)
 
 Note there is no reason you can't use `make` for SIN projects. Doing so would probably make life a whole lot easier!
 
