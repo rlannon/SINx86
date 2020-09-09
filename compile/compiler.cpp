@@ -586,11 +586,11 @@ void compiler::generate_asm(std::string filename) {
         // now, we want to see if we have a function 'main' in the symbol table; if so, we need to set it up and call it
         try {
             // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
-            std::shared_ptr<symbol> main_function = this->lookup("main", 0);
-            function_symbol main_symbol = *dynamic_cast<function_symbol*>(main_function.get());
+            symbol *main_function = this->lookup("main", 0);
+            function_symbol &main_symbol = *dynamic_cast<function_symbol*>(main_function);
             
             // 'main' should have a return type of 'int'; if not, issue a warning
-            if (main_function->get_data_type().get_primary() != INT) {
+            if (main_symbol.get_data_type().get_primary() != INT) {
                 compiler_warning(
                     "Function 'main' should have a return type of 'int'",
                     compiler_errors::MAIN_SIGNATURE,

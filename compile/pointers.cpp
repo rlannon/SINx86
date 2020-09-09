@@ -123,7 +123,7 @@ std::stringstream compiler::get_address_of(Unary &u, reg r, unsigned int line) {
         Identifier* target = dynamic_cast<Identifier*>(u.get_operand().get());
         
         // look up the symbol; obtain the address based on its memory location
-        std::shared_ptr<symbol> s = this->lookup(target->getValue(), line);
+        symbol *s = this->lookup(target->getValue(), line);
         addr_ss << get_address(*s, r);
     }
     else if (u.get_operand()->get_expression_type() == INDEXED) {
