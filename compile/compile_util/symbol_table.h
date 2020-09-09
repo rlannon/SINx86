@@ -45,8 +45,8 @@ public:
 	
 	bool insert(std::shared_ptr<symbol> to_insert);
 
-	bool contains(std::string symbol_name);
-	std::shared_ptr<symbol>& find(std::string to_find);
+	bool contains(std::string symbol_name, std::string scope_name = "");
+	std::shared_ptr<symbol>& find(std::string to_find, std::string scope_name = "");
 	
 	std::vector<symbol> get_symbols_to_free(std::string name, unsigned int level, bool is_function);
 	size_t leave_scope(std::string name, unsigned int level);

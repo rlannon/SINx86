@@ -447,9 +447,8 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
     }
 
     // construct the object
-    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name()) : def.get_name();
+    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name(), scope_name) : def.get_name();
     function_symbol to_return(
-        //def.get_name(),
         name,
         def.get_type_information(),
         formal_parameters,

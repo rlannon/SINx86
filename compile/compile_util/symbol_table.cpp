@@ -48,7 +48,6 @@ void symbol_table::erase(node to_erase) {
 	*/
 
 	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(
-		//symbol_table::get_mangled_name(to_erase.name)
 		to_erase.name
 	);
 	if (it == this->symbols.end()) {
@@ -69,7 +68,7 @@ std::string symbol_table::get_mangled_name(std::string org, std::string scope_na
 
 	*/
 
-    return "SIN_" + (scope_name == "global" ? "" : scope_name) + org;
+    return "SIN_" + (scope_name == "global" ? "" : scope_name) + "_" + org;
 }
 
 bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
@@ -89,7 +88,6 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 
 	auto returned = this->symbols.insert(
 		std::make_pair<>(
-			//symbol_table::get_mangled_name(to_insert->get_name()),
 			to_insert->get_name(),
 			to_insert)
 	);	// should std::unordered_map::emplace be used instead of insert?
@@ -111,13 +109,13 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	return returned.second;
 }
 
-bool symbol_table::contains(std::string symbol_name)
+bool symbol_table::contains(std::string symbol_name, std::string scope_name)
 {
 	// returns whether the symbol with a given name is in the symbol table
 	// if it can't find it with the name mangled, it will try finding the unmangled version
 	bool in_table = false;	
 	if ((bool)this->symbols.count(
-		symbol_table::get_mangled_name(symbol_name)
+		symbol_table::get_mangled_name(symbol_name, scope_name)
 	)) {
 		in_table = true;
 	}
@@ -127,7 +125,7 @@ bool symbol_table::contains(std::string symbol_name)
 	return in_table;
 }
 
-std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
+std::shared_ptr<symbol>& symbol_table::find(std::string to_find, std::string scope_name)
 {
 	/*
 	
@@ -139,7 +137,7 @@ std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
 	*/
 
 	auto it = this->symbols.find(
-		symbol_table::get_mangled_name(to_find)
+		symbol_table::get_mangled_name(to_find, scope_name)
 	);
 	if (it == this->symbols.end()) {
 		it = this->symbols.find(to_find);
