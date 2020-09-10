@@ -182,7 +182,14 @@ std::stringstream compiler::assign(
                     assign_instruction = "mov " + dest.address_for_lea + ", rax";
                 }
                 else {
-                    handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                    // todo: verify this works generally
+                    // if we don't have an address (e.g., it's a binary), then we can use mov with the dest
+                    if (dest.can_use_lea) {
+                        handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                    }
+                    else {
+                        handle_assign << "\t" << "mov r15, " << dest.address_for_lea << std::endl;  // still uses 'address_for_lea'
+                    }
                     assign_instruction = "mov [r15], rax";
                 }
 

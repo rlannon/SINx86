@@ -68,7 +68,12 @@ std::string symbol_table::get_mangled_name(std::string org, std::string scope_na
 
 	*/
 
-    return "SIN_" + (scope_name == "global" ? "" : scope_name) + "_" + org;
+    if (scope_name == "global" || scope_name == "") {
+        return "SIN_" + org;
+    }
+    else {
+        return "SIN_" + scope_name + "_" + org;
+    }
 }
 
 bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {

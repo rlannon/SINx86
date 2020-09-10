@@ -24,12 +24,14 @@ namespace assign_utilities {
         std::string fetch_instructions;
         std::string address_for_lea;    // if we need 'lea' (e.g., for strings), we should track the pointer here
         bool in_register;
+        bool can_use_lea;
 
         destination_information(
             std::string dest_location,
             std::string fetch_instructions,
             std::string address_for_lea = "",
-            bool in_register=false
+            bool in_register=false,
+            bool can_use_lea=false
         );
     };
 

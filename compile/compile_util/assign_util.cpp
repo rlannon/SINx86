@@ -11,12 +11,14 @@ assign_utilities::destination_information::destination_information(
     std::string dest_location,
     std::string fetch_instructions,
     std::string address_for_lea,
-    bool in_register
+    bool in_register,
+    bool can_use_lea
 ) {
     this->dest_location = dest_location;
     this->fetch_instructions = fetch_instructions;
     this->address_for_lea = address_for_lea;
     this->in_register = in_register;
+    this->can_use_lea = can_use_lea;
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
@@ -44,6 +46,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     std::stringstream gen_code;
     std::string address_for_lea;
     bool in_register = false;
+    bool can_use_lea = false;
 
     // generate code based on the expression type
     if (exp->get_expression_type() == IDENTIFIER) {
@@ -53,6 +56,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         auto p = fetch_destination_operand(*sym, symbols, line, r, is_initialization);
         dest = p.dest_location;
         address_for_lea = p.address_for_lea;
+        can_use_lea = p.can_use_lea;
         in_register = p.in_register;
         gen_code << p.fetch_instructions;
 
@@ -80,6 +84,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
                 // add the fetched code from the recursive call to this one
                 dest = "[rbx]";
                 address_for_lea = fetched.dest_location;
+                can_use_lea = fetched.can_use_lea;
                 gen_code << fetched.fetch_instructions;
                 in_register = fetched.in_register;
                 
@@ -99,6 +104,8 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         if (lhs->get_operator() == DOT) {
             dest = "[rbx]";
             gen_code << expression_util::get_exp_address(exp, symbols, structures, r, line).str();
+            can_use_lea = false;
+            address_for_lea = "rbx";
         }
         else {
             throw NonModifiableLValueException(line);
@@ -119,7 +126,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         throw NonModifiableLValueException(line);
     }
     
-    return destination_information(dest, gen_code.str(), address_for_lea, in_register);
+    return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea);
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
@@ -140,6 +147,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     std::stringstream gen_code;
     std::string address_for_lea;
     bool in_register = false;
+    bool can_use_lea = false;
 
     auto dt = sym.get_data_type();
 
@@ -157,6 +165,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         if (dt.get_qualities().is_static()) {
             dest = "[rbx]";
             address_for_lea = "[" + sym.get_name() + "]";
+            can_use_lea = true;
             gen_code << "\t" << "lea rbx, [" << sym.get_name() << "]" << std::endl;
         }
         else {
@@ -188,11 +197,11 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
                 // if we don't have a string but we do require a copy, use lea
                 // but if that value is in a register, just use mov
                 dest = "[rbx]";
-                if (!in_register) {
-                    gen_code << "\t" << "lea rbx, " << location << std::endl;
+                if (in_register) {
+                    gen_code << "\t" << "mov rbx, " << location << std::endl;
                 }
                 else {
-                    gen_code << "\t" << "mov rbx, " << location << std::endl;
+                    gen_code << "\t" << "lea rbx, " << location << std::endl;
                 }
             }
             else {
@@ -200,10 +209,11 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             }
 
             address_for_lea = location;
+            can_use_lea = !in_register;
         }
     }
 
-    return destination_information(dest, gen_code.str(), address_for_lea, in_register);
+    return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea);
 }
 
 bool assign_utilities::requires_copy(DataType t) {
