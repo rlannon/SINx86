@@ -18,6 +18,11 @@ Utilities for assignment -- specifically, tools to determine the source and dest
 #include "expression_util.h"
 
 namespace assign_utilities {
+    enum MoveInstruction {
+        MOV,
+        LEA
+    };
+
     struct destination_information
     {
         std::string dest_location;
@@ -25,13 +30,15 @@ namespace assign_utilities {
         std::string address_for_lea;    // if we need 'lea' (e.g., for strings), we should track the pointer here
         bool in_register;
         bool can_use_lea;
+        MoveInstruction instruction_used;
 
         destination_information(
             std::string dest_location,
             std::string fetch_instructions,
             std::string address_for_lea = "",
             bool in_register=false,
-            bool can_use_lea=false
+            bool can_use_lea=false,
+            MoveInstruction instruction_used = MOV
         );
     };
 

@@ -166,7 +166,7 @@ std::stringstream compiler::assign(
 
             // set up our registers/arguments
             handle_assign << "\t" << "mov rsi, rax" << std::endl;
-            handle_assign << "\t" << "mov rdi, rbx" << std::endl;
+            handle_assign << "\t" << "mov rdi, " << (dest.instruction_used == assign_utilities::MoveInstruction::LEA ? "[rbx]" : "rbx") << std::endl;
 
             std::string proc_name;
             std::string assign_instruction; // if we are storing the reference in a register, we will need a different assign instruction

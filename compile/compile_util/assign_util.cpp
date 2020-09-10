@@ -12,13 +12,15 @@ assign_utilities::destination_information::destination_information(
     std::string fetch_instructions,
     std::string address_for_lea,
     bool in_register,
-    bool can_use_lea
+    bool can_use_lea,
+    MoveInstruction instruction_used
 ) {
     this->dest_location = dest_location;
     this->fetch_instructions = fetch_instructions;
     this->address_for_lea = address_for_lea;
     this->in_register = in_register;
     this->can_use_lea = can_use_lea;
+    this->instruction_used = instruction_used;
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
@@ -47,6 +49,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     std::string address_for_lea;
     bool in_register = false;
     bool can_use_lea = false;
+    MoveInstruction instruction_used;
 
     // generate code based on the expression type
     if (exp->get_expression_type() == IDENTIFIER) {
@@ -59,6 +62,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         can_use_lea = p.can_use_lea;
         in_register = p.in_register;
         gen_code << p.fetch_instructions;
+        instruction_used = p.instruction_used;
 
         // marks the symbol as initialized
         sym->set_initialized();
@@ -90,6 +94,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
                 
                 // now, add an instruction to move the previously fetched destination into RBX
                 gen_code << "\t" << "mov rbx, " << fetched.dest_location << std::endl;
+                instruction_used = MoveInstruction::MOV;
             }
             else {
                 throw IllegalIndirectionException(line);
@@ -106,6 +111,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             gen_code << expression_util::get_exp_address(exp, symbols, structures, r, line).str();
             can_use_lea = false;
             address_for_lea = "rbx";
+            instruction_used = MoveInstruction::LEA;
         }
         else {
             throw NonModifiableLValueException(line);
@@ -126,7 +132,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         throw NonModifiableLValueException(line);
     }
     
-    return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea);
+    return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea, instruction_used);
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
@@ -148,6 +154,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     std::string address_for_lea;
     bool in_register = false;
     bool can_use_lea = false;
+    MoveInstruction instruction_used;
 
     auto dt = sym.get_data_type();
 
@@ -167,6 +174,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             address_for_lea = "[" + sym.get_name() + "]";
             can_use_lea = true;
             gen_code << "\t" << "lea rbx, [" << sym.get_name() << "]" << std::endl;
+            instruction_used = MoveInstruction::LEA;
         }
         else {
             // we will need the stack location no matter what
@@ -192,6 +200,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             ) {
                 dest = "[rbx]";
                 gen_code << "\t" << "mov rbx, " << location << std::endl;
+                instruction_used = MoveInstruction::MOV;
             }
             else if (requires_copy(sym.get_data_type())) {
                 // if we don't have a string but we do require a copy, use lea
@@ -199,9 +208,11 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
                 dest = "[rbx]";
                 if (in_register) {
                     gen_code << "\t" << "mov rbx, " << location << std::endl;
+                    instruction_used = MoveInstruction::MOV;
                 }
                 else {
                     gen_code << "\t" << "lea rbx, " << location << std::endl;
+                    instruction_used = MoveInstruction::LEA;
                 }
             }
             else {
@@ -213,7 +224,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         }
     }
 
-    return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea);
+    return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea, instruction_used);
 }
 
 bool assign_utilities::requires_copy(DataType t) {
