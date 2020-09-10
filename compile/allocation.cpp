@@ -326,7 +326,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 		}
 
-		// if the type is STRUCT, we need to initialize non-dynamic array members
+		// if the type is STRUCT, we need to initialize non-dynamic array members and allocate dynamic members
 		if (allocated.get_data_type().get_primary() == STRUCT) {
 			// todo: eliminate this call and initialize a function-level object earlier?
 			struct_info &info = this->get_struct_info(allocated.get_data_type().get_struct_name(), alloc_stmt.get_line_number());
@@ -356,22 +356,32 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			std::string struct_addr = get_address(allocated, r);
 			allocation_ss << struct_addr;
 			for (auto m: members) {
-				// we only need to do this for non-dynamic arrays
-				if (m->get_data_type().get_primary() == ARRAY && !m->get_data_type().get_qualities().is_dynamic()) {
-					// evaluate the array length expression and move it (an integer) into [R15 + offset]
-					auto alloc_p = this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
-					allocation_ss << alloc_p.first;
-					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;
+                // only need to worry about variables -- not member functions!
+                if (m->get_symbol_type() == SymbolType::VARIABLE) {
+                    // we only need to do this for non-dynamic arrays
+                    if (m->get_data_type().get_primary() == ARRAY && !m->get_data_type().get_qualities().is_dynamic()) {
+                        // evaluate the array length expression and move it (an integer) into [R15 + offset]
+                        auto alloc_p = this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
+                        allocation_ss << alloc_p.first;
+                        allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;
 
-					// if we had a reference to an integer, we need to free it
-					if (alloc_p.second) {
-						allocation_ss << "\t" << "pop rdi" << std::endl;
-						allocation_ss << call_sre_function(magic_numbers::SRE_FREE);
-					}
-				}
-				else if (m->get_data_type().must_initialize()) {
-					init_required = true;
-				}
+                        // if we had a reference to an integer, we need to free it
+                        if (alloc_p.second) {
+                            allocation_ss << "\t" << "pop rdi" << std::endl;
+                            allocation_ss << call_sre_function(magic_numbers::SRE_FREE);
+                        }
+                    }
+                    else if (m->get_data_type().get_primary() == STRING) {
+                        allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
+                        allocation_ss << "\t" << "mov esi, 0" << std::endl;
+                        allocation_ss << call_sincall_subroutine("sinl_string_alloc");
+                        allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() - m->get_offset() << "]" << ", rax" << std::endl;
+                        allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+                    }
+                    else if (m->get_data_type().must_initialize()) {
+                        init_required = true;
+                    }
+                }
 			}
 
 			// if we needed to initialize but didn't, throw an exception
