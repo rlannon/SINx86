@@ -80,7 +80,10 @@ struct_info::struct_info(std::string name, std::vector<std::shared_ptr<symbol>> 
 				}
             }
 
-            this->struct_width += sym_width;
+            // skip adding the width if we have a function -- they aren't allocated with the struct
+            if (s->get_symbol_type() != FUNCTION_SYMBOL) {
+                this->struct_width += sym_width;
+            }
         } catch (std::exception &e) {
             throw DuplicateSymbolException(line);
         }
