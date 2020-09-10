@@ -271,15 +271,15 @@ public:
 
 class Call : public Statement
 {
-	std::shared_ptr<Identifier> func;	// the function name
-	std::vector<std::shared_ptr<Expression>> args;	// arguments to the function
+	CallExpression call_exp;
 public:
-	std::string get_func_name();
+	Expression *get_func_name();
+    CallExpression &get_call_expression();
 	size_t get_args_size();
-	std::shared_ptr<Expression> get_arg(size_t index);	// get one argument
+	Expression *get_arg(size_t index);	// get one argument
 	std::vector<std::shared_ptr<Expression>> get_args();	// get all arguments
 
-	Call(std::shared_ptr<Identifier> func, std::vector<std::shared_ptr<Expression>> args);
+	Call(CallExpression call_exp);
 	Call();
 };
 

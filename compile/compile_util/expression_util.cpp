@@ -88,22 +88,29 @@ std::stringstream expression_util::evaluate_member_selection(
         size_t member_offset = 0;
 
         // structs must be accessed with an identifier -- other expression types are syntactically invalid
-        if (to_evaluate.get_right()->get_expression_type() != IDENTIFIER) {
+        if (to_evaluate.get_right()->get_expression_type() == IDENTIFIER) {
+            Identifier *id = dynamic_cast<Identifier*>(to_evaluate.get_right().get());
+            auto member = lhs_struct.get_member(id->getValue());
+            member_offset = member->get_offset();
+
+            if (member_offset > 0) {
+                eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
+            }
+            result_type = member->get_data_type();
+
+        }
+        else if (to_evaluate.get_right()->get_expression_type() == CALL_EXP) {
+            auto method = dynamic_cast<CallExpression*>(to_evaluate.get_right().get());
+
+            // todo: method calls
+        }
+        else {
             throw CompilerException(
                 "Struct members must be accessed with an identifier",
                 compiler_errors::STRUCT_MEMBER_SELECTION_ERROR,
                 line
             );
         }
-
-        Identifier *id = dynamic_cast<Identifier*>(to_evaluate.get_right().get());
-        auto member = lhs_struct.get_member(id->getValue());
-        member_offset = member->get_offset();
-
-        if (member_offset > 0) {
-            eval_ss << "\t" << "add " << reg_name << ", " << member_offset << std::endl;
-        }
-        result_type = member->get_data_type();
     }
     else if (lhs_type.get_primary() == TUPLE) {
         // get the offset for our index
@@ -376,11 +383,19 @@ DataType expression_util::get_expression_data_type(
 
             break;
         }
-        case VALUE_RETURNING_CALL:
+        case CALL_EXP:
         {
             // look into the symbol table to get the return type of the function
-            ValueReturningFunctionCall *call_exp = dynamic_cast<ValueReturningFunctionCall*>(to_eval.get());
-			std::shared_ptr<symbol> sym = symbols.find(call_exp->get_func_name());
+            CallExpression *call_exp = dynamic_cast<CallExpression*>(to_eval.get());
+            std::shared_ptr<symbol> sym = nullptr;
+            if (call_exp->get_func_name()->get_expression_type() == IDENTIFIER) {
+                auto id = dynamic_cast<Identifier*>(call_exp->get_func_name());
+                sym = symbols.find(id->getValue());
+            }
+            else {
+                // todo: other expression types
+                throw CompilerException("Unsupported feature");
+            }
 
             // ensure the symbol is a function symbol
             if (sym->get_symbol_type() == FUNCTION_SYMBOL) {

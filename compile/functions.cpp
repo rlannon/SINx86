@@ -199,7 +199,7 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
 }
 
 template std::pair<std::string, size_t> compiler::call_function(Call, unsigned int, bool);
-template std::pair<std::string, size_t> compiler::call_function(ValueReturningFunctionCall, unsigned int, bool);
+template std::pair<std::string, size_t> compiler::call_function(CallExpression, unsigned int, bool);
 
 template<typename T>
 std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line, bool allow_void) {
@@ -229,7 +229,16 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     size_t count = 0;
 
     // first, look up the function
-    symbol *sym = this->lookup(call.get_func_name(), line);
+    symbol *sym = nullptr;
+
+    if (call.get_func_name()->get_expression_type() == IDENTIFIER) {
+        Identifier *id = dynamic_cast<Identifier*>(call.get_func_name());
+        sym = this->lookup(id->getValue(), line);
+    }
+    else {
+        // todo: other exp types
+        throw CompilerException("Unsupported feature");
+    }
 
     // if the function returns a reference type, we need to increment the count
     if (sym->get_data_type().is_reference_type()) {

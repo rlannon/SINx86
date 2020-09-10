@@ -187,8 +187,10 @@ std::shared_ptr<Expression> Parser::parse_expression(
 		// if we have a function call
 		if (current_lex.value == "@") {
 			current_lex = this->next();
-
-			if (current_lex.type == IDENTIFIER_LEX) {
+            auto func_name = this->parse_expression();
+            left = func_name;
+			/*
+            if (current_lex.type == IDENTIFIER_LEX) {
 				// Same code as is in statement
 				std::vector<std::shared_ptr<Expression>> args;
 
@@ -211,6 +213,7 @@ std::shared_ptr<Expression> Parser::parse_expression(
 			else {
 				throw MissingIdentifierError(current_lex.line_number);
 			}
+            */
 		}
 		// if it's not a function, it must be a unary expression
 		else {

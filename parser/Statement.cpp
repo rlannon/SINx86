@@ -370,28 +370,31 @@ StructDefinition::StructDefinition(std::string name, std::shared_ptr<StatementBl
 
 /*******************	FUNCTION CALL CLASS		********************/
 
-std::string Call::get_func_name() {
-	return this->func->getValue();
+Expression *Call::get_func_name() {
+	return this->call_exp.get_func_name();
+}
+
+CallExpression &Call::get_call_expression() {
+    return this->call_exp;
 }
 
 size_t Call::get_args_size() {
-	return this->args.size();
+	return this->call_exp.get_args_size();
 }
 
-std::shared_ptr<Expression> Call::get_arg(size_t index) {
+Expression *Call::get_arg(size_t index) {
 	// return one argument
-	return this->args[index];
+	return this->call_exp.get_arg(index);
 }
 
 std::vector<std::shared_ptr<Expression>> Call::get_args() {
 	// return all function arguments
-	return this->args;
+	return this->call_exp.get_args();
 }
 
-Call::Call(std::shared_ptr<Identifier> func, std::vector<std::shared_ptr<Expression>> args) : 
+Call::Call(CallExpression call_exp): 
 	Statement(CALL),
-	func(func),
-	args(args)
+	call_exp(call_exp)
 {
 }
 

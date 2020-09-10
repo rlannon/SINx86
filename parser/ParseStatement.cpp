@@ -141,7 +141,11 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 			stmt = this->parse_function_call(current_lex);
 		}
 		else {
-			throw ParserException("Lexeme '" + current_lex.value + "' is not a valid beginning to a statement", 000, current_lex.line_number);
+			throw ParserException(
+                "Lexeme '" + current_lex.value + "' is not a valid beginning to a statement",
+                000,
+                current_lex.line_number
+            );
 		}
 	}
 	// otherwise, we might have a scoped block statement
@@ -620,30 +624,18 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 
 std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt = nullptr;
+    CallExpression *exp = dynamic_cast<CallExpression*>(this->parse_expression().get());
+    if (exp == nullptr) {
+        throw ParserException(
+            "Expected a valid function call expression",
+            compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+            current_lex.line_number
+        );
+    }
+    else {
+        stmt = std::make_shared<Call>(*exp);
+    }
 
-	// Get the function's name
-	lexeme func_name = this->next();
-	if (func_name.type == IDENTIFIER_LEX) {
-		std::vector<std::shared_ptr<Expression>> args;
-		this->next();
-		this->next();
-		lexeme cur = this->current_token();
-		while (cur.value != ")") {
-			args.push_back(this->parse_expression());
-			cur = this->next();
-		}
-		
-		// function calls as statements must *always* be followed by semicolons
-		// this is not the function to parse a call that is part of an expression
-		if (this->peek().value != ";") {
-			throw MissingSemicolonError(this->previous().line_number);
-		}
-		stmt = std::make_shared<Call>(std::make_shared<Identifier>(func_name.value), args);
-		stmt->set_line_number(current_lex.line_number);
-		return stmt;
-	}
-	else {
-		throw ParserException("Expected an identifier", 111, current_lex.line_number);
-	}
+    return stmt;
 }

@@ -308,37 +308,63 @@ Unary::Unary(): Expression(UNARY) {
 
 // Parsing function calls
 
-std::shared_ptr<Identifier> ValueReturningFunctionCall::get_name() {
-	return this->name;
+Expression *Procedure::get_func_name() {
+    return this->name.get();
 }
 
-std::string ValueReturningFunctionCall::get_func_name() {
-	return this->name->getValue();
+std::vector<std::shared_ptr<Expression>> Procedure::get_args() {
+    return this->args;
 }
 
-std::vector<std::shared_ptr<Expression>> ValueReturningFunctionCall::get_args() {
-	return this->args;
+Expression *Procedure::get_arg(size_t arg_no) {
+    return this->args.at(arg_no).get();
 }
 
-std::shared_ptr<Expression> ValueReturningFunctionCall::get_arg(int i) {
-	return this->args[i];
+size_t Procedure::get_num_args() {
+    return this->args.size();
 }
 
-int ValueReturningFunctionCall::get_args_size() {
-	return this->args.size();
-}
-
-ValueReturningFunctionCall::ValueReturningFunctionCall(
-	std::shared_ptr<Identifier> name,
-	std::vector<std::shared_ptr<Expression>> args
-): 
-	Expression(VALUE_RETURNING_CALL),
-	name(name), 
-	args(args) 
+Procedure::Procedure(
+    std::shared_ptr<Expression> proc_name, 
+    std::vector<std::shared_ptr<Expression>> proc_args
+):
+    Expression(PROC_EXP),
+    name(proc_name),
+    args(proc_args)
 {
 }
 
-ValueReturningFunctionCall::ValueReturningFunctionCall(): Expression(VALUE_RETURNING_CALL) {
+Procedure::Procedure(): Expression(PROC_EXP)
+{
+    this->name = nullptr;
+}
+
+Expression *CallExpression::get_func_name() {
+	return this->proc.get_func_name();
+}
+
+std::vector<std::shared_ptr<Expression>> CallExpression::get_args() {
+	return this->proc.get_args();
+}
+
+Expression *CallExpression::get_arg(size_t i) {
+	return this->proc.get_arg(i);
+}
+
+size_t CallExpression::get_args_size() {
+	return this->proc.get_num_args();
+}
+
+CallExpression::CallExpression(
+	Procedure proc
+): 
+	Expression(CALL_EXP),
+	proc(proc)
+{
+}
+
+CallExpression::CallExpression(): Expression(CALL_EXP)
+{
 }
 
 

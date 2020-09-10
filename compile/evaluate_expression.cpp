@@ -233,9 +233,9 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             // todo: clean up unary?
             break;
         }
-        case VALUE_RETURNING_CALL:
+        case CALL_EXP:
         {
-            ValueReturningFunctionCall call_exp = *dynamic_cast<ValueReturningFunctionCall*>(to_evaluate.get());
+            CallExpression call_exp = *dynamic_cast<CallExpression*>(to_evaluate.get());
             auto call_p = this->call_function(call_exp, line, false);  // don't allow void functions here
             
             // add the call code

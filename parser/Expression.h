@@ -152,20 +152,31 @@ public:
 
 
 // Functions are expressions if they return a value
-
-class ValueReturningFunctionCall : public Expression
+class Procedure: public Expression
 {
-	std::shared_ptr<Identifier> name;
-	std::vector<std::shared_ptr<Expression>> args;
+    std::shared_ptr<Expression> name;
+    std::vector<std::shared_ptr<Expression>> args;
 public:
-	std::shared_ptr<Identifier> get_name();
-	std::string get_func_name();
-	std::vector<std::shared_ptr<Expression>> get_args();
-	std::shared_ptr<Expression> get_arg(int i);
-	int get_args_size();
+    Expression *get_func_name();
+    std::vector<std::shared_ptr<Expression>> get_args();
+    Expression *get_arg(size_t arg_no);
+    size_t get_num_args();
 
-	ValueReturningFunctionCall(std::shared_ptr<Identifier> name, std::vector<std::shared_ptr<Expression>> args);
-	ValueReturningFunctionCall();
+    Procedure(std::shared_ptr<Expression> proc_name, std::vector<std::shared_ptr<Expression>> proc_args);
+    Procedure();
+};
+
+class CallExpression : public Expression
+{
+	Procedure proc;
+public:
+	Expression *get_func_name();
+	std::vector<std::shared_ptr<Expression>> get_args();
+	Expression *get_arg(size_t i);
+	size_t get_args_size();
+
+	CallExpression(Procedure proc);
+	CallExpression();
 };
 
 // typecasting expressions

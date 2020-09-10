@@ -262,7 +262,7 @@ bool assign_utilities::is_valid_move_expression(std::shared_ptr<Expression> exp)
 
     if (
         exp->get_expression_type() == LITERAL ||
-        exp->get_expression_type() == VALUE_RETURNING_CALL
+        exp->get_expression_type() == CALL_EXP
     ) {
         is_valid = false;
     }
