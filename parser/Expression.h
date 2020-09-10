@@ -155,14 +155,14 @@ public:
 class Procedure: public Expression
 {
     std::shared_ptr<Expression> name;
-    std::vector<std::shared_ptr<Expression>> args;
+    std::shared_ptr<ListExpression> args;
 public:
     Expression *get_func_name();
-    std::vector<std::shared_ptr<Expression>> get_args();
+    ListExpression *get_args();
     Expression *get_arg(size_t arg_no);
     size_t get_num_args();
 
-    Procedure(std::shared_ptr<Expression> proc_name, std::vector<std::shared_ptr<Expression>> proc_args);
+    Procedure(std::shared_ptr<Expression> proc_name, std::shared_ptr<ListExpression> proc_args);
     Procedure();
 };
 

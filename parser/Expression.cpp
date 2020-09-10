@@ -312,21 +312,21 @@ Expression *Procedure::get_func_name() {
     return this->name.get();
 }
 
-std::vector<std::shared_ptr<Expression>> Procedure::get_args() {
-    return this->args;
+ListExpression *Procedure::get_args() {
+    return this->args.get();
 }
 
 Expression *Procedure::get_arg(size_t arg_no) {
-    return this->args.at(arg_no).get();
+    return this->args->get_list().at(arg_no).get();
 }
 
 size_t Procedure::get_num_args() {
-    return this->args.size();
+    return this->args->get_list().size();
 }
 
 Procedure::Procedure(
     std::shared_ptr<Expression> proc_name, 
-    std::vector<std::shared_ptr<Expression>> proc_args
+    std::shared_ptr<ListExpression> proc_args
 ):
     Expression(PROC_EXP),
     name(proc_name),
@@ -344,7 +344,7 @@ Expression *CallExpression::get_func_name() {
 }
 
 std::vector<std::shared_ptr<Expression>> CallExpression::get_args() {
-	return this->proc.get_args();
+	return this->proc.get_args()->get_list();
 }
 
 Expression *CallExpression::get_arg(size_t i) {
