@@ -233,10 +233,6 @@ ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_mem
 ListExpression::ListExpression(): ListExpression({}, NONE) {
 }
 
-ListExpression::~ListExpression() {
-
-}
-
 // Keyword Expressions -- necessary for some expressions
 
 std::string KeywordExpression::get_keyword() {
@@ -312,8 +308,8 @@ Expression *Procedure::get_func_name() {
     return this->name.get();
 }
 
-ListExpression *Procedure::get_args() {
-    return this->args.get();
+ListExpression &Procedure::get_args() {
+    return *this->args.get();
 }
 
 Expression *Procedure::get_arg(size_t arg_no) {
@@ -334,33 +330,38 @@ Procedure::Procedure(
 {
 }
 
+Procedure::Procedure(std::shared_ptr<Expression> proc_name, ListExpression *proc_args): Expression(PROC_EXP) {
+    this->name = proc_name;
+    this->args = std::make_shared<ListExpression>(*proc_args);
+}
+
 Procedure::Procedure(): Expression(PROC_EXP)
 {
     this->name = nullptr;
 }
 
 Expression *CallExpression::get_func_name() {
-	return this->proc.get_func_name();
+	return this->proc->get_func_name();
 }
 
 std::vector<std::shared_ptr<Expression>> CallExpression::get_args() {
-	return this->proc.get_args()->get_list();
+	return this->proc->get_args().get_list();
 }
 
 Expression *CallExpression::get_arg(size_t i) {
-	return this->proc.get_arg(i);
+	return this->proc->get_arg(i);
 }
 
 size_t CallExpression::get_args_size() {
-	return this->proc.get_num_args();
+	return this->proc->get_num_args();
 }
 
 CallExpression::CallExpression(
-	Procedure proc
+	Procedure *proc
 ): 
-	Expression(CALL_EXP),
-	proc(proc)
+	Expression(CALL_EXP)
 {
+    this->proc = std::make_shared<Procedure>(*proc);
 }
 
 CallExpression::CallExpression(): Expression(CALL_EXP)

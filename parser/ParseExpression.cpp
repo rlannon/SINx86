@@ -39,8 +39,16 @@ std::shared_ptr<Expression> Parser::parse_expression(
 	// note that curly braces are NOT included here; they are parsed separately as they are not considered grouping symbols in the same way as parentheses and brackets are
 	if (is_opening_grouping_symbol(current_lex.value)) {
 		grouping_symbol = current_lex.value;
-		this->next();
-		auto temp = this->parse_expression(0, grouping_symbol);	// utilize a 'temp' variable in case we have a list
+        std::shared_ptr<Expression> temp = nullptr;
+        
+        // we might have an empty list
+        if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
+            temp = std::make_shared<ListExpression>();
+        }
+        else {
+    		this->next();
+		    temp = this->parse_expression(0, grouping_symbol);	// utilize a 'temp' variable in case we have a list
+        }
 
 		/*
 
@@ -80,6 +88,9 @@ std::shared_ptr<Expression> Parser::parse_expression(
 		if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
 			return temp;
 		}
+        else if (this->peek().value == ";") {
+            return temp;
+        }
 		// if our next character is an op_char, returning the expression would skip it, so we need to parse a binary using the expression in parens as our left expression
 		else if (is_valid_operator(this->peek())) {
 			return this->maybe_binary(temp, prec, grouping_symbol);
@@ -188,33 +199,14 @@ std::shared_ptr<Expression> Parser::parse_expression(
 		if (current_lex.value == "@") {
 			current_lex = this->next();
             auto func_name = this->parse_expression();
-            left = func_name;
-			/*
-            if (current_lex.type == IDENTIFIER_LEX) {
-				// Same code as is in statement
-				std::vector<std::shared_ptr<Expression>> args;
-
-				// make sure we have parens -- if not, throw an exception
-				if (this->peek().value != "(") {
-					throw CallError(current_lex.line_number);
-				} else {
-					this->next();
-					this->next();
-					while (this->current_token().value != get_closing_grouping_symbol(grouping_symbol)) {
-						args.push_back(this->parse_expression());
-						this->next();
-					}
-				}
-
-				// assemble the value returning call so we can pass into maybe_binary
-				left = std::make_shared<ValueReturningFunctionCall>(std::make_shared<Identifier>(current_lex.value), args);
-			}
-			// the "@" character must be followed by an identifier
-			else {
-				throw MissingIdentifierError(current_lex.line_number);
-			}
-            */
-		}
+            if (func_name->get_expression_type() == PROC_EXP) {
+                auto proc_exp = static_cast<Procedure*>(func_name.get());
+                left = std::make_shared<CallExpression>(proc_exp);
+            }
+            else {
+                // todo: valid call expressions without proc objects
+            }
+    	}
 		// if it's not a function, it must be a unary expression
 		else {
 			exp_operator unary_op = Parser::get_unary_operator(current_lex.value);
@@ -388,6 +380,31 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 				this->next();
 				to_check = std::make_shared<Indexed>(left, index_value);
 			}
+            else if (op == PROC_OPERATOR) {
+                // Procedures require a little special care as well
+                this->back();
+                auto arg_exp = this->parse_expression(his_prec, grouping_symbol, false, omit_equals);
+                //this->next();
+                
+                if (arg_exp->get_expression_type() == LIST) {
+                    auto l = static_cast<ListExpression*>(arg_exp.get());
+                    to_check = std::make_shared<Procedure>(left, l);
+                }
+                else if (this->current_token().value == ")") {
+                    // if there was only one argument, the parser will emit that expression alone
+                    auto l = std::make_shared<ListExpression>(std::vector<std::shared_ptr<Expression>>({ arg_exp }), TUPLE);
+                    to_check = std::make_shared<Procedure>(left, l);
+                }
+                else {
+                    throw ParserException(
+                        "Expected argument list expression",
+                        compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+                        next.line_number
+                    );
+                }
+
+                return to_check;
+            }
 			else {
 				// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
 				auto right = this->maybe_binary(
@@ -432,7 +449,6 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 			return left;
 		}
 	}
-	// There shouldn't be anything besides a semicolon, closing paren, or an op_char immediately following "left"
 	else {
 		throw InvalidTokenException(next.value, next.line_number);
 	}

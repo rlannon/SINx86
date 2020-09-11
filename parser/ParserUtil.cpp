@@ -49,6 +49,7 @@ const std::unordered_map<std::string, exp_operator> Parser::op_strings({
 	{".", DOT},
 	{"[", INDEX},
 	{"@", CONTROL_TRANSFER},
+    {"(", PROC_OPERATOR},
 	{"::", SCOPE_RESOLUTION}
 });
 
@@ -91,7 +92,8 @@ const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{DEREFERENCE, 20},
 	{ATTRIBUTE_SELECTION, 23},
 	{CONTROL_TRANSFER, 24},
-	{DOT, 25},
+	{PROC_OPERATOR, 25},
+    {DOT, 25},
 	{INDEX, 25},
 	{SCOPE_RESOLUTION, 30}
 });
@@ -735,14 +737,7 @@ calling_convention Parser::get_calling_convention(symbol_qualities sq, unsigned 
 
 const bool Parser::is_valid_operator(lexeme l) {
 	// Checks whether the lexeme is a valid operator for maybe_binary
-	return (
-		l.type == OPERATOR ||
-		l.value == "[" ||
-		l.value == "as" ||
-		l.value == "and" ||
-		l.value == "or" || 
-		l.value == "xor"
-	);
+	return (bool)op_strings.count(l.value);
 }
 
 const exp_operator Parser::get_unary_operator(std::string s) {

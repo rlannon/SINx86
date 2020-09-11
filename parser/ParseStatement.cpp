@@ -438,10 +438,14 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 			}
 		}
 		else {
-			throw ParserException("The variable's type must be followed by a valid identifier", 0, next_token.line_number);
+			throw ParserException(
+                "The variable's type must be followed by a valid identifier",
+                compiler_errors::MISSING_IDENTIFIER_ERROR,
+                next_token.line_number
+            );
 		}
 	} else {
-		throw ParserException("Expected a valid data type", 111, current_lex.line_number);
+		throw ParserException("Expected a valid data type", compiler_errors::TYPE_ERROR, current_lex.line_number);
 	}
 
 	return stmt;
@@ -625,7 +629,8 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 {
 	std::shared_ptr<Statement> stmt = nullptr;
-    CallExpression *exp = dynamic_cast<CallExpression*>(this->parse_expression().get());
+    auto parsed = this->parse_expression();
+    CallExpression *exp = dynamic_cast<CallExpression*>(parsed.get());
     if (exp == nullptr) {
         throw ParserException(
             "Expected a valid function call expression",

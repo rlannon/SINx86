@@ -140,6 +140,7 @@ enum exp_operator {
 	TYPECAST,	// the 'as' operator
 	ATTRIBUTE_SELECTION,	// :
 	CONTROL_TRANSFER,	// @, used in function calls
+    PROC_OPERATOR,  // (), marks a procedure
 	SCOPE_RESOLUTION,	//	::
 	NO_OP
 };

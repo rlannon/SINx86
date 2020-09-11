@@ -86,7 +86,6 @@ public:
 
 	ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type);
 	ListExpression();
-	~ListExpression();
 };
 
 class Indexed : public Expression
@@ -158,24 +157,25 @@ class Procedure: public Expression
     std::shared_ptr<ListExpression> args;
 public:
     Expression *get_func_name();
-    ListExpression *get_args();
+    ListExpression &get_args();
     Expression *get_arg(size_t arg_no);
     size_t get_num_args();
 
     Procedure(std::shared_ptr<Expression> proc_name, std::shared_ptr<ListExpression> proc_args);
+    Procedure(std::shared_ptr<Expression> proc_name, ListExpression *proc_args);
     Procedure();
 };
 
 class CallExpression : public Expression
 {
-	Procedure proc;
+	std::shared_ptr<Procedure> proc;
 public:
 	Expression *get_func_name();
 	std::vector<std::shared_ptr<Expression>> get_args();
 	Expression *get_arg(size_t i);
 	size_t get_args_size();
 
-	CallExpression(Procedure proc);
+	CallExpression(Procedure *proc);
 	CallExpression();
 };
 
