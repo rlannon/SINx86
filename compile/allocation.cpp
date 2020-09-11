@@ -118,6 +118,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
 			allocation_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
 
+            // todo: generalize array length initialization
             // if we have an array, we need to initialize its length
             if (alloc_data.get_primary() == ARRAY) {
                 // if we have a const length, we can use the array_length memeber; else, we need to evaluate the expression for the length
@@ -381,6 +382,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                     else if (m->get_data_type().must_initialize()) {
                         init_required = true;
                     }
+                    // todo: do dynamic struct members need to have space reserved here as well ... ?
                 }
 			}
 
@@ -398,6 +400,35 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				allocation_ss << "\t" << "pop r15" << std::endl;
 			}
 		}
+        // We need to do the same for tuples, but we iterate through them differently
+        else if (allocated.get_data_type().get_primary() == TUPLE) {
+            // we will need to manually adjust the member offset
+            size_t member_offset = 0;
+            // todo: offset for non-automatic tuples should be 0; we are calculating the offset within the tuple
+
+            for (auto m: allocated.get_data_type().get_contained_types()) {
+                if (m.get_qualities().is_dynamic()) {
+                    // todo: reserve dynamic space
+                    member_offset += sin_widths::PTR_WIDTH;
+                }
+                else if (m.get_qualities().is_static())
+                {
+                    // exception -- tuples may not have static members!
+                    throw CompilerException(
+                        "Tuple members may not be marked 'static'",
+                        compiler_errors::TYPE_VALIDITY_RULE_VIOLATION_ERROR,
+                        alloc_stmt.get_line_number()
+                    );
+                }
+                else {
+                    if (m.get_primary() == ARRAY) {
+                        allocation_ss << "\t" << "mov eax, " << m.get_array_length() << std::endl;
+                        allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() - member_offset << "], eax" << std::endl;
+                    }
+                    member_offset += m.get_width();
+                }
+            }
+        }
 	}
 	else {
 		throw TypeValidityViolation(alloc_stmt.get_line_number());	// todo: generate a more specific error saying what the policy violation was
