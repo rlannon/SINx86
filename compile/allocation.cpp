@@ -360,11 +360,35 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                 // only need to worry about variables -- not member functions!
                 if (m->get_symbol_type() == SymbolType::VARIABLE) {
                     // we only need to do this for non-dynamic arrays
-                    if (m->get_data_type().get_primary() == ARRAY && !m->get_data_type().get_qualities().is_dynamic()) {
+                    if (m->get_data_type().get_primary() == ARRAY) {
                         // evaluate the array length expression and move it (an integer) into [R15 + offset]
                         auto alloc_p = this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
                         allocation_ss << alloc_p.first;
-                        allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;
+
+                        // reserve space for dynamic arrays; move it in
+                        if (m->get_data_type().get_qualities().is_dynamic()) {
+                            // todo: dynamic arrays without a supplied initial length
+
+                            // call sre_request_resource
+                            // eax now contains the number of elements
+                            allocation_ss << "\t" << "push rax" << std::endl;   // preserve so we can write it in
+
+                            // request the resource
+                            size_t type_width = (m->get_data_type().get_subtype().get_qualities().is_dynamic() ? 8 : m->get_data_type().get_subtype().get_width());
+                            allocation_ss << "\t" << "mov ebx, " << type_width << std::endl;
+                            allocation_ss << "\t" << "mul ebx" << std::endl;
+                            allocation_ss << "\t" << "mov rdi, rax" << std::endl;
+                            allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
+
+                            // write in the array's length
+                            allocation_ss << "\t" << "pop rbx" << std::endl;    // restore the length in ebx
+                            allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], rax" << std::endl;  // store the address of the dynamic memory in the struct
+                            allocation_ss << "\t" << "mov [rax], ebx" << std::endl; // write in the length
+                        }
+                        else {
+                            // just move in the array length
+                            allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;
+                        }
 
                         // if we had a reference to an integer, we need to free it
                         if (alloc_p.second) {
@@ -372,12 +396,18 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                             allocation_ss << call_sre_function(magic_numbers::SRE_FREE);
                         }
                     }
+                    // we need to allocate string members
                     else if (m->get_data_type().get_primary() == STRING) {
                         allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
                         allocation_ss << "\t" << "mov esi, 0" << std::endl;
                         allocation_ss << call_sincall_subroutine("sinl_string_alloc");
                         allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() - m->get_offset() << "]" << ", rax" << std::endl;
                         allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+                    }
+                    // we need to reserve space for all other dynamic types
+                    else if (m->get_data_type().get_qualities().is_dynamic()) {
+                        // todo: reserve space
+                        allocation_ss << "; todo: reserve space for member " << m->get_name() << std::endl;
                     }
                     else if (m->get_data_type().must_initialize()) {
                         init_required = true;
