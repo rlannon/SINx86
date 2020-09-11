@@ -166,8 +166,21 @@ std::stringstream compiler::assign(
 
             // set up our registers/arguments
             handle_assign << "\t" << "mov rsi, rax" << std::endl;
-            handle_assign << "\t" << "mov rdi, " << (dest.instruction_used == assign_utilities::MoveInstruction::LEA ? "[rbx]" : "rbx") << std::endl;
+            std::string destination_register_operand;
 
+            if (dest.instruction_used == assign_utilities::MoveInstruction::LEA) {
+                if (lhs_type.get_primary() == STRING || lhs_type.get_qualities().is_dynamic()) {
+                    destination_register_operand = "[rbx]";
+                }
+                else {
+                    destination_register_operand = "rbx";
+                }
+            }
+            else {
+                destination_register_operand = "rbx";
+            }
+            handle_assign << "\t" << "mov rdi, " << destination_register_operand << std::endl;
+            
             std::string proc_name;
             std::string assign_instruction; // if we are storing the reference in a register, we will need a different assign instruction
 
