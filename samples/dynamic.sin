@@ -1,7 +1,14 @@
 // dynamic.sin
 // test of the 'dynamic' keyword
 
+def struct myStruct {
+    alloc array<10, int> arr &dynamic;
+    alloc tuple<int, string> t &dynamic;
+}
+
 def int main(alloc array<string> args &dynamic) {
+    alloc myStruct m;
+
     alloc int a &dynamic: 10;
     alloc int b;
     let b = a;
