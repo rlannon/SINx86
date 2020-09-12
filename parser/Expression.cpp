@@ -120,8 +120,8 @@ Identifier::Identifier(): Identifier("") {
 
 // Attribute Selection
 
-std::shared_ptr<Expression> AttributeSelection::get_selected() {
-	return this->selected;
+Expression &AttributeSelection::get_selected() {
+	return *this->selected.get();
 }
 
 attribute AttributeSelection::get_attribute() {
@@ -132,11 +132,11 @@ DataType &AttributeSelection::get_data_type() {
 	return this->t;
 }
 
-AttributeSelection::AttributeSelection(std::shared_ptr<Expression> selected, std::string attribute_name):
-	Expression(ATTRIBUTE),
-	selected(selected)
+AttributeSelection::AttributeSelection(Expression &selected, std::string attribute_name):
+	Expression(ATTRIBUTE)
 {
 	this->attrib = to_attribute(attribute_name);
+    this->selected = std::make_unique<Expression>(selected);
 
 	// set the type
 	this->t = 
@@ -161,10 +161,10 @@ AttributeSelection::AttributeSelection(std::shared_ptr<Binary> to_deconstruct): 
 	// Construct an 'AttributeSelection' object from a Binary expression
 	
 	// as long as we have a valid binary expression, continue
-	if (to_deconstruct->get_right()->get_expression_type() == KEYWORD_EXP) {
-		this->selected = to_deconstruct->get_left();
-		auto right = dynamic_cast<KeywordExpression*>(to_deconstruct->get_right().get());
-		this->attrib = to_attribute(right->get_keyword());
+	if (to_deconstruct->get_right().get_expression_type() == KEYWORD_EXP) {
+		this->selected = std::make_unique<Expression>(to_deconstruct->get_left());
+		auto right = dynamic_cast<KeywordExpression&>(to_deconstruct->get_right());
+		this->attrib = to_attribute(right.get_keyword());
 	}
 	else {
 		this->expression_type = EXPRESSION_GENERAL;
@@ -218,9 +218,13 @@ Type ListExpression::get_list_type() const {
 	return this->primary;
 }
 
-std::vector<std::shared_ptr<Expression>> ListExpression::get_list()
+std::vector<Expression*> ListExpression::get_list()
 {
-	return this->list_members;
+    std::vector<Expression*> to_return;
+    for (auto it = this->list_members.begin(); it != this->list_members.end(); it++) {
+        to_return.push_back(it->get());
+    }
+	return to_return;
 }
 
 ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type) :
@@ -255,12 +259,12 @@ KeywordExpression::KeywordExpression(DataType t):
 	this->t = t;
 }
 
-std::shared_ptr<Expression> Binary::get_left() {
-	return this->left_exp;
+Expression &Binary::get_left() {
+	return *this->left_exp.get();
 }
 
-std::shared_ptr<Expression> Binary::get_right() {
-	return this->right_exp;
+Expression &Binary::get_right() {
+	return *this->right_exp.get();
 }
 
 exp_operator Binary::get_operator() {
@@ -289,8 +293,8 @@ exp_operator Unary::get_operator() {
 	return this->op;
 }
 
-std::shared_ptr<Expression> Unary::get_operand() {
-	return this->operand;
+Expression &Unary::get_operand() {
+	return *this->operand.get();
 }
 
 Unary::Unary(std::shared_ptr<Expression> operand, exp_operator op) : Expression(UNARY), operand(operand), op(op) {
@@ -304,16 +308,16 @@ Unary::Unary(): Expression(UNARY) {
 
 // Parsing function calls
 
-Expression *Procedure::get_func_name() {
-    return this->name.get();
+Expression &Procedure::get_func_name() {
+    return *this->name.get();
 }
 
 ListExpression &Procedure::get_args() {
     return *this->args.get();
 }
 
-Expression *Procedure::get_arg(size_t arg_no) {
-    return this->args->get_list().at(arg_no).get();
+Expression &Procedure::get_arg(size_t arg_no) {
+    return *this->args->get_list().at(arg_no);
 }
 
 size_t Procedure::get_num_args() {
@@ -340,15 +344,15 @@ Procedure::Procedure(): Expression(PROC_EXP)
     this->name = nullptr;
 }
 
-Expression *CallExpression::get_func_name() {
+Expression &CallExpression::get_func_name() {
 	return this->proc->get_func_name();
 }
 
-std::vector<std::shared_ptr<Expression>> CallExpression::get_args() {
+std::vector<Expression*> CallExpression::get_args() {
 	return this->proc->get_args().get_list();
 }
 
-Expression *CallExpression::get_arg(size_t i) {
+Expression &CallExpression::get_arg(size_t i) {
 	return this->proc->get_arg(i);
 }
 
@@ -369,14 +373,14 @@ CallExpression::CallExpression(): Expression(CALL_EXP)
 }
 
 
-std::shared_ptr<Expression> Indexed::get_index_value()
+Expression &Indexed::get_index_value()
 {
-	return this->index_value;
+	return *this->index_value.get();
 }
 
-std::shared_ptr<Expression> Indexed::get_to_index()
+Expression &Indexed::get_to_index()
 {
-	return this->to_index;
+	return *this->to_index.get();
 }
 
 Indexed::Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value): Expression(INDEXED)
@@ -389,24 +393,24 @@ Indexed::Indexed(): Indexed(nullptr, nullptr)
 {
 }
 
-std::shared_ptr<Expression> Cast::get_exp() {
-	return this->to_cast;
+Expression &Cast::get_exp() {
+	return *this->to_cast.get();
 }
 
 DataType& Cast::get_new_type() {
 	return this->new_type;
 }
 
-Cast::Cast(std::shared_ptr<Expression> to_cast, DataType new_type): Expression(CAST) {
-	this->to_cast = to_cast;
+Cast::Cast(Expression &to_cast, DataType new_type): Expression(CAST) {
+	this->to_cast = std::make_unique<Expression>(to_cast);
 	this->new_type = new_type;
 }
 
-Cast::Cast(std::shared_ptr<Binary> b): Expression(CAST) {
-	if (b->get_operator() == TYPECAST && b->get_right()->get_expression_type() == KEYWORD_EXP) {
-		auto* kw = dynamic_cast<KeywordExpression*>(b->get_right().get());
-		this->to_cast = b->get_left();
-		this->new_type = kw->get_type();
+Cast::Cast(Binary &b): Expression(CAST) {
+	if (b.get_operator() == TYPECAST && b.get_right().get_expression_type() == KEYWORD_EXP) {
+		auto &kw = dynamic_cast<KeywordExpression&>(b.get_right());
+		this->to_cast = std::make_unique<Expression>(b.get_left());
+		this->new_type = kw.get_type();
 	}
 	else {
 		this->expression_type = EXPRESSION_GENERAL;

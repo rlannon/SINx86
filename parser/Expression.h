@@ -80,7 +80,7 @@ class ListExpression : public Expression
 	Type primary;
 	std::vector<std::shared_ptr<Expression>> list_members;
 public:
-	std::vector<std::shared_ptr<Expression>> get_list();
+	std::vector<Expression*> get_list();
 	bool has_type_information() const override;
 	Type get_list_type() const;	// the list type that we parsed -- () yields TUPLE, {} yields ARRAY
 
@@ -93,8 +93,8 @@ class Indexed : public Expression
 	std::shared_ptr<Expression> index_value;	// the index value is simply an expression
 	std::shared_ptr<Expression> to_index;	// what we are indexing
 public:
-	std::shared_ptr<Expression> get_index_value();
-	std::shared_ptr<Expression> get_to_index();
+	Expression &get_index_value();
+	Expression &get_to_index();
 
 	Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value);
 	Indexed();
@@ -116,7 +116,7 @@ class AddressOf : public Expression
 {
 	std::shared_ptr<Expression> target;
 public:
-	std::shared_ptr<Expression> get_target();
+	Expression &get_target();
 
 	AddressOf(std::shared_ptr<Expression> target);
 	AddressOf();
@@ -128,8 +128,8 @@ class Binary : public Expression
 	std::shared_ptr<Expression> left_exp;
 	std::shared_ptr<Expression> right_exp;
 public:
-	std::shared_ptr<Expression> get_left();
-	std::shared_ptr<Expression> get_right();
+	Expression &get_left();
+	Expression &get_right();
 
 	exp_operator get_operator();
 
@@ -143,7 +143,7 @@ class Unary : public Expression
 	std::shared_ptr<Expression> operand;
 public:
 	exp_operator get_operator();
-	std::shared_ptr<Expression> get_operand();
+	Expression &get_operand();
 
 	Unary(std::shared_ptr<Expression> operand, exp_operator op);
 	Unary();
@@ -156,9 +156,9 @@ class Procedure: public Expression
     std::shared_ptr<Expression> name;
     std::shared_ptr<ListExpression> args;
 public:
-    Expression *get_func_name();
+    Expression &get_func_name();
     ListExpression &get_args();
-    Expression *get_arg(size_t arg_no);
+    Expression &get_arg(size_t arg_no);
     size_t get_num_args();
 
     Procedure(std::shared_ptr<Expression> proc_name, std::shared_ptr<ListExpression> proc_args);
@@ -170,9 +170,9 @@ class CallExpression : public Expression
 {
 	std::shared_ptr<Procedure> proc;
 public:
-	Expression *get_func_name();
-	std::vector<std::shared_ptr<Expression>> get_args();
-	Expression *get_arg(size_t i);
+	Expression &get_func_name();
+	std::vector<Expression*> get_args();
+	Expression &get_arg(size_t i);
 	size_t get_args_size();
 
 	CallExpression(Procedure *proc);
@@ -182,28 +182,28 @@ public:
 // typecasting expressions
 class Cast : public Expression
 {
-	std::shared_ptr<Expression> to_cast;	// any expression can by typecast
+	std::unique_ptr<Expression> to_cast;	// any expression can by typecast
 	DataType new_type;	// the new type for the expression
 public:
-	std::shared_ptr<Expression> get_exp();
+	Expression &get_exp();
 	DataType &get_new_type();
-	Cast(std::shared_ptr<Expression> to_cast, DataType new_type);
-	Cast(std::shared_ptr<Binary> b);
+	Cast(Expression &to_cast, DataType new_type);
+	Cast(Binary &b);
 };
 
 // Attribute selection
 class AttributeSelection : public Expression
 {
-	std::shared_ptr<Expression> selected;
+	std::unique_ptr<Expression> selected;
 	attribute attrib;
 	DataType t;
 public:
 	static attribute to_attribute(std::string to_convert);
 	static bool is_attribute(std::string a);
 
-	std::shared_ptr<Expression> get_selected();
+	Expression &get_selected();
 	attribute get_attribute();
 	DataType &get_data_type();
-	AttributeSelection(std::shared_ptr<Expression> selected, std::string attribute_name);
+	AttributeSelection(Expression &selected, std::string attribute_name);
 	AttributeSelection(std::shared_ptr<Binary> to_deconstruct);
 };
