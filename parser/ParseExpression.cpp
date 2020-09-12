@@ -426,10 +426,10 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 				// now, call maybe_binary based on the binary type (transform the statement)
 				to_check = binary;
 				if (binary->get_operator() == ATTRIBUTE_SELECTION) {
-					to_check = std::make_shared<AttributeSelection>(binary);
+					to_check = std::make_shared<AttributeSelection>(*binary.get());
 				}
 				else if (binary->get_operator() == TYPECAST) {
-					to_check = std::make_shared<Cast>(binary);
+					to_check = std::make_shared<Cast>(*binary.get());
 				}
 
 				// ensure we still have a valid expression

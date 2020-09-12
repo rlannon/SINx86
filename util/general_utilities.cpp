@@ -44,8 +44,8 @@ bool general_utilities::returns(StatementBlock to_check) {
 
 bool general_utilities::returns(Statement &to_check) {
     if (to_check.get_statement_type() == SCOPE_BLOCK) {
-        ScopedBlock *block = dynamic_cast<ScopedBlock*>(to_check.get());
-        return returns(block->get_statements());
+        ScopedBlock &block = dynamic_cast<ScopedBlock&>(to_check);
+        return returns(block.get_statements());
     }
     else {
         return to_check.get_statement_type() == RETURN_STATEMENT;
