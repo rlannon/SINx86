@@ -205,5 +205,5 @@ public:
 	attribute get_attribute();
 	DataType &get_data_type();
 	AttributeSelection(Expression &selected, std::string attribute_name);
-	AttributeSelection(std::shared_ptr<Binary> to_deconstruct);
+	AttributeSelection(Binary &to_deconstruct);
 };

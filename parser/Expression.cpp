@@ -156,14 +156,14 @@ AttributeSelection::AttributeSelection(Expression &selected, std::string attribu
 	this->t.get_qualities().add_quality(FINAL);
 }
 
-AttributeSelection::AttributeSelection(std::shared_ptr<Binary> to_deconstruct): Expression(ATTRIBUTE)
+AttributeSelection::AttributeSelection(Binary &to_deconstruct): Expression(ATTRIBUTE)
 {
 	// Construct an 'AttributeSelection' object from a Binary expression
 	
 	// as long as we have a valid binary expression, continue
-	if (to_deconstruct->get_right().get_expression_type() == KEYWORD_EXP) {
-		this->selected = std::make_unique<Expression>(to_deconstruct->get_left());
-		auto right = dynamic_cast<KeywordExpression&>(to_deconstruct->get_right());
+	if (to_deconstruct.get_right().get_expression_type() == KEYWORD_EXP) {
+		this->selected = std::make_unique<Expression>(to_deconstruct.get_left());
+		auto right = static_cast<KeywordExpression&>(to_deconstruct.get_right());
 		this->attrib = to_attribute(right.get_keyword());
 	}
 	else {
@@ -408,7 +408,7 @@ Cast::Cast(Expression &to_cast, DataType new_type): Expression(CAST) {
 
 Cast::Cast(Binary &b): Expression(CAST) {
 	if (b.get_operator() == TYPECAST && b.get_right().get_expression_type() == KEYWORD_EXP) {
-		auto &kw = dynamic_cast<KeywordExpression&>(b.get_right());
+		auto &kw = static_cast<KeywordExpression&>(b.get_right());
 		this->to_cast = std::make_unique<Expression>(b.get_left());
 		this->new_type = kw.get_type();
 	}

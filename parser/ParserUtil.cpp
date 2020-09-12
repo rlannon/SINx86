@@ -369,7 +369,7 @@ const bool Parser::has_return(StatementBlock to_test)
 			// get the last statement and check its type
 			Statement* last_statement = to_test.statements_list.back().get();
 			if (last_statement->get_statement_type() == IF_THEN_ELSE) {
-				IfThenElse* ite = dynamic_cast<IfThenElse*>(last_statement);
+				IfThenElse* ite = static_cast<IfThenElse*>(last_statement);
 
 				bool returns = general_utilities::ite_returns(ite);
 
@@ -381,11 +381,14 @@ const bool Parser::has_return(StatementBlock to_test)
 				return returns;
 			}
 			else if (last_statement->get_statement_type() == WHILE_LOOP) {
-				WhileLoop* while_loop = dynamic_cast<WhileLoop*>(last_statement);
+				WhileLoop* while_loop = static_cast<WhileLoop*>(last_statement);
 
 				// while loops are a little simpler, we can simply pass in the branch for the while loop
-				return general_utilities::returns(while_loop->get_branch());
-			}
+                if (while_loop->get_branch())
+    				return general_utilities::returns(*while_loop->get_branch());
+                else
+                    return false;
+    		}
 			else {
 				return false;
 			}
