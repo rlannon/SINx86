@@ -209,7 +209,7 @@ std::string get_rax_name_variant(DataType t, unsigned int line) {
 	return reg_string;
 }
 
-struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte) {
+struct_info define_struct(StructDefinition &definition, compile_time_evaluator &cte) {
     /*
     
     define_struct
@@ -230,7 +230,7 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
     // iterate through our definition statements and create symbols for all struct members
     std::vector<std::shared_ptr<symbol>> members;
     size_t current_offset = 0;
-    for (auto s: definition.get_procedure()->statements_list) {
+    for (auto s: definition.get_procedure().statements_list) {
         size_t this_width = 0;
 
         // Only allocations are allowed within a struct body

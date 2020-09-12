@@ -141,7 +141,7 @@ struct_info& compiler::get_struct_info(std::string struct_name, unsigned int lin
 	return this->structs.find(struct_name, line);
 }
 
-std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature) {
+std::stringstream compiler::compile_statement(Statement &s, function_symbol *signature) {
     /*
 
         Compiles a single statement to x86, dispatching appropriately
@@ -153,21 +153,21 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     // todo: set-up functionality?
 
     // The statement will be casted to the appropriate type and dispatched
-    stmt_type s_type = s->get_statement_type();
+    stmt_type s_type = s.get_statement_type();
     switch (s_type) {
         case INCLUDE:
         {
             // includes must be in the global scope at level 0
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
                 // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
-                auto include = dynamic_cast<Include*>(s.get());
-                compile_ss << this->process_include(include->get_filename(), include->get_line_number()).str();
+                auto include = static_cast<Include&>(s);
+                compile_ss << this->process_include(include.get_filename(), include.get_line_number()).str();
             }
             else {
                 throw CompilerException(
                     "Include statements must be made in the global scope at level 0",
                     compiler_errors::INCLUDE_SCOPE_ERROR,
-                    s->get_line_number()
+                    s.get_line_number()
                 );
             }
 
@@ -176,55 +176,55 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         case DECLARATION:
         {
             // handle a declaration
-            Declaration *decl_stmt = dynamic_cast<Declaration*>(s.get());
+            auto &decl_stmt = dynamic_cast<Declaration&>(s);
 
             // we need to ensure that the current scope is global -- declarations can only happen in the global scope, as they must be static
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
-                compile_ss << this->handle_declaration(*decl_stmt).str();
+                compile_ss << this->handle_declaration(decl_stmt).str();
             } else {
-                throw DeclarationException(decl_stmt->get_line_number());
+                throw DeclarationException(decl_stmt.get_line_number());
             }
             break;
         }
         case ALLOCATION:
         {
-            Allocation *alloc_stmt = dynamic_cast<Allocation*>(s.get());
-            compile_ss << this->allocate(*alloc_stmt).str() << std::endl;
+            auto &alloc_stmt = dynamic_cast<Allocation&>(s);
+            compile_ss << this->allocate(alloc_stmt).str() << std::endl;
             break;
         }
         case MOVEMENT:
         {
-            Movement *move_stmt = dynamic_cast<Movement*>(s.get());
-            compile_ss << this->handle_move(*move_stmt).str() << std::endl;
+            auto &move_stmt = dynamic_cast<Movement&>(s);
+            compile_ss << this->handle_move(move_stmt).str() << std::endl;
             break;
         }
         case ASSIGNMENT:
         {
-            Assignment *assign_stmt = dynamic_cast<Assignment*>(s.get());
-            compile_ss << this->handle_assignment(*assign_stmt).str() << std::endl;
+            auto &assign_stmt = dynamic_cast<Assignment&>(s);
+            compile_ss << this->handle_assignment(assign_stmt).str() << std::endl;
             break;
         }
         case RETURN_STATEMENT:
         {
             // return statements may only occur within functions; if 'signature' wasn't passed to this function, then we aren't compiling code inside a function and must throw an exception
             if (signature) {
-                ReturnStatement *return_stmt = dynamic_cast<ReturnStatement*>(s.get());
-                compile_ss << this->handle_return(*return_stmt, *(signature.get())).str() << std::endl;
+                auto &return_stmt = dynamic_cast<ReturnStatement&>(s);
+                compile_ss << this->handle_return(return_stmt, *signature).str() << std::endl;
             } else {
-                throw IllegalReturnException(s->get_line_number());
+                throw IllegalReturnException(s.get_line_number());
             }
             break;
         }
         case IF_THEN_ELSE:
 		{
 			// first, we need to cast and get the current block number (in case we have nested blocks)
-			IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
+			auto &ite = dynamic_cast<IfThenElse&>(s);
 			size_t current_scope_num = this->scope_block_num;
 			this->scope_block_num += 1; // increment the scope number now in case we have recursive conditionals
 			
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
-            auto condition_p = this->evaluate_expression(ite->get_condition(), ite->get_line_number());
+            auto condition_p = this->evaluate_expression(ite.get_condition(), ite.get_line_number());
 			compile_ss << condition_p.first;
             // todo: count
             
@@ -232,15 +232,15 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compile_ss << "\t" << "jne " << magic_numbers::ITE_ELSE_LABEL << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
-			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
+			compile_ss << this->compile_statement(*ite.get_if_branch(), signature).str();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
 			compile_ss << "\t" << "jmp " << magic_numbers::ITE_DONE_LABEL << current_scope_num << std::endl;
 			compile_ss << magic_numbers::ITE_ELSE_LABEL << current_scope_num << ":" << std::endl;
             
 			// compile the branch, if one exists
-			if (ite->get_else_branch().get()) {
-				compile_ss << this->compile_statement(ite->get_else_branch(), signature).str();
+			if (ite.get_else_branch()) {
+				compile_ss << this->compile_statement(*ite.get_else_branch(), signature).str();
 			}
 
 			// clean-up
@@ -249,12 +249,12 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 		}
 		case WHILE_LOOP:
         {
-            WhileLoop *while_stmt = dynamic_cast<WhileLoop*>(s.get());
+            auto &while_stmt = dynamic_cast<WhileLoop&>(s);
             
             // create a loop heading, evaluate the condition
             auto current_block_num = this->scope_block_num;
             this->scope_block_num += 1;
-            auto condition_p = this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number());
+            auto condition_p = this->evaluate_expression(while_stmt.get_condition(), while_stmt.get_line_number());
 
             compile_ss << magic_numbers::WHILE_LABEL << current_block_num << ":" << std::endl;
             compile_ss << condition_p.first;
@@ -263,7 +263,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compile_ss << "\t" << "jne " << magic_numbers::WHILE_DONE_LABEL << current_block_num << std::endl;
 
             // compile the loop body
-            compile_ss << this->compile_statement(while_stmt->get_branch(), signature).str();
+            compile_ss << this->compile_statement(*while_stmt.get_branch(), signature).str();
             compile_ss << "\t" << "jmp " << magic_numbers::WHILE_LABEL << current_block_num << std::endl;
 
             compile_ss << magic_numbers::WHILE_DONE_LABEL << current_block_num << ":" << std::endl;
@@ -271,33 +271,33 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         }
         case FUNCTION_DEFINITION:
         {
-            FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
+            auto &def_stmt = dynamic_cast<FunctionDefinition&>(s);
 
 			// ensure the function has a return value in all control paths
-			if (general_utilities::returns(*def_stmt->get_procedure().get())) {
-                if (def_stmt->get_calling_convention() == SINCALL) {
-                    compile_ss << this->define_function(*def_stmt).str() << std::endl;
+			if (general_utilities::returns(def_stmt.get_procedure())) {
+                if (def_stmt.get_calling_convention() == SINCALL) {
+                    compile_ss << this->define_function(def_stmt).str() << std::endl;
                 } else {
                     throw CompilerException(
                         "Currently, defining non-sincall functions is not supported",
                         compiler_errors::CALLING_CONVENTION_ERROR,
-                        def_stmt->get_line_number()
+                        def_stmt.get_line_number()
                     );
                 }
             } else {
-                throw NoReturnException(s->get_line_number());
+                throw NoReturnException(s.get_line_number());
             }
             break;
         }
         case STRUCT_DEFINITION:
 		{
-			StructDefinition *def_stmt = dynamic_cast<StructDefinition*>(s.get());
+			auto &def_stmt = dynamic_cast<StructDefinition&>(s);
 
             // first, define the struct
-			struct_info defined = define_struct(*def_stmt, this->evaluator);
+			struct_info defined = define_struct(def_stmt, this->evaluator);
             
             // now we can add the struct to the table
-			this->add_struct(defined, s->get_line_number());
+			this->add_struct(defined, s.get_line_number());
 
             // now, if we had any member functions, we have to define them as well
             // update the scope name
@@ -306,7 +306,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             this->current_scope_name = defined.get_struct_name();
             this->current_scope_level += 1;
 
-            for (auto member_s: def_stmt->get_procedure()->statements_list) {
+            for (auto member_s: def_stmt.get_procedure().statements_list) {
                 if (member_s->get_statement_type() == FUNCTION_DEFINITION) {
                     auto func_def = dynamic_cast<FunctionDefinition*>(member_s.get());
                     auto func_sym = defined.get_member(func_def->get_name());
@@ -314,7 +314,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
                         function_symbol *f = dynamic_cast<function_symbol*>(func_sym);
                         compile_ss << this->define_function(
                             *f,
-                            *func_def->get_procedure().get(),
+                            func_def->get_procedure(),
                             func_def->get_line_number()
                         ).str();
                     }
@@ -336,8 +336,8 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 		}
         case CALL:
         {
-            Call *call_stmt = dynamic_cast<Call*>(s.get());
-            compile_ss << this->call_function(*call_stmt, call_stmt->get_line_number()).first << std::endl;
+            auto &call_stmt = dynamic_cast<Call&>(s);
+            compile_ss << this->call_function(call_stmt, call_stmt.get_line_number()).first << std::endl;
             break;
         }
         case INLINE_ASM:
@@ -347,9 +347,9 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compiler_warning(
                 "Use of inline assembly is highly discouraged as it cannot be analyzed by the compiler nor utilize certain runtime safety measures (unless done manually)",
                 compiler_errors::UNSAFE_OPERATION,
-                s->get_line_number()
+                s.get_line_number()
             );
-            InlineAssembly *asm_stmt = dynamic_cast<InlineAssembly*>(s.get());
+            auto &asm_stmt = dynamic_cast<InlineAssembly&>(s);
 
             // todo: write asm to file
 
@@ -375,8 +375,8 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
             */
 
-            ScopedBlock *block = dynamic_cast<ScopedBlock*>(s.get());
-            StatementBlock ast = block->get_statements();
+            auto &block = dynamic_cast<ScopedBlock&>(s);
+            StatementBlock ast = block.get_statements();
 
             // be sure to adjust scope levels
             unsigned int old_scope_level = this->current_scope_level;
@@ -393,7 +393,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             break;
         }
         default:
-            throw CompilerException("This statement type is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s->get_line_number());
+            throw CompilerException("This statement type is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s.get_line_number());
             break;
     };
 
@@ -403,7 +403,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     return compile_ss;
 }
 
-std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature) {
+std::stringstream compiler::compile_ast(StatementBlock &ast, function_symbol *signature) {
     /*
 
     compile_ast
@@ -419,8 +419,8 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
     std::stringstream compile_ss;
 
     // iterate over it and compile each statement in turn, adding it to the stringstream
-    for (std::shared_ptr<Statement> s: ast.statements_list) {
-        compile_ss << this->compile_statement(s, signature).str();
+    for (auto s: ast.statements_list) {
+        compile_ss << this->compile_statement(*s.get(), signature).str();
     }
 
 	// when we leave a scope, remove local variables -- but NOT global variables (they must be retained for inclusions)

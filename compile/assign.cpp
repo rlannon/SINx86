@@ -41,12 +41,12 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     std::stringstream handle_ss;
 
     // if we have an indexed expression as the lvalue, we need a special case (for code generation)
-    if (a.get_lvalue()->get_expression_type() == INDEXED) {
+    if (a.get_lvalue().get_expression_type() == INDEXED) {
         // make sure that the type is actually indexable/subscriptable
-        auto idx = dynamic_cast<Indexed*>(a.get_lvalue().get());
+        auto &idx = dynamic_cast<Indexed&>(a.get_lvalue());
         if (!is_subscriptable(
                 expression_util::get_expression_data_type(
-                    idx->get_to_index(), 
+                    idx.get_to_index(), 
                     this->symbols, 
                     this->structs,
                     a.get_line_number()
@@ -77,7 +77,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     return handle_ss;
 }
 
-std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expression> rvalue, unsigned int line) {
+std::stringstream compiler::handle_alloc_init(symbol &sym, Expression &rvalue, unsigned int line) {
     /*
 
     handle_alloc_init
@@ -93,13 +93,15 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
     reg src_reg = sym.get_data_type().get_primary() == FLOAT ? XMM0 : RAX;
 
     // we need to have a special case for ref<T> initialization
+    std::unique_ptr<Unary> u = nullptr;
     if (sym.get_data_type().get_primary() == REFERENCE) {
         // wrap the rvalue in a unary address-of expression
         // this will be fine since we will be comparing against the subtype but evaluating a pointer
-        rvalue = std::make_shared<Unary>(
+        u = std::make_unique<Unary>(
             rvalue,
             exp_operator::ADDRESS
         );
+        rvalue = *u.get();
     }
     // todo: we can utilize the copy construction method for alloc-init when used with dynamic types
 
@@ -110,7 +112,7 @@ std::stringstream compiler::assign(
     DataType lhs_type,
     DataType &rhs_type,
     assign_utilities::destination_information dest,
-    std::shared_ptr<Expression> rvalue,
+    Expression &rvalue,
     unsigned int line,
     bool is_alloc_init
 ) {

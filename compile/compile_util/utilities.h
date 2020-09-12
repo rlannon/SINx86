@@ -49,7 +49,7 @@ bool can_pass_in_register(DataType to_check);
 
 std::string get_rax_name_variant(DataType t, unsigned int line);
 
-struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte);
+struct_info define_struct(StructDefinition &definition, compile_time_evaluator &cte);
 
 template<typename T>
 function_symbol create_function_symbol(T def, bool mangle=true, bool defined=true, std::string scope_name = "global", unsigned int scope_level = 0, bool is_method = false);

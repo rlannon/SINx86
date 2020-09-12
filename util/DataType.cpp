@@ -268,8 +268,8 @@ std::string DataType::get_struct_name() const {
 	return this->struct_name;
 }
 
-std::shared_ptr<Expression> DataType::get_array_length_expression() const {
-	return this->array_length_expression;
+Expression *DataType::get_array_length_expression() const {
+	return this->array_length_expression.get();
 }
 
 DataType DataType::get_subtype() const {

@@ -57,7 +57,7 @@ public:
 	size_t get_array_length() const;
 	std::string get_struct_name() const;
 
-	std::shared_ptr<Expression> get_array_length_expression() const;
+	Expression *get_array_length_expression() const;
 
 	void set_primary(Type new_primary);
 	void set_subtype(DataType new_subtype);
