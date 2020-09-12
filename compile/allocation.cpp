@@ -412,7 +412,6 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                     else if (m->get_data_type().must_initialize()) {
                         init_required = true;
                     }
-                    // todo: do dynamic struct members need to have space reserved here as well ... ?
                 }
 			}
 
@@ -429,6 +428,9 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			if (push_r15) {
 				allocation_ss << "\t" << "pop r15" << std::endl;
 			}
+            else {
+                this->reg_stack.peek().clear(r);    // since we set it as in use, clear it (but only if it wasn't in use already)
+            }
 		}
         // We need to do the same for tuples, but we iterate through them differently
         else if (allocated.get_data_type().get_primary() == TUPLE) {
