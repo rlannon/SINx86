@@ -249,18 +249,23 @@ struct_info define_struct(StructDefinition &definition, compile_time_evaluator &
             // todo: once references are enabled, disallow those as well -- they can't be null, so that would cause infinite recursion, too
             else if (alloc->get_type_information().get_primary() == ARRAY) {
                 // arrays must have constant lengths or be dynamic
-                if (alloc->get_type_information().get_array_length_expression()->is_const()) {
-                    size_t array_length = stoul(
-                        cte.evaluate_expression(
-                            alloc->get_type_information().get_array_length_expression(),
-                            definition.get_name(),
-                            1,
-                            definition.get_line_number()
-                        )
-                    );
-                    array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
-                    alloc->get_type_information().set_array_length(array_length);
-                    this_width = array_length;
+                if (alloc->get_type_information().get_array_length_expression()) {
+                    if (alloc->get_type_information().get_array_length_expression()->is_const()) {
+                        size_t array_length = stoul(
+                            cte.evaluate_expression(
+                                *alloc->get_type_information().get_array_length_expression(),
+                                definition.get_name(),
+                                1,
+                                definition.get_line_number()
+                            )
+                        );
+                        array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
+                        alloc->get_type_information().set_array_length(array_length);
+                        this_width = array_length;
+                    }
+                    else {
+                        throw NonConstArrayLengthException(definition.get_line_number());
+                    }
                 }
                 else {
                     throw NonConstArrayLengthException(definition.get_line_number());
@@ -378,7 +383,7 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
 
         // cast to the appropriate symbol type
         if (param->get_statement_type() == DECLARATION) {
-            Declaration *param_decl = dynamic_cast<Declaration*>(param.get());
+            Declaration *param_decl = dynamic_cast<Declaration*>(param);
             param_sym = generate_symbol(
                 *param_decl,
                 param_decl->get_type_information().get_width(),
@@ -387,7 +392,7 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
                 stack_offset
             );
         } else if (param->get_statement_type() == ALLOCATION) {
-            Allocation *param_alloc = dynamic_cast<Allocation*>(param.get());
+            Allocation *param_alloc = dynamic_cast<Allocation*>(param);
             DataType t = param_alloc->get_type_information();
             param_sym = generate_symbol(
                 *param_alloc,

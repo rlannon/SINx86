@@ -91,7 +91,7 @@ std::stringstream compiler::move(
     DataType &lvalue_type,
     DataType &rvalue_type,
     assign_utilities::destination_information dest,
-    std::shared_ptr<Expression> rvalue,
+    Expression &rvalue,
     unsigned int line
 ) {
     /*

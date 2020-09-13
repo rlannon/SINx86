@@ -97,8 +97,9 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, Expression &rvalue, u
     if (sym.get_data_type().get_primary() == REFERENCE) {
         // wrap the rvalue in a unary address-of expression
         // this will be fine since we will be comparing against the subtype but evaluating a pointer
+        auto rvalue_temp = std::make_shared<Expression>(rvalue);
         u = std::make_unique<Unary>(
-            rvalue,
+            rvalue_temp,
             exp_operator::ADDRESS
         );
         rvalue = *u.get();

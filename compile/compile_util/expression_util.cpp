@@ -307,10 +307,10 @@ DataType expression_util::get_expression_data_type(
                 // get the data type of the left side to get the struct name or tuple type information
                 auto lhs_type = expression_util::get_expression_data_type(binary.get_left(), symbols, structs, line);
                 if (lhs_type.get_primary() == STRUCT) {
-                    auto lhs_struct = structs.find(lhs_type.get_struct_name(), line);
+                    auto &lhs_struct = structs.find(lhs_type.get_struct_name(), line);
                     if (binary.get_right().get_expression_type() == IDENTIFIER) {
                         auto &r = dynamic_cast<Identifier&>(binary.get_right());
-                        type_information = lhs_struct.get_member(r->getValue())->get_data_type();
+                        type_information = lhs_struct.get_member(r.getValue())->get_data_type();
                     }
                     // todo: exception
                 }

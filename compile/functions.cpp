@@ -231,9 +231,9 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     // first, look up the function
     symbol *sym = nullptr;
 
-    if (call.get_func_name()->get_expression_type() == IDENTIFIER) {
-        Identifier *id = dynamic_cast<Identifier*>(call.get_func_name());
-        sym = this->lookup(id->getValue(), line);
+    if (call.get_func_name().get_expression_type() == IDENTIFIER) {
+        auto &id = dynamic_cast<Identifier&>(call.get_func_name());
+        sym = this->lookup(id.getValue(), line);
     }
     else {
         // todo: other exp types

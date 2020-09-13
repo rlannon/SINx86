@@ -243,7 +243,7 @@ bool assign_utilities::requires_copy(DataType t) {
     );
 }
 
-bool assign_utilities::is_valid_move_expression(std::shared_ptr<Expression> exp) {
+bool assign_utilities::is_valid_move_expression(Expression &exp) {
     /*
 
     is_valid_move_expression
@@ -261,23 +261,23 @@ bool assign_utilities::is_valid_move_expression(std::shared_ptr<Expression> exp)
     bool is_valid;
 
     if (
-        exp->get_expression_type() == LITERAL ||
-        exp->get_expression_type() == CALL_EXP
+        exp.get_expression_type() == LITERAL ||
+        exp.get_expression_type() == CALL_EXP
     ) {
         is_valid = false;
     }
-    else if (exp->get_expression_type() == BINARY) {
-        auto b = dynamic_cast<Binary*>(exp.get());
-        if (b->get_operator() == DOT) {
+    else if (exp.get_expression_type() == BINARY) {
+        auto &b = dynamic_cast<Binary&>(exp);
+        if (b.get_operator() == DOT) {
             is_valid = true;
         }
         else {
             is_valid = false;
         }
     }
-    else if (exp->get_expression_type() == UNARY) {
-        auto u = dynamic_cast<Unary*>(exp.get());
-        if (u->get_operator() == DEREFERENCE) {
+    else if (exp.get_expression_type() == UNARY) {
+        auto &u = dynamic_cast<Unary&>(exp);
+        if (u.get_operator() == DEREFERENCE) {
             is_valid = true;
         }
         else {
