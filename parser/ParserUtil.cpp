@@ -10,49 +10,6 @@ Contains the implementations of various utility functions for the parser.
 
 #include "Parser.h"
 
-const std::unordered_map<std::string, exp_operator> Parser::op_strings({
-	{"->", RIGHT_ARROW},
-	{"<-", LEFT_ARROW},
-	{"+=", PLUS_EQUAL},
-	{"-=", MINUS_EQUAL},
-	{"*=", MULT_EQUAL},
-	{"/=", DIV_EQUAL},
-	{"%=", MOD_EQUAL},
-	{"&=", AND_EQUAL},
-	{"|=", OR_EQUAL},
-	{"^=", XOR_EQUAL},
-	{"+", PLUS},
-	{"-", MINUS},
-	{"*", MULT},
-	{"/", DIV},
-	{"%", MODULO},
-	{"=", EQUAL},
-	{"!=", NOT_EQUAL},
-	{">", GREATER},
-	{"<", LESS},
-	{">=", GREATER_OR_EQUAL},
-	{"<=", LESS_OR_EQUAL},
-	{"&", BIT_AND},
-	{"|", BIT_OR},
-	{"^", BIT_XOR},
-	{"~", BIT_NOT},
-	{">>", RIGHT_SHIFT},
-	{"<<", LEFT_SHIFT},
-	{"and", AND},
-	{"or", OR},
-	{"xor", XOR},
-	{"not", NOT},
-	{"as", TYPECAST},
-	{"$", ADDRESS},
-	{"*", DEREFERENCE},
-	{":", ATTRIBUTE_SELECTION},
-	{".", DOT},
-	{"[", INDEX},
-	{"@", CONTROL_TRANSFER},
-    {"(", PROC_OPERATOR},
-	{"::", SCOPE_RESOLUTION}
-});
-
 const std::unordered_map<exp_operator, size_t> Parser::op_precedence({
 	{RIGHT_ARROW, 1},	// there is also a move assignment operator
 	{LEFT_ARROW, 1},
@@ -122,10 +79,14 @@ exp_operator Parser::read_operator(bool peek) {
 	return op;
 }
 
+const bool Parser::is_valid_operator(lexeme l) {
+    return Lexer::is_valid_operator(l.value);
+}
+
 const exp_operator Parser::translate_operator(std::string op_string) {
 	// try and find the operator
-	auto it = Parser::op_strings.find(op_string);
-	if (it == Parser::op_strings.end()) {
+	auto it = Lexer::op_strings.find(op_string);
+	if (it == Lexer::op_strings.end()) {
 		return NO_OP;
 	}
 	else {
@@ -736,11 +697,6 @@ calling_convention Parser::get_calling_convention(symbol_qualities sq, unsigned 
 	}
 
 	return c;
-}
-
-const bool Parser::is_valid_operator(lexeme l) {
-	// Checks whether the lexeme is a valid operator for maybe_binary
-	return (bool)op_strings.count(l.value);
 }
 
 const exp_operator Parser::get_unary_operator(std::string s) {

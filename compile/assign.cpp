@@ -97,16 +97,16 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, Expression &rvalue, u
     if (sym.get_data_type().get_primary() == REFERENCE) {
         // wrap the rvalue in a unary address-of expression
         // this will be fine since we will be comparing against the subtype but evaluating a pointer
-        auto rvalue_temp = std::make_shared<Expression>(rvalue);
         u = std::make_unique<Unary>(
-            rvalue_temp,
+            std::move(rvalue.get_unique()),
             exp_operator::ADDRESS
         );
-        rvalue = *u.get();
+        return this->assign(sym.get_data_type(), rhs_type, p, *u.get(), line, true);
     }
+    else {
     // todo: we can utilize the copy construction method for alloc-init when used with dynamic types
-
-    return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
+        return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
+    }
 }
 
 std::stringstream compiler::assign(

@@ -25,6 +25,50 @@ const std::string Lexer::op_exp = R"([\.\+\-\*/%=\&\|\^<>\$\?!~@#:])";	// expres
 const std::string Lexer::id_exp = "[_0-9a-zA-Z]";	// expression for interior id letters
 const std::string Lexer::bool_exp = "[(true)|(false)]";
 
+// The map containing our operator strings
+const std::unordered_map<std::string, exp_operator> Lexer::op_strings({
+	{"->", RIGHT_ARROW},
+	{"<-", LEFT_ARROW},
+	{"+=", PLUS_EQUAL},
+	{"-=", MINUS_EQUAL},
+	{"*=", MULT_EQUAL},
+	{"/=", DIV_EQUAL},
+	{"%=", MOD_EQUAL},
+	{"&=", AND_EQUAL},
+	{"|=", OR_EQUAL},
+	{"^=", XOR_EQUAL},
+	{"+", PLUS},
+	{"-", MINUS},
+	{"*", MULT},
+	{"/", DIV},
+	{"%", MODULO},
+	{"=", EQUAL},
+	{"!=", NOT_EQUAL},
+	{">", GREATER},
+	{"<", LESS},
+	{">=", GREATER_OR_EQUAL},
+	{"<=", LESS_OR_EQUAL},
+	{"&", BIT_AND},
+	{"|", BIT_OR},
+	{"^", BIT_XOR},
+	{"~", BIT_NOT},
+	{">>", RIGHT_SHIFT},
+	{"<<", LEFT_SHIFT},
+	{"and", AND},
+	{"or", OR},
+	{"xor", XOR},
+	{"not", NOT},
+	{"as", TYPECAST},
+	{"$", ADDRESS},
+	{"*", DEREFERENCE},
+	{":", ATTRIBUTE_SELECTION},
+	{".", DOT},
+	{"[", INDEX},
+	{"@", CONTROL_TRANSFER},
+    {"(", PROC_OPERATOR},
+	{"::", SCOPE_RESOLUTION}
+});
+
 
 // Our stream access and test functions
 
@@ -181,8 +225,9 @@ bool Lexer::is_keyword(std::string candidate) {
 	return (bool)keywords.count(candidate);
 }
 
-bool Lexer::is_valid_operator(std::string candidate) {
-	return std::regex_match(candidate, std::regex(op_exp));
+const bool Lexer::is_valid_operator(std::string candidate) {
+	// Checks whether the lexeme is a valid operator for maybe_binary
+	return (bool)Lexer::op_strings.count(candidate);
 }
 
 /*
@@ -226,6 +271,13 @@ std::string Lexer::read_operator() {
 	// get the first character
 	char ch = this->peek();
 	op_string = std::string(1, ch);
+
+    // '!' by itself is not an operator; read one more char
+    if (ch == '!') {
+        this->next();
+        op_string.push_back(this->peek());
+    }
+
 	while (this->is_valid_operator(op_string)) {
 		this->next();
 		ch = this->peek();

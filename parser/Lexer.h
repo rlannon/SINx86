@@ -23,6 +23,7 @@ Note that the Lexer class does /not/ parse source files; it simply puts those fi
 #include <vector>
 #include <set>
 #include <exception>
+#include <unordered_map>
 
 #include "lexeme.h"
 #include "../util/Exceptions.h"
@@ -92,7 +93,6 @@ class Lexer
 	static bool is_boolean(std::string candidate);
 
 	static bool is_keyword(std::string candidate);	// test whether the string is a keyword (such as alloc or let) or an identifier (such as a variable name)
-	static bool is_valid_operator(std::string candidate);
 
 	std::string read_while(bool(*predicate)(char));
 	std::string read_operator();
@@ -104,7 +104,10 @@ class Lexer
 	std::string read_ident();	// read the full identifier
 
 public:
-	bool eof();		// check to see if we are at the end of the file
+    static const std::unordered_map<std::string, exp_operator> op_strings;
+	static const bool is_valid_operator(std::string candidate);
+    
+    bool eof();		// check to see if we are at the end of the file
 	bool exit_flag_is_set();	// check to see the status of the exit flag
 
 	std::ostream& write(std::ostream& os) const;	// allows a lexeme to be written to an ostream
