@@ -47,7 +47,13 @@ std::string compile_time_evaluator::evaluate_unary(Unary & exp, std::string scop
 	*/
 
 	// first, ensure we have an appropriate data type
-	DataType exp_data_type = expression_util::get_expression_data_type(exp.get_operand(), *this->constants, *this->structs, line);
+	DataType exp_data_type = expression_util::get_expression_data_type(
+        exp.get_operand(),
+        *this->constants,
+        *this->structs,
+        line,
+        nullptr
+    );
 	if (exp_data_type.get_primary() == BOOL || exp_data_type.get_primary() == INT || exp_data_type.get_primary() == FLOAT) {
 		// evaluate the operand
 		std::string evaluated = this->evaluate_expression(exp.get_operand(), scope_name, scope_level, line);

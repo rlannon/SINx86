@@ -172,7 +172,8 @@ DataType expression_util::get_expression_data_type(
     Expression &to_eval,
     symbol_table& symbols,
     struct_table& structs,
-    unsigned int line
+    unsigned int line,
+    DataType *type_hint
 ) {
     /*
 
@@ -198,6 +199,14 @@ DataType expression_util::get_expression_data_type(
             // set base type data
             Literal &literal = dynamic_cast<Literal&>(to_eval);
             type_information = literal.get_data_type();
+
+            // update qualities based on type hint, if applicable
+            if (type_hint) {
+                if (type_information.get_primary() == type_hint->get_primary()) {
+                    type_information = *type_hint;
+                }
+            }
+
             break;
         }
         case IDENTIFIER:

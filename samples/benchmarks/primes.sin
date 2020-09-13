@@ -42,7 +42,7 @@ def bool is_prime(alloc unsigned int candidate) {
         let prime = true;
     }
     else {
-        alloc int i: 2 &unsigned;
+        alloc int i &unsigned: 2;
         while (i < candidate and prime) {
             if (candidate % i = 0) {
                 let prime = false;

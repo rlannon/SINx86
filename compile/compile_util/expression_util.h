@@ -34,7 +34,8 @@ namespace expression_util {
         Expression &to_eval,
         symbol_table& symbols,
         struct_table& structs,
-        unsigned int line
+        unsigned int line,
+        DataType *type_hint = nullptr
     );
 
     size_t get_width(

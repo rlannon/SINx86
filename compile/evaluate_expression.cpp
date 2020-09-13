@@ -715,7 +715,12 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     
     std::stringstream eval_ss;
 
-    DataType to_index_type = expression_util::get_expression_data_type(to_evaluate.get_to_index(), this->symbols, this->structs, line);
+    DataType to_index_type = expression_util::get_expression_data_type(
+        to_evaluate.get_to_index(),
+        this->symbols,
+        this->structs,
+        line
+    );
     if (is_subscriptable(to_index_type.get_primary())) {
         // todo: evaluate indexed
         eval_ss << "\t" << "; todo: subscripting" << std::endl;
