@@ -48,7 +48,6 @@ bool Expression::was_overridden() const {
 }
 
 std::unique_ptr<Expression> Expression::get_unique() {
-    std::cout << "Base virtual function" << std::endl;
     return std::make_unique<Expression>(*this);
 }
 
@@ -87,7 +86,6 @@ bool Literal::has_type_information() const {
 }
 
 std::unique_ptr<Expression> Literal::get_unique() {
-    std::cout << "Making unique literal" << std::endl;
     return std::make_unique<Literal>(*this);
 }
 
@@ -122,7 +120,6 @@ void Identifier::setValue(std::string new_value) {
 }
 
 std::unique_ptr<Expression> Identifier::get_unique() {
-    std::cout << "Making unique identifier" << std::endl;
     return std::make_unique<Identifier>(*this);
 }
 
@@ -243,7 +240,6 @@ std::vector<Expression*> ListExpression::get_list()
 }
 
 std::unique_ptr<Expression> ListExpression::get_unique() {
-    std::cout << "Making unique List" << std::endl;
     return std::make_unique<ListExpression>(*this);
 }
 
@@ -268,7 +264,6 @@ DataType &KeywordExpression::get_type() {
 }
 
 std::unique_ptr<Expression> KeywordExpression::get_unique() {
-    std::cout << "Making unique kwd exp" << std::endl;
     return std::make_unique<KeywordExpression>(*this);
 }
 
@@ -297,7 +292,6 @@ exp_operator Binary::get_operator() {
 }
 
 std::unique_ptr<Expression> Binary::get_unique() {
-    std::cout << "Making unique binary" << std::endl;
     return std::make_unique<Binary>(*this);
 }
 
@@ -328,7 +322,6 @@ Expression &Unary::get_operand() {
 }
 
 std::unique_ptr<Expression> Unary::get_unique() {
-    std::cout << "Making unique unary" << std::endl;
     return std::make_unique<Unary>(*this);
 }
 
@@ -360,7 +353,6 @@ size_t Procedure::get_num_args() {
 }
 
 std::unique_ptr<Expression> Procedure::get_unique() {
-    std::cout << "Making unique proc" << std::endl;
     return std::make_unique<Procedure>(*this);
 }
 
@@ -401,7 +393,6 @@ size_t CallExpression::get_args_size() {
 }
 
 std::unique_ptr<Expression> CallExpression::get_unique() {
-    std::cout << "Making unique call" << std::endl;
     return std::make_unique<CallExpression>(*this);
 }
 
@@ -429,7 +420,6 @@ Expression &Indexed::get_to_index()
 }
 
 std::unique_ptr<Expression> Indexed::get_unique() {
-    std::cout << "Making unique indexed" << std::endl;
     return std::make_unique<Indexed>(*this);
 }
 
