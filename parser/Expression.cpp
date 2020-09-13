@@ -47,6 +47,11 @@ bool Expression::was_overridden() const {
 	return this->overridden;
 }
 
+std::unique_ptr<Expression> Expression::get_unique() {
+    std::cout << "Base virtual function" << std::endl;
+    return std::make_unique<Expression>(*this);
+}
+
 Expression::Expression(exp_type expression_type) : expression_type(expression_type) {
 	this->_const = false;	// all expressions default to being non-const
 	this->overridden = false;
@@ -81,6 +86,11 @@ bool Literal::has_type_information() const {
 	return true;
 }
 
+std::unique_ptr<Expression> Literal::get_unique() {
+    std::cout << "Making unique literal" << std::endl;
+    return std::make_unique<Literal>(*this);
+}
+
 Literal::Literal(Type data_type, std::string value, Type subtype) : Expression(LITERAL), value(value) {
     // symbol qualities for our DataType object
     bool const_q = true;
@@ -111,6 +121,11 @@ void Identifier::setValue(std::string new_value) {
 	this->value = new_value;
 }
 
+std::unique_ptr<Expression> Identifier::get_unique() {
+    std::cout << "Making unique identifier" << std::endl;
+    return std::make_unique<Identifier>(*this);
+}
+
 Identifier::Identifier(std::string value) : Expression(IDENTIFIER), value(value) {
 }
 
@@ -136,7 +151,7 @@ AttributeSelection::AttributeSelection(Expression &selected, std::string attribu
 	Expression(ATTRIBUTE)
 {
 	this->attrib = to_attribute(attribute_name);
-    this->selected = std::make_unique<Expression>(selected);
+    this->selected = std::move(selected.get_unique());
 
 	// set the type
 	this->t = 
@@ -162,7 +177,7 @@ AttributeSelection::AttributeSelection(Binary &to_deconstruct): Expression(ATTRI
 	
 	// as long as we have a valid binary expression, continue
 	if (to_deconstruct.get_right().get_expression_type() == KEYWORD_EXP) {
-		this->selected = std::make_unique<Expression>(to_deconstruct.get_left());
+		this->selected = std::move(to_deconstruct.get_left().get_unique());
 		auto right = static_cast<KeywordExpression&>(to_deconstruct.get_right());
 		this->attrib = to_attribute(right.get_keyword());
 	}
@@ -227,6 +242,11 @@ std::vector<Expression*> ListExpression::get_list()
 	return to_return;
 }
 
+std::unique_ptr<Expression> ListExpression::get_unique() {
+    std::cout << "Making unique List" << std::endl;
+    return std::make_unique<ListExpression>(*this);
+}
+
 ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type) :
 	Expression(LIST),
 	list_members(list_members),
@@ -245,6 +265,11 @@ std::string KeywordExpression::get_keyword() {
 
 DataType &KeywordExpression::get_type() {
 	return this->t;
+}
+
+std::unique_ptr<Expression> KeywordExpression::get_unique() {
+    std::cout << "Making unique kwd exp" << std::endl;
+    return std::make_unique<KeywordExpression>(*this);
 }
 
 KeywordExpression::KeywordExpression(std::string keyword):
@@ -269,6 +294,11 @@ Expression &Binary::get_right() {
 
 exp_operator Binary::get_operator() {
 	return this->op;
+}
+
+std::unique_ptr<Expression> Binary::get_unique() {
+    std::cout << "Making unique binary" << std::endl;
+    return std::make_unique<Binary>(*this);
 }
 
 Binary::Binary(
@@ -297,6 +327,11 @@ Expression &Unary::get_operand() {
 	return *this->operand.get();
 }
 
+std::unique_ptr<Expression> Unary::get_unique() {
+    std::cout << "Making unique unary" << std::endl;
+    return std::make_unique<Unary>(*this);
+}
+
 Unary::Unary(std::shared_ptr<Expression> operand, exp_operator op) : Expression(UNARY), operand(operand), op(op) {
 }
 
@@ -322,6 +357,11 @@ Expression &Procedure::get_arg(size_t arg_no) {
 
 size_t Procedure::get_num_args() {
     return this->args->get_list().size();
+}
+
+std::unique_ptr<Expression> Procedure::get_unique() {
+    std::cout << "Making unique proc" << std::endl;
+    return std::make_unique<Procedure>(*this);
 }
 
 Procedure::Procedure(
@@ -360,6 +400,11 @@ size_t CallExpression::get_args_size() {
 	return this->proc->get_num_args();
 }
 
+std::unique_ptr<Expression> CallExpression::get_unique() {
+    std::cout << "Making unique call" << std::endl;
+    return std::make_unique<CallExpression>(*this);
+}
+
 CallExpression::CallExpression(
 	Procedure *proc
 ): 
@@ -383,6 +428,11 @@ Expression &Indexed::get_to_index()
 	return *this->to_index.get();
 }
 
+std::unique_ptr<Expression> Indexed::get_unique() {
+    std::cout << "Making unique indexed" << std::endl;
+    return std::make_unique<Indexed>(*this);
+}
+
 Indexed::Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value): Expression(INDEXED)
 {
 	this->to_index = to_index;
@@ -402,14 +452,14 @@ DataType& Cast::get_new_type() {
 }
 
 Cast::Cast(Expression &to_cast, DataType new_type): Expression(CAST) {
-	this->to_cast = std::make_unique<Expression>(to_cast);
+	this->to_cast = std::move(to_cast.get_unique());
 	this->new_type = new_type;
 }
 
 Cast::Cast(Binary &b): Expression(CAST) {
 	if (b.get_operator() == TYPECAST && b.get_right().get_expression_type() == KEYWORD_EXP) {
 		auto &kw = static_cast<KeywordExpression&>(b.get_right());
-		this->to_cast = std::make_unique<Expression>(b.get_left());
+		this->to_cast = std::move(b.get_left().get_unique());
 		this->new_type = kw.get_type();
 	}
 	else {

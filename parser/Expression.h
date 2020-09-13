@@ -29,6 +29,8 @@ protected:
 	bool overridden;
 	exp_type expression_type;	// replace "string type" with "exp_type expression_type"
 public:
+    virtual std::unique_ptr<Expression> get_unique();
+    
 	bool is_const();
 	void set_const();
 	exp_type get_expression_type();
@@ -57,6 +59,8 @@ public:
 	void override_qualities(symbol_qualities sq) override;
 	bool has_type_information() const override;
 
+    std::unique_ptr<Expression> get_unique() override;
+
 	Literal(Type data_type, std::string value, Type subtype = NONE);
 	Literal(DataType t, std::string value);
 	Literal();
@@ -70,6 +74,8 @@ protected:
 public:
 	std::string getValue();
 	void setValue(std::string new_value);
+
+    std::unique_ptr<Expression> get_unique() override;
 	
 	Identifier(std::string value);
 	Identifier();
@@ -84,6 +90,8 @@ public:
 	bool has_type_information() const override;
 	Type get_list_type() const;	// the list type that we parsed -- () yields TUPLE, {} yields ARRAY
 
+    std::unique_ptr<Expression> get_unique() override;
+
 	ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type);
 	ListExpression();
 };
@@ -96,6 +104,8 @@ public:
 	Expression &get_index_value();
 	Expression &get_to_index();
 
+    std::unique_ptr<Expression> get_unique() override;
+
 	Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value);
 	Indexed();
 };
@@ -105,6 +115,8 @@ class KeywordExpression: public Expression
 	DataType t;
 	std::string keyword;
 public:
+    std::unique_ptr<Expression> get_unique() override;
+
 	std::string get_keyword();
 	DataType &get_type();
 	KeywordExpression(std::string keyword);
@@ -117,6 +129,8 @@ class AddressOf : public Expression
 	std::shared_ptr<Expression> target;
 public:
 	Expression &get_target();
+
+    std::unique_ptr<Expression> get_unique() override;
 
 	AddressOf(std::shared_ptr<Expression> target);
 	AddressOf();
@@ -133,6 +147,8 @@ public:
 
 	exp_operator get_operator();
 
+    std::unique_ptr<Expression> get_unique() override;
+
 	Binary(std::shared_ptr<Expression> left, std::shared_ptr<Expression> right, exp_operator op);
 	Binary();
 };
@@ -144,6 +160,8 @@ class Unary : public Expression
 public:
 	exp_operator get_operator();
 	Expression &get_operand();
+
+    std::unique_ptr<Expression> get_unique() override;
 
 	Unary(std::shared_ptr<Expression> operand, exp_operator op);
 	Unary();
@@ -161,6 +179,8 @@ public:
     Expression &get_arg(size_t arg_no);
     size_t get_num_args();
 
+    std::unique_ptr<Expression> get_unique() override;
+
     Procedure(std::shared_ptr<Expression> proc_name, std::shared_ptr<ListExpression> proc_args);
     Procedure(std::shared_ptr<Expression> proc_name, ListExpression *proc_args);
     Procedure();
@@ -175,6 +195,8 @@ public:
 	Expression &get_arg(size_t i);
 	size_t get_args_size();
 
+    std::unique_ptr<Expression> get_unique() override;
+
 	CallExpression(Procedure *proc);
 	CallExpression();
 };
@@ -182,12 +204,13 @@ public:
 // typecasting expressions
 class Cast : public Expression
 {
-	std::unique_ptr<Expression> to_cast;	// any expression can by typecast
+	std::unique_ptr<Expression> to_cast;	// any expression can be casted
 	DataType new_type;	// the new type for the expression
 public:
-	Expression &get_exp();
+    Expression &get_exp();
 	DataType &get_new_type();
-	Cast(Expression &to_cast, DataType new_type);
+	
+    Cast(Expression &to_cast, DataType new_type);
 	Cast(Binary &b);
 };
 
@@ -204,6 +227,8 @@ public:
 	Expression &get_selected();
 	attribute get_attribute();
 	DataType &get_data_type();
+
+    AttributeSelection(const AttributeSelection &old);
 	AttributeSelection(Expression &selected, std::string attribute_name);
 	AttributeSelection(Binary &to_deconstruct);
 };

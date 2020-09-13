@@ -26,7 +26,7 @@ std::shared_ptr<Expression> Parser::parse_expression(
 	lexeme current_lex = this->current_token();
 
 	// Create a pointer to our first value
-	std::shared_ptr<Expression> left(nullptr);
+	std::shared_ptr<Expression> left = nullptr;
 	bool is_const = false;
 
 	// first, check to see if we have the 'constexpr' keyword

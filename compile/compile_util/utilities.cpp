@@ -333,7 +333,9 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
 
     */
 
-    std::string inner_scope_name = def.get_name();
+    // todo: this function marks the scope name of parameters without mangling
+    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name(), scope_name) : def.get_name();
+    std::string inner_scope_name = name;
     unsigned int inner_scope_level = scope_level + 1;
     size_t stack_offset = 0;
 
@@ -452,7 +454,6 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
     }
 
     // construct the object
-    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name(), scope_name) : def.get_name();
     function_symbol to_return(
         name,
         def.get_type_information(),

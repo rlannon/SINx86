@@ -157,6 +157,10 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                 try {
                     hinted_type = type_hint->get_contained_types().at(i);
                     to_pass = &hinted_type;
+                }
+                catch (std::out_of_range &e) {
+                    hinted_type = type_hint->get_contained_types().at(0);
+                    to_pass = &hinted_type;
                 } catch (std::exception &e) {
                     to_pass = nullptr;
                 }
