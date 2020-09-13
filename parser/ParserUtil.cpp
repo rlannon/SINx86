@@ -94,17 +94,6 @@ const exp_operator Parser::translate_operator(std::string op_string) {
 	}
 }
 
-const exp_operator Parser::make_compound_operator(lexeme l, lexeme r) {
-	// using two lexemes, forms one operator if it can
-	exp_operator op = NO_OP;
-	if (is_valid_operator(l) && is_valid_operator(r)) {
-		std::string op_string = l.value + r.value;
-		op = translate_operator(op_string);
-	}
-	
-	return op;
-}
-
 const bool Parser::is_valid_copy_assignment_operator(exp_operator op) {
 	return (
 		op == EQUAL ||

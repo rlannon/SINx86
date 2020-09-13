@@ -48,7 +48,6 @@ class Parser
 
 	// translates an operator character into an exp_operator type
 	static const exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
-	static const exp_operator make_compound_operator(lexeme l, lexeme r);
 	static const bool is_valid_copy_assignment_operator(exp_operator op);
 	static const bool is_valid_move_assignment_operator(exp_operator op);
 	exp_operator read_operator(bool peek);
