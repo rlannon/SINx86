@@ -508,7 +508,8 @@ std::stringstream compiler::handle_return(ReturnStatement &ret, function_symbol 
     if (return_type.is_compatible(signature.get_data_type())) {
         // ensure we have a valid return type; we can't return local references
         if (signature.get_data_type().get_primary() == REFERENCE || signature.get_data_type().get_primary() == PTR) {
-            if (!return_type.get_qualities().is_dynamic() && !return_type.get_qualities().is_static()) {
+            DataType returned_subtype = return_type.get_subtype();
+            if (!returned_subtype.get_qualities().is_dynamic() && !returned_subtype.get_qualities().is_static()) {
                 throw CompilerException(
                     "References to automatic memory may not be returned",
                     compiler_errors::RETURN_AUTOMATIC_REFERENCE,
