@@ -397,23 +397,20 @@ DataType expression_util::get_expression_data_type(
         {
             // look into the symbol table to get the return type of the function
             CallExpression &call_exp = dynamic_cast<CallExpression&>(to_eval);
-            symbol *sym = nullptr;
-            if (call_exp.get_func_name().get_expression_type() == IDENTIFIER) {
-                auto &id = dynamic_cast<Identifier&>(call_exp.get_func_name());
-                sym = &symbols.find(id.getValue());
-            }
-            else {
-                // todo: other expression types
-                throw CompilerException("Unsupported feature");
-            }
+            symbol &sym = expression_util::get_function_symbol(
+                call_exp.get_func_name(),
+                structs,
+                symbols,
+                line
+            );
 
             // ensure the symbol is a function symbol
-            if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
+            if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
                 // get the function symbol
-                function_symbol *func_sym = dynamic_cast<function_symbol*>(sym);
+                function_symbol &func_sym = dynamic_cast<function_symbol&>(sym);
 
                 // get the return type data
-                type_information = func_sym->get_data_type();
+                type_information = func_sym.get_data_type();
             } else {
                 throw InvalidSymbolException(line);
             }
@@ -529,40 +526,101 @@ size_t expression_util::get_width(
     return width;
 }
 
-std::string expression_util::get_asm_function_label(
-    Expression &name_expression,
+symbol &expression_util::get_function_symbol(
+    Expression &func_name,
     struct_table &structs,
     symbol_table &symbols,
     unsigned int line
 ) {
     /*
 
-    get_asm_function_label
-    Gets the label used for the given function name expression
+    get_function_symbol
+    Gets a reference to the function_symbol referenced by the func_name Expression reference
 
     */
 
-    std::string function_label;
+    // todo: consider how this lookup scheme will work for proc objects
 
-    // todo: get label
-    exp_type name_exp_type = name_expression.get_expression_type();
-    switch (name_exp_type) {
-        case exp_type::IDENTIFIER:
+    exp_type name_exp_type = func_name.get_expression_type();
+    switch(name_exp_type) {
+        case IDENTIFIER:
         {
-            Identifier &ident = static_cast<Identifier&>(name_expression);
+            auto &id = static_cast<Identifier&>(func_name);
             try {
-                auto &func_sym = symbols.find(ident.getValue());
+                auto &s = symbols.find(id.getValue());
+                return s;
             }
             catch (SymbolNotFoundException &e) {
                 e.set_line(line);
                 throw e;
             }
+        }
+        case BINARY:
+        {
+            symbol *s = nullptr;
+            auto &bin = static_cast<Binary&>(func_name);
+            if (bin.get_operator() == DOT) {
+                auto &lhs_struct = expression_util::get_struct_type(bin.get_left(), structs, symbols, line);
+                try {
+                    auto &id = dynamic_cast<Identifier&>(bin.get_right());
+                    s = lhs_struct.get_member(id.getValue());
+                }
+                catch (std::bad_cast &e) {
+                    throw CompilerException(
+                        "Expected valid struct member name",
+                        compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+                        line
+                    );
+                }
+                catch (SymbolNotFoundException &e) {
+                    e.set_line(line);
+                    throw e;
+                }
+            }
+            else {
+                throw CompilerException(
+                    "Expected member selection expression",
+                    compiler_errors::STRUCT_MEMBER_SELECTION_ERROR,
+                    line
+                );
+            }
 
-            break;
+            // s can't be nullptr because any control path leading here will have initialized it
+            return *s;
         }
         default:
+            throw CompilerException(
+                "Illegal expression for procedure object",
+                compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+                line
+            );
             break;
     }
+}
 
-    return function_label;
+struct_info &expression_util::get_struct_type(
+    Expression &exp,
+    struct_table &structs,
+    symbol_table &symbols,
+    unsigned int line
+) {
+    /*
+
+    get_struct_type
+    Gets the struct type for the LHS of an expression
+
+    */
+
+    DataType lhs_type = get_expression_data_type(exp, symbols, structs, line);
+    if (lhs_type.get_primary() == STRUCT) {
+        auto &si = structs.find(lhs_type.get_struct_name(), line);
+        return si;
+    }
+    else {
+        throw CompilerException(
+            "Expected struct type",
+            compiler_errors::STRUCT_TYPE_EXPECTED_ERROR,
+            line
+        );
+    }
 }

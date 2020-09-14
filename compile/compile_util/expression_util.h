@@ -48,8 +48,15 @@ namespace expression_util {
         unsigned int line
     );
 
-    std::string get_asm_function_label(
-        Expression &name_expression,
+    symbol &get_function_symbol(
+        Expression &func_name,
+        struct_table &structs,
+        symbol_table &symbols,
+        unsigned int line
+    );
+
+    struct_info &get_struct_type(
+        Expression &exp,
         struct_table &structs,
         symbol_table &symbols,
         unsigned int line

@@ -28,14 +28,7 @@ symbol *struct_info::get_member(std::string name)
 	
 	*/
 
-    symbol *s = nullptr;
-	try {
-		s = &this->members.find(name, this->struct_name);
-    }
-	catch (SymbolNotFoundException & e) {
-		throw e;
-	}
-
+    symbol *s = &this->members.find(name, this->struct_name);
     return s;
 }
 

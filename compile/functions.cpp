@@ -229,30 +229,23 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     size_t count = 0;
 
     // first, look up the function
-    symbol *sym = nullptr;
-
-    if (call.get_func_name().get_expression_type() == IDENTIFIER) {
-        auto &id = dynamic_cast<Identifier&>(call.get_func_name());
-        sym = this->lookup(id.getValue(), line);
-    }
-    else {
-        // todo: other exp types
-        throw CompilerException(
-            "Unsupported feature",
-            compiler_errors::UNSUPPORTED_FEATURE,
-            line
-        );
-    }
+    symbol &sym = expression_util::get_function_symbol(
+        call.get_func_name(),
+        this->structs,
+        this->symbols,
+        line
+    );
 
     // if the function returns a reference type, we need to increment the count
-    if (sym->get_data_type().is_reference_type()) {
+    if (sym.get_data_type().is_reference_type()) {
         count = 1;
     }
 
     // ensure we have a function
-    if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
+    // todo: data types could be valid as well -- proc type
+    if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
         // cast to the correct type
-        function_symbol func_sym = *dynamic_cast<function_symbol*>(sym);
+        function_symbol &func_sym = dynamic_cast<function_symbol&>(sym);
 
         // if we aren't allowing a void return type, then throw an exception if the primary type is void
         if (!allow_void && func_sym.get_data_type().get_primary() == VOID) {
