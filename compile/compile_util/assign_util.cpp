@@ -24,7 +24,7 @@ assign_utilities::destination_information::destination_information(
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
-    std::shared_ptr<Expression> exp,
+    Expression &exp,
     symbol_table &symbols,
     struct_table &structures,
     std::string scope_name,
@@ -52,10 +52,10 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     MoveInstruction instruction_used;
 
     // generate code based on the expression type
-    if (exp->get_expression_type() == IDENTIFIER) {
+    if (exp.get_expression_type() == IDENTIFIER) {
         // get the symbol information
-        auto lhs = dynamic_cast<Identifier*>(exp.get());
-        auto sym = symbols.find(lhs->getValue());
+        auto &lhs = dynamic_cast<Identifier&>(exp);
+        auto sym = symbols.find(lhs.getValue());
         auto p = fetch_destination_operand(*sym, symbols, line, r, is_initialization);
         dest = p.dest_location;
         address_for_lea = p.address_for_lea;
@@ -67,15 +67,15 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         // marks the symbol as initialized
         sym->set_initialized();
     }
-    else if (exp->get_expression_type() == UNARY) {
+    else if (exp.get_expression_type() == UNARY) {
         // get the unary
-        auto lhs = dynamic_cast<Unary*>(exp.get());
-        if (lhs->get_operator() == exp_operator::DEREFERENCE) {
+        auto &lhs = dynamic_cast<Unary&>(exp);
+        if (lhs.get_operator() == exp_operator::DEREFERENCE) {
             // ensure the expression has a pointer type; else, indirection is illegal
-            auto op_t = expression_util::get_expression_data_type(lhs->get_operand(), symbols, structures, line);
+            auto op_t = expression_util::get_expression_data_type(lhs.get_operand(), symbols, structures, line);
             if (op_t.get_primary() == PTR) {
                 auto fetched = fetch_destination_operand(
-                    lhs->get_operand(),
+                    lhs.get_operand(),
                     symbols,
                     structures,
                     scope_name,
@@ -104,9 +104,9 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             throw NonModifiableLValueException(line);
         }
     }
-    else if (exp->get_expression_type() == BINARY) {
-        auto lhs = dynamic_cast<Binary*>(exp.get());
-        if (lhs->get_operator() == DOT) {
+    else if (exp.get_expression_type() == BINARY) {
+        auto &lhs = dynamic_cast<Binary&>(exp);
+        if (lhs.get_operator() == DOT) {
             dest = "[rbx]";
             gen_code << expression_util::get_exp_address(exp, symbols, structures, r, line).str();
             can_use_lea = false;
@@ -117,7 +117,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             throw NonModifiableLValueException(line);
         }
     }
-    else if (exp->get_expression_type() == INDEXED) {
+    else if (exp.get_expression_type() == INDEXED) {
         /*
 
         Indexed expressions can't be evaluated properly by this utility
@@ -243,7 +243,7 @@ bool assign_utilities::requires_copy(DataType t) {
     );
 }
 
-bool assign_utilities::is_valid_move_expression(std::shared_ptr<Expression> exp) {
+bool assign_utilities::is_valid_move_expression(Expression &exp) {
     /*
 
     is_valid_move_expression
@@ -261,23 +261,23 @@ bool assign_utilities::is_valid_move_expression(std::shared_ptr<Expression> exp)
     bool is_valid;
 
     if (
-        exp->get_expression_type() == LITERAL ||
-        exp->get_expression_type() == CALL_EXP
+        exp.get_expression_type() == LITERAL ||
+        exp.get_expression_type() == CALL_EXP
     ) {
         is_valid = false;
     }
-    else if (exp->get_expression_type() == BINARY) {
-        auto b = dynamic_cast<Binary*>(exp.get());
-        if (b->get_operator() == DOT) {
+    else if (exp.get_expression_type() == BINARY) {
+        auto &b = dynamic_cast<Binary&>(exp);
+        if (b.get_operator() == DOT) {
             is_valid = true;
         }
         else {
             is_valid = false;
         }
     }
-    else if (exp->get_expression_type() == UNARY) {
-        auto u = dynamic_cast<Unary*>(exp.get());
-        if (u->get_operator() == DEREFERENCE) {
+    else if (exp.get_expression_type() == UNARY) {
+        auto &u = dynamic_cast<Unary&>(exp);
+        if (u.get_operator() == DEREFERENCE) {
             is_valid = true;
         }
         else {

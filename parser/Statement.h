@@ -102,9 +102,9 @@ public:
 	bool is_function() const;
 	bool is_struct() const;
 
-	std::shared_ptr<Expression> get_initial_value();
+	Expression *get_initial_value();
 
-	std::vector<std::shared_ptr<Statement>> get_formal_parameters();
+	std::vector<Statement*> get_formal_parameters();
 	calling_convention get_calling_convention() const;
 
 	Declaration(DataType type, std::string var_name, std::shared_ptr<Expression> initial_value = std::make_shared<Expression>(EXPRESSION_GENERAL), bool is_function = false, bool is_struct = false, std::vector<std::shared_ptr<Statement>> formal_parameters = {});
@@ -151,7 +151,7 @@ public:
 	std::string get_name();
 
 	bool was_initialized();
-	std::shared_ptr<Expression> get_initial_value();
+	Expression *get_initial_value();
 
 	Allocation(DataType type_information, std::string value, bool was_initialized = false, std::shared_ptr<Expression> initial_value = std::make_shared<Expression>());	// use default parameters to allow us to use alloc-define syntax, but we don't have to
 	Allocation();
@@ -163,8 +163,8 @@ class Assignment : public Statement
 	std::shared_ptr<Expression> rvalue_ptr;
 public:
 	// get the variables / expressions themselves
-	std::shared_ptr<Expression> get_lvalue();
-	std::shared_ptr<Expression> get_rvalue();
+	Expression &get_lvalue();
+	Expression &get_rvalue();
 
 	Assignment(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue);
 	Assignment(Identifier lvalue, std::shared_ptr<Expression> rvalue);
@@ -182,7 +182,7 @@ class ReturnStatement : public Statement
 {
 	std::shared_ptr<Expression> return_exp;
 public:
-	std::shared_ptr<Expression> get_return_exp();
+	Expression &get_return_exp();
 
 	ReturnStatement(std::shared_ptr<Expression> exp_ptr);
 	ReturnStatement();
@@ -194,9 +194,9 @@ class IfThenElse : public Statement
 	std::shared_ptr<Statement> if_branch;	// branches may be single statements or scope blocks
 	std::shared_ptr<Statement> else_branch;
 public:
-	std::shared_ptr<Expression> get_condition();
-	std::shared_ptr<Statement> get_if_branch();
-	std::shared_ptr<Statement> get_else_branch();
+	Expression &get_condition();
+	Statement *get_if_branch();
+	Statement *get_else_branch();
 
 	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr);
 	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr);
@@ -208,8 +208,8 @@ class WhileLoop : public Statement
 	std::shared_ptr<Expression> condition;
 	std::shared_ptr<Statement> branch;
 public:
-	std::shared_ptr<Expression> get_condition();
-	std::shared_ptr<Statement> get_branch();
+	Expression &get_condition();
+	Statement *get_branch();
 
 	WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch);
 	WhileLoop();
@@ -229,10 +229,10 @@ class Definition: public Statement
 	// The parent class for definitions
 protected:
 	std::string name;
-	std::shared_ptr<StatementBlock> procedure;
+	std::shared_ptr<StatementBlock> procedure;  // does this need to be a shared_ptr?
 public:
 	std::string get_name();
-	std::shared_ptr<StatementBlock> get_procedure();
+	StatementBlock &get_procedure();
 
 	Definition(std::string name, std::shared_ptr<StatementBlock> procedure);
 	Definition();
@@ -248,7 +248,7 @@ class FunctionDefinition : public Definition
 	calling_convention call_con;
 public:
 	DataType &get_type_information();
-	std::vector<std::shared_ptr<Statement>> get_formal_parameters();
+	std::vector<Statement*> get_formal_parameters();
 	calling_convention get_calling_convention();
 
 	FunctionDefinition(
@@ -273,11 +273,11 @@ class Call : public Statement
 {
 	CallExpression call_exp;
 public:
-	Expression *get_func_name();
+	Expression &get_func_name();
     CallExpression &get_call_expression();
 	size_t get_args_size();
-	Expression *get_arg(size_t index);	// get one argument
-	std::vector<std::shared_ptr<Expression>> get_args();	// get all arguments
+	Expression &get_arg(size_t index);	// get one argument
+	std::vector<Expression*> get_args();	// get all arguments
 
 	Call(CallExpression call_exp);
 	Call();
@@ -297,7 +297,7 @@ class FreeMemory : public Statement
 {
 	std::shared_ptr<Expression> to_free;
 public:
-	std::shared_ptr<Expression> get_freed_memory();
+	Expression &get_freed_memory();
 
 	FreeMemory(std::shared_ptr<Expression> to_free);
 	FreeMemory();

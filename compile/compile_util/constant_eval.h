@@ -23,10 +23,11 @@ This file contains the function/class declarations required for the compiler's c
 // must be forward-declared to avoid a circular dependency
 namespace expression_util {
 	DataType get_expression_data_type(
-		std::shared_ptr<Expression> to_eval,
+		Expression &to_eval,
 		symbol_table& symbols,
 		struct_table& structs,
-		unsigned int line
+		unsigned int line,
+        DataType *type_hint
 	);
 }
 
@@ -55,7 +56,7 @@ class compile_time_evaluator {
 public:
 	void add_constant(Allocation &alloc, symbol &s);	// located in utility file
 
-	std::string evaluate_expression(std::shared_ptr<Expression> to_evaluate, std::string scope_name, unsigned int scope_level, unsigned int line);
+	std::string evaluate_expression(Expression &to_evaluate, std::string scope_name, unsigned int scope_level, unsigned int line);
 
 	compile_time_evaluator();
 	compile_time_evaluator(struct_table* structs);

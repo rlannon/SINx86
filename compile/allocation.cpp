@@ -128,7 +128,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                 else if (alloc_data.get_array_length_expression()) {
                     allocation_ss << "\t" << "push rax" << std::endl;
                     // todo: push used registers?
-                    allocation_ss << this->evaluate_expression(alloc_data.get_array_length_expression(), alloc_stmt.get_line_number()).first << std::endl;
+                    allocation_ss << this->evaluate_expression(*alloc_data.get_array_length_expression(), alloc_stmt.get_line_number()).first << std::endl;
                     allocation_ss << "\t" << "pop rbx" << std::endl;
                 }
                 else {
@@ -143,7 +143,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// ensure we handle alloc-init for dynamic objects
 			if (alloc_stmt.was_initialized()) {
 				auto initial_value = alloc_stmt.get_initial_value();
-				allocation_ss << this->handle_alloc_init(allocated, initial_value, alloc_stmt.get_line_number()).str();
+				allocation_ss << this->handle_alloc_init(allocated, *initial_value, alloc_stmt.get_line_number()).str();
 
 				allocated.set_initialized();
 			}
@@ -187,7 +187,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			std::string initial_value = "";
 			if (alloc_stmt.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
 				initial_value = this->evaluator.evaluate_expression(
-					alloc_stmt.get_initial_value(), 
+					*alloc_stmt.get_initial_value(), 
 					"global", 
 					0, 
 					alloc_stmt.get_line_number()
@@ -314,7 +314,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
 				// get the initial value
-				std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
+				auto &initial_value = *alloc_stmt.get_initial_value();
 
 				// make an assignment of 'initial_value' to 'allocated'
 				allocation_ss << this->handle_alloc_init(allocated, initial_value, alloc_stmt.get_line_number()).str();
@@ -362,7 +362,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                     // we only need to do this for non-dynamic arrays
                     if (m->get_data_type().get_primary() == ARRAY) {
                         // evaluate the array length expression and move it (an integer) into [R15 + offset]
-                        auto alloc_p = this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
+                        auto alloc_p = this->evaluate_expression(*m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
                         allocation_ss << alloc_p.first;
 
                         // reserve space for dynamic arrays; move it in

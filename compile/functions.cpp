@@ -72,7 +72,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     function_symbol func_sym = create_function_symbol(definition);
     return this->define_function(
         func_sym,
-        *definition.get_procedure().get(),
+        definition.get_procedure(),
         definition.get_line_number()
     );
 }
@@ -185,7 +185,7 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
     this->max_offset += sin_widths::PTR_WIDTH;
 
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
-    procedure_ss = this->compile_ast(prog, std::make_shared<function_symbol>(func_sym));
+    procedure_ss = this->compile_ast(prog, &func_sym);
 
     // now, put everything together in definition_ss by adding procedure_ss onto the end
     definition_ss << procedure_ss.str() << std::endl;
@@ -231,9 +231,9 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     // first, look up the function
     symbol *sym = nullptr;
 
-    if (call.get_func_name()->get_expression_type() == IDENTIFIER) {
-        Identifier *id = dynamic_cast<Identifier*>(call.get_func_name());
-        sym = this->lookup(id->getValue(), line);
+    if (call.get_func_name().get_expression_type() == IDENTIFIER) {
+        auto &id = dynamic_cast<Identifier&>(call.get_func_name());
+        sym = this->lookup(id.getValue(), line);
     }
     else {
         // todo: other exp types
@@ -296,6 +296,21 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     /*
 
     sincall
+    Overloaded version to handle a vector of shared pointers
+
+    */
+
+    std::vector<Expression*> to_pass;
+    for (auto elem: args) {
+        to_pass.push_back(elem.get());
+    }
+    return this->sincall(s, to_pass, line);
+}
+
+std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> args, unsigned int line) {
+    /*
+
+    sincall
     Generates stack set-up code for the SIN calling convention
 
     For more information on this calling convention, see doc/Calling Convention.md
@@ -339,18 +354,18 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         // iterate over our arguments, ensure the types match and that we have an appropriate number
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
-            std::shared_ptr<Expression> arg = args[i];
+            Expression *arg = args.at(i);
             symbol &param = formal_parameters[i];
 
             // first, ensure the types match
-            DataType arg_type = expression_util::get_expression_data_type(arg, this->symbols, this->structs, line);
+            DataType arg_type = expression_util::get_expression_data_type(*arg, this->symbols, this->structs, line);
             if (!arg_type.is_compatible(param.get_data_type())) {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
             }
             
             // evaluate the expression and pass it in the appropriate manner
-            auto arg_p = this->evaluate_expression(arg, line, &arg_type);
+            auto arg_p = this->evaluate_expression(*arg, line, &arg_type);
             sincall_ss << arg_p.first;
 
             std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
@@ -449,7 +464,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     return sincall_ss;
 }
 
-std::stringstream compiler::system_v_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line)
+std::stringstream compiler::system_v_call(function_symbol s, std::vector<Expression*> args, unsigned int line)
 {
     std::stringstream system_v_call_ss;
 
@@ -458,7 +473,7 @@ std::stringstream compiler::system_v_call(function_symbol s, std::vector<std::sh
     return system_v_call_ss;
 }
 
-std::stringstream compiler::win64_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line)
+std::stringstream compiler::win64_call(function_symbol s, std::vector<Expression*> args, unsigned int line)
 {
     std::stringstream win64_call_ss;
 
@@ -469,7 +484,7 @@ std::stringstream compiler::win64_call(function_symbol s, std::vector<std::share
 
 // Function returns
 
-std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol signature) {
+std::stringstream compiler::handle_return(ReturnStatement &ret, function_symbol &signature) {
     /*
 
     handle_return
@@ -493,7 +508,8 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     if (return_type.is_compatible(signature.get_data_type())) {
         // ensure we have a valid return type; we can't return local references
         if (signature.get_data_type().get_primary() == REFERENCE || signature.get_data_type().get_primary() == PTR) {
-            if (!return_type.get_qualities().is_dynamic() && !return_type.get_qualities().is_static()) {
+            DataType returned_subtype = return_type.get_subtype();
+            if (!returned_subtype.get_qualities().is_dynamic() && !returned_subtype.get_qualities().is_static()) {
                 throw CompilerException(
                     "References to automatic memory may not be returned",
                     compiler_errors::RETURN_AUTOMATIC_REFERENCE,

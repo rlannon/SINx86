@@ -209,7 +209,7 @@ std::string get_rax_name_variant(DataType t, unsigned int line) {
 	return reg_string;
 }
 
-struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte) {
+struct_info define_struct(StructDefinition &definition, compile_time_evaluator &cte) {
     /*
     
     define_struct
@@ -230,7 +230,7 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
     // iterate through our definition statements and create symbols for all struct members
     std::vector<std::shared_ptr<symbol>> members;
     size_t current_offset = 0;
-    for (auto s: definition.get_procedure()->statements_list) {
+    for (auto s: definition.get_procedure().statements_list) {
         size_t this_width = 0;
 
         // Only allocations are allowed within a struct body
@@ -249,18 +249,23 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
             // todo: once references are enabled, disallow those as well -- they can't be null, so that would cause infinite recursion, too
             else if (alloc->get_type_information().get_primary() == ARRAY) {
                 // arrays must have constant lengths or be dynamic
-                if (alloc->get_type_information().get_array_length_expression()->is_const()) {
-                    size_t array_length = stoul(
-                        cte.evaluate_expression(
-                            alloc->get_type_information().get_array_length_expression(),
-                            definition.get_name(),
-                            1,
-                            definition.get_line_number()
-                        )
-                    );
-                    array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
-                    alloc->get_type_information().set_array_length(array_length);
-                    this_width = array_length;
+                if (alloc->get_type_information().get_array_length_expression()) {
+                    if (alloc->get_type_information().get_array_length_expression()->is_const()) {
+                        size_t array_length = stoul(
+                            cte.evaluate_expression(
+                                *alloc->get_type_information().get_array_length_expression(),
+                                definition.get_name(),
+                                1,
+                                definition.get_line_number()
+                            )
+                        );
+                        array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
+                        alloc->get_type_information().set_array_length(array_length);
+                        this_width = array_length;
+                    }
+                    else {
+                        throw NonConstArrayLengthException(definition.get_line_number());
+                    }
                 }
                 else {
                     throw NonConstArrayLengthException(definition.get_line_number());
@@ -328,7 +333,9 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
 
     */
 
-    std::string inner_scope_name = def.get_name();
+    // todo: this function marks the scope name of parameters without mangling
+    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name(), scope_name) : def.get_name();
+    std::string inner_scope_name = name;
     unsigned int inner_scope_level = scope_level + 1;
     size_t stack_offset = 0;
 
@@ -378,7 +385,7 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
 
         // cast to the appropriate symbol type
         if (param->get_statement_type() == DECLARATION) {
-            Declaration *param_decl = dynamic_cast<Declaration*>(param.get());
+            Declaration *param_decl = dynamic_cast<Declaration*>(param);
             param_sym = generate_symbol(
                 *param_decl,
                 param_decl->get_type_information().get_width(),
@@ -387,7 +394,7 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
                 stack_offset
             );
         } else if (param->get_statement_type() == ALLOCATION) {
-            Allocation *param_alloc = dynamic_cast<Allocation*>(param.get());
+            Allocation *param_alloc = dynamic_cast<Allocation*>(param);
             DataType t = param_alloc->get_type_information();
             param_sym = generate_symbol(
                 *param_alloc,
@@ -447,7 +454,6 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
     }
 
     // construct the object
-    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name(), scope_name) : def.get_name();
     function_symbol to_return(
         name,
         def.get_type_information(),

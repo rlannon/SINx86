@@ -214,7 +214,8 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			to_evaluate.get_right(),
 			this->symbols,
 			this->structs,
-			line
+			line,
+            &left_type
 		);
 
 		Type primary = left_type.get_primary();

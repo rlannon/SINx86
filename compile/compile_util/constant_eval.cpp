@@ -47,7 +47,13 @@ std::string compile_time_evaluator::evaluate_unary(Unary & exp, std::string scop
 	*/
 
 	// first, ensure we have an appropriate data type
-	DataType exp_data_type = expression_util::get_expression_data_type(exp.get_operand(), *this->constants, *this->structs, line);
+	DataType exp_data_type = expression_util::get_expression_data_type(
+        exp.get_operand(),
+        *this->constants,
+        *this->structs,
+        line,
+        nullptr
+    );
 	if (exp_data_type.get_primary() == BOOL || exp_data_type.get_primary() == INT || exp_data_type.get_primary() == FLOAT) {
 		// evaluate the operand
 		std::string evaluated = this->evaluate_expression(exp.get_operand(), scope_name, scope_level, line);
@@ -113,7 +119,7 @@ std::string compile_time_evaluator::evaluate_binary(Binary & exp, std::string sc
 	return std::string();
 }
 
-std::string compile_time_evaluator::evaluate_expression(std::shared_ptr<Expression> to_evaluate, std::string scope_name, unsigned int scope_level, unsigned int line)
+std::string compile_time_evaluator::evaluate_expression(Expression &to_evaluate, std::string scope_name, unsigned int scope_level, unsigned int line)
 {
 	/*
 	
@@ -130,23 +136,23 @@ std::string compile_time_evaluator::evaluate_expression(std::shared_ptr<Expressi
 
 	std::string evaluated_expression = "";
 
-	if (to_evaluate->get_expression_type() == LITERAL) {
-		Literal exp = *dynamic_cast<Literal*>(to_evaluate.get());
+	if (to_evaluate.get_expression_type() == LITERAL) {
+		Literal &exp = dynamic_cast<Literal&>(to_evaluate);
 		evaluated_expression = compile_time_evaluator::evaluate_literal(exp);
 	}
-	else if (to_evaluate->get_expression_type() == IDENTIFIER) {
-		Identifier lvalue = *dynamic_cast<Identifier*>(to_evaluate.get());
+	else if (to_evaluate.get_expression_type() == IDENTIFIER) {
+		Identifier &lvalue = dynamic_cast<Identifier&>(to_evaluate);
 		evaluated_expression = this->evaluate_lvalue(lvalue, scope_name, scope_level, line);
 	}
-	else if (to_evaluate->get_expression_type() == UNARY) {
-		Unary unary = *dynamic_cast<Unary*>(to_evaluate.get());
+	else if (to_evaluate.get_expression_type() == UNARY) {
+		Unary &unary = dynamic_cast<Unary&>(to_evaluate);
 		evaluated_expression = this->evaluate_unary(unary, scope_name, scope_level, line);
 	}
-	else if (to_evaluate->get_expression_type() == LIST) {
+	else if (to_evaluate.get_expression_type() == LIST) {
 		// for lists, just evaluate each element individually and concatenate
-		auto l = dynamic_cast<ListExpression*>(to_evaluate.get());
-		for (auto elem: l->get_list()) {
-			evaluated_expression += this->evaluate_expression(elem, scope_name, scope_level, line) + ",";
+		auto &l = dynamic_cast<ListExpression&>(to_evaluate);
+		for (auto elem: l.get_list()) {
+			evaluated_expression += this->evaluate_expression(*elem, scope_name, scope_level, line) + ",";
 		}
 	}
 	// todo: more expression types
@@ -165,10 +171,13 @@ compile_time_evaluator::compile_time_evaluator(struct_table* structs)
 }
 
 compile_time_evaluator::compile_time_evaluator() {
-	this->constants = nullptr;
+	this->constants = new symbol_table();
 	this->structs = nullptr;
 }
 
 compile_time_evaluator::~compile_time_evaluator()
 {
+    if (this->constants) {
+        delete this->constants;
+    }
 }

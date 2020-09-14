@@ -43,7 +43,7 @@ namespace assign_utilities {
     };
 
     destination_information fetch_destination_operand(
-        std::shared_ptr<Expression> exp,
+        Expression &exp,
         symbol_table &symbols,
         struct_table &structures,
         std::string scope_name,
@@ -60,5 +60,5 @@ namespace assign_utilities {
         bool is_initialization = false
     );
     bool requires_copy(DataType t);
-    bool is_valid_move_expression(std::shared_ptr<Expression> exp);
+    bool is_valid_move_expression(Expression &exp);
 };

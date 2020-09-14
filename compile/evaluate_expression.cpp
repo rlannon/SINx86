@@ -13,7 +13,7 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 // todo: create an expression evaluation class and give it access to compiler members?
 std::pair<std::string, size_t> compiler::evaluate_expression(
-    std::shared_ptr<Expression> to_evaluate,
+    Expression &to_evaluate,
     unsigned int line,
     DataType *type_hint
 ) {
@@ -42,11 +42,11 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
     size_t count = 0;
 
     // The expression evaluation depends on the expression's type
-    switch (to_evaluate->get_expression_type()) {
+    switch (to_evaluate.get_expression_type()) {
         case LITERAL:
         {
             // get the literal
-            Literal literal_exp = *dynamic_cast<Literal*>(to_evaluate.get());
+            Literal &literal_exp = dynamic_cast<Literal&>(to_evaluate);
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_literal(literal_exp, line, type_hint);
@@ -55,7 +55,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case IDENTIFIER:
         {
             // get the lvalue
-            Identifier lvalue_exp = *dynamic_cast<Identifier*>(to_evaluate.get());
+            Identifier &lvalue_exp = dynamic_cast<Identifier&>(to_evaluate);
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_identifier(lvalue_exp, line);
@@ -95,8 +95,8 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
             // get our type information
             DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
-            auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
-            t.set_primary(le->get_list_type());
+            auto &le = dynamic_cast<ListExpression&>(to_evaluate);
+            t.set_primary(le.get_list_type());
 
             size_t width = expression_util::get_width(
                 t,
@@ -122,7 +122,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
             if (t.get_primary() == ARRAY) {
                 // write in the length if we have an array
-                evaluation_ss << "\t" << "mov eax, " << le->get_list().size() << std::endl;
+                evaluation_ss << "\t" << "mov eax, " << le.get_list().size() << std::endl;
                 evaluation_ss << "\t" << "mov [r15], eax" << std::endl;
 
                 // increment the pointer by one dword
@@ -130,10 +130,10 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             }
 
             // now, iterate
-            for (size_t i = 0; i < le->get_list().size(); i++) {
+            for (size_t i = 0; i < le.get_list().size(); i++) {
                 // first, make sure the type of this expression matches the list's subtype
-                auto m = le->get_list().at(i);
-                DataType member_type = expression_util::get_expression_data_type(m, this->symbols, this->structs, line);
+                auto m = le.get_list().at(i);
+                DataType member_type = expression_util::get_expression_data_type(*m, this->symbols, this->structs, line);
                 
                 // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
                 if (t.get_primary() == ARRAY && member_type != t.get_subtype()) {
@@ -157,11 +157,15 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                 try {
                     hinted_type = type_hint->get_contained_types().at(i);
                     to_pass = &hinted_type;
+                }
+                catch (std::out_of_range &e) {
+                    hinted_type = type_hint->get_contained_types().at(0);
+                    to_pass = &hinted_type;
                 } catch (std::exception &e) {
                     to_pass = nullptr;
                 }
 
-                auto member_p = this->evaluate_expression(m, line, to_pass);
+                auto member_p = this->evaluate_expression(*m, line, to_pass);
                 evaluation_ss << member_p.first;
                 count += member_p.second;
 
@@ -206,7 +210,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                     res_instruction = "resb";
                 }
                 this->bss_segment << list_label << ": resd 1" << std::endl; 
-                this->bss_segment << list_label << "_data: " << res_instruction << " " << le->get_list().size() << std::endl;
+                this->bss_segment << list_label << "_data: " << res_instruction << " " << le.get_list().size() << std::endl;
             }
             else {
                 this->bss_segment << list_label << ": resb " << width << std::endl;
@@ -217,7 +221,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case BINARY:
         {
 			// cast to Binary class and dispatch
-			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
+			Binary &bin_exp = dynamic_cast<Binary&>(to_evaluate);
             auto bin_p = this->evaluate_binary(bin_exp, line, type_hint);
             evaluation_ss << bin_p.first;
             count += bin_p.second;
@@ -228,14 +232,14 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case UNARY:
         {
-			Unary unary_exp = *dynamic_cast<Unary*>(to_evaluate.get());
+			Unary &unary_exp = dynamic_cast<Unary&>(to_evaluate);
 			evaluation_ss << this->evaluate_unary(unary_exp, line, type_hint).str();
             // todo: clean up unary?
             break;
         }
         case CALL_EXP:
         {
-            CallExpression call_exp = *dynamic_cast<CallExpression*>(to_evaluate.get());
+            CallExpression &call_exp = dynamic_cast<CallExpression&>(to_evaluate);
             auto call_p = this->call_function(call_exp, line, false);  // don't allow void functions here
             
             // add the call code
@@ -253,33 +257,33 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case CAST:
         {
-            auto c = dynamic_cast<Cast*>(to_evaluate.get());
+            auto &c = dynamic_cast<Cast&>(to_evaluate);
 
             // ensure the type to which we are casting is valid
-            if (DataType::is_valid_type(c->get_new_type())) {
+            if (DataType::is_valid_type(c.get_new_type())) {
                 // check to make sure the typecast itself is valid (follows the rules)
-                DataType old_type = expression_util::get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
-                if (is_valid_cast(old_type, c->get_new_type())) {
+                DataType old_type = expression_util::get_expression_data_type(c.get_exp(), this->symbols, this->structs, line);
+                if (is_valid_cast(old_type, c.get_new_type())) {
                     // if we are casting a literal integer or float to itself (but with a different width), create a new Literal
                     if (
-                        (c->get_exp()->get_expression_type() == LITERAL) &&
-                        (old_type.get_primary() == c->get_new_type().get_primary()) &&
+                        (c.get_exp().get_expression_type() == LITERAL) &&
+                        (old_type.get_primary() == c.get_new_type().get_primary()) &&
                         (old_type.get_primary() == INT || old_type.get_primary() == FLOAT)
                     ) {
                         // update the type
-                        std::shared_ptr<Literal> contained = std::dynamic_pointer_cast<Literal>(c->get_exp());
-                        contained->set_type(c->get_new_type());
+                        auto &contained = static_cast<Literal&>(c.get_exp());
+                        contained.set_type(c.get_new_type());
 
                         // now, evaluate
                         evaluation_ss << this->evaluate_expression(contained, line, type_hint).first;
                     }
                     else {
                         // to perform the typecast, we must first evaluate the expression to be casted
-                        auto cast_p = this->evaluate_expression(c->get_exp(), line, type_hint);
+                        auto cast_p = this->evaluate_expression(c.get_exp(), line, type_hint);
                         evaluation_ss << cast_p.first;
 
                         // now, use the utility function to actually cast the type
-                        evaluation_ss << cast(old_type, c->get_new_type(), line).str();
+                        evaluation_ss << cast(old_type, c.get_new_type(), line).str();
                     }
                 }
                 else {
@@ -293,12 +297,12 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case ATTRIBUTE:
         {
-            auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
-            auto t = expression_util::get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
-            auto attr_p = this->evaluate_expression(attr->get_selected(), line, type_hint);
+            auto &attr = dynamic_cast<AttributeSelection&>(to_evaluate);
+            auto t = expression_util::get_expression_data_type(attr.get_selected(), this->symbols, this->structs, line);
+            auto attr_p = this->evaluate_expression(attr.get_selected(), line, type_hint);
 
             // we have a limited number of attributes
-            if (attr->get_attribute() == LENGTH) {
+            if (attr.get_attribute() == LENGTH) {
                 /*
 
                 length attribute
@@ -326,7 +330,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                     evaluation_ss << "\t" << "mov eax, 1" << std::endl;
                 }
             }
-            else if (attr->get_attribute() == SIZE) {
+            else if (attr.get_attribute() == SIZE) {
                 /*
                 
                 size attribute
@@ -358,7 +362,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                     evaluation_ss << "\t" << "mov eax, " << t.get_width() << std::endl;
                 }
             }
-            else if (attr->get_attribute() == VARIABILITY) {
+            else if (attr.get_attribute() == VARIABILITY) {
                 // todo: variability
                 throw CompilerException("Not yet implemented", compiler_errors::UNKNOWN_ATTRIBUTE, line);
             }
@@ -711,7 +715,12 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     
     std::stringstream eval_ss;
 
-    DataType to_index_type = expression_util::get_expression_data_type(to_evaluate.get_to_index(), this->symbols, this->structs, line);
+    DataType to_index_type = expression_util::get_expression_data_type(
+        to_evaluate.get_to_index(),
+        this->symbols,
+        this->structs,
+        line
+    );
     if (is_subscriptable(to_index_type.get_primary())) {
         // todo: evaluate indexed
         eval_ss << "\t" << "; todo: subscripting" << std::endl;

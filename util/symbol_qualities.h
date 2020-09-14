@@ -24,7 +24,7 @@ class symbol_qualities
 	bool static_q;
 	bool dynamic_q;
 	bool signed_q;
-	bool unsigned_q;
+    bool _listed_unsigned;
 	bool long_q;
 	bool short_q;
 	bool extern_q;
@@ -55,12 +55,14 @@ public:
 	bool is_c64();
 	bool is_windows();
 
+    bool has_sign_quality();
+
 	// void add_qualities(std::vector<SymbolQuality> to_add);
 	void add_qualities(symbol_qualities to_add);
     void add_quality(SymbolQuality to_add);
 
 	symbol_qualities(std::vector<SymbolQuality> qualities);
-	symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long = false, bool is_short = false, bool is_extern = false);
+	symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_long = false, bool is_short = false, bool is_extern = false);
 	symbol_qualities();
 	~symbol_qualities();
 };

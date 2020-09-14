@@ -467,9 +467,6 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 	// get the operator character, make sure it's an equals sign
 	lexeme op_lex = this->next();
 	exp_operator op = translate_operator(op_lex.value);
-	if (op != EQUAL) {
-		op = make_compound_operator(op_lex, this->next());
-	}
 
 	if (is_valid_copy_assignment_operator(op)) {
 		// if the next lexeme is not a semicolon and the next lexeme's line number is the same as the current lexeme's line number, we are ok

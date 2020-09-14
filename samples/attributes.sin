@@ -2,7 +2,7 @@
 // demo of :len, etc.
 
 def int main() {
-    alloc array<10, int> myarr;
+    alloc array<10, int> myarr; // todo: ensure that the length of this array can be accessed before assignment (as its initialization d/n affect its length)
     alloc int i: 0;
 
     while (i < myarr:len) {
