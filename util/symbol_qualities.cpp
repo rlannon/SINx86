@@ -30,7 +30,6 @@ bool symbol_qualities::operator==(const symbol_qualities& right) const {
 		(this->long_q == right.long_q) &&
 		(this->short_q == right.short_q) &&
 		(this->signed_q == right.signed_q) &&
-		(this->unsigned_q == right.unsigned_q) &&
 		(this->const_q == right.const_q) &&
 		(this->final_q == right.final_q) &&
 		(this->dynamic_q == right.dynamic_q) &&
@@ -82,7 +81,12 @@ bool symbol_qualities::is_signed()
 
 bool symbol_qualities::is_unsigned()
 {
-	return unsigned_q;
+	return !signed_q;
+}
+
+bool symbol_qualities::has_sign_quality()
+{
+    return signed_q || _listed_unsigned;
 }
 
 bool symbol_qualities::is_extern()
@@ -145,7 +149,6 @@ void symbol_qualities::add_quality(SymbolQuality to_add)
     } else if (to_add == SIGNED) {
         signed_q = true;
     } else if (to_add == UNSIGNED) {
-        unsigned_q = true;
         signed_q = false;
 	}
 	else if (to_add == LONG) {
@@ -179,20 +182,9 @@ void symbol_qualities::add_quality(SymbolQuality to_add)
 	}
 }
 
-symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities)
+symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities):
+    symbol_qualities()
 {
-	// start with our default values
-	this->const_q = false;
-	this->final_q = false;
-	this->static_q = false;
-	this->dynamic_q = false;
-	this->signed_q = false;
-	this->unsigned_q = false;
-	this->sincall_con = false;
-	this->c64_con = false;
-	this->windows_con = false;
-	this->extern_q = false;
-
 	// todo: there must be a better way of doing this
 
 	// then, populate according to the vector
@@ -220,7 +212,8 @@ symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities)
 		}
 		else if (*it == UNSIGNED)
 		{
-			unsigned_q = true;
+			signed_q = false;
+            _listed_unsigned = true;
 		}
 		else if (*it == SINCALL_CONVENTION)
 		{
@@ -242,21 +235,15 @@ symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities)
 	}
 }
 
-symbol_qualities::symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long, bool is_short, bool is_extern) :
+symbol_qualities::symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_long, bool is_short, bool is_extern) :
 	const_q(is_const),
 	static_q(is_static),
 	dynamic_q(is_dynamic),
 	signed_q(is_signed),
-	unsigned_q(is_unsigned),
 	long_q(is_long),
 	short_q(is_short),
 	extern_q(is_extern)
 {
-	// unsigned always wins out over signed
-	if (this->unsigned_q) {
-		this->signed_q = false;
-	}
-
 	// const will always win out over dynamic (can be 'static const')
 	if (this->const_q) {
 		this->dynamic_q = false;
@@ -286,13 +273,14 @@ symbol_qualities::symbol_qualities()
 	static_q = false;
 	dynamic_q = false;
 	signed_q = false;
-	unsigned_q = false;
 	long_q = false;
 	short_q = false;
 	sincall_con = false;
 	c64_con = false;
 	windows_con = false;
 	extern_q = false;
+
+    _listed_unsigned = false;
 }
 
 symbol_qualities::~symbol_qualities()

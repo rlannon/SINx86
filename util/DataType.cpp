@@ -367,7 +367,7 @@ bool DataType::is_valid_type(DataType &t) {
 	}
 	else if (t.primary == STRING) {
 		// strings are not numerics and so may not be used with signed or unsigned qualifiers
-		if (t.qualities.is_signed() || t.qualities.is_unsigned()) {
+		if (t.qualities.has_sign_quality()) {
 			is_valid = false;
 		}
 
@@ -378,7 +378,7 @@ bool DataType::is_valid_type(DataType &t) {
 	}
 	else if (t.primary == STRUCT) {
 		// structs don't support numeric or width qualifiers
-		if (t.qualities.is_long() || t.qualities.is_short() || t.qualities.is_signed() || t.qualities.is_unsigned()) {
+		if (t.qualities.is_long() || t.qualities.is_short() || t.qualities.has_sign_quality()) {
 			is_valid = false;
 		}
 	}

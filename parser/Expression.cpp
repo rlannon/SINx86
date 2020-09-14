@@ -147,8 +147,7 @@ AttributeSelection::AttributeSelection(std::shared_ptr<Expression> selected, std
 			false,	// not const
 			false,	// not static
 			false,	// not dynamic
-			false,	// not signed
-			true	// is unsigned
+			false	// not signed
 		)	// not long, short, or extern
 	);
 

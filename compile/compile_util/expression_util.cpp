@@ -428,7 +428,7 @@ DataType expression_util::get_expression_data_type(
 
 size_t expression_util::get_width(
     DataType &alloc_data,
-    compile_time_evaluator evaluator,
+    compile_time_evaluator &evaluator,
     struct_table &structs,
     symbol_table &symbols,
     std::string scope_name,
