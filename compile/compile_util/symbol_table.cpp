@@ -51,7 +51,7 @@ void symbol_table::erase(node to_erase) {
 		to_erase.name
 	);
 	if (it == this->symbols.end()) {
-		throw std::exception();
+		throw SymbolNotFoundException(0);
 	}
 	else {
 		this->symbols.erase(it);
@@ -108,7 +108,7 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	}
 	else {
 		// todo: specialize exceptions thrown here
-		throw std::exception();
+		throw DuplicateSymbolException(0);
 	}
 
 	return returned.second;
@@ -148,7 +148,7 @@ symbol& symbol_table::find(std::string to_find, std::string scope_name)
 		it = this->symbols.find(to_find);
 
 		if (it == this->symbols.end())
-			throw std::exception();
+			throw SymbolNotFoundException(0);
 	}
 
 	return *it->second.get();

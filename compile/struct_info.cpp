@@ -32,8 +32,8 @@ symbol *struct_info::get_member(std::string name)
 	try {
 		s = &this->members.find(name, this->struct_name);
     }
-	catch (std::exception& e) {
-		throw SymbolNotFoundException(0);	// todo: line number?
+	catch (SymbolNotFoundException & e) {
+		throw e;
 	}
 
     return s;
@@ -83,8 +83,9 @@ struct_info::struct_info(std::string name, std::vector<std::shared_ptr<symbol>> 
             if (s->get_symbol_type() != FUNCTION_SYMBOL) {
                 this->struct_width += sym_width;
             }
-        } catch (std::exception &e) {
-            throw DuplicateSymbolException(line);
+        } catch (DuplicateSymbolException &e) {
+            e.set_line(line);
+            throw e;
         }
     }
 }

@@ -60,8 +60,9 @@ const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string sc
 		symbol& s = this->constants->find(sym_name);
 		const_symbol &to_return = dynamic_cast<const_symbol&>(s);
 	}
-	catch (std::exception & e) {
-		throw SymbolNotFoundException(line);
+	catch (SymbolNotFoundException & e) {
+		e.set_line(line);
+        throw e;
 	}
 
 	return to_return;

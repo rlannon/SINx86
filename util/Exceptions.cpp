@@ -19,6 +19,10 @@ const char* CompilerException::what() const noexcept {
 	return message.c_str();
 }
 
+void CompilerException::set_line(unsigned int new_line) {
+    this->line = new_line;
+}
+
 CompilerException::CompilerException(const std::string& message, unsigned int code, unsigned int line) : message(message), code(code), line(line) {
 	this->message = "**** Compiler error C" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }

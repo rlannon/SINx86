@@ -31,8 +31,9 @@ symbol *compiler::lookup(std::string name, unsigned int line) {
 	try {
 		to_return = &this->symbols.find(name);
 	}
-	catch (std::exception e) {
-		throw SymbolNotFoundException(line);
+	catch (SymbolNotFoundException &e) {
+        e.set_line(line);
+        throw e;
 	}
 
 	return to_return;

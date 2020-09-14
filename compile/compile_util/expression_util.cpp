@@ -219,8 +219,9 @@ DataType expression_util::get_expression_data_type(
 				// get the symbol and return its type data
 				sym = &symbols.find(ident.getValue());
 			}
-			catch (std::exception& e) {
-				throw SymbolNotFoundException(line);
+			catch (SymbolNotFoundException& e) {
+				e.set_line(line);
+                throw e;
 			}
 
             // the expression type of a reference should be treated as its subtype
@@ -549,6 +550,13 @@ std::string expression_util::get_asm_function_label(
         case exp_type::IDENTIFIER:
         {
             Identifier &ident = static_cast<Identifier&>(name_expression);
+            try {
+                auto &func_sym = symbols.find(ident.getValue());
+            }
+            catch (SymbolNotFoundException &e) {
+                e.set_line(line);
+                throw e;
+            }
 
             break;
         }
