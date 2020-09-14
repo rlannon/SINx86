@@ -628,6 +628,9 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 	std::shared_ptr<Statement> stmt = nullptr;
     auto parsed = this->parse_expression();
     CallExpression *exp = dynamic_cast<CallExpression*>(parsed.get());
+
+    // if we didn't get a CallExpression, then it's an error -- we /must/ have one for a Call statement 
+    // this means if we have a binary or something else (e.g., '@x.y().z'), it's not valid
     if (exp == nullptr) {
         throw ParserException(
             "Expected a valid function call expression",

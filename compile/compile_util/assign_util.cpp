@@ -55,8 +55,8 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     if (exp.get_expression_type() == IDENTIFIER) {
         // get the symbol information
         auto &lhs = dynamic_cast<Identifier&>(exp);
-        auto sym = symbols.find(lhs.getValue());
-        auto p = fetch_destination_operand(*sym, symbols, line, r, is_initialization);
+        auto &sym = symbols.find(lhs.getValue());
+        auto p = fetch_destination_operand(sym, symbols, line, r, is_initialization);
         dest = p.dest_location;
         address_for_lea = p.address_for_lea;
         can_use_lea = p.can_use_lea;
@@ -65,7 +65,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         instruction_used = p.instruction_used;
 
         // marks the symbol as initialized
-        sym->set_initialized();
+        sym.set_initialized();
     }
     else if (exp.get_expression_type() == UNARY) {
         // get the unary

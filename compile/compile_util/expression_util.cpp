@@ -30,8 +30,8 @@ std::stringstream expression_util::get_exp_address(
     if (exp.get_expression_type() == IDENTIFIER) {
         // we have a utility for these already
         auto &l = dynamic_cast<Identifier&>(exp);
-        auto sym = symbols.find(l.getValue());
-        addr_ss << get_address(*sym, r);
+        auto &sym = symbols.find(l.getValue());
+        addr_ss << get_address(sym, r);
     }
     else if (exp.get_expression_type() == UNARY) {
         // use this function recursively to get the address of the operand
@@ -213,11 +213,11 @@ DataType expression_util::get_expression_data_type(
 		{
             // look into the symbol table for an LValue
             Identifier &ident = dynamic_cast<Identifier&>(to_eval);
-			std::shared_ptr<symbol> sym;
+			symbol *sym = nullptr;
 
 			try {
 				// get the symbol and return its type data
-				sym = symbols.find(ident.getValue());
+				sym = &symbols.find(ident.getValue());
 			}
 			catch (std::exception& e) {
 				throw SymbolNotFoundException(line);
@@ -396,10 +396,10 @@ DataType expression_util::get_expression_data_type(
         {
             // look into the symbol table to get the return type of the function
             CallExpression &call_exp = dynamic_cast<CallExpression&>(to_eval);
-            std::shared_ptr<symbol> sym = nullptr;
+            symbol *sym = nullptr;
             if (call_exp.get_func_name().get_expression_type() == IDENTIFIER) {
                 auto &id = dynamic_cast<Identifier&>(call_exp.get_func_name());
-                sym = symbols.find(id.getValue());
+                sym = &symbols.find(id.getValue());
             }
             else {
                 // todo: other expression types
@@ -409,7 +409,7 @@ DataType expression_util::get_expression_data_type(
             // ensure the symbol is a function symbol
             if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
                 // get the function symbol
-                function_symbol *func_sym = dynamic_cast<function_symbol*>(sym.get());
+                function_symbol *func_sym = dynamic_cast<function_symbol*>(sym);
 
                 // get the return type data
                 type_information = func_sym->get_data_type();
@@ -528,3 +528,33 @@ size_t expression_util::get_width(
     return width;
 }
 
+std::string expression_util::get_asm_function_label(
+    Expression &name_expression,
+    struct_table &structs,
+    symbol_table &symbols,
+    unsigned int line
+) {
+    /*
+
+    get_asm_function_label
+    Gets the label used for the given function name expression
+
+    */
+
+    std::string function_label;
+
+    // todo: get label
+    exp_type name_exp_type = name_expression.get_expression_type();
+    switch (name_exp_type) {
+        case exp_type::IDENTIFIER:
+        {
+            Identifier &ident = static_cast<Identifier&>(name_expression);
+
+            break;
+        }
+        default:
+            break;
+    }
+
+    return function_label;
+}

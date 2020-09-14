@@ -30,8 +30,7 @@ symbol *struct_info::get_member(std::string name)
 
     symbol *s = nullptr;
 	try {
-		std::shared_ptr<symbol> sym = this->members.find(name, this->struct_name);
-        s = sym.get();
+		s = &this->members.find(name, this->struct_name);
     }
 	catch (std::exception& e) {
 		throw SymbolNotFoundException(0);	// todo: line number?

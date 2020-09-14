@@ -130,7 +130,7 @@ bool symbol_table::contains(std::string symbol_name, std::string scope_name)
 	return in_table;
 }
 
-std::shared_ptr<symbol>& symbol_table::find(std::string to_find, std::string scope_name)
+symbol& symbol_table::find(std::string to_find, std::string scope_name)
 {
 	/*
 	
@@ -151,7 +151,7 @@ std::shared_ptr<symbol>& symbol_table::find(std::string to_find, std::string sco
 			throw std::exception();
 	}
 
-	return it->second;
+	return *it->second.get();
 }
 
 std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned int level, bool is_function) {
@@ -180,7 +180,7 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 			)
 		)
 	) {
-		symbol s = *this->find(l.pop_back().name);
+		symbol &s = this->find(l.pop_back().name);
 		if (
 			s.get_data_type().get_primary() == PTR ||
 			s.get_data_type().is_reference_type()
@@ -216,15 +216,15 @@ size_t symbol_table::leave_scope(std::string name, unsigned int level)
 
 			// ensure that we don't delete symbols from the global scope
 			if (to_erase.scope_name != "global") {
-				auto s = this->find(to_erase.name);
-				if (s->get_data_type().is_reference_type()) {
+				auto &s = this->find(to_erase.name);
+				if (s.get_data_type().is_reference_type()) {
 					data_width += sin_widths::PTR_WIDTH;
 				}
-				else if (s->get_data_type().get_primary() == ARRAY) {
-					data_width += s->get_data_type().get_array_length();
+				else if (s.get_data_type().get_primary() == ARRAY) {
+					data_width += s.get_data_type().get_array_length();
 				}
 				else {
-					data_width += s->get_data_type().get_width();
+					data_width += s.get_data_type().get_width();
 				}
 
 				// erase the node

@@ -112,16 +112,16 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
     // check to see if the symbol already exists in the table and is undefined -- if so, we need to add 'global'
     bool marked_extern = false; // to ensure we don't mark it as global twice if the declared function is 'extern'
     if (this->symbols.contains(func_sym.get_name())) {
-        auto sym = this->symbols.find(func_sym.get_name());
-        if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
-            auto declared_sym = dynamic_cast<function_symbol*>(sym.get());
-            if (sym->is_defined()) {
+        auto &sym = this->symbols.find(func_sym.get_name());
+        if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
+            auto &declared_sym = dynamic_cast<function_symbol&>(sym);
+            if (sym.is_defined()) {
                 throw DuplicateDefinitionException(line);
             }
             else {
                 // check to ensure signatures match
                 if (
-                    !func_sym.matches(*declared_sym)
+                    !func_sym.matches(declared_sym)
                 ) {
                     throw CompilerException(
                         "Function signature does not match that of declaration",
@@ -132,11 +132,11 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
 
                 // mark this label as 'global', delete the 'extern' statement for it in this file
                 definition_ss << "global " << func_sym.get_name() << std::endl;
-                sym->set_defined();
+                sym.set_defined();
                 marked_extern = true;
 
-                if (this->externals.count(sym->get_name())) {
-                    this->externals.erase(sym->get_name());
+                if (this->externals.count(sym.get_name())) {
+                    this->externals.erase(sym.get_name());
                 }
             }
         }

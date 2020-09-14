@@ -57,8 +57,8 @@ const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string sc
 	const_symbol to_return;
 
 	try {
-		std::shared_ptr<symbol>& s = this->constants->find(sym_name);
-		const_symbol to_return = *dynamic_cast<const_symbol*>(s.get());
+		symbol& s = this->constants->find(sym_name);
+		const_symbol &to_return = dynamic_cast<const_symbol&>(s);
 	}
 	catch (std::exception & e) {
 		throw SymbolNotFoundException(line);

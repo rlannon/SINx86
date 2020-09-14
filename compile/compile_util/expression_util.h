@@ -47,4 +47,11 @@ namespace expression_util {
         unsigned int scope_level, 
         unsigned int line
     );
+
+    std::string get_asm_function_label(
+        Expression &name_expression,
+        struct_table &structs,
+        symbol_table &symbols,
+        unsigned int line
+    );
 }

@@ -653,7 +653,7 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
 
         // preserve our status register
         dec_ss << "\t" << "pushfq" << std::endl;
-        for (symbol& s: v) {
+        for (symbol &s: v) {
             // if we have a negative number, add it instead
             if (s.get_offset() < 0) {
                 dec_ss << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;

@@ -26,16 +26,16 @@ symbol *compiler::lookup(std::string name, unsigned int line) {
 
     */
 
-	std::shared_ptr<symbol> to_return;
+	symbol *to_return = nullptr;
 
 	try {
-		to_return = this->symbols.find(name);
+		to_return = &this->symbols.find(name);
 	}
 	catch (std::exception e) {
 		throw SymbolNotFoundException(line);
 	}
 
-	return to_return.get();
+	return to_return;
 }
 
 // we need to specify which classes can be used for our <typename T> since it's implemented in a separate file
@@ -75,10 +75,10 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
     // it's also possible the symbol was added as a declaration and is now being defined
     if (!ok) {
         // get the current symbol
-        auto sym = this->symbols.find(s->get_name());
+        auto &sym = this->symbols.find(s->get_name());
 
         // if it was defined, throw an error
-        if (sym->is_defined()) {
+        if (sym.is_defined()) {
             // if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
             if (to_add.get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
                 throw DuplicateDefinitionException(line);
@@ -87,7 +87,7 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
         }
         // otherwise, mark the symbol as defined
         else {
-            sym->set_defined();
+            sym.set_defined();
         }
     }
 }
