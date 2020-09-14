@@ -111,6 +111,8 @@ namespace compiler_errors {
 
     const unsigned int ILLEGAL_MOVE_ASSIGNMENT_EXPRESSION = 310;
 
+    const unsigned int UNSUPPORTED_FEATURE = 390;
+
     // Parse errors
     const unsigned int INVALID_TOKEN = 400;
     const unsigned int BAD_LITERAL = 401;

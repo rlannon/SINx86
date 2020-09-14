@@ -637,6 +637,7 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
     }
     else {
         stmt = std::make_shared<Call>(*exp);
+        stmt->set_line_number(current_lex.line_number);
     }
 
     return stmt;

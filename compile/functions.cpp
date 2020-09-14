@@ -237,7 +237,11 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     }
     else {
         // todo: other exp types
-        throw CompilerException("Unsupported feature");
+        throw CompilerException(
+            "Unsupported feature",
+            compiler_errors::UNSUPPORTED_FEATURE,
+            line
+        );
     }
 
     // if the function returns a reference type, we need to increment the count
