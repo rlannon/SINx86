@@ -1,9 +1,10 @@
 // primes.sin
 // A very naive prime calculation in SIN
 
-// declare/define some sinstdlib functions, as the library isn't finished
+// declare some sinstdlib functions
 
 decl void print(decl string s);
+decl string itos(decl int n);
 
 def string itos(alloc int n) {
     // a very simple itos implementation

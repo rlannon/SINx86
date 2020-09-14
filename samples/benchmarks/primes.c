@@ -13,6 +13,7 @@ int main(int argc, char* argv[]) {
     while (i < 1000) {
         if (is_prime(i)) {
             printf("%d, ", i);
+            count++;
         }
         
         i += 1;
