@@ -715,7 +715,9 @@ bool compiler::is_in_scope(symbol &sym) {
     );
 }
 
-compiler::compiler() {
+compiler::compiler():
+    evaluator(&this->structs)
+{
     // initialize our number trackers
     this->strc_num = 0;
     this->strcmp_num = 0;
@@ -728,9 +730,6 @@ compiler::compiler() {
     // initialize the scope
     this->current_scope_name = "global";
     this->current_scope_level = 0;
-
-    // initialize the compile-time evaluator
-    this->evaluator = compile_time_evaluator(&this->structs);
 }
 
 compiler::~compiler() {

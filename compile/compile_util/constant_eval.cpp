@@ -171,10 +171,13 @@ compile_time_evaluator::compile_time_evaluator(struct_table* structs)
 }
 
 compile_time_evaluator::compile_time_evaluator() {
-	this->constants = nullptr;
+	this->constants = new symbol_table();
 	this->structs = nullptr;
 }
 
 compile_time_evaluator::~compile_time_evaluator()
 {
+    if (this->constants) {
+        delete this->constants;
+    }
 }

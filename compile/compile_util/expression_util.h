@@ -40,7 +40,7 @@ namespace expression_util {
 
     size_t get_width(
         DataType &alloc_data,
-        compile_time_evaluator evaluator,
+        compile_time_evaluator &evaluator,
         struct_table &structs,
         symbol_table &symbols,
         std::string scope_name, 
