@@ -122,7 +122,7 @@ class compiler {
 	std::stringstream define_function(FunctionDefinition definition);
     std::stringstream define_function(function_symbol func_sym, StatementBlock prog, unsigned int line);
 
-	template<typename T> std::pair<std::string, size_t> call_function(T to_call, unsigned int line, bool allow_void = true);
+	std::pair<std::string, size_t> call_function(Procedure &to_call, unsigned int line, bool allow_void = true);
 	
     std::stringstream sincall(function_symbol s, std::vector<Expression*> args, unsigned int line);
     std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);

@@ -23,6 +23,14 @@ bool function_symbol::matches(const function_symbol& right) const {
 	return name_match && ret_match && param_match;
 }
 
+bool function_symbol::is_method() const {
+    return this->_method;
+}
+
+bool function_symbol::requires_this() const {
+    return this->_method && !this->type.get_qualities().is_static();
+}
+
 calling_convention function_symbol::get_calling_convention() {
     // Get the function's calling convention
     return this->call_con;
@@ -69,6 +77,8 @@ function_symbol::function_symbol(
 
     */
 
+    this->_method = this->scope_name != "global";
+
     if (this->formal_parameters.size() > 0) {
         // this->arg_regs will hold the registers used by this signature
 
@@ -105,7 +115,14 @@ function_symbol::function_symbol(
 				Type primary_type = sym.get_data_type().get_primary();
 				
 				// assign the register, if possible
-				if (can_pass_in_reg && (primary_type != ARRAY && primary_type != STRUCT)) {
+				if (
+                    can_pass_in_reg && 
+                    (
+                        primary_type != ARRAY && 
+                        primary_type != STRUCT &&
+                        primary_type != TUPLE
+                    )
+                ) {
 					// pass in the primary type; the get_available_register function will be able to handle it
 					reg to_use = NO_REGISTER;
 					const reg integer_registers[] = { RSI, RDI, RCX, RDX, R8, R9 };
@@ -168,7 +185,13 @@ function_symbol::function_symbol(
 }
 
 function_symbol::function_symbol() :
-function_symbol("", NONE, {}, "global", 0) {
+function_symbol(
+    "",
+    NONE,
+    {},
+    "global",
+    0
+) {
     // delegate to specialized constructor
 }
 

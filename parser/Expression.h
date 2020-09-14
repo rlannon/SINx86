@@ -91,6 +91,7 @@ public:
 	Type get_list_type() const;	// the list type that we parsed -- () yields TUPLE, {} yields ARRAY
 
     std::unique_ptr<Expression> get_unique() override;
+    void add_item(Expression &to_add, size_t index);
 
 	ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type);
 	ListExpression();
@@ -180,21 +181,16 @@ public:
     size_t get_num_args();
 
     std::unique_ptr<Expression> get_unique() override;
+    void insert_arg(Expression &to_insert, size_t index);
 
     Procedure(std::shared_ptr<Expression> proc_name, std::shared_ptr<ListExpression> proc_args);
     Procedure(std::shared_ptr<Expression> proc_name, ListExpression *proc_args);
     Procedure();
 };
 
-class CallExpression : public Expression
+class CallExpression : public Procedure
 {
-	std::shared_ptr<Procedure> proc;
 public:
-	Expression &get_func_name();
-	std::vector<Expression*> get_args();
-	Expression &get_arg(size_t i);
-	size_t get_args_size();
-
     std::unique_ptr<Expression> get_unique() override;
 
 	CallExpression(Procedure *proc);

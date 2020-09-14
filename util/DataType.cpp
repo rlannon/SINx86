@@ -205,13 +205,11 @@ bool DataType::is_compatible(DataType to_compare) const
 	}
 	else if (this->primary == REFERENCE) {
 		// if we have a reference type, compare the reference subtype to to_compare
-		if (!this->contained_types.empty()) {
-			compatible = this->get_subtype().is_compatible(to_compare);
-		}
-		else {
-			throw CompilerException("Expected subtype", 0, 0);
-		}
+        compatible = this->get_subtype().is_compatible(to_compare);
 	}
+    else if (to_compare.get_primary() == REFERENCE) {
+        compatible = this->is_compatible(to_compare.get_subtype());
+    }
 	else if (this->primary == ARRAY && to_compare.get_primary() == ARRAY) {
 		if (!this->contained_types.empty()) {
 			compatible = this->get_subtype().is_compatible(

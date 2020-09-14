@@ -23,14 +23,16 @@ class function_symbol: public symbol {
 
     // Function arguments -- formal parameters should be stored as symbols (they are considered local variables, so they will be pushed first)
     std::vector<symbol> formal_parameters;
-
     register_usage arg_regs;    // the registers used by this signature
+    bool _method;
 
     // calling convention -- defaults to SIN
     calling_convention call_con;
 public:
     bool matches(const function_symbol& right) const;
-    
+    bool is_method() const;
+    bool requires_this() const;
+
     std::vector<symbol> &get_formal_parameters();
     calling_convention get_calling_convention();
 

@@ -198,11 +198,7 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
     return definition_ss;
 }
 
-template std::pair<std::string, size_t> compiler::call_function(Call, unsigned int, bool);
-template std::pair<std::string, size_t> compiler::call_function(CallExpression, unsigned int, bool);
-
-template<typename T>
-std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line, bool allow_void) {
+std::pair<std::string, size_t> compiler::call_function(Procedure &to_call, unsigned int line, bool allow_void) {
     /*
 
     call_function
@@ -230,7 +226,7 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
 
     // first, look up the function
     symbol &sym = expression_util::get_function_symbol(
-        call.get_func_name(),
+        to_call.get_func_name(),
         this->structs,
         this->symbols,
         line
@@ -252,10 +248,16 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
             throw VoidException(line);
         }
 
+        // check to see if we have a 'this' parameter that needs evaluation
+        if (func_sym.requires_this() && to_call.get_func_name().get_expression_type() == BINARY) {
+            Binary &bin_name = static_cast<Binary&>(to_call.get_func_name());
+            to_call.insert_arg(bin_name.get_left(), 0);
+        }
+
         // behaves according to the calling convention
         if (func_sym.get_calling_convention() == calling_convention::SINCALL) {
             // SIN calling convention
-            call_ss << this->sincall(func_sym, call.get_args(), line).str(); // todo: return this function's result directly?
+            call_ss << this->sincall(func_sym, to_call.get_args().get_list(), line).str(); // todo: return this function's result directly?
 		}
 		else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
 			throw CompilerException(
@@ -452,7 +454,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
 
         // if registers were preserved, restore them here
         sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
-    } else {
+    }
+    else {
         // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature
         throw FunctionSignatureException(line);
     }

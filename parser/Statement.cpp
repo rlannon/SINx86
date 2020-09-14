@@ -377,7 +377,7 @@ StructDefinition::StructDefinition(std::string name, std::shared_ptr<StatementBl
 
 
 /*******************	FUNCTION CALL CLASS		********************/
-
+/*
 Expression &Call::get_func_name() {
 	return this->call_exp.get_func_name();
 }
@@ -399,10 +399,10 @@ std::vector<Expression*> Call::get_args() {
 	// return all function arguments
 	return this->call_exp.get_args();
 }
-
+*/
 Call::Call(CallExpression call_exp): 
 	Statement(CALL),
-	call_exp(call_exp)
+	CallExpression(call_exp)
 {
 }
 

@@ -242,6 +242,19 @@ std::unique_ptr<Expression> ListExpression::get_unique() {
     return std::make_unique<ListExpression>(*this);
 }
 
+void ListExpression::add_item(Expression &to_add, size_t index) {
+    if (index <= this->list_members.size()) {
+        auto it = this->list_members.begin() + index;
+        this->list_members.insert(
+            it,
+            std::move(to_add.get_unique())
+        );
+    }
+    else {
+        throw std::out_of_range("ListExpression out of range");
+    }
+}
+
 ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type) :
 	Expression(LIST),
 	list_members(list_members),
@@ -355,6 +368,10 @@ std::unique_ptr<Expression> Procedure::get_unique() {
     return std::make_unique<Procedure>(*this);
 }
 
+void Procedure::insert_arg(Expression &to_insert, size_t index) {
+    this->args->add_item(to_insert, index);
+}
+
 Procedure::Procedure(
     std::shared_ptr<Expression> proc_name, 
     std::shared_ptr<ListExpression> proc_args
@@ -375,6 +392,7 @@ Procedure::Procedure(): Expression(PROC_EXP)
     this->name = nullptr;
 }
 
+/*
 Expression &CallExpression::get_func_name() {
 	return this->proc->get_func_name();
 }
@@ -390,21 +408,29 @@ Expression &CallExpression::get_arg(size_t i) {
 size_t CallExpression::get_args_size() {
 	return this->proc->get_num_args();
 }
+*/
 
 std::unique_ptr<Expression> CallExpression::get_unique() {
     return std::make_unique<CallExpression>(*this);
 }
 
+/*
+void CallExpression::insert_arg(Expression &to_insert, size_t index) {
+    this->proc->insert_arg(to_insert, index);
+}
+*/
+
 CallExpression::CallExpression(
 	Procedure *proc
 ): 
-	Expression(CALL_EXP)
+    Procedure(*proc)
 {
-    this->proc = std::make_shared<Procedure>(*proc);
+    this->expression_type = CALL_EXP;
 }
 
-CallExpression::CallExpression(): Expression(CALL_EXP)
+CallExpression::CallExpression()
 {
+    this->expression_type = CALL_EXP;
 }
 
 

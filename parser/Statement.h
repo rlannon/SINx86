@@ -269,16 +269,9 @@ public:
 	StructDefinition();
 };
 
-class Call : public Statement
+class Call : public Statement, public CallExpression
 {
-	CallExpression call_exp;
 public:
-	Expression &get_func_name();
-    CallExpression &get_call_expression();
-	size_t get_args_size();
-	Expression &get_arg(size_t index);	// get one argument
-	std::vector<Expression*> get_args();	// get all arguments
-
 	Call(CallExpression call_exp);
 	Call();
 };

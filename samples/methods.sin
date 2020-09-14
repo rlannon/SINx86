@@ -9,6 +9,7 @@ def struct myStruct {
 
     def string get_name() {
         return this._name;
+    }
 }
 
 def int main(alloc array<string> args &dynamic) {
