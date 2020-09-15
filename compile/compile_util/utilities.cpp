@@ -613,21 +613,27 @@ std::string get_address(symbol &s, reg r) {
     std::string address_info = "";
     std::string reg_name = register_usage::get_register_name(r);
 
-    // if it's static, we can just use the name
-    if (s.get_data_type().get_qualities().is_static()) {
-        address_info = "\tlea " + reg_name + ", [" + s.get_name() + "]\n";
-    }
-    // otherwise, we need to look in the stack
-    else if (s.get_data_type().is_reference_type()) {
-        address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
-    }
-    else {
-        if (s.get_offset() < 0) {
-            address_info += "\tlea " + reg_name + ", [rbp + " + std::to_string(-s.get_offset()) + "]\n";
+    // if the symbol is in a register, move the value into r
+    if (s.get_register() == NO_REGISTER) {
+        // if it's static, we can just use the name
+        if (s.get_data_type().get_qualities().is_static()) {
+            address_info = "\tlea " + reg_name + ", [" + s.get_name() + "]\n";
+        }
+        // otherwise, we need to look in the stack
+        else if (s.get_data_type().is_reference_type()) {
+            address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
         }
         else {
-            address_info += "\tlea " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
+            if (s.get_offset() < 0) {
+                address_info += "\tlea " + reg_name + ", [rbp + " + std::to_string(-s.get_offset()) + "]\n";
+            }
+            else {
+                address_info += "\tlea " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
+            }
         }
+    }
+    else {
+        address_info = "\tmov " + reg_name + ", " + register_usage::get_register_name(s.get_register()) + "\n";
     }
 
     return address_info;

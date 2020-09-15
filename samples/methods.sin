@@ -10,6 +10,11 @@ def struct myStruct {
     def string get_name() {
         return this._name;
     }
+
+    def void set_name(alloc string new_name) {
+        let this._name = new_name;
+        return void;
+    }
 }
 
 def int main(alloc array<string> args &dynamic) {
@@ -19,7 +24,10 @@ def int main(alloc array<string> args &dynamic) {
     alloc myStruct m;
     let m._size = 0;
     let m._name = "MYSTRUCT M";
-    @print( @m.get_name() );
-
+    @print( @m.get_name() + "\n");
+    
+    @m.set_name("new name!");
+    @print( @m.get_name() + "\n");
+    
     return 0;
 }

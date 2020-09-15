@@ -164,7 +164,7 @@ function_symbol::function_symbol(
 						can_pass_in_reg = false;
 					}
 					else {
-						this->arg_regs.set(to_use);	// mark the register as in use
+						this->arg_regs.set(to_use, &sym);	// mark the register as in use
 					}
 				}
 				else {

@@ -399,8 +399,10 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
             if (param.get_data_type().get_primary() == STRING) {
                 // to construct a string, we load the address where the parameter wil be stored into rdi
                 sincall_ss << "\t" << "lea rdi, [rsp + " << param_offset << "]" << std::endl;
+                sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
                 sincall_ss << "\t" << "mov rsi, rax" << std::endl;
                 sincall_ss << call_sincall_subroutine("sinl_string_copy_construct") << std::endl;
+                sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
             }
             else if (arg_type.get_qualities().is_dynamic()) {
                 // todo: copy-construct other types
@@ -561,7 +563,7 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
 
 	std::stringstream sincall_ss;
 
-    auto ret_p = evaluate_expression(ret.get_return_exp(), ret.get_line_number());
+    auto ret_p = this->evaluate_expression(ret.get_return_exp(), ret.get_line_number());
 
 	sincall_ss << ret_p.first;
     // todo: count
