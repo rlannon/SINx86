@@ -631,16 +631,16 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 
     // if we didn't get a CallExpression, then it's an error -- we /must/ have one for a Call statement 
     // this means if we have a binary or something else (e.g., '@x.y().z'), it's not valid
-    if (exp == nullptr) {
+    if (exp) {
+        stmt = std::make_shared<Call>(*exp);
+        stmt->set_line_number(current_lex.line_number);
+    }
+    else {
         throw ParserException(
             "Expected a valid function call expression",
             compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
             current_lex.line_number
         );
-    }
-    else {
-        stmt = std::make_shared<Call>(*exp);
-        stmt->set_line_number(current_lex.line_number);
     }
 
     return stmt;

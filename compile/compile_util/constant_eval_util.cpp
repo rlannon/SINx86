@@ -64,6 +64,13 @@ const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string sc
 		e.set_line(line);
         throw e;
 	}
+    catch (std::bad_cast &e) {
+        throw CompilerException(
+            "Expected a const symbol",
+            compiler_errors::NON_CONST_VALUE_ERROR,
+            line
+        );
+    }
 
 	return to_return;
 }

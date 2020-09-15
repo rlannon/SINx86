@@ -114,7 +114,7 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
     if (this->symbols.contains(func_sym.get_name())) {
         auto &sym = this->symbols.find(func_sym.get_name());
         if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
-            auto &declared_sym = dynamic_cast<function_symbol&>(sym);
+            auto &declared_sym = static_cast<function_symbol&>(sym);
             if (sym.is_defined()) {
                 throw DuplicateDefinitionException(line);
             }
@@ -241,7 +241,7 @@ std::pair<std::string, size_t> compiler::call_function(Procedure &to_call, unsig
     // todo: data types could be valid as well -- proc type
     if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
         // cast to the correct type
-        function_symbol &func_sym = dynamic_cast<function_symbol&>(sym);
+        function_symbol &func_sym = static_cast<function_symbol&>(sym);
 
         // if we aren't allowing a void return type, then throw an exception if the primary type is void
         if (!allow_void && func_sym.get_data_type().get_primary() == VOID) {

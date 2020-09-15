@@ -46,7 +46,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case LITERAL:
         {
             // get the literal
-            Literal &literal_exp = dynamic_cast<Literal&>(to_evaluate);
+            Literal &literal_exp = static_cast<Literal&>(to_evaluate);
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_literal(literal_exp, line, type_hint);
@@ -55,7 +55,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case IDENTIFIER:
         {
             // get the lvalue
-            Identifier &lvalue_exp = dynamic_cast<Identifier&>(to_evaluate);
+            Identifier &lvalue_exp = static_cast<Identifier&>(to_evaluate);
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_identifier(lvalue_exp, line);
@@ -95,7 +95,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
             // get our type information
             DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
-            auto &le = dynamic_cast<ListExpression&>(to_evaluate);
+            auto &le = static_cast<ListExpression&>(to_evaluate);
             t.set_primary(le.get_list_type());
 
             size_t width = expression_util::get_width(
@@ -221,7 +221,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case BINARY:
         {
 			// cast to Binary class and dispatch
-			Binary &bin_exp = dynamic_cast<Binary&>(to_evaluate);
+			Binary &bin_exp = static_cast<Binary&>(to_evaluate);
             auto bin_p = this->evaluate_binary(bin_exp, line, type_hint);
             evaluation_ss << bin_p.first;
             count += bin_p.second;
@@ -232,14 +232,14 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case UNARY:
         {
-			Unary &unary_exp = dynamic_cast<Unary&>(to_evaluate);
+			Unary &unary_exp = static_cast<Unary&>(to_evaluate);
 			evaluation_ss << this->evaluate_unary(unary_exp, line, type_hint).str();
             // todo: clean up unary?
             break;
         }
         case CALL_EXP:
         {
-            CallExpression &call_exp = dynamic_cast<CallExpression&>(to_evaluate);
+            CallExpression &call_exp = static_cast<CallExpression&>(to_evaluate);
             auto call_p = this->call_function(call_exp, line, false);  // don't allow void functions here
             
             // add the call code
@@ -257,7 +257,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case CAST:
         {
-            auto &c = dynamic_cast<Cast&>(to_evaluate);
+            auto &c = static_cast<Cast&>(to_evaluate);
 
             // ensure the type to which we are casting is valid
             if (DataType::is_valid_type(c.get_new_type())) {
@@ -297,7 +297,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case ATTRIBUTE:
         {
-            auto &attr = dynamic_cast<AttributeSelection&>(to_evaluate);
+            auto &attr = static_cast<AttributeSelection&>(to_evaluate);
             auto t = expression_util::get_expression_data_type(attr.get_selected(), this->symbols, this->structs, line);
             auto attr_p = this->evaluate_expression(attr.get_selected(), line, type_hint);
 

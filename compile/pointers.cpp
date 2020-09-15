@@ -24,7 +24,7 @@ std::stringstream compiler::get_exp_address(Expression &exp, reg r, unsigned int
     // now, make any adjustments we need to
     if (exp.get_expression_type() == INDEXED) {
         // we need to adjust the value of 'r' by the index value
-        auto &i = dynamic_cast<Indexed&>(exp);
+        auto &i = static_cast<Indexed&>(exp);
         DataType idx_type = expression_util::get_expression_data_type(i.get_to_index(), this->symbols, this->structs, line);
 
         // if RCX is in use, preserve it -- we are using it for 'mul'
@@ -109,7 +109,7 @@ std::stringstream compiler::get_address_of(Unary &u, reg r, unsigned int line) {
     // how we generate code for this depends on the type
     if (u.get_operand().get_expression_type() == BINARY) {
         // if we have a binary expression, it *must* be the dot operator; if so, just return what's in RBX after we evaluate it
-        Binary &target = dynamic_cast<Binary&>(u.get_operand());
+        Binary &target = static_cast<Binary&>(u.get_operand());
         if (target.get_operator() != DOT) {
             throw CompilerException("Illegal binary operand in address-of expression", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
         }
@@ -120,7 +120,7 @@ std::stringstream compiler::get_address_of(Unary &u, reg r, unsigned int line) {
         this->reg_stack.peek().clear(r);  // now we can use RBX again
     }
     else if (u.get_operand().get_expression_type() == IDENTIFIER) {
-        auto &target = dynamic_cast<Identifier&>(u.get_operand());
+        auto &target = static_cast<Identifier&>(u.get_operand());
         
         // look up the symbol; obtain the address based on its memory location
         symbol *s = this->lookup(target.getValue(), line);

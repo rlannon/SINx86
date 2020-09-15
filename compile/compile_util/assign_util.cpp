@@ -54,7 +54,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     // generate code based on the expression type
     if (exp.get_expression_type() == IDENTIFIER) {
         // get the symbol information
-        auto &lhs = dynamic_cast<Identifier&>(exp);
+        auto &lhs = static_cast<Identifier&>(exp);
         auto &sym = symbols.find(lhs.getValue());
         auto p = fetch_destination_operand(sym, symbols, line, r, is_initialization);
         dest = p.dest_location;
@@ -69,7 +69,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     }
     else if (exp.get_expression_type() == UNARY) {
         // get the unary
-        auto &lhs = dynamic_cast<Unary&>(exp);
+        auto &lhs = static_cast<Unary&>(exp);
         if (lhs.get_operator() == exp_operator::DEREFERENCE) {
             // ensure the expression has a pointer type; else, indirection is illegal
             auto op_t = expression_util::get_expression_data_type(lhs.get_operand(), symbols, structures, line);
@@ -105,7 +105,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         }
     }
     else if (exp.get_expression_type() == BINARY) {
-        auto &lhs = dynamic_cast<Binary&>(exp);
+        auto &lhs = static_cast<Binary&>(exp);
         if (lhs.get_operator() == DOT) {
             dest = "[rbx]";
             gen_code << expression_util::get_exp_address(exp, symbols, structures, r, line).str();
@@ -267,7 +267,7 @@ bool assign_utilities::is_valid_move_expression(Expression &exp) {
         is_valid = false;
     }
     else if (exp.get_expression_type() == BINARY) {
-        auto &b = dynamic_cast<Binary&>(exp);
+        auto &b = static_cast<Binary&>(exp);
         if (b.get_operator() == DOT) {
             is_valid = true;
         }
@@ -276,7 +276,7 @@ bool assign_utilities::is_valid_move_expression(Expression &exp) {
         }
     }
     else if (exp.get_expression_type() == UNARY) {
-        auto &u = dynamic_cast<Unary&>(exp);
+        auto &u = static_cast<Unary&>(exp);
         if (u.get_operator() == DEREFERENCE) {
             is_valid = true;
         }

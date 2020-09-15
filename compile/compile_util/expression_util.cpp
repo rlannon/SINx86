@@ -29,13 +29,13 @@ std::stringstream expression_util::get_exp_address(
 
     if (exp.get_expression_type() == IDENTIFIER) {
         // we have a utility for these already
-        auto &l = dynamic_cast<Identifier&>(exp);
+        auto &l = static_cast<Identifier&>(exp);
         auto &sym = symbols.find(l.getValue());
         addr_ss << get_address(sym, r);
     }
     else if (exp.get_expression_type() == UNARY) {
         // use this function recursively to get the address of the operand
-        auto &u = dynamic_cast<Unary&>(exp);
+        auto &u = static_cast<Unary&>(exp);
         addr_ss << get_exp_address(u.get_operand(), symbols, structs, r, line).str();
         
         if (u.get_operator() == DEREFERENCE) {
@@ -45,13 +45,13 @@ std::stringstream expression_util::get_exp_address(
     }
     else if (exp.get_expression_type() == INDEXED) {
         // use recursion
-        auto &i = dynamic_cast<Indexed&>(exp);
+        auto &i = static_cast<Indexed&>(exp);
         addr_ss << get_exp_address(i.get_to_index(), symbols, structs, r, line).str();
         // note that this can't evaluate the index; that's up to the caller
     }
     else if (exp.get_expression_type() == BINARY) {
         // create and evaluate a member_selection object
-        auto &b = dynamic_cast<Binary&>(exp);
+        auto &b = static_cast<Binary&>(exp);
         addr_ss << expression_util::evaluate_member_selection(b, symbols, structs, r, line, false).str();
     }
 
@@ -89,7 +89,7 @@ std::stringstream expression_util::evaluate_member_selection(
 
         // structs must be accessed with an identifier -- other expression types are syntactically invalid
         if (to_evaluate.get_right().get_expression_type() == IDENTIFIER) {
-            Identifier &id = dynamic_cast<Identifier&>(to_evaluate.get_right());
+            Identifier &id = static_cast<Identifier&>(to_evaluate.get_right());
             auto member = lhs_struct.get_member(id.getValue());
             member_offset = member->get_offset();
 
@@ -100,7 +100,7 @@ std::stringstream expression_util::evaluate_member_selection(
 
         }
         else if (to_evaluate.get_right().get_expression_type() == CALL_EXP) {
-            auto &method = dynamic_cast<CallExpression&>(to_evaluate.get_right());
+            auto &method = static_cast<CallExpression&>(to_evaluate.get_right());
 
             // todo: method calls
         }
@@ -116,7 +116,7 @@ std::stringstream expression_util::evaluate_member_selection(
         // get the offset for our index
         size_t member_offset = 0;
         if (to_evaluate.get_right().get_expression_type() == LITERAL) {
-            Literal &lit = dynamic_cast<Literal&>(to_evaluate.get_right());
+            Literal &lit = static_cast<Literal&>(to_evaluate.get_right());
             if (lit.get_data_type().get_primary() != INT) {
                 throw CompilerException(
                     "Expected integer literal",
@@ -197,7 +197,7 @@ DataType expression_util::get_expression_data_type(
         case LITERAL:
         {
             // set base type data
-            Literal &literal = dynamic_cast<Literal&>(to_eval);
+            Literal &literal = static_cast<Literal&>(to_eval);
             type_information = literal.get_data_type();
 
             // update qualities based on type hint, if applicable
@@ -212,7 +212,7 @@ DataType expression_util::get_expression_data_type(
         case IDENTIFIER:
 		{
             // look into the symbol table for an LValue
-            Identifier &ident = dynamic_cast<Identifier&>(to_eval);
+            Identifier &ident = static_cast<Identifier&>(to_eval);
 			symbol *sym = nullptr;
 
 			try {
@@ -236,7 +236,7 @@ DataType expression_util::get_expression_data_type(
         }
         case INDEXED:
         {
-            Indexed &idx = dynamic_cast<Indexed&>(to_eval);
+            Indexed &idx = static_cast<Indexed&>(to_eval);
             DataType t = expression_util::get_expression_data_type(idx.get_to_index(), symbols, structs, line);
             // we can index strings or arrays; if we index an array, we get the subtype, and if we index a string, we get a char
             if (t.get_primary() == ARRAY) {
@@ -252,7 +252,7 @@ DataType expression_util::get_expression_data_type(
         case LIST:
         {
             // get list type
-            auto &init_list = dynamic_cast<ListExpression&>(to_eval);
+            auto &init_list = static_cast<ListExpression&>(to_eval);
             
             // iterate over the elements and get the data types of each
             bool homogeneous = true;    // if homogeneous, we will set the type as array; else, tuple (tuple assignment checks each type against every other)
@@ -297,7 +297,7 @@ DataType expression_util::get_expression_data_type(
         case BINARY:
         {
             // get the type of a binary expression
-            Binary &binary = dynamic_cast<Binary&>(to_eval);
+            Binary &binary = static_cast<Binary&>(to_eval);
 
             /*
 
@@ -319,14 +319,14 @@ DataType expression_util::get_expression_data_type(
                 if (lhs_type.get_primary() == STRUCT) {
                     auto &lhs_struct = structs.find(lhs_type.get_struct_name(), line);
                     if (binary.get_right().get_expression_type() == IDENTIFIER) {
-                        auto &r = dynamic_cast<Identifier&>(binary.get_right());
+                        auto &r = static_cast<Identifier&>(binary.get_right());
                         type_information = lhs_struct.get_member(r.getValue())->get_data_type();
                     }
                     // todo: exception
                 }
                 else if (lhs_type.get_primary() == TUPLE) {
                     if (binary.get_right().get_expression_type() == LITERAL) {
-                        Literal &r = dynamic_cast<Literal&>(binary.get_right());
+                        Literal &r = static_cast<Literal&>(binary.get_right());
                         if (r.get_data_type().get_primary() == INT) {
                             unsigned long index_value = std::stoul(r.get_value());
                             if (index_value < lhs_type.get_contained_types().size()) {
@@ -375,7 +375,7 @@ DataType expression_util::get_expression_data_type(
         case UNARY:
         {
             // get the type of a unary expression
-            Unary &u = dynamic_cast<Unary&>(to_eval);
+            Unary &u = static_cast<Unary&>(to_eval);
 
             // Unary expressions contain an expression inside of them; call this function recursively using said expression as a parameter
             type_information = expression_util::get_expression_data_type(u.get_operand(), symbols, structs, line);
@@ -396,7 +396,7 @@ DataType expression_util::get_expression_data_type(
         case CALL_EXP:
         {
             // look into the symbol table to get the return type of the function
-            CallExpression &call_exp = dynamic_cast<CallExpression&>(to_eval);
+            CallExpression &call_exp = static_cast<CallExpression&>(to_eval);
             symbol &sym = expression_util::get_function_symbol(
                 call_exp.get_func_name(),
                 structs,
@@ -407,7 +407,7 @@ DataType expression_util::get_expression_data_type(
             // ensure the symbol is a function symbol
             if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
                 // get the function symbol
-                function_symbol &func_sym = dynamic_cast<function_symbol&>(sym);
+                function_symbol &func_sym = static_cast<function_symbol&>(sym);
 
                 // get the return type data
                 type_information = func_sym.get_data_type();
@@ -418,7 +418,7 @@ DataType expression_util::get_expression_data_type(
         }
         case CAST:
         {
-            Cast &c = dynamic_cast<Cast&>(to_eval);
+            Cast &c = static_cast<Cast&>(to_eval);
             if (DataType::is_valid_type(c.get_new_type())) {
                 type_information = c.get_new_type();
             }
@@ -562,7 +562,7 @@ symbol &expression_util::get_function_symbol(
             if (bin.get_operator() == DOT) {
                 auto &lhs_struct = expression_util::get_struct_type(bin.get_left(), structs, symbols, line);
                 try {
-                    auto &id = dynamic_cast<Identifier&>(bin.get_right());
+                    auto &id = static_cast<Identifier&>(bin.get_right());
                     s = lhs_struct.get_member(id.getValue());
                 }
                 catch (std::bad_cast &e) {

@@ -30,7 +30,7 @@ bool general_utilities::returns(StatementBlock to_check) {
 
             // handle ite
 			if (s->get_statement_type() == stmt_type::IF_THEN_ELSE) {
-                to_return = ite_returns(dynamic_cast<IfThenElse*>(s.get()));
+                to_return = ite_returns(static_cast<IfThenElse*>(s.get()));
 			}
 
 			// increment the iterator
@@ -44,7 +44,7 @@ bool general_utilities::returns(StatementBlock to_check) {
 
 bool general_utilities::returns(Statement &to_check) {
     if (to_check.get_statement_type() == SCOPE_BLOCK) {
-        ScopedBlock &block = dynamic_cast<ScopedBlock&>(to_check);
+        ScopedBlock &block = static_cast<ScopedBlock&>(to_check);
         return returns(block.get_statements());
     }
     else {

@@ -236,7 +236,7 @@ struct_info define_struct(StructDefinition &definition, compile_time_evaluator &
         // Only allocations are allowed within a struct body
         if (s->get_statement_type() == ALLOCATION) {
             // cast to Allocation and create a symbol
-            Allocation *alloc = dynamic_cast<Allocation*>(s.get());
+            Allocation *alloc = static_cast<Allocation*>(s.get());
 
             // first, ensure that the symbol's type is not this struct
             if ((alloc->get_type_information().get_primary() == STRUCT) && (alloc->get_type_information().get_struct_name() == struct_name)) {
@@ -288,7 +288,7 @@ struct_info define_struct(StructDefinition &definition, compile_time_evaluator &
             current_offset += this_width;
         }
         else if (s->get_statement_type() == DECLARATION) {
-            Declaration *decl = dynamic_cast<Declaration*>(s.get());
+            Declaration *decl = static_cast<Declaration*>(s.get());
             if (decl->is_function()) {
                 function_symbol f_sym = create_function_symbol(*decl, true, true, struct_name, 1, true);
             }
@@ -298,7 +298,7 @@ struct_info define_struct(StructDefinition &definition, compile_time_evaluator &
         }
         else if (s->get_statement_type() == FUNCTION_DEFINITION) {
             // cast and define the function
-            FunctionDefinition *def = dynamic_cast<FunctionDefinition*>(s.get());
+            FunctionDefinition *def = static_cast<FunctionDefinition*>(s.get());
             function_symbol f_sym = create_function_symbol(*def, true, true, struct_name, 1, true);
             members.push_back(std::make_shared<function_symbol>(f_sym));
         }
@@ -385,7 +385,7 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
 
         // cast to the appropriate symbol type
         if (param->get_statement_type() == DECLARATION) {
-            Declaration *param_decl = dynamic_cast<Declaration*>(param);
+            Declaration *param_decl = static_cast<Declaration*>(param);
             param_sym = generate_symbol(
                 *param_decl,
                 param_decl->get_type_information().get_width(),
@@ -394,7 +394,7 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
                 stack_offset
             );
         } else if (param->get_statement_type() == ALLOCATION) {
-            Allocation *param_alloc = dynamic_cast<Allocation*>(param);
+            Allocation *param_alloc = static_cast<Allocation*>(param);
             DataType t = param_alloc->get_type_information();
             param_sym = generate_symbol(
                 *param_alloc,
