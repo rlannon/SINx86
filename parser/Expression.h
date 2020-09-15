@@ -205,7 +205,10 @@ class Cast : public Expression
 public:
     Expression &get_exp();
 	DataType &get_new_type();
+
+    std::unique_ptr<Expression> get_unique() override;
 	
+    Cast(Cast &old);
     Cast(Expression &to_cast, DataType new_type);
 	Cast(Binary &b);
 };
@@ -220,11 +223,13 @@ public:
 	static attribute to_attribute(std::string to_convert);
 	static bool is_attribute(std::string a);
 
+    std::unique_ptr<Expression> get_unique() override;
+
 	Expression &get_selected();
 	attribute get_attribute();
 	DataType &get_data_type();
 
-    AttributeSelection(const AttributeSelection &old);
+    AttributeSelection(AttributeSelection &old);
 	AttributeSelection(Expression &selected, std::string attribute_name);
 	AttributeSelection(Binary &to_deconstruct);
 };

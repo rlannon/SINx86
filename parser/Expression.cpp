@@ -144,6 +144,35 @@ DataType &AttributeSelection::get_data_type() {
 	return this->t;
 }
 
+attribute AttributeSelection::to_attribute(std::string to_convert) {
+    if (to_convert == "len") {
+        return LENGTH;
+    }
+    else if (to_convert == "size") {
+        return SIZE;
+    }
+    else if (to_convert == "var") {
+        return VARIABILITY;
+    }
+    else {
+        return NO_ATTRIBUTE;
+    }
+}
+
+bool AttributeSelection::is_attribute(std::string a) {
+	return to_attribute(a) != NO_ATTRIBUTE;
+}
+
+std::unique_ptr<Expression> AttributeSelection::get_unique() {
+    return std::make_unique<AttributeSelection>(*this);
+}
+
+AttributeSelection::AttributeSelection(AttributeSelection &old): Expression(ATTRIBUTE) {
+    this->selected = std::move(old.selected);
+    this->t = old.t;
+    this->attrib = old.attrib;
+}
+
 AttributeSelection::AttributeSelection(Expression &selected, std::string attribute_name):
 	Expression(ATTRIBUTE)
 {
@@ -198,26 +227,6 @@ AttributeSelection::AttributeSelection(Binary &to_deconstruct): Expression(ATTRI
 	// all attributes are final; they are not necessarily known at compile time, but they are not directly modifiable
 	this->t.get_qualities().add_quality(FINAL);
 }
-
-attribute AttributeSelection::to_attribute(std::string to_convert) {
-    if (to_convert == "len") {
-        return LENGTH;
-    }
-    else if (to_convert == "size") {
-        return SIZE;
-    }
-    else if (to_convert == "var") {
-        return VARIABILITY;
-    }
-    else {
-        return NO_ATTRIBUTE;
-    }
-}
-
-bool AttributeSelection::is_attribute(std::string a) {
-	return to_attribute(a) != NO_ATTRIBUTE;
-}
-
 
 // Lists
 
@@ -464,6 +473,16 @@ Expression &Cast::get_exp() {
 
 DataType& Cast::get_new_type() {
 	return this->new_type;
+}
+
+std::unique_ptr<Expression> Cast::get_unique() {
+    // overriden virtual method
+    return std::make_unique<Cast>(*this);
+}
+
+Cast::Cast(Cast &old): Expression(CAST) {
+    this->new_type = old.new_type;
+    this->to_cast = std::move(old.to_cast);
 }
 
 Cast::Cast(Expression &to_cast, DataType new_type): Expression(CAST) {
