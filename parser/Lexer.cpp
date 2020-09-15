@@ -15,7 +15,7 @@ const std::set<std::string> Lexer::keywords{
 	"alloc", "and", "array", "as", "asm", "bool", "char", "const", 
 	"constexpr", "c64", "decl", "def", "dynamic", "else", "extern", "final", "float", "free", "if", "include", "int", 
 	"len", "let", "long", "move", "not", "null", "or", "pass", "private", "ptr", "public", "raw", "readonly", "realloc", 
-	"return", "short", "sincall", "size",  "static", "string", "struct", "tuple", "typename", "unsigned", "var", "void", 
+	"return", "short", "signed", "sincall", "size",  "static", "string", "struct", "tuple", "typename", "unsigned", "var", "void", 
 	"while", "windows", "xor"
 };
 
@@ -178,7 +178,14 @@ bool Lexer::is_number(char ch) {
 
 bool Lexer::is_id_start(char ch) {
 
-	/*  Returns true if the character is the start of an ID; that is, if it starts with a letter or an underscore  */
+	/*  
+    
+    is_id_start
+    
+    Returns true if the character is the start of an ID
+    That is, if it starts with a letter or an underscore
+    
+    */
 
 	if (match_character(ch, "[_a-zA-Z]")) {
 		return true;

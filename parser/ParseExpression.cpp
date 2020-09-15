@@ -383,7 +383,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(
             else if (op == PROC_OPERATOR) {
                 // Procedures require a little special care as well
                 this->back();
-                auto arg_exp = this->parse_expression(his_prec, grouping_symbol, false, omit_equals);
+                auto arg_exp = this->parse_expression(0, grouping_symbol, false, omit_equals);
                 //this->next();
                 
                 if (arg_exp->get_expression_type() == LIST) {
