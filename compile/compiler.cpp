@@ -432,12 +432,14 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, function_symbol *si
     }
 
 	// when we leave a scope, remove local variables -- but NOT global variables (they must be retained for inclusions)
-	if (this->current_scope_name != "global") {
+	if (this->current_scope_level != 0) {
 		// todo: call leave_scope on the compile-time evaluator
 
         // free local data
-		size_t reserved_space = this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
-        if (this->current_scope_level != 1) {
+        size_t reserved_space = this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
+
+        // note we don't need to do have an "add rsp" instruction if we just had a return statement (it's unreachable)
+        if ((this->current_scope_level != 1) && (ast.statements_list.back()->get_statement_type() != RETURN_STATEMENT)) {
             compile_ss << "\t" << "add rsp, " << reserved_space << std::endl;
             this->max_offset -= reserved_space;
         }
@@ -595,7 +597,7 @@ void compiler::generate_asm(std::string filename) {
         symbol *main_function = nullptr;
 
         try {
-            symbol *main_function = this->lookup("main", 0);
+            main_function = this->lookup("main", 0);
         }
         catch (SymbolNotFoundException &e) {
             // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
