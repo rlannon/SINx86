@@ -93,7 +93,10 @@ std::shared_ptr<Expression> Parser::parse_expression(
         }
 		// if our next character is an op_char, returning the expression would skip it, so we need to parse a binary using the expression in parens as our left expression
 		else if (is_valid_operator(this->peek())) {
-			return this->maybe_binary(temp, prec, grouping_symbol);
+            if (not_binary)
+                return temp;
+            else
+    			return this->maybe_binary(temp, prec, grouping_symbol);
 		}
 		// if we had a comma, we need to parse a list
 		else if (this->peek().value == ",") {
@@ -198,13 +201,14 @@ std::shared_ptr<Expression> Parser::parse_expression(
 		// if we have a function call
 		if (current_lex.value == "@") {
 			current_lex = this->next();
-            auto func_name = this->parse_expression();
+            auto func_name = this->parse_expression(get_precedence(exp_operator::CONTROL_TRANSFER));
             if (func_name->get_expression_type() == PROC_EXP) {
                 auto proc_exp = static_cast<Procedure*>(func_name.get());
                 left = std::make_shared<CallExpression>(proc_exp);
             }
             else {
                 // todo: valid call expressions without proc objects
+                throw ParserException("Expected procedure expression", compiler_errors::UNSUPPORTED_FEATURE, current_lex.line_number);
             }
     	}
 		// if it's not a function, it must be a unary expression
@@ -383,8 +387,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(
             else if (op == PROC_OPERATOR) {
                 // Procedures require a little special care as well
                 this->back();
-                auto arg_exp = this->parse_expression(0, grouping_symbol, false, omit_equals);
-                //this->next();
+                auto arg_exp = this->parse_expression(0, grouping_symbol, true, omit_equals);
                 
                 if (arg_exp->get_expression_type() == LIST) {
                     auto l = static_cast<ListExpression*>(arg_exp.get());
