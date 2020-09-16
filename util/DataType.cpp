@@ -105,14 +105,20 @@ void DataType::set_must_free() {
     */
 
     if (
-        this->primary == PTR ||
+        (
+            this->primary == PTR &&
+            this->qualities.is_managed()
+        ) ||
         this->is_reference_type()
     ) {
         this->_must_free = true;
     }
     else if (this->primary == ARRAY) {
         if (
-            this->get_subtype().primary == PTR ||
+            (
+                this->get_subtype().primary == PTR &&
+                this->get_subtype().qualities.is_managed()
+            ) ||
             this->get_subtype().is_reference_type()
         ) {
             this->_must_free = true;
@@ -122,7 +128,8 @@ void DataType::set_must_free() {
         bool _free_contained = false;
         auto it = this->contained_types.begin();
         while (it != this->contained_types.end() && !_free_contained) {
-            if (it->primary == PTR || it->is_reference_type())
+            if (
+                (it->primary == PTR && it->qualities.is_managed()) || it->is_reference_type())
                 _free_contained = true;
         }
         this->_must_free = _free_contained;
