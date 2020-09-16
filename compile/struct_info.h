@@ -36,6 +36,7 @@ public:
 
     struct_info(std::string struct_name, std::vector<std::shared_ptr<symbol>> members, unsigned int line);
     struct_info(std::string struct_name);
+    struct_info(const struct_info &s);
     struct_info();
     ~struct_info();
 };

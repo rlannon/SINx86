@@ -108,7 +108,7 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	}
 	else {
 		// todo: specialize exceptions thrown here
-		throw DuplicateSymbolException(0);
+		throw DuplicateSymbolException(to_insert->get_line_defined());
 	}
 
 	return returned.second;
@@ -169,7 +169,7 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 	*/
 
 	std::vector<symbol> v;
-	auto l = this->locals;
+	stack<node> l(this->locals);
 	while (
 		!l.empty() && 
 		(is_function ? 

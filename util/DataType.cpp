@@ -134,6 +134,9 @@ void DataType::set_must_free() {
         }
         this->_must_free = _free_contained;
     }
+    else {
+        this->_must_free = false;
+    }
     
     return;
 }
@@ -158,6 +161,7 @@ DataType& DataType::operator=(const DataType &right)
 		this->struct_name = right.struct_name;
 		this->width = right.width;
 		this->array_length_expression = right.array_length_expression;
+        this->_must_free = right._must_free;
 	}
 
 	return *this;

@@ -104,6 +104,13 @@ struct_info::struct_info(std::string struct_name) {
     this->width_known = false;
 }
 
+struct_info::struct_info(const struct_info &s) {
+    this->struct_name = s.struct_name;
+    this->struct_width = s.struct_width;
+    this->members = s.members;
+    this->width_known = s.width_known;
+}
+
 struct_info::struct_info() {
     this->struct_name = "";
     this->struct_width = 0;

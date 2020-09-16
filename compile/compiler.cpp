@@ -281,7 +281,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
                 } else {
                     throw CompilerException(
                         "Currently, defining non-sincall functions is not supported",
-                        compiler_errors::CALLING_CONVENTION_ERROR,
+                        compiler_errors::UNSUPPORTED_FEATURE,
                         def_stmt.get_line_number()
                     );
                 }
