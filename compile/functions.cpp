@@ -581,7 +581,7 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
         sincall_ss << call_sre_function(magic_numbers::SRE_ADD_REF);
     }
 
-    // decrement the rc of all pointers and dynamic memory
+    // decrement the rc of all pointers, references, and dynamic memory
     try {
         sincall_ss << decrement_rc(this->reg_stack.peek(), this->symbols, this->structs, this->current_scope_name, this->current_scope_level, true).str();
     }

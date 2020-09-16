@@ -672,6 +672,7 @@ std::stringstream decrement_rc(
         struct_info &info = structs.find(ls->get_data_type().get_struct_name(), 0);
         v = info.get_members_to_free(v, scope, level);
     }
+    // todo: right now, structs cannot contain other structs, but if this feature is added, this function must change to free reference types within /those/ structs (wouldn't get caught here)
 
     if (!v.empty()) {
         // preserve all registers to ensure the memory locations contain their respective values
@@ -683,28 +684,60 @@ std::stringstream decrement_rc(
         dec_ss << "\t" << "pushfq" << std::endl;
         for (symbol &s: v) {
             if (s.get_data_type().get_primary() == ARRAY && !s.get_data_type().is_reference_type()) {
-                // todo: free array members
+                /*
+
+                To free array members, we should iterate in our assembly
+                The routine begins by:
+                    * Aligning the stack to a 16-byte boundary
+                    * Load R12 with the array base
+                    * Load R13 with 0 (the current index)
+                It proceeds as follows:
+                    * If R12 < the length of the array, continue; else, done
+                    * Load RDI with [R12 + R13 * 8 + 4]
+                    * Call the SRE function
+                    * Increment R13
+                Finally, the routine ends by restoring the original stack alignment
+
+                Currently, pushing r12 and r13 is unnecessary as we pushed all used register before.
+
+                */
+
+                // ensure 16-byte alignment
+                dec_ss << "\t" << "mov rax, rsp" << std::endl;
+                dec_ss << "\t" << "and rsp, -0x10" << std::endl;
+                dec_ss << "\t" << "push rax" << std::endl;
+                dec_ss << "\t" << "sub rsp, 0x08" << std::endl;
+
+                dec_ss << get_address(s, R12);
+                dec_ss << "\t" << "mov r13, 0" << std::endl;
+                dec_ss << ".free_array_" << std::endl;
+                dec_ss << "\t" << "cmp r13d, [r12]" << std::endl;
+                dec_ss << "\t" << "jg .free_array_done_" << std::endl;
+                dec_ss << "\t" << "mov rdi, [r12 + r13 * 8 + 4]" << std::endl;
+                dec_ss << "\t" << "call " << magic_numbers::SRE_FREE << std::endl;
+                dec_ss << "\t" << "inc r13" << std::endl;
+                dec_ss << "\t" << "jmp .free_array_" << std::endl;
+
+                // restore original stack alignment
+                dec_ss << ".free_array_done_" << std::endl;
+                dec_ss << "\t" << "add rsp, 0x08" << std::endl;
+                dec_ss << "\t" << "pop rsp" << std::endl;
+                
+                // if the array itself must be freed, do so
                 if (s.get_data_type().is_reference_type()) {
-                    // todo: free the array itself
+                    dec_ss << call_sre_free(s).str();
                 }
             }
             else if (s.get_data_type().get_primary() == TUPLE) {
                 // todo: free tuple members
 
+                // if the tuple itself must be freed, do so
                 if (s.get_data_type().is_reference_type()) {
-                    // todo: free the tuple itself
+                    dec_ss << call_sre_free(s).str();
                 }
             }
             else {
-                // if we have a negative number for the offset, add it instead
-                if (s.get_offset() < 0) {
-                    dec_ss << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;
-                }
-                else {
-                    dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
-                }
-                dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
-                dec_ss << call_sre_function(magic_numbers::SRE_FREE);
+                dec_ss << call_sre_free(s).str();
             }
         }
         // restore the status
@@ -765,14 +798,14 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
         get_addr << "\t" << "mov rdi, [rbp - " << s.get_offset() << "]" << std::endl;
     }
     else {
-        get_addr << "\t" << "mov rdi, rbp" << std::endl;
-
+         // if we have a negative number for the offset, add it instead
         if (s.get_offset() < 0) {
-            get_addr << "\t" << "add rdi, " << -s.get_offset() << std::endl;
+            get_addr << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;
         }
         else {
-            get_addr << "\t" << "sub rdi, " << s.get_offset() << std::endl;
+            get_addr << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
         }
+        get_addr << "\t" << "mov rdi, [rbx]" << std::endl;
     }
 
     gen << get_addr.str();

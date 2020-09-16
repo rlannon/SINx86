@@ -169,7 +169,7 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 	*/
 
 	std::vector<symbol> v;
-	stack<node> l = this->locals;
+	auto l = this->locals;
 	while (
 		!l.empty() && 
 		(is_function ? 
@@ -227,7 +227,7 @@ size_t symbol_table::leave_scope(std::string name, unsigned int level)
 
 		while (!this->locals.empty() && this->locals.peek().scope_level == level && this->locals.peek().scope_name == name) {
 			// pop the last node and erase it
-			node to_erase = this->locals.pop_back();
+			auto to_erase = this->locals.pop_back();
 
 			// ensure that we don't delete symbols from the global scope
 			if (to_erase.scope_name != "global") {
@@ -270,7 +270,8 @@ std::vector<symbol*> symbol_table::get_local_structs(std::string scope_name, uns
     */
 
     std::vector<symbol*> v;
-    stack<node> l = this->locals;
+    auto l = this->locals;
+
     while (
 		!l.empty() && 
 		(is_function ? 
@@ -286,6 +287,8 @@ std::vector<symbol*> symbol_table::get_local_structs(std::string scope_name, uns
 		if (s.get_data_type().get_primary() == STRUCT)
             v.push_back(&s);
 	}
+
+    return v;
 }
 
 symbol_table::symbol_table()
