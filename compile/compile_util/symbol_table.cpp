@@ -164,7 +164,7 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 		* is marked as dynamic
 		* is a pointer
 		* is a reference
-	If we are in a function, we need to
+	We also need to see if we have an array or a tuple, iterate through their contained types, and see if anything needs to be freed there. If so, add the array/tuple to the vector.
 
 	*/
 
@@ -180,16 +180,31 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 			)
 		)
 	) {
+        // todo: some of this could be done when we create the DataType or symbol objects
 		symbol &s = this->find(l.pop_back().name);
-		if (
-			s.get_data_type().get_primary() == PTR ||
-			s.get_data_type().is_reference_type()
-		) {
-			v.push_back(s);
-		}
+		if (s.get_data_type().must_free())
+            v.push_back(s);
 	}
 
 	return v;
+}
+
+std::vector<symbol> &symbol_table::get_symbols_to_free(
+    std::vector<symbol> &current,
+    std::string name,
+    unsigned int level,
+    bool is_function
+) {
+    /*
+
+    get_symbols_to_free
+    An overloaded version that appends elements to the vector supplied and returns a new one
+
+    */
+
+    auto v = this->get_symbols_to_free(name, level, is_function);
+    current.insert(current.end(), std::make_move_iterator(v.begin()), std::make_move_iterator(v.end()));
+    return current;
 }
 
 size_t symbol_table::leave_scope(std::string name, unsigned int level)
@@ -244,6 +259,33 @@ std::vector<std::shared_ptr<symbol>> symbol_table::get_all_symbols() {
 	}
 
 	return v;
+}
+
+std::vector<symbol*> symbol_table::get_local_structs(std::string scope_name, unsigned int scope_level, bool is_function) {
+    /*
+
+    get_local_structs
+    Gets all struct data in the given scope
+
+    */
+
+    std::vector<symbol*> v;
+    stack<node> l = this->locals;
+    while (
+		!l.empty() && 
+		(is_function ? 
+			(l.peek().scope_level >= scope_level) :
+			(
+				(l.peek().scope_level == scope_level)	&& 
+				(l.peek().scope_name == scope_name)
+			)
+		)
+	) {
+        // todo: some of this could be done when we create the DataType or symbol objects
+		symbol &s = this->find(l.pop_back().name);
+		if (s.get_data_type().get_primary() == STRUCT)
+            v.push_back(&s);
+	}
 }
 
 symbol_table::symbol_table()

@@ -178,7 +178,7 @@ bool Lexer::is_number(char ch) {
 
 bool Lexer::is_id_start(char ch) {
 
-	/*  
+	/*
     
     is_id_start
     

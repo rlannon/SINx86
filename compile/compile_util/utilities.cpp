@@ -639,12 +639,24 @@ std::string get_address(symbol &s, reg r) {
     return address_info;
 }
 
-std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string scope, unsigned int level, bool is_function) {
+std::stringstream decrement_rc(
+    register_usage &r,
+    symbol_table& symbols,
+    struct_table &structs,
+    std::string scope,
+    unsigned int level,
+    bool is_function
+) {
     /*
 
     decrement_rc
     Decrements the RC of all local variables
 
+    @param  r   The register_usage object containing available and used registers
+    @param  symbols The symbol table to use
+    @param  structs The struct table to use
+    @param  scope   The name of the scope we are looking in
+    @param  level   The level of the scope we are leaving
     @param  is_function If we are in a function, we need to free data that's below the scope level as well
 
     */
@@ -652,7 +664,15 @@ std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string s
     std::stringstream dec_ss;
 
     // get the local variables that need to be freed
-    std::vector<symbol> v = t.get_symbols_to_free(scope, level, is_function);
+    auto v = symbols.get_symbols_to_free(scope, level, is_function);
+
+    // now we need to look at the structs in the scope that we are leaving and see if we need to decrement any of their memebers
+    auto local_structs = symbols.get_local_structs(scope, level, is_function);
+    for (auto ls: local_structs) {
+        struct_info &info = structs.find(ls->get_data_type().get_struct_name(), 0);
+        // todo: continue
+    }
+
     if (!v.empty()) {
         // preserve all registers to ensure the memory locations contain their respective values
         dec_ss << push_used_registers(r, true).str();

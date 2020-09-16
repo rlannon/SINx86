@@ -49,9 +49,11 @@ public:
 	symbol& find(std::string to_find, std::string scope_name = "");
 	
 	std::vector<symbol> get_symbols_to_free(std::string name, unsigned int level, bool is_function);
+    std::vector<symbol> &get_symbols_to_free(std::vector<symbol> &current, std::string name, unsigned int level, bool is_function);
 	size_t leave_scope(std::string name, unsigned int level);
 
 	std::vector<std::shared_ptr<symbol>> get_all_symbols();
+    std::vector<symbol*> get_local_structs(std::string scope_name, unsigned int scope_level, bool is_function);
 
 	// constructor, destructor
 	symbol_table();

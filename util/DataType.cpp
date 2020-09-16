@@ -93,6 +93,44 @@ void DataType::set_width() {
 	}
 }
 
+void DataType::set_must_free() {
+    /*
+
+    set_must_free
+    Sets the _must_free member, indicating whether this data type must be freed
+
+    Note this will add array or tuple types if a contained type must be freed.
+    This will be handled by the compiler.
+
+    */
+
+    if (
+        this->primary == PTR ||
+        this->is_reference_type()
+    ) {
+        this->_must_free = true;
+    }
+    else if (this->primary == ARRAY) {
+        if (
+            this->get_subtype().primary == PTR ||
+            this->get_subtype().is_reference_type()
+        ) {
+            this->_must_free = true;
+        }
+    }
+    else if (this->primary == TUPLE) {
+        bool _free_contained = false;
+        auto it = this->contained_types.begin();
+        while (it != this->contained_types.end() && !_free_contained) {
+            if (it->primary == PTR || it->is_reference_type())
+                _free_contained = true;
+        }
+        this->_must_free = _free_contained;
+    }
+    
+    return;
+}
+
 /*
 
 We can use the overloaded operators to do any of the following:
@@ -418,6 +456,10 @@ bool DataType::must_initialize() const {
 	return init_required;
 }
 
+bool DataType::must_free() const {
+    return this->_must_free;
+}
+
 DataType::DataType
 (
     Type primary,
@@ -453,6 +495,7 @@ DataType::DataType
 
 	// set the data width
 	this->set_width();
+    this->set_must_free();
 }
 
 DataType::DataType(Type primary, std::vector<DataType> contained_types, symbol_qualities qualities):
@@ -464,6 +507,7 @@ DataType::DataType(Type primary, std::vector<DataType> contained_types, symbol_q
 	this->array_length = 0;
 	this->struct_name = "";
 	this->set_width();
+    this->set_must_free();
 }
 
 DataType::DataType(Type primary) :
@@ -487,6 +531,7 @@ DataType::DataType(const DataType &ref) {
 	this->array_length_expression = ref.array_length_expression;
 	this->struct_name = ref.struct_name;
 	this->width = ref.width;
+    this->_must_free = ref._must_free;
 }
 
 DataType::DataType()
@@ -497,6 +542,7 @@ DataType::DataType()
 	this->width = 0;
 	this->struct_name = "";
 	this->array_length_expression = nullptr;
+    this->_must_free = false;
 }
 
 DataType::~DataType()
