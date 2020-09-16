@@ -182,7 +182,7 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 	) {
         // todo: some of this could be done when we create the DataType or symbol objects
 		symbol &s = this->find(l.pop_back().name);
-		if (s.get_data_type().must_free())
+		if (s.get_symbol_type() == VARIABLE && s.get_data_type().must_free())
             v.push_back(s);
 	}
 

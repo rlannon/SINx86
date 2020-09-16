@@ -670,7 +670,7 @@ std::stringstream decrement_rc(
     auto local_structs = symbols.get_local_structs(scope, level, is_function);
     for (auto ls: local_structs) {
         struct_info &info = structs.find(ls->get_data_type().get_struct_name(), 0);
-        v = info.get_members_to_free(v, scope, level);
+        v = info.get_members_to_free(v);
     }
     // todo: right now, structs cannot contain other structs, but if this feature is added, this function must change to free reference types within /those/ structs (wouldn't get caught here)
 
@@ -736,6 +736,32 @@ std::stringstream decrement_rc(
                     dec_ss << call_sre_free(s).str();
                 }
             }
+            else if (s.get_scope_name() != scope) {
+                // Structs to be freed
+                struct_info &s_info = structs.find(s.get_scope_name(), s.get_line_defined());
+                symbol &to_free = *s_info.get_member(s.get_name());
+                symbol *struct_symbol = nullptr;
+                auto it = local_structs.begin();
+                while (it != local_structs.end() && !struct_symbol) {
+                    if ((*it)->get_data_type().get_struct_name() == s_info.get_struct_name()) {
+                        struct_symbol = *it;
+                    }
+                    else {
+                        it++;
+                    }
+                }
+
+                if (struct_symbol) {
+                    // get the address of the struct in rbx and add the member's offset
+                    dec_ss << get_address(*struct_symbol, RBX);
+                    dec_ss << "\t" << "add rbx, " << to_free.get_offset() << std::endl;
+                    dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
+                    dec_ss << call_sre_function(magic_numbers::SRE_FREE);
+                }
+                else {
+                    throw CompilerException("Could not find struct " + s_info.get_struct_name() + " in scope", compiler_errors::SYMBOL_NOT_FOUND_ERROR, 0);
+                }
+            }
             else {
                 dec_ss << call_sre_free(s).str();
             }
@@ -792,8 +818,8 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
         get_addr << "\t" << "lea rdi, " << s.get_name() << std::endl;
     }
     else if (
-        s.get_data_type().get_primary() == PTR ||
-        s.get_data_type().get_qualities().is_dynamic()
+        (s.get_data_type().get_primary() == PTR && s.get_data_type().get_qualities().is_managed()) ||
+        s.get_data_type().is_reference_type()
     ) {
         get_addr << "\t" << "mov rdi, [rbp - " << s.get_offset() << "]" << std::endl;
     }
