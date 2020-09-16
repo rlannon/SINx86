@@ -670,25 +670,42 @@ std::stringstream decrement_rc(
     auto local_structs = symbols.get_local_structs(scope, level, is_function);
     for (auto ls: local_structs) {
         struct_info &info = structs.find(ls->get_data_type().get_struct_name(), 0);
-        // todo: continue
+        v = info.get_members_to_free(v, scope, level);
     }
 
     if (!v.empty()) {
         // preserve all registers to ensure the memory locations contain their respective values
         dec_ss << push_used_registers(r, true).str();
 
+        // todo: this process could be a bit more modular
+
         // preserve our status register
         dec_ss << "\t" << "pushfq" << std::endl;
         for (symbol &s: v) {
-            // if we have a negative number, add it instead
-            if (s.get_offset() < 0) {
-                dec_ss << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;
+            if (s.get_data_type().get_primary() == ARRAY && !s.get_data_type().is_reference_type()) {
+                // todo: free array members
+                if (s.get_data_type().is_reference_type()) {
+                    // todo: free the array itself
+                }
+            }
+            else if (s.get_data_type().get_primary() == TUPLE) {
+                // todo: free tuple members
+
+                if (s.get_data_type().is_reference_type()) {
+                    // todo: free the tuple itself
+                }
             }
             else {
-                dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
+                // if we have a negative number for the offset, add it instead
+                if (s.get_offset() < 0) {
+                    dec_ss << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;
+                }
+                else {
+                    dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
+                }
+                dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
+                dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
-            dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
-            dec_ss << call_sre_function(magic_numbers::SRE_FREE);
         }
         // restore the status
         dec_ss << "\t" << "popfq" << std::endl;

@@ -88,6 +88,16 @@ std::vector<std::shared_ptr<symbol>> struct_info::get_all_members() {
     return this->members.get_all_symbols();
 }
 
+std::vector<symbol> struct_info::get_members_to_free(std::string scope_name, unsigned int scope_level) {
+    // returns members that must be freed
+    return this->members.get_symbols_to_free(scope_name, scope_level, false);
+}
+
+std::vector<symbol> &struct_info::get_members_to_free(std::vector<symbol> &current, std::string scope_name, unsigned int scope_level) {
+    // calls overloaded version on 'members'
+    return this->members.get_symbols_to_free(current, scope_name, scope_level, false);
+}
+
 struct_info::struct_info(std::string struct_name) {
     this->struct_name = struct_name;
     this->struct_width = 0;

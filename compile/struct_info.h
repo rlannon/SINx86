@@ -31,6 +31,8 @@ public:
     bool is_width_known() const;    // whether the width of the struct is known
 
     std::vector<std::shared_ptr<symbol>> get_all_members();
+    std::vector<symbol> get_members_to_free(std::string scope_name, unsigned int scope_level);
+    std::vector<symbol> &get_members_to_free(std::vector<symbol> &current, std::string scope_name, unsigned int scope_level);
 
     struct_info(std::string struct_name, std::vector<std::shared_ptr<symbol>> members, unsigned int line);
     struct_info(std::string struct_name);
