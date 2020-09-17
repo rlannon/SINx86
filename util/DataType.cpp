@@ -131,6 +131,9 @@ void DataType::set_must_free() {
             if (
                 (it->primary == PTR && it->qualities.is_managed()) || it->is_reference_type())
                 _free_contained = true;
+            else {
+                it++;
+            }
         }
         this->_must_free = _free_contained;
     }

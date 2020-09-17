@@ -16,8 +16,6 @@ The implementation of the Parser member functions to parse statements, including
 	- std::shared_ptr<Statement> parse_definition(lexeme current_lex);
 	- std::shared_ptr<Statement> parse_function_call(lexeme current_lex);
 
-Keeping the statement parsing functions together makes for a smaller 'Parser.cpp' file and more readable code.
-
 */
 
 #include "Parser.h"
