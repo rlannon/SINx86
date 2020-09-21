@@ -251,11 +251,11 @@ size_t symbol_table::leave_scope(std::string name, unsigned int level)
 	return data_width;
 }
 
-std::vector<std::shared_ptr<symbol>> symbol_table::get_all_symbols() {
+std::vector<symbol*> symbol_table::get_all_symbols() {
 	// gets all symbols
-	std::vector<std::shared_ptr<symbol>> v;
+	std::vector<symbol*> v;
 	for (auto s: this->symbols) {
-		v.push_back(s.second);
+		v.push_back(s.second.get());
 	}
 
 	return v;

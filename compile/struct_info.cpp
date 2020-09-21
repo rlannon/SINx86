@@ -83,7 +83,7 @@ struct_info::struct_info(std::string name, std::vector<std::shared_ptr<symbol>> 
     }
 }
 
-std::vector<std::shared_ptr<symbol>> struct_info::get_all_members() {
+std::vector<symbol*> struct_info::get_all_members() {
     // gets all struct members in a vector
     return this->members.get_all_symbols();
 }

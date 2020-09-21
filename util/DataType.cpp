@@ -155,7 +155,7 @@ We can use the overloaded operators to do any of the following:
 
 DataType& DataType::operator=(const DataType &right)
 {
-	// Move assignment operator
+	// Copy assignment operator
 	if (this != &right) {
 		this->primary = right.primary;
 		this->contained_types = right.contained_types;
@@ -164,8 +164,8 @@ DataType& DataType::operator=(const DataType &right)
 		this->struct_name = right.struct_name;
 		this->width = right.width;
 		this->array_length_expression = right.array_length_expression;
-        this->_must_free = right._must_free;
 	}
+    this->set_must_free();
 
 	return *this;
 }
@@ -545,7 +545,7 @@ DataType::DataType(const DataType &ref) {
 	this->array_length_expression = ref.array_length_expression;
 	this->struct_name = ref.struct_name;
 	this->width = ref.width;
-    this->_must_free = ref._must_free;
+    this->set_must_free();
 }
 
 DataType::DataType()

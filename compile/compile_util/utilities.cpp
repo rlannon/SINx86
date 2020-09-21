@@ -639,7 +639,7 @@ std::string get_address(symbol &s, reg r) {
     return address_info;
 }
 
-std::stringstream decrement_rc(
+std::string decrement_rc(
     register_usage &r,
     symbol_table& symbols,
     struct_table &structs,
@@ -663,6 +663,10 @@ std::stringstream decrement_rc(
 
     std::stringstream dec_ss;
 
+    // preserve registers
+    dec_ss << "\t" << "pushfq" << std::endl;
+    dec_ss << push_used_registers(r, true).str();
+
     // get the local variables that need to be freed
     auto v = symbols.get_symbols_to_free(scope, level, is_function);
 
@@ -670,110 +674,100 @@ std::stringstream decrement_rc(
     auto local_structs = symbols.get_local_structs(scope, level, is_function);
     for (auto ls: local_structs) {
         struct_info &info = structs.find(ls->get_data_type().get_struct_name(), 0);
-        v = info.get_members_to_free(v);
+        auto struct_members = info.get_members_to_free();
+        dec_ss << decrement_rc_util(struct_members, structs, scope, 1, false);
     }
     // todo: right now, structs cannot contain other structs, but if this feature is added, this function must change to free reference types within /those/ structs (wouldn't get caught here)
 
-    if (!v.empty()) {
-        // preserve all registers to ensure the memory locations contain their respective values
-        dec_ss << push_used_registers(r, true).str();
+    if (!v.empty())
+        dec_ss << decrement_rc_util(v, structs, scope, level, is_function);
 
-        // todo: this process could be a bit more modular
+    dec_ss << pop_used_registers(r, true).str();
+    dec_ss << "\t" << "popfq" << std::endl;
 
-        // preserve our status register
-        dec_ss << "\t" << "pushfq" << std::endl;
-        for (symbol &s: v) {
-            if (s.get_data_type().get_primary() == ARRAY && !s.get_data_type().is_reference_type()) {
-                /*
+    return dec_ss.str();
+}
 
-                To free array members, we should iterate in our assembly
-                The routine begins by:
-                    * Aligning the stack to a 16-byte boundary
-                    * Load R12 with the array base
-                    * Load R13 with 0 (the current index)
-                It proceeds as follows:
-                    * If R12 < the length of the array, continue; else, done
-                    * Load RDI with [R12 + R13 * 8 + 4]
-                    * Call the SRE function
-                    * Increment R13
-                Finally, the routine ends by restoring the original stack alignment
+std::string decrement_rc_util(
+    std::vector<symbol> &to_free,
+    struct_table &structs,
+    std::string scope,
+    unsigned int level,
+    bool is_function
+) {
+    /*
 
-                Currently, pushing r12 and r13 is unnecessary as we pushed all used register before.
+    decrement_rc_util
+    The function that is called by decrement_rc
 
-                */
+    */
 
-                // ensure 16-byte alignment
-                dec_ss << "\t" << "mov rax, rsp" << std::endl;
-                dec_ss << "\t" << "and rsp, -0x10" << std::endl;
-                dec_ss << "\t" << "push rax" << std::endl;
-                dec_ss << "\t" << "sub rsp, 0x08" << std::endl;
 
-                dec_ss << get_address(s, R12);
-                dec_ss << "\t" << "mov r13, 0" << std::endl;
-                dec_ss << ".free_array_" << std::endl;
-                dec_ss << "\t" << "cmp r13d, [r12]" << std::endl;
-                dec_ss << "\t" << "jg .free_array_done_" << std::endl;
-                dec_ss << "\t" << "mov rdi, [r12 + r13 * 8 + 4]" << std::endl;
-                dec_ss << "\t" << "call " << magic_numbers::SRE_FREE << std::endl;
-                dec_ss << "\t" << "inc r13" << std::endl;
-                dec_ss << "\t" << "jmp .free_array_" << std::endl;
+    std::stringstream dec_ss;
 
-                // restore original stack alignment
-                dec_ss << ".free_array_done_" << std::endl;
-                dec_ss << "\t" << "add rsp, 0x08" << std::endl;
-                dec_ss << "\t" << "pop rsp" << std::endl;
-                
-                // if the array itself must be freed, do so
-                if (s.get_data_type().is_reference_type()) {
-                    dec_ss << call_sre_free(s).str();
-                }
-            }
-            else if (s.get_data_type().get_primary() == TUPLE) {
-                // todo: free tuple members
+    for (symbol s: to_free) {
+        if (s.get_data_type().get_primary() == ARRAY && !s.get_data_type().is_reference_type()) {
+            /*
 
-                // if the tuple itself must be freed, do so
-                if (s.get_data_type().is_reference_type()) {
-                    dec_ss << call_sre_free(s).str();
-                }
-            }
-            else if (s.get_scope_name() != scope) {
-                // Structs to be freed
-                struct_info &s_info = structs.find(s.get_scope_name(), s.get_line_defined());
-                symbol &to_free = *s_info.get_member(s.get_name());
-                symbol *struct_symbol = nullptr;
-                auto it = local_structs.begin();
-                while (it != local_structs.end() && !struct_symbol) {
-                    if ((*it)->get_data_type().get_struct_name() == s_info.get_struct_name()) {
-                        struct_symbol = *it;
-                    }
-                    else {
-                        it++;
-                    }
-                }
+            To free array members, we should iterate in our assembly
+            The routine begins by:
+                * Aligning the stack to a 16-byte boundary
+                * Load R12 with the array base
+                * Load R13 with 0 (the current index)
+            It proceeds as follows:
+                * If R12 < the length of the array, continue; else, done
+                * Load RDI with [R12 + R13 * 8 + 4]
+                * Call the SRE function
+                * Increment R13
+            Finally, the routine ends by restoring the original stack alignment
 
-                if (struct_symbol) {
-                    // get the address of the struct in rbx and add the member's offset
-                    dec_ss << get_address(*struct_symbol, RBX);
-                    dec_ss << "\t" << "add rbx, " << to_free.get_offset() << std::endl;
-                    dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
-                    dec_ss << call_sre_function(magic_numbers::SRE_FREE);
-                }
-                else {
-                    throw CompilerException("Could not find struct " + s_info.get_struct_name() + " in scope", compiler_errors::SYMBOL_NOT_FOUND_ERROR, 0);
-                }
-            }
-            else {
-                dec_ss << call_sre_free(s).str();
+            Currently, pushing r12 and r13 is unnecessary as we pushed all used register before.
+
+            */
+
+            // ensure 16-byte alignment
+            dec_ss << "\t" << "mov rax, rsp" << std::endl;
+            dec_ss << "\t" << "and rsp, -0x10" << std::endl;
+            dec_ss << "\t" << "push rax" << std::endl;
+            dec_ss << "\t" << "sub rsp, 0x08" << std::endl;
+
+            dec_ss << get_address(s, R12);
+            dec_ss << "\t" << "mov r13, 0" << std::endl;
+            dec_ss << ".free_array_" << std::endl;
+            dec_ss << "\t" << "cmp r13d, [r12]" << std::endl;
+            dec_ss << "\t" << "jg .free_array_done_" << std::endl;
+            dec_ss << "\t" << "mov rdi, [r12 + r13 * 8 + 4]" << std::endl;
+            dec_ss << "\t" << "call " << magic_numbers::SRE_FREE << std::endl;
+            dec_ss << "\t" << "inc r13" << std::endl;
+            dec_ss << "\t" << "jmp .free_array_" << std::endl;
+
+            // restore original stack alignment
+            dec_ss << ".free_array_done_" << std::endl;
+            dec_ss << "\t" << "add rsp, 0x08" << std::endl;
+            dec_ss << "\t" << "pop rsp" << std::endl;
+            
+            // if the array itself must be freed, do so
+            if (s.get_data_type().is_reference_type()) {
+                dec_ss << get_address(s, RDI);
+                dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
         }
-        // restore the status
-        dec_ss << "\t" << "popfq" << std::endl;
+        else if (s.get_data_type().get_primary() == TUPLE) {
+            // todo: free tuple members
 
-        // restore our registers
-        dec_ss << pop_used_registers(r, true).str();
+            // if the tuple itself must be freed, do so
+            if (s.get_data_type().is_reference_type()) {
+                dec_ss << get_address(s, RDI);
+                dec_ss << call_sre_function(magic_numbers::SRE_FREE);
+            }
+        }
+        else {
+            dec_ss << get_address(s, RDI);
+            dec_ss << call_sre_function(magic_numbers::SRE_FREE);
+        }
     }
 
-    return dec_ss;
+    return dec_ss.str();
 }
 
 std::stringstream call_sre_free(symbol& s) {

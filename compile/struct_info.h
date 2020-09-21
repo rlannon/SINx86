@@ -30,7 +30,7 @@ public:
     size_t get_width() const;   // get the struct's width (0 if unknown)
     bool is_width_known() const;    // whether the width of the struct is known
 
-    std::vector<std::shared_ptr<symbol>> get_all_members();
+    std::vector<symbol*> get_all_members();
     std::vector<symbol> get_members_to_free();
     std::vector<symbol> &get_members_to_free(std::vector<symbol> &current);
 

@@ -394,7 +394,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
                 this->current_scope_name,
                 this->current_scope_level,
                 false
-            ).str();
+            );
             
             // restore the scope level
             this->current_scope_level = old_scope_level;
