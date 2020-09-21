@@ -261,7 +261,11 @@ struct_info define_struct(StructDefinition &definition, compile_time_evaluator &
                         );
                         array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
                         alloc->get_type_information().set_array_length(array_length);
-                        this_width = array_length;
+                        // set the width
+                        if (alloc->get_type_information().is_reference_type())
+                            this_width = sin_widths::PTR_WIDTH;
+                        else
+                            this_width = array_length;
                     }
                     else {
                         throw NonConstArrayLengthException(definition.get_line_number());
@@ -272,7 +276,11 @@ struct_info define_struct(StructDefinition &definition, compile_time_evaluator &
                 }
             }
             else {
-                this_width = alloc->get_type_information().get_width();
+                // set the width
+                if (alloc->get_type_information().is_reference_type())
+                    this_width = sin_widths::PTR_WIDTH;
+                else
+                    this_width = alloc->get_type_information().get_width();
             }
 
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
@@ -639,6 +647,35 @@ std::string get_address(symbol &s, reg r) {
     return address_info;
 }
 
+std::string get_struct_member_address(
+    symbol &struct_symbol,
+    struct_table &structs,
+    std::string member_name,
+    reg r
+) {
+    /*
+
+    get_address
+    Gets the address of a struct member
+
+    */
+
+    std::stringstream get_ss;
+
+    auto &si = structs.find(struct_symbol.get_data_type().get_struct_name(), 0);
+    symbol *member = si.get_member(member_name);
+    if (member) {
+        get_ss << get_address(struct_symbol, RAX);
+        get_ss << "\t" << "mov " << register_usage::get_register_name(r) << ", [rax]" << std::endl;
+        get_ss << "\t" << "add " << register_usage::get_register_name(r) << ", " << member->get_offset() << std::endl;
+    }
+    else {
+        throw SymbolNotFoundException(0);
+    }
+
+    return get_ss.str();
+}
+
 std::string decrement_rc(
     register_usage &r,
     symbol_table& symbols,
@@ -675,12 +712,12 @@ std::string decrement_rc(
     for (auto ls: local_structs) {
         struct_info &info = structs.find(ls->get_data_type().get_struct_name(), 0);
         auto struct_members = info.get_members_to_free();
-        dec_ss << decrement_rc_util(struct_members, structs, scope, 1, false);
+        dec_ss << decrement_rc_util(struct_members, symbols, structs, scope, 1, false, ls);
     }
     // todo: right now, structs cannot contain other structs, but if this feature is added, this function must change to free reference types within /those/ structs (wouldn't get caught here)
 
     if (!v.empty())
-        dec_ss << decrement_rc_util(v, structs, scope, level, is_function);
+        dec_ss << decrement_rc_util(v, symbols, structs, scope, level, is_function);
 
     dec_ss << pop_used_registers(r, true).str();
     dec_ss << "\t" << "popfq" << std::endl;
@@ -690,10 +727,12 @@ std::string decrement_rc(
 
 std::string decrement_rc_util(
     std::vector<symbol> &to_free,
+    symbol_table &symbols,
     struct_table &structs,
     std::string scope,
     unsigned int level,
-    bool is_function
+    bool is_function,
+    symbol *parent
 ) {
     /*
 
@@ -706,7 +745,15 @@ std::string decrement_rc_util(
     std::stringstream dec_ss;
 
     for (symbol s: to_free) {
-        if (s.get_data_type().get_primary() == ARRAY && !s.get_data_type().is_reference_type()) {
+        dec_ss << "; freeing symbol " << s.get_name() << std::endl;
+        if (parent) {
+            dec_ss << get_struct_member_address(*parent, structs, s.get_name(), RDI);
+        }
+        else {
+            dec_ss << get_address(s, RDI);
+        }
+
+        if (s.get_data_type().get_primary() == ARRAY) {
             /*
 
             To free array members, we should iterate in our assembly
@@ -724,45 +771,44 @@ std::string decrement_rc_util(
             Currently, pushing r12 and r13 is unnecessary as we pushed all used register before.
 
             */
+            
+            if (s.get_data_type().get_subtype().must_free()) {
+                // ensure 16-byte alignment
+                dec_ss << "\t" << "mov rax, rsp" << std::endl;
+                dec_ss << "\t" << "and rsp, -0x10" << std::endl;
+                dec_ss << "\t" << "push rax" << std::endl;
+                dec_ss << "\t" << "sub rsp, 0x08" << std::endl;
+                dec_ss << "\t" << "mov r13, 0" << std::endl;
 
-            // ensure 16-byte alignment
-            dec_ss << "\t" << "mov rax, rsp" << std::endl;
-            dec_ss << "\t" << "and rsp, -0x10" << std::endl;
-            dec_ss << "\t" << "push rax" << std::endl;
-            dec_ss << "\t" << "sub rsp, 0x08" << std::endl;
+                dec_ss << ".free_array_:" << std::endl;
+                dec_ss << "\t" << "cmp r13d, [r12]" << std::endl;
+                dec_ss << "\t" << "jg .free_array_done_" << std::endl;
+                dec_ss << "\t" << "mov rdi, [r12 + r13 * 8 + 4]" << std::endl;
+                dec_ss << "\t" << "call " << magic_numbers::SRE_FREE << std::endl;
+                dec_ss << "\t" << "inc r13" << std::endl;
+                dec_ss << "\t" << "jmp .free_array_" << std::endl;
 
-            dec_ss << get_address(s, R12);
-            dec_ss << "\t" << "mov r13, 0" << std::endl;
-            dec_ss << ".free_array_" << std::endl;
-            dec_ss << "\t" << "cmp r13d, [r12]" << std::endl;
-            dec_ss << "\t" << "jg .free_array_done_" << std::endl;
-            dec_ss << "\t" << "mov rdi, [r12 + r13 * 8 + 4]" << std::endl;
-            dec_ss << "\t" << "call " << magic_numbers::SRE_FREE << std::endl;
-            dec_ss << "\t" << "inc r13" << std::endl;
-            dec_ss << "\t" << "jmp .free_array_" << std::endl;
-
-            // restore original stack alignment
-            dec_ss << ".free_array_done_" << std::endl;
-            dec_ss << "\t" << "add rsp, 0x08" << std::endl;
-            dec_ss << "\t" << "pop rsp" << std::endl;
+                // restore original stack alignment
+                dec_ss << ".free_array_done_:" << std::endl;
+                dec_ss << "\t" << "add rsp, 0x08" << std::endl;
+                dec_ss << "\t" << "pop rsp" << std::endl;
+            }
             
             // if the array itself must be freed, do so
-            if (s.get_data_type().is_reference_type()) {
-                dec_ss << get_address(s, RDI);
+            if (s.get_data_type().must_free()) {
                 dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
+
         }
         else if (s.get_data_type().get_primary() == TUPLE) {
             // todo: free tuple members
 
             // if the tuple itself must be freed, do so
-            if (s.get_data_type().is_reference_type()) {
-                dec_ss << get_address(s, RDI);
+            if (s.get_data_type().must_free()) {
                 dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
         }
         else {
-            dec_ss << get_address(s, RDI);
             dec_ss << call_sre_function(magic_numbers::SRE_FREE);
         }
     }

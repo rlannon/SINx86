@@ -63,6 +63,7 @@ std::stringstream push_used_registers(register_usage &regs, bool ignore_ab = fal
 std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false);
 
 std::string get_address(symbol &s, reg r);
+std::string get_struct_member_address(symbol &struct_symbol, struct_table &structs, std::string member_name, reg r);
 
 std::string decrement_rc(
     register_usage &r,
@@ -74,10 +75,12 @@ std::string decrement_rc(
 );
 std::string decrement_rc_util(
     std::vector<symbol> &to_free,
+    symbol_table &symbols,
     struct_table &structs,
     std::string scope,
     unsigned int level,
-    bool is_function
+    bool is_function,
+    symbol *parent = nullptr
 );
 
 std::stringstream call_sre_free(symbol& s);

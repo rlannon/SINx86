@@ -356,9 +356,15 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			auto members = info.get_all_members();
 			std::string struct_addr = get_address(allocated, r);
 			allocation_ss << struct_addr;
+            
+            if (!members.empty())
+                allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
+            
 			for (auto m: members) {
                 // only need to worry about variables -- not member functions!
                 if (m->get_symbol_type() == SymbolType::VARIABLE) {
+                    allocation_ss << "; requesting space for member " << m->get_name() << std::endl;
+
                     // we only need to do this for non-dynamic arrays
                     if (m->get_data_type().get_primary() == ARRAY) {
                         // evaluate the array length expression and move it (an integer) into [R15 + offset]
@@ -377,6 +383,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                             size_t type_width = (m->get_data_type().get_subtype().get_qualities().is_dynamic() ? 8 : m->get_data_type().get_subtype().get_width());
                             allocation_ss << "\t" << "mov ebx, " << type_width << std::endl;
                             allocation_ss << "\t" << "mul ebx" << std::endl;
+                            allocation_ss << "\t" << "add rax, " << sin_widths::INT_WIDTH << std::endl;
                             allocation_ss << "\t" << "mov rdi, rax" << std::endl;
                             allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
 
@@ -398,22 +405,25 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                     }
                     // we need to allocate string members
                     else if (m->get_data_type().get_primary() == STRING) {
-                        allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
                         allocation_ss << "\t" << "mov esi, 0" << std::endl;
                         allocation_ss << call_sincall_subroutine("sinl_string_alloc");
-                        allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() - m->get_offset() << "]" << ", rax" << std::endl;
-                        allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+                        allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "]" << ", rax" << std::endl;
                     }
                     // we need to reserve space for all other dynamic types
                     else if (m->get_data_type().get_qualities().is_dynamic()) {
-                        // todo: reserve space
-                        allocation_ss << "; todo: reserve space for member " << m->get_name() << std::endl;
+                        allocation_ss << "\t" << "mov rdi, " << m->get_data_type().get_width() << std::endl;
+                        allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
+                        allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "]" << ", rax" << std::endl;
                     }
-                    else if (m->get_data_type().must_initialize()) {
+                    
+                    if (m->get_data_type().must_initialize()) {
                         init_required = true;
                     }
                 }
 			}
+
+            if (!members.empty())
+                allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
 
 			// if we needed to initialize but didn't, throw an exception
 			if (init_required && !alloc_stmt.was_initialized()) {
