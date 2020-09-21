@@ -666,8 +666,8 @@ std::string get_struct_member_address(
     symbol *member = si.get_member(member_name);
     if (member) {
         get_ss << get_address(struct_symbol, RAX);
+        get_ss << "\t" << "add rax, " << member->get_offset() << std::endl;
         get_ss << "\t" << "mov " << register_usage::get_register_name(r) << ", [rax]" << std::endl;
-        get_ss << "\t" << "add " << register_usage::get_register_name(r) << ", " << member->get_offset() << std::endl;
     }
     else {
         throw SymbolNotFoundException(0);
