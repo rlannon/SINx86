@@ -774,6 +774,10 @@ std::string decrement_rc_util(
             */
             
             if (s.get_data_type().get_subtype().must_free()) {
+                // preserve rdi; move rdi into r12, as the array address is now in rdi
+                dec_ss << "\t" << "push rdi" << std::endl;
+                dec_ss << "\t" << "mov r12, rdi" << std::endl;
+
                 // ensure 16-byte alignment
                 dec_ss << "\t" << "mov rax, rsp" << std::endl;
                 dec_ss << "\t" << "and rsp, -0x10" << std::endl;
@@ -783,7 +787,7 @@ std::string decrement_rc_util(
 
                 dec_ss << ".free_array_:" << std::endl;
                 dec_ss << "\t" << "cmp r13d, [r12]" << std::endl;
-                dec_ss << "\t" << "jg .free_array_done_" << std::endl;
+                dec_ss << "\t" << "jge .free_array_done_" << std::endl;
                 dec_ss << "\t" << "mov rdi, [r12 + r13 * 8 + 4]" << std::endl;
                 dec_ss << "\t" << "call " << magic_numbers::SRE_FREE << std::endl;
                 dec_ss << "\t" << "inc r13" << std::endl;
@@ -793,11 +797,11 @@ std::string decrement_rc_util(
                 dec_ss << ".free_array_done_:" << std::endl;
                 dec_ss << "\t" << "add rsp, 0x08" << std::endl;
                 dec_ss << "\t" << "pop rsp" << std::endl;
+                dec_ss << "\t" << "pop rdi" << std::endl;   // restore rdi's original value
             }
             
             // if the array itself must be freed, do so
             if (s.get_data_type().must_free()) {
-                dec_ss << get_address(s, RDI);
                 dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
 
@@ -807,7 +811,6 @@ std::string decrement_rc_util(
 
             // if the tuple itself must be freed, do so
             if (s.get_data_type().must_free()) {
-                dec_ss << get_address(s, RDI);
                 dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
         }

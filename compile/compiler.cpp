@@ -637,26 +637,34 @@ void compiler::generate_asm(std::string filename) {
 
             // check parameters; should have one with type 'dynamic array<string>'
             if (main_symbol.get_formal_parameters().size() != 1) {
-                compiler_warning(
+                throw CompilerException(
                     "Function 'main' should include one argument, 'dynamic array<string> args'",
                     compiler_errors::MAIN_SIGNATURE,
                     main_function->get_line_defined()
                 );
             }
-            
-            // todo: get actual command-line arguments, convert them into SIN data types
-            std::vector<std::shared_ptr<Expression>> cmd_args = {};
-            for (
-                auto it = main_symbol.get_formal_parameters().begin();
-                it != main_symbol.get_formal_parameters().end(); 
-                it++
-            ) {
-                // todo: get argument
+            else {
+                auto cl_param = main_symbol.get_formal_parameters().at(0);
+                if (
+                    (cl_param->get_data_type().get_primary() != ARRAY) ||
+                    (cl_param->get_data_type().get_subtype() != STRING) ||
+                    !cl_param->get_data_type().get_qualities().is_dynamic()
+                ) {
+                    throw CompilerException(
+                        "Function 'main' should include one argument, 'dynamic array<string> args'",
+                        compiler_errors::MAIN_SIGNATURE,
+                        main_function->get_line_defined()
+                    );
+                }
             }
 
             // insert our wrapper for the program
             this->text_segment << "global " << magic_numbers::MAIN_LABEL << std::endl;
             this->text_segment << magic_numbers::MAIN_LABEL << ":" << std::endl;
+
+            // preserve argc and argv
+            this->text_segment << "\t" << "mov r12, rdi" << std::endl
+                << "\t" << "mov r13, rsi" << std::endl;
 
             // call SRE init function (takes no parameters) -- ensure 16-byte stack alignment
             this->text_segment << "\t" << "mov rax, rsp" << std::endl
@@ -667,12 +675,34 @@ void compiler::generate_asm(std::string filename) {
                 << "\t" << "call " << magic_numbers::SRE_INIT << std::endl
                 << "\t" << "add rsp, 8" << std::endl
                 << "\t" << "pop rsp" << std::endl;
+            
+            // allocate an array to hold our command line arguments
+            this->text_segment << "\t" << "mov rsi, 8" << std::endl // width of contained type is 8
+                << "\t" << "mov rdi, r12" << std::endl  // contains 'r12' elements
+                << "\t" << "pushfq" << std::endl
+                << "\t" << "push rbp" << std::endl
+                << "\t" << "mov rbp, rsp" << std::endl
+                << "\t" << "call sinl_dynamic_array_alloc" << std::endl
+                << "\t" << "mov rsp, rbp" << std::endl
+                << "\t" << "pop rbp" << std::endl
+                << "\t" << "popfq" << std::endl
+                << "\t" << "push rax" << std::endl;
+
+            // todo: get actual command-line arguments, convert them into SIN data types
+            std::vector<std::shared_ptr<Expression>> cmd_args = {};
+            for (
+                auto it = main_symbol.get_formal_parameters().begin();
+                it != main_symbol.get_formal_parameters().end(); 
+                it++
+            ) {
+                // todo: get argument, create string, insert it into the array
+            }
 
             // call the main function with SINCALL
             this->text_segment << this->sincall(main_symbol, cmd_args, 0).str();
 
             // preserve the return value and call SRE cleanup function
-            this->text_segment << "\t" << "push rax" << std::endl;
+            this->text_segment << "\t" << "mov [rsp], rax" << std::endl;
             this->text_segment << "\t" << "mov rax, rsp" << std::endl
                 << "\t" << "and rsp, -0x10" << std::endl
                 << "\t" << "push rax" << std::endl
