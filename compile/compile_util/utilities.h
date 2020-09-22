@@ -31,6 +31,7 @@ Our various compiler utilities
 #include "constant_eval.h"
 
 #include "../../util/general_utilities.h"
+#include "magic_numbers.h"
 
 // todo: put these in their own namespace
 
@@ -48,10 +49,10 @@ bool can_pass_in_register(DataType to_check);
 
 std::string get_rax_name_variant(DataType t, unsigned int line);
 
-struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte);
+struct_info define_struct(StructDefinition &definition, compile_time_evaluator &cte);
 
 template<typename T>
-function_symbol create_function_symbol(T def, bool mangle=true, bool defined=true);
+function_symbol create_function_symbol(T def, bool mangle=true, bool defined=true, std::string scope_name = "global", unsigned int scope_level = 0, bool is_method = false);
 
 template<typename T>
 symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined=true);
@@ -62,11 +63,25 @@ std::stringstream push_used_registers(register_usage &regs, bool ignore_ab = fal
 std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false);
 
 std::string get_address(symbol &s, reg r);
+std::string get_struct_member_address(symbol &struct_symbol, struct_table &structs, std::string member_name, reg r);
 
-std::stringstream copy_array(symbol &src, symbol &dest, register_usage &regs);
-std::stringstream copy_string(symbol &src, symbol &dest, register_usage &regs);
-
-std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string scope, unsigned int level, bool is_function);
+std::string decrement_rc(
+    register_usage &r,
+    symbol_table &symbols,
+    struct_table &structs,
+    std::string scope,
+    unsigned int level,
+    bool is_function
+);
+std::string decrement_rc_util(
+    std::vector<symbol> &to_free,
+    symbol_table &symbols,
+    struct_table &structs,
+    std::string scope,
+    unsigned int level,
+    bool is_function,
+    symbol *parent = nullptr
+);
 
 std::stringstream call_sre_free(symbol& s);
 std::stringstream call_sre_add_ref(symbol& s);

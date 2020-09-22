@@ -1,6 +1,6 @@
 // array_param.sin
 // A test of array< T > function parameters
 
-def int main(alloc dynamic array<int> my_arr) {
+def int main(alloc dynamic array<string> my_arr) {
     return 0;
 }

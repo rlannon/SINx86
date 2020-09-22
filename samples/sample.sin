@@ -3,7 +3,7 @@
 
 decl void print(decl string s);
 
-def void main() {	// should generate a warning because it returns void
+def void main(alloc dynamic array<string> args) {	// should generate a warning because it returns void
 	alloc int x: 10;
 	alloc int y: 20;
 	alloc int z: 30;

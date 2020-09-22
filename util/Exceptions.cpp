@@ -19,6 +19,10 @@ const char* CompilerException::what() const noexcept {
 	return message.c_str();
 }
 
+void CompilerException::set_line(unsigned int new_line) {
+    this->line = new_line;
+}
+
 CompilerException::CompilerException(const std::string& message, unsigned int code, unsigned int line) : message(message), code(code), line(line) {
 	this->message = "**** Compiler error C" + std::to_string(this->code) + ": " + this->message + " (error occurred at or near line " + std::to_string(this->line) + ")";
 }
@@ -331,6 +335,14 @@ CompilerException(
 
 void compiler_warning(std::string message, unsigned int code, unsigned int line_number) {
 	std::cout << "**** Compiler Warning W" << code << ": " << message << " (at or near line " << line_number << ")" << std::endl;
+}
+
+void half_precision_not_supported_warning(unsigned int line) {
+	compiler_warning(
+		"Found unsupported 16-bit half-precision floating point number; utilizing 32-bit single-precision instead",
+		compiler_errors::DATA_WIDTH_ERROR,
+		line
+	);
 }
 
 void compiler_note(std::string message, unsigned int line_number) {

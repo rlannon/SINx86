@@ -1,9 +1,10 @@
 // primes.sin
 // A very naive prime calculation in SIN
 
-// declare/define some sinstdlib functions, as the library isn't finished
+// declare some sinstdlib functions
 
 decl void print(decl string s);
+decl string itos(decl int n);
 
 def string itos(alloc int n) {
     // a very simple itos implementation
@@ -42,7 +43,7 @@ def bool is_prime(alloc unsigned int candidate) {
         let prime = true;
     }
     else {
-        alloc int i: 2 &unsigned;
+        alloc int i &unsigned: 2;
         while (i < candidate and prime) {
             if (candidate % i = 0) {
                 let prime = false;

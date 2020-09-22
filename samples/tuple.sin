@@ -2,13 +2,19 @@
 // a demo of the tuple type
 
 def int main(alloc array<string> args &dynamic) {
-    alloc tuple<int, int> t: (1, 2);    // alloc-init
-    alloc tuple<int, int> t2;   // normal allocation
+    alloc tuple<int, int> t: (1, 2);    // alloc-init -- [rbp - 16]
+    alloc tuple<int, int> t2;   // normal allocation -- [rbp - 24]
     let t2 = t; // test tuple assignment
-    alloc int i: t.0;   // member access
+    alloc int i: t.0;   // member access -- [rbp - 28]
 
     // test tuples with array and tuple members
+
+    // 0 = [rbp - 64]
+    // 1 = [rbp - 60], [rbp - 56] 
+    // 2:len = [rbp - 52]
+    // 2:elem = [rbp - 48], [rbp - 46], ... [rbp - 30]
     alloc tuple< int, tuple< int, int >, array< 10, short int > > recursive;
+    
     let recursive.0 = 10;
     let recursive.1 = (100, 200);
     let recursive.2 = {5 &short, 10 &short, 15 &short};

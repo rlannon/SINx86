@@ -3,7 +3,7 @@
 
 decl void print(decl final string s);
 
-def int main() {
+def int main(alloc array<string> args &dynamic) {
     alloc int x: 10;
     alloc ptr<int> p: $x;
     alloc int y: *p;
@@ -12,11 +12,24 @@ def int main() {
     alloc int z: **p_double;
 
     if (z = x) {
-        @print("Works!\nAs do escaped characters like \"\\\"\n");
+        @print("Works!\n");
     }
     else {
-        @print("Fail...\n");
+        @print("Failure\n");
     }
+
+    alloc dynamic int d_int;
+    let d_int = 1_000_000;
+    let p = $d_int;
+    if (*p = d_int) {
+        @print("p points to d_int\n");
+    }
+    else {
+        @print("Pointer failure\n");
+    }
+
+    let p = $y;
+    @print("Now, there should be only one reference to d_int\n");
 
     return 0;
 }

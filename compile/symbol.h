@@ -88,6 +88,7 @@ public:
         bool defined=true,
         unsigned int line_defined=0
     );
+    //symbol(symbol &&r);
     symbol();
     virtual ~symbol(); // the destructor must be virtual for the sake of the child class
 };

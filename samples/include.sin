@@ -3,7 +3,7 @@
 
 include "point_include.sinh";
 
-def int main() {
+def int main(alloc dynamic array<string> args) {
     alloc ptr<point> p1: @make_point_2d(10, 20);
     alloc int x;
     let x = (*p1).x;

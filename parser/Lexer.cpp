@@ -11,16 +11,63 @@ The implementation of the lexer
 #include "Lexer.h"
 
 // The list of language keywords
-const std::set<std::string> Lexer::keywords{ "alloc", "and", "array", "as", "asm", "bool", "char", "const", 
-"constexpr", "c64", "decl", "def", "dynamic", "else", "extern", "final", "float", "free", "if", "include", "int", 
-"len", "let", "long", "not", "null", "or", "pass", "ptr", "raw", "realloc", "return", "short", "sincall", "size", 
-"static", "string", "struct", "tuple", "unsigned", "var", "void", "while", "windows", "xor" };
+const std::set<std::string> Lexer::keywords{
+	"alloc", "and", "array", "as", "asm", "bool", "char", "const", 
+	"constexpr", "c64", "decl", "def", "dynamic", "else", "extern", "final", "float", "free", "if", "include", "int", 
+	"len", "let", "long", "move", "not", "null", "or", "pass", "private", "ptr", "public", "raw", "readonly", "realloc", 
+	"return", "short", "signed", "sincall", "size",  "static", "string", "struct", "tuple", "typename", "unmanaged", "unsigned", "var", "void", 
+	"while", "windows", "xor"
+};
 
 // Our regular expressions
 const std::string Lexer::punc_exp = R"([',;\[\]\{\}\(\)])";	// expression for punctuation
 const std::string Lexer::op_exp = R"([\.\+\-\*/%=\&\|\^<>\$\?!~@#:])";	// expression for operations
 const std::string Lexer::id_exp = "[_0-9a-zA-Z]";	// expression for interior id letters
 const std::string Lexer::bool_exp = "[(true)|(false)]";
+
+// The map containing our operator strings
+const std::unordered_map<std::string, exp_operator> Lexer::op_strings({
+	{"->", RIGHT_ARROW},
+	{"<-", LEFT_ARROW},
+	{"+=", PLUS_EQUAL},
+	{"-=", MINUS_EQUAL},
+	{"*=", MULT_EQUAL},
+	{"/=", DIV_EQUAL},
+	{"%=", MOD_EQUAL},
+	{"&=", AND_EQUAL},
+	{"|=", OR_EQUAL},
+	{"^=", XOR_EQUAL},
+	{"+", PLUS},
+	{"-", MINUS},
+	{"*", MULT},
+	{"/", DIV},
+	{"%", MODULO},
+	{"=", EQUAL},
+	{"!=", NOT_EQUAL},
+	{">", GREATER},
+	{"<", LESS},
+	{">=", GREATER_OR_EQUAL},
+	{"<=", LESS_OR_EQUAL},
+	{"&", BIT_AND},
+	{"|", BIT_OR},
+	{"^", BIT_XOR},
+	{"~", BIT_NOT},
+	{">>", RIGHT_SHIFT},
+	{"<<", LEFT_SHIFT},
+	{"and", AND},
+	{"or", OR},
+	{"xor", XOR},
+	{"not", NOT},
+	{"as", TYPECAST},
+	{"$", ADDRESS},
+	{"*", DEREFERENCE},
+	{":", ATTRIBUTE_SELECTION},
+	{".", DOT},
+	{"[", INDEX},
+	{"@", CONTROL_TRANSFER},
+    {"(", PROC_OPERATOR},
+	{"::", SCOPE_RESOLUTION}
+});
 
 
 // Our stream access and test functions
@@ -131,7 +178,14 @@ bool Lexer::is_number(char ch) {
 
 bool Lexer::is_id_start(char ch) {
 
-	/*  Returns true if the character is the start of an ID; that is, if it starts with a letter or an underscore  */
+	/*
+    
+    is_id_start
+    
+    Returns true if the character is the start of an ID
+    That is, if it starts with a letter or an underscore
+    
+    */
 
 	if (match_character(ch, "[_a-zA-Z]")) {
 		return true;
@@ -178,8 +232,9 @@ bool Lexer::is_keyword(std::string candidate) {
 	return (bool)keywords.count(candidate);
 }
 
-bool Lexer::is_valid_operator(std::string candidate) {
-	return std::regex_match(candidate, std::regex(op_exp));
+const bool Lexer::is_valid_operator(std::string candidate) {
+	// Checks whether the lexeme is a valid operator for maybe_binary
+	return (bool)Lexer::op_strings.count(candidate);
 }
 
 /*
@@ -223,6 +278,13 @@ std::string Lexer::read_operator() {
 	// get the first character
 	char ch = this->peek();
 	op_string = std::string(1, ch);
+
+    // '!' by itself is not an operator; read one more char
+    if (ch == '!') {
+        this->next();
+        op_string.push_back(this->peek());
+    }
+
 	while (this->is_valid_operator(op_string)) {
 		this->next();
 		ch = this->peek();
@@ -254,6 +316,8 @@ lexeme Lexer::read_next() {
 		this->exit_flag = true;	// set our exit flag
 		return next_lexeme;
 	}
+
+	// todo: overhaul comments (return null lexeme if we have a comment, or maybe just have some sort of iteration)
 
 	if (ch == '/') {	// if we have a slash, we may have a comment
 		ch = this->next();	// advance one character

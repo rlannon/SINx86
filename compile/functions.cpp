@@ -61,7 +61,23 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
     return decl_ss;
 }
 
-std::stringstream compiler::define_function(FunctionDefinition definition) {
+std::stringstream compiler::define_function(FunctionDefinition &definition) {
+    /*
+    
+    define_function
+    An overloaded version to define a function with a definition statement
+    
+    */
+
+    function_symbol func_sym = create_function_symbol(definition);
+    return this->define_function(
+        func_sym,
+        definition.get_procedure(),
+        definition.get_line_number()
+    );
+}
+
+std::stringstream compiler::define_function(function_symbol &func_sym, StatementBlock prog, unsigned int line) {
     /*
 
     define_function
@@ -89,41 +105,38 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     size_t previous_max_offset = this->max_offset;
 
     // update the scope information
-    this->current_scope_name = definition.get_name();
-    this->current_scope_level = 1;
+    this->current_scope_name = func_sym.get_name();
+    this->current_scope_level += 1;
     this->max_offset = 0;
-
-    // construct the symbol for the function -- everything is offloaded to the utility
-    function_symbol func_sym = create_function_symbol(definition);
 
     // check to see if the symbol already exists in the table and is undefined -- if so, we need to add 'global'
     bool marked_extern = false; // to ensure we don't mark it as global twice if the declared function is 'extern'
     if (this->symbols.contains(func_sym.get_name())) {
-        auto sym = this->symbols.find(func_sym.get_name());
-        if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
-            auto declared_sym = dynamic_cast<function_symbol*>(sym.get());
-            if (sym->is_defined()) {
-                throw DuplicateDefinitionException(definition.get_line_number());
+        auto &sym = this->symbols.find(func_sym.get_name());
+        if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
+            auto &declared_sym = static_cast<function_symbol&>(sym);
+            if (sym.is_defined()) {
+                throw DuplicateDefinitionException(line);
             }
             else {
                 // check to ensure signatures match
                 if (
-                    !func_sym.matches(*declared_sym)
+                    !func_sym.matches(declared_sym)
                 ) {
                     throw CompilerException(
                         "Function signature does not match that of declaration",
                         compiler_errors::SIGNATURE_MISMATCH,
-                        definition.get_line_number()
+                        line
                     );
                 }
 
                 // mark this label as 'global', delete the 'extern' statement for it in this file
                 definition_ss << "global " << func_sym.get_name() << std::endl;
-                sym->set_defined();
+                sym.set_defined();
                 marked_extern = true;
 
-                if (this->externals.count(sym->get_name())) {
-                    this->externals.erase(sym->get_name());
+                if (this->externals.count(sym.get_name())) {
+                    this->externals.erase(sym.get_name());
                 }
             }
         }
@@ -131,13 +144,13 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
             throw CompilerException(
                 "Attempt to redefine \"" + func_sym.get_name() + "\" as a function",
                 compiler_errors::DUPLICATE_SYMBOL_ERROR,
-                definition.get_line_number()
+                line
             );
         }
     }
     else {
         // add the symbol to the table
-        this->add_symbol(func_sym, definition.get_line_number());
+        this->add_symbol(func_sym, line);
     }
 
     // if the function is marked as 'extern', ensure it is global
@@ -147,15 +160,17 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
 
     // now, we have to iterate over the function symbol's parameters and add them to our symbol table
     // todo: optimize by enabling symbol table additions in template function?
-    std::set<reg> arg_regs;
-    for (symbol &sym: func_sym.get_formal_parameters()) {
+    std::unordered_map<symbol*, reg> arg_regs;
+    for (auto sym: func_sym.get_formal_parameters()) {
         // add the parameter symbol to the table
-        this->add_symbol(sym, definition.get_line_number());
+        symbol &inserted = this->add_symbol(sym, line);
         
 		// if r was passed in a register, then we must add it to arg_regs
-		reg r = sym.get_register();
+		reg r = sym->get_register();
         if (r != NO_REGISTER) {
-            arg_regs.insert(sym.get_register());
+            arg_regs.insert(
+                std::make_pair<>(&inserted, sym->get_register())
+            );
         }
     }
 
@@ -172,24 +187,27 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     this->max_offset += sin_widths::PTR_WIDTH;
 
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
-    procedure_ss = this->compile_ast(*definition.get_procedure().get(), std::make_shared<function_symbol>(func_sym));
+    procedure_ss = this->compile_ast(prog, &func_sym);
+
+    // after compiling the AST, we need to restore the registers that our parameter symbols were contained in
+    // otherwise, when the function is called, we won't know what registers to pass arguments in
+    for (auto it = arg_regs.begin(); it != arg_regs.end(); it++) {
+        it->first->set_register(it->second);
+    }
 
     // now, put everything together in definition_ss by adding procedure_ss onto the end
     definition_ss << procedure_ss.str() << std::endl;
 
-    // restore our scope information (except our register stack -- it was already popped)
+    // restore our scope information
     this->current_scope_name = previous_scope_name;
     this->current_scope_level = previous_scope_level;
     this->max_offset = previous_max_offset;
+    this->reg_stack.pop_back();
 
     return definition_ss;
 }
 
-template std::pair<std::string, size_t> compiler::call_function(Call, unsigned int, bool);
-template std::pair<std::string, size_t> compiler::call_function(ValueReturningFunctionCall, unsigned int, bool);
-
-template<typename T>
-std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line, bool allow_void) {
+std::pair<std::string, size_t> compiler::call_function(Procedure &to_call, unsigned int line, bool allow_void) {
     /*
 
     call_function
@@ -216,36 +234,60 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
     size_t count = 0;
 
     // first, look up the function
-    std::shared_ptr<symbol> sym = this->lookup(call.get_func_name(), line);
+    symbol &sym = expression_util::get_function_symbol(
+        to_call.get_func_name(),
+        this->structs,
+        this->symbols,
+        line
+    );
 
     // if the function returns a reference type, we need to increment the count
-    if (sym->get_data_type().is_reference_type()) {
+    if (sym.get_data_type().is_reference_type()) {
         count = 1;
     }
 
     // ensure we have a function
-    if (sym->get_symbol_type() == FUNCTION_SYMBOL) {
+    // todo: data types could be valid as well -- proc type
+    if (sym.get_symbol_type() == FUNCTION_SYMBOL) {
         // cast to the correct type
-        function_symbol func_sym = *dynamic_cast<function_symbol*>(sym.get());
+        function_symbol &func_sym = static_cast<function_symbol&>(sym);
 
         // if we aren't allowing a void return type, then throw an exception if the primary type is void
         if (!allow_void && func_sym.get_data_type().get_primary() == VOID) {
             throw VoidException(line);
         }
 
+        // check to see if we have a 'this' parameter that needs evaluation
+        if (func_sym.requires_this() && to_call.get_func_name().get_expression_type() == BINARY) {
+            Binary &bin_name = static_cast<Binary&>(to_call.get_func_name());
+            to_call.insert_arg(bin_name.get_left(), 0);
+        }
+
         // behaves according to the calling convention
         if (func_sym.get_calling_convention() == calling_convention::SINCALL) {
             // SIN calling convention
-            call_ss << this->sincall(func_sym, call.get_args(), line).str(); // todo: return this function's result directly?
+            call_ss << this->sincall(func_sym, to_call.get_args().get_list(), line).str(); // todo: return this function's result directly?
 		}
-		/*else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
-			// todo: System V
+		else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
+			throw CompilerException(
+                "System V calling convention (AMD64) currently unsupported",
+                compiler_errors::UNSUPPORTED_ERROR,
+                line
+            );
 		}
         else if (func_sym.get_calling_convention() == calling_convention::WIN_64) {
-            // todo: Windows x86-64
-        }*/
+            throw CompilerException(
+                "Windows 64-bit calling convention currently unsupported",
+                compiler_errors::UNSUPPORTED_ERROR,
+                line
+            );
+        }
 		else {
-            throw CompilerException("Other calling conventions not supported at this time", 0, line);
+            throw CompilerException(
+                "Other calling conventions not supported at this time",
+                compiler_errors::UNSUPPORTED_ERROR,
+                line
+            );
         }
 
         // now, the function's return value (or pointer to the return value) is in RAX or XMM0, depending on the type -- the compiler always expects return values here regardless of calling convention
@@ -259,6 +301,21 @@ std::pair<std::string, size_t> compiler::call_function(T call, unsigned int line
 }
 
 std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line) {
+    /*
+
+    sincall
+    Overloaded version to handle a vector of shared pointers
+
+    */
+
+    std::vector<Expression*> to_pass;
+    for (auto elem: args) {
+        to_pass.push_back(elem.get());
+    }
+    return this->sincall(s, to_pass, line);
+}
+
+std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> args, unsigned int line) {
     /*
 
     sincall
@@ -279,20 +336,24 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     std::stringstream sincall_ss;
 
     // if registers need to be preserved, do that here
-    sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
+    bool pushed = false;
+    if (!this->reg_stack.empty()) {
+        pushed = true;
+        sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
+    }
 
     // create a new reg stack for our parameters
     this->reg_stack.push_back(register_usage());
 
     // get the formal parameters so we don't need to call a function every time
-    std::vector<symbol> &formal_parameters = s.get_formal_parameters();
+    auto &formal_parameters = s.get_formal_parameters();
 
     // ensure the number of arguments provided is less than or equal to the number expected
     if (args.size() <= s.get_formal_parameters().size()) {
         // get the width of arguments so we can calculate the offsets
         unsigned int total_offset = 0;
-        for (symbol& s: formal_parameters) {
-            total_offset += s.get_data_type().get_width();
+        for (auto s: formal_parameters) {
+            total_offset += s->get_data_type().get_width();
         }
 
         // we only need to subtract from rsp if the adjustment is non-zero
@@ -305,22 +366,28 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         // iterate over our arguments, ensure the types match and that we have an appropriate number
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
-            std::shared_ptr<Expression> arg = args[i];
-            symbol param = formal_parameters[i];
+            Expression *arg = args.at(i);
+            symbol &param = *formal_parameters[i];
 
             // first, ensure the types match
-            DataType arg_type = expression_util::get_expression_data_type(arg, this->symbols, this->structs, line);
+            DataType arg_type = expression_util::get_expression_data_type(*arg, this->symbols, this->structs, line);
             if (!arg_type.is_compatible(param.get_data_type())) {
                 // if the types don't match, we have a signature mismatch
                 throw FunctionSignatureException(line);
             }
             
             // evaluate the expression and pass it in the appropriate manner
-            auto arg_p = this->evaluate_expression(arg, line);
+            auto arg_p = this->evaluate_expression(*arg, line, &arg_type);
             sincall_ss << arg_p.first;
 
             std::string reg_name = get_rax_name_variant(param.get_data_type(), line);
-            auto destination_operand = assign_utilities::fetch_destination_operand(param, this->symbols, line);
+            auto destination_operand = assign_utilities::fetch_destination_operand(
+                param, 
+                this->symbols, 
+                line,
+                RBX,
+                true
+            );
             bool copy_constructed = true;
 
             // get the offset (rsp+) for this parameter
@@ -330,21 +397,28 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 param_offset += sin_widths::PTR_WIDTH;
             }
 
+            // if the parameter is marked as dynamic, we need to request a new resource from the SRE
+            if (param.get_data_type().get_qualities().is_dynamic()) {
+                if (param.get_data_type().get_primary() == STRING || param.get_data_type().get_primary() == ARRAY) {
+                    // todo: initial lengths for strings and arrays -- we will allocate space based on the parameter's width
+                }
+                else {
+                    // all other types have a known, fixed width
+                    sincall_ss << "\t" << "mov rdi, 0" << std::endl;
+                }
+            }
+
             // if we had a dynamic or string type, we have to construct it regardless (pass by value)
             if (param.get_data_type().get_primary() == STRING) {
                 // to construct a string, we load the address where the parameter wil be stored into rdi
                 sincall_ss << "\t" << "lea rdi, [rsp + " << param_offset << "]" << std::endl;
-                
-                // preserve the source string so we can free it *if* we need to adjust its RC
-                // if (adjust_rc) {
-                //     sincall_ss << "\t" << "push rax" << std::endl;
-                // }
-                
+                sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
                 sincall_ss << "\t" << "mov rsi, rax" << std::endl;
                 sincall_ss << call_sincall_subroutine("sinl_string_copy_construct") << std::endl;
+                sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
             }
-            else if (param.get_data_type().get_qualities().is_dynamic()) {
-                // todo: construct other types
+            else if (arg_type.get_qualities().is_dynamic()) {
+                // todo: copy-construct other types
             }
             else {
                 copy_constructed = false;
@@ -353,12 +427,11 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
             // if we needed to adjust the RC
             if (arg_p.second) {
                 sincall_ss << "\t" << "pop rdi" << std::endl;   // free the original string to free
-                sincall_ss << call_sre_function("_sre_free");
+                sincall_ss << call_sre_function(magic_numbers::SRE_FREE);
                 // now we need to move the parameter position back because we popped the value
                 param_offset -= sin_widths::PTR_WIDTH;
             }
 
-            // now, determine where that data should go -- this has been determined already so we don't need to do it on every function call
             // if the symbol has a register, pass it there; else, push it
             if (param.get_register() == NO_REGISTER) {
                 if (copy_constructed) {
@@ -376,6 +449,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
                 this->reg_stack.peek().set(param.get_register());
                 sincall_ss << "\t" << "mov " << register_usage::get_register_name(param.get_register(), param.get_data_type()) << ", " << reg_name << std::endl;
             }
+
+            param.set_initialized();
         }
         // todo: default values
 
@@ -393,8 +468,10 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
         this->reg_stack.pop_back();
 
         // if registers were preserved, restore them here
-        sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
-    } else {
+        if (pushed)
+            sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+    }
+    else {
         // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature
         throw FunctionSignatureException(line);
     }
@@ -403,7 +480,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
     return sincall_ss;
 }
 
-std::stringstream compiler::system_v_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line)
+std::stringstream compiler::system_v_call(function_symbol s, std::vector<Expression*> args, unsigned int line)
 {
     std::stringstream system_v_call_ss;
 
@@ -412,7 +489,7 @@ std::stringstream compiler::system_v_call(function_symbol s, std::vector<std::sh
     return system_v_call_ss;
 }
 
-std::stringstream compiler::win64_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line)
+std::stringstream compiler::win64_call(function_symbol s, std::vector<Expression*> args, unsigned int line)
 {
     std::stringstream win64_call_ss;
 
@@ -423,7 +500,7 @@ std::stringstream compiler::win64_call(function_symbol s, std::vector<std::share
 
 // Function returns
 
-std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol signature) {
+std::stringstream compiler::handle_return(ReturnStatement &ret, function_symbol &signature) {
     /*
 
     handle_return
@@ -447,7 +524,8 @@ std::stringstream compiler::handle_return(ReturnStatement ret, function_symbol s
     if (return_type.is_compatible(signature.get_data_type())) {
         // ensure we have a valid return type; we can't return local references
         if (signature.get_data_type().get_primary() == REFERENCE || signature.get_data_type().get_primary() == PTR) {
-            if (!return_type.get_qualities().is_dynamic() && !return_type.get_qualities().is_static()) {
+            DataType returned_subtype = return_type.get_subtype();
+            if (!returned_subtype.get_qualities().is_dynamic() && !returned_subtype.get_qualities().is_static()) {
                 throw CompilerException(
                     "References to automatic memory may not be returned",
                     compiler_errors::RETURN_AUTOMATIC_REFERENCE,
@@ -499,7 +577,7 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
 
 	std::stringstream sincall_ss;
 
-    auto ret_p = evaluate_expression(ret.get_return_exp(), ret.get_line_number());
+    auto ret_p = this->evaluate_expression(ret.get_return_exp(), ret.get_line_number());
 
 	sincall_ss << ret_p.first;
     // todo: count
@@ -514,11 +592,18 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
     );
     if (t.is_reference_type() || t.get_primary() == PTR) {
         sincall_ss << "\t" << "mov rdi, rax" << std::endl;
-        sincall_ss << call_sre_function("_sre_add_ref");
+        sincall_ss << call_sre_function(magic_numbers::SRE_ADD_REF);
     }
 
-    // decrement the rc of all pointers and dynamic memory
-    sincall_ss << decrement_rc(this->reg_stack.peek(), this->symbols, this->current_scope_name, this->current_scope_level, true).str();
+    // decrement the rc of all pointers, references, and dynamic memory
+    try {
+        sincall_ss << decrement_rc(this->reg_stack.peek(), this->symbols, this->structs, this->current_scope_name, this->current_scope_level, true);
+    }
+    catch (CompilerException &e) {
+        e.set_line(ret.get_line_number());  // it would be unusual for this to get caught, but to be safe...
+        throw e;
+    }
+
     sincall_ss << "\t" << "pop rax" << std::endl;
 
     return sincall_ss;

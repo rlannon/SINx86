@@ -13,7 +13,7 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 // todo: create an expression evaluation class and give it access to compiler members?
 std::pair<std::string, size_t> compiler::evaluate_expression(
-    std::shared_ptr<Expression> to_evaluate,
+    Expression &to_evaluate,
     unsigned int line,
     DataType *type_hint
 ) {
@@ -34,18 +34,19 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
     */
 
-    // todo: include a DataType field to hint at the appropriate type (for literal expressions)
-    // for example, if we are assigning like `alloc long int a: 1_000`, then we should ensure it treats the literal as a `long`, not regular, `int`
+    // todo: proper type hints -- e.g., if we are assigning like `alloc long int a: 1_000`, then we should ensure it treats the literal as a `long`, not regular, `int`
+    // although literal 1000 could fit in a long int, we need to ensure that the sign is extended properly
+    // this could be done in the assignment tool, automatically sign-extending 32-bit integers to 64-bit
 
     std::stringstream evaluation_ss;
     size_t count = 0;
 
     // The expression evaluation depends on the expression's type
-    switch (to_evaluate->get_expression_type()) {
+    switch (to_evaluate.get_expression_type()) {
         case LITERAL:
         {
             // get the literal
-            Literal literal_exp = *dynamic_cast<Literal*>(to_evaluate.get());
+            Literal &literal_exp = static_cast<Literal&>(to_evaluate);
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_literal(literal_exp, line, type_hint);
@@ -54,7 +55,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case IDENTIFIER:
         {
             // get the lvalue
-            Identifier lvalue_exp = *dynamic_cast<Identifier*>(to_evaluate.get());
+            Identifier &lvalue_exp = static_cast<Identifier&>(to_evaluate);
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_identifier(lvalue_exp, line);
@@ -75,7 +76,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             // todo: would it be better to just iterate on an assignment and copy into the list? or is it better to use array_copy (as we are doing now)?
             
             // create our label
-            std::string list_label = compiler::LIST_LITERAL_LABEL + std::to_string(this->list_literal_num);
+            std::string list_label = magic_numbers::LIST_LITERAL_LABEL + std::to_string(this->list_literal_num);
             this->list_literal_num += 1;
 
             // preserve R15, as it will be used to keep track of where our list is
@@ -94,8 +95,8 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
             // get our type information
             DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
-            auto le = dynamic_cast<ListExpression*>(to_evaluate.get());
-            t.set_primary(le->get_list_type());
+            auto &le = static_cast<ListExpression&>(to_evaluate);
+            t.set_primary(le.get_list_type());
 
             size_t width = expression_util::get_width(
                 t,
@@ -121,7 +122,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             evaluation_ss << "\t" << "lea r15, [" << list_label << "]" << std::endl;
             if (t.get_primary() == ARRAY) {
                 // write in the length if we have an array
-                evaluation_ss << "\t" << "mov eax, " << le->get_list().size() << std::endl;
+                evaluation_ss << "\t" << "mov eax, " << le.get_list().size() << std::endl;
                 evaluation_ss << "\t" << "mov [r15], eax" << std::endl;
 
                 // increment the pointer by one dword
@@ -129,10 +130,10 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
             }
 
             // now, iterate
-            for (size_t i = 0; i < le->get_list().size(); i++) {
+            for (size_t i = 0; i < le.get_list().size(); i++) {
                 // first, make sure the type of this expression matches the list's subtype
-                auto m = le->get_list().at(i);
-                DataType member_type = expression_util::get_expression_data_type(m, this->symbols, this->structs, line);
+                auto m = le.get_list().at(i);
+                DataType member_type = expression_util::get_expression_data_type(*m, this->symbols, this->structs, line);
                 
                 // todo: support lists of strings and arrays (utilize references and copies) -- could utilize RBX for this
                 if (t.get_primary() == ARRAY && member_type != t.get_subtype()) {
@@ -149,11 +150,22 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                         line
                     );
                 }
+                
+                // adjust the type hint
+                DataType hinted_type;
+                DataType *to_pass = nullptr;
+                try {
+                    hinted_type = type_hint->get_contained_types().at(i);
+                    to_pass = &hinted_type;
+                }
+                catch (std::out_of_range &e) {
+                    hinted_type = type_hint->get_contained_types().at(0);
+                    to_pass = &hinted_type;
+                } catch (std::exception &e) {
+                    to_pass = nullptr;
+                }
 
-                // todo: utilize type hinting for array assignment to ensure types match correctly
-
-                // evaluate the expression
-                auto member_p = this->evaluate_expression(m, line);
+                auto member_p = this->evaluate_expression(*m, line, to_pass);
                 evaluation_ss << member_p.first;
                 count += member_p.second;
 
@@ -198,7 +210,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                     res_instruction = "resb";
                 }
                 this->bss_segment << list_label << ": resd 1" << std::endl; 
-                this->bss_segment << list_label << "_data: " << res_instruction << " " << le->get_list().size() << std::endl;
+                this->bss_segment << list_label << "_data: " << res_instruction << " " << le.get_list().size() << std::endl;
             }
             else {
                 this->bss_segment << list_label << ": resb " << width << std::endl;
@@ -209,8 +221,8 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case BINARY:
         {
 			// cast to Binary class and dispatch
-			Binary bin_exp = *dynamic_cast<Binary*>(to_evaluate.get());
-            auto bin_p = this->evaluate_binary(bin_exp, line);
+			Binary &bin_exp = static_cast<Binary&>(to_evaluate);
+            auto bin_p = this->evaluate_binary(bin_exp, line, type_hint);
             evaluation_ss << bin_p.first;
             count += bin_p.second;
 
@@ -220,14 +232,14 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case UNARY:
         {
-			Unary unary_exp = *dynamic_cast<Unary*>(to_evaluate.get());
-			evaluation_ss << this->evaluate_unary(unary_exp, line).str();
+			Unary &unary_exp = static_cast<Unary&>(to_evaluate);
+			evaluation_ss << this->evaluate_unary(unary_exp, line, type_hint).str();
             // todo: clean up unary?
             break;
         }
-        case VALUE_RETURNING_CALL:
+        case CALL_EXP:
         {
-            ValueReturningFunctionCall call_exp = *dynamic_cast<ValueReturningFunctionCall*>(to_evaluate.get());
+            CallExpression &call_exp = static_cast<CallExpression&>(to_evaluate);
             auto call_p = this->call_function(call_exp, line, false);  // don't allow void functions here
             
             // add the call code
@@ -245,33 +257,33 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case CAST:
         {
-            auto c = dynamic_cast<Cast*>(to_evaluate.get());
+            auto &c = static_cast<Cast&>(to_evaluate);
 
             // ensure the type to which we are casting is valid
-            if (DataType::is_valid_type(c->get_new_type())) {
+            if (DataType::is_valid_type(c.get_new_type())) {
                 // check to make sure the typecast itself is valid (follows the rules)
-                DataType old_type = expression_util::get_expression_data_type(c->get_exp(), this->symbols, this->structs, line);
-                if (is_valid_cast(old_type, c->get_new_type())) {
+                DataType old_type = expression_util::get_expression_data_type(c.get_exp(), this->symbols, this->structs, line);
+                if (is_valid_cast(old_type, c.get_new_type())) {
                     // if we are casting a literal integer or float to itself (but with a different width), create a new Literal
                     if (
-                        (c->get_exp()->get_expression_type() == LITERAL) &&
-                        (old_type.get_primary() == c->get_new_type().get_primary()) &&
+                        (c.get_exp().get_expression_type() == LITERAL) &&
+                        (old_type.get_primary() == c.get_new_type().get_primary()) &&
                         (old_type.get_primary() == INT || old_type.get_primary() == FLOAT)
                     ) {
                         // update the type
-                        std::shared_ptr<Literal> contained = std::dynamic_pointer_cast<Literal>(c->get_exp());
-                        contained->set_type(c->get_new_type());
+                        auto &contained = static_cast<Literal&>(c.get_exp());
+                        contained.set_type(c.get_new_type());
 
                         // now, evaluate
-                        evaluation_ss << this->evaluate_expression(contained, line).first;
+                        evaluation_ss << this->evaluate_expression(contained, line, type_hint).first;
                     }
                     else {
                         // to perform the typecast, we must first evaluate the expression to be casted
-                        auto cast_p = this->evaluate_expression(c->get_exp(), line);
+                        auto cast_p = this->evaluate_expression(c.get_exp(), line, type_hint);
                         evaluation_ss << cast_p.first;
 
                         // now, use the utility function to actually cast the type
-                        evaluation_ss << cast(old_type, c->get_new_type(), line).str();
+                        evaluation_ss << cast(old_type, c.get_new_type(), line).str();
                     }
                 }
                 else {
@@ -285,11 +297,12 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case ATTRIBUTE:
         {
-            auto attr = dynamic_cast<AttributeSelection*>(to_evaluate.get());
-            auto t = expression_util::get_expression_data_type(attr->get_selected(), this->symbols, this->structs, line);
-            auto attr_p = this->evaluate_expression(attr->get_selected(), line);
+            auto &attr = static_cast<AttributeSelection&>(to_evaluate);
+            auto t = expression_util::get_expression_data_type(attr.get_selected(), this->symbols, this->structs, line);
+            auto attr_p = this->evaluate_expression(attr.get_selected(), line, type_hint);
+
             // we have a limited number of attributes
-            if (attr->get_attribute() == LENGTH) {
+            if (attr.get_attribute() == LENGTH) {
                 /*
 
                 length attribute
@@ -317,7 +330,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                     evaluation_ss << "\t" << "mov eax, 1" << std::endl;
                 }
             }
-            else if (attr->get_attribute() == SIZE) {
+            else if (attr.get_attribute() == SIZE) {
                 /*
                 
                 size attribute
@@ -349,7 +362,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                     evaluation_ss << "\t" << "mov eax, " << t.get_width() << std::endl;
                 }
             }
-            else if (attr->get_attribute() == VARIABILITY) {
+            else if (attr.get_attribute() == VARIABILITY) {
                 // todo: variability
                 throw CompilerException("Not yet implemented", compiler_errors::UNKNOWN_ATTRIBUTE, line);
             }
@@ -374,7 +387,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         evaluation_ss << "\t" << "mov r13, rax" << std::endl;
         for (size_t i = 1; i < count; i++) {
             evaluation_ss << "\t" << "pop rdi" << std::endl;
-            evaluation_ss << call_sre_function("_sre_free");
+            evaluation_ss << call_sre_function(magic_numbers::SRE_FREE);
         }
         evaluation_ss << "\t" << "push r12" << std::endl;
         evaluation_ss << "\t" << "mov rax, r13" << std::endl;
@@ -408,12 +421,11 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
     // act based on data type and width -- use type_hint if we have one
     // todo: verify that the type hint is appropriate?
-    DataType type;
+    DataType type = to_evaluate.get_data_type();
     if (type_hint) {
-        type = *type_hint;
-    }
-    else {
-        type = to_evaluate.get_data_type();
+        // We only want to change the type if we have the same primary type -- the type hint is to serve as a hint about *qualities* of a type
+        if (type_hint->get_primary() == type.get_primary())
+            type = *type_hint;
     }
 
     if (type.get_primary() == VOID) {
@@ -451,7 +463,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        std::string float_label = compiler::FLOAT_LITERAL_LABEL + std::to_string(this->fltc_num);
+        std::string float_label = magic_numbers::FLOAT_LITERAL_LABEL + std::to_string(this->fltc_num);
         this->fltc_num += 1;
 
         // todo: check to see if the width was specified with a type suffix
@@ -500,7 +512,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
 
         */
 
-        std::string name = compiler::CONST_STRING_LABEL + std::to_string(this->strc_num);
+        std::string name = magic_numbers::CONST_STRING_LABEL + std::to_string(this->strc_num);
 
         // actually reserve the data and enclose the string in backticks in case we have escaped characters
         this->rodata_segment << "\t" << name << "\t" << "dd " << to_evaluate.get_value().length() << ", `" << to_evaluate.get_value() << "`, 0" << std::endl;
@@ -533,7 +545,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
     std::stringstream eval_ss;
 
     // get the symbol for the lvalue; make sure it was initialized
-    symbol &sym = *(this->lookup(to_evaluate.getValue(), line).get());
+    symbol &sym = *this->lookup(to_evaluate.getValue(), line);
 	if (!sym.was_initialized())
 		throw ReferencedBeforeInitializationException(sym.get_name(), line);
     
@@ -567,7 +579,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                 if (sym.get_data_type().get_qualities().is_static()) {
                     // static memory can be looked up by name -- variables are in the .bss, .data, or .rodata section
                     eval_ss << "\t" << "lea rax, [" << sym.get_name() << "]" << std::endl;
-                    eval_ss << "\t" << "mov " << reg_string << ", rax" << std::endl;
+                    eval_ss << "\t" << "mov " << reg_string << ", [rax]" << std::endl;
                 } 
                 else if (sym.get_data_type().get_qualities().is_dynamic()) {
                     // dynamic memory
@@ -582,7 +594,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     r = this->reg_stack.peek().get_available_register(sym.get_data_type().get_primary());
                     if (r == NO_REGISTER) {
                         // since no register is available, use rsi
-                        // if it contains a symbol, just 
+                        // if it contains a symbol, store it back in the stack and mark it as not in a register
                         symbol *contained = this->reg_stack.peek().get_contained_symbol(RSI);
                         reg_used = "rsi";
                         if (contained == nullptr) {
@@ -600,8 +612,18 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
                     }
 
                     // get the dereferenced pointer in A
-                    eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
-                    eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
+                    if (
+                        sym.get_data_type().get_primary() == STRING ||
+                        sym.get_data_type().get_primary() == ARRAY || 
+                        sym.get_data_type() == STRUCT || 
+                        sym.get_data_type().get_primary() == TUPLE
+                    ) {
+                        eval_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                    }
+                    else {
+                        eval_ss << "\t" << "mov " << reg_used << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+                        eval_ss << "\t" << "mov " << reg_string << ", [" << reg_used << "]" << std::endl;
+                    }
 
                     // if we had to push a register, restore it
                     if (reg_pushed) {
@@ -693,7 +715,12 @@ std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int 
     
     std::stringstream eval_ss;
 
-    DataType to_index_type = expression_util::get_expression_data_type(to_evaluate.get_to_index(), this->symbols, this->structs, line);
+    DataType to_index_type = expression_util::get_expression_data_type(
+        to_evaluate.get_to_index(),
+        this->symbols,
+        this->structs,
+        line
+    );
     if (is_subscriptable(to_index_type.get_primary())) {
         // todo: evaluate indexed
         eval_ss << "\t" << "; todo: subscripting" << std::endl;

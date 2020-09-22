@@ -6,7 +6,7 @@ def struct MyStruct {
     alloc array<5, float> f;
 }
 
-def int main() {
+def int main(alloc array<string> args &dynamic) {
     alloc MyStruct m;
     let m.i = {-5, -4, -3, -2, -1, 0, 1, 2, 3, 4};
     let m.f = {0.0, 1.1, 2.2, 3.3, 4.4};

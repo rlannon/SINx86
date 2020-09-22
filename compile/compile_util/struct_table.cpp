@@ -21,7 +21,7 @@ bool struct_table::insert(struct_info to_add) {
 	
 	*/
 
-	std::pair<std::string, struct_info> to_insert(to_add.get_struct_name(), to_add);
+	auto to_insert = std::make_pair<>(to_add.get_struct_name(), to_add);
 	auto returned = this->structs.insert(to_insert);	 // insert the pair containing our key/value pair, store the result in a pair
 	return returned.second;
 }

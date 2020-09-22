@@ -10,7 +10,7 @@ Implements various functionality for pointers within the compiler
 
 #include "compiler.h"
 
-std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg r, unsigned int line) {
+std::stringstream compiler::get_exp_address(Expression &exp, reg r, unsigned int line) {
     /*
 
     get_exp_address
@@ -22,10 +22,10 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
     std::stringstream addr_ss = expression_util::get_exp_address(exp, this->symbols, this->structs, r, line);
 
     // now, make any adjustments we need to
-    if (exp->get_expression_type() == INDEXED) {
+    if (exp.get_expression_type() == INDEXED) {
         // we need to adjust the value of 'r' by the index value
-        auto i = dynamic_cast<Indexed*>(exp.get());
-        DataType idx_type = expression_util::get_expression_data_type(i->get_to_index(), this->symbols, this->structs, line);
+        auto &i = static_cast<Indexed&>(exp);
+        DataType idx_type = expression_util::get_expression_data_type(i.get_to_index(), this->symbols, this->structs, line);
 
         // if RCX is in use, preserve it -- we are using it for 'mul'
         if (this->reg_stack.peek().is_in_use(RCX)) {
@@ -54,7 +54,7 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         // the index value will be in eax and the array length will be in [rax]
 
         // evaluate the index value and multiply by the type width
-        auto exp_address_p = this->evaluate_expression(i->get_index_value(), line);
+        auto exp_address_p = this->evaluate_expression(i.get_index_value(), line);
         addr_ss << exp_address_p.first;
         
         // now, restore our values if we needed to make any adjustments
@@ -73,7 +73,7 @@ std::stringstream compiler::get_exp_address(std::shared_ptr<Expression> exp, reg
         addr_ss << "\t" << "jg .sinl_rtbounds_" << this->rtbounds_num << std::endl;
 
         // if we were out of bounds, call the appropriate function
-        addr_ss << "\t" << "call _sinl_rte_index_out_of_bounds" << std::endl;
+        addr_ss << "\t" << "call " << magic_numbers::SINL_RTE_OUT_OF_BOUNDS << std::endl;
         
         addr_ss << ".sinl_rtbounds_" << this->rtbounds_num << ":" << std::endl;
 
@@ -107,26 +107,26 @@ std::stringstream compiler::get_address_of(Unary &u, reg r, unsigned int line) {
     std::stringstream addr_ss;
 			
     // how we generate code for this depends on the type
-    if (u.get_operand()->get_expression_type() == BINARY) {
+    if (u.get_operand().get_expression_type() == BINARY) {
         // if we have a binary expression, it *must* be the dot operator; if so, just return what's in RBX after we evaluate it
-        Binary* target = dynamic_cast<Binary*>(u.get_operand().get());
-        if (target->get_operator() != DOT) {
+        Binary &target = static_cast<Binary&>(u.get_operand());
+        if (target.get_operator() != DOT) {
             throw CompilerException("Illegal binary operand in address-of expression", compiler_errors::ILLEGAL_ADDRESS_OF_ARGUMENT, line);
         }
 
-        auto bin_p = this->evaluate_binary(*target, line);
+        auto bin_p = this->evaluate_binary(target, line);
         addr_ss << bin_p.first;
         addr_ss << "mov " << register_usage::get_register_name(r) << ", rbx" << std::endl;
         this->reg_stack.peek().clear(r);  // now we can use RBX again
     }
-    else if (u.get_operand()->get_expression_type() == IDENTIFIER) {
-        Identifier* target = dynamic_cast<Identifier*>(u.get_operand().get());
+    else if (u.get_operand().get_expression_type() == IDENTIFIER) {
+        auto &target = static_cast<Identifier&>(u.get_operand());
         
         // look up the symbol; obtain the address based on its memory location
-        std::shared_ptr<symbol> s = this->lookup(target->getValue(), line);
+        symbol *s = this->lookup(target.getValue(), line);
         addr_ss << get_address(*s, r);
     }
-    else if (u.get_operand()->get_expression_type() == INDEXED) {
+    else if (u.get_operand().get_expression_type() == INDEXED) {
 
     }
     else {

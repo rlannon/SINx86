@@ -24,10 +24,11 @@ class symbol_qualities
 	bool static_q;
 	bool dynamic_q;
 	bool signed_q;
-	bool unsigned_q;
+    bool _listed_unsigned;
 	bool long_q;
 	bool short_q;
 	bool extern_q;
+    bool _managed;
 
 	// function qualities -- for calling conventions, unused by other data
 	// todo: create additional, inherited class 'function_symbol_qualities' to use with functions?
@@ -49,18 +50,21 @@ public:
 	bool is_long();
 	bool is_short();
 	bool is_extern();
+    bool is_managed();
 
 	// function-specific qualities
 	bool is_sincall();
 	bool is_c64();
 	bool is_windows();
 
+    bool has_sign_quality();
+
 	// void add_qualities(std::vector<SymbolQuality> to_add);
 	void add_qualities(symbol_qualities to_add);
     void add_quality(SymbolQuality to_add);
 
 	symbol_qualities(std::vector<SymbolQuality> qualities);
-	symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_unsigned, bool is_long = false, bool is_short = false, bool is_extern = false);
+	symbol_qualities(bool is_const, bool is_static, bool is_dynamic, bool is_signed, bool is_long = false, bool is_short = false, bool is_extern = false);
 	symbol_qualities();
 	~symbol_qualities();
 };

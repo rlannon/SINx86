@@ -6,7 +6,7 @@ def int get_int() {
     return 10;
 }
 
-def void main() {
+def void main(alloc array<string> args &dynamic) {
     alloc int a: @get_int();
     alloc int b: a * 2;
     

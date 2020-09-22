@@ -11,16 +11,20 @@ assign_utilities::destination_information::destination_information(
     std::string dest_location,
     std::string fetch_instructions,
     std::string address_for_lea,
-    bool in_register
+    bool in_register,
+    bool can_use_lea,
+    MoveInstruction instruction_used
 ) {
     this->dest_location = dest_location;
     this->fetch_instructions = fetch_instructions;
     this->address_for_lea = address_for_lea;
     this->in_register = in_register;
+    this->can_use_lea = can_use_lea;
+    this->instruction_used = instruction_used;
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
-    std::shared_ptr<Expression> exp,
+    Expression &exp,
     symbol_table &symbols,
     struct_table &structures,
     std::string scope_name,
@@ -43,31 +47,35 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     std::string dest;
     std::stringstream gen_code;
     std::string address_for_lea;
-    bool in_register;
+    bool in_register = false;
+    bool can_use_lea = false;
+    MoveInstruction instruction_used;
 
     // generate code based on the expression type
-    if (exp->get_expression_type() == IDENTIFIER) {
+    if (exp.get_expression_type() == IDENTIFIER) {
         // get the symbol information
-        auto lhs = dynamic_cast<Identifier*>(exp.get());
-        auto sym = symbols.find(lhs->getValue());
-        auto p = fetch_destination_operand(*sym, symbols, line, r, is_initialization);
+        auto &lhs = static_cast<Identifier&>(exp);
+        auto &sym = symbols.find(lhs.getValue());
+        auto p = fetch_destination_operand(sym, symbols, line, r, is_initialization);
         dest = p.dest_location;
         address_for_lea = p.address_for_lea;
+        can_use_lea = p.can_use_lea;
         in_register = p.in_register;
         gen_code << p.fetch_instructions;
+        instruction_used = p.instruction_used;
 
         // marks the symbol as initialized
-        sym->set_initialized();
+        sym.set_initialized();
     }
-    else if (exp->get_expression_type() == UNARY) {
+    else if (exp.get_expression_type() == UNARY) {
         // get the unary
-        auto lhs = dynamic_cast<Unary*>(exp.get());
-        if (lhs->get_operator() == exp_operator::DEREFERENCE) {
+        auto &lhs = static_cast<Unary&>(exp);
+        if (lhs.get_operator() == exp_operator::DEREFERENCE) {
             // ensure the expression has a pointer type; else, indirection is illegal
-            auto op_t = expression_util::get_expression_data_type(lhs->get_operand(), symbols, structures, line);
+            auto op_t = expression_util::get_expression_data_type(lhs.get_operand(), symbols, structures, line);
             if (op_t.get_primary() == PTR) {
                 auto fetched = fetch_destination_operand(
-                    lhs->get_operand(),
+                    lhs.get_operand(),
                     symbols,
                     structures,
                     scope_name,
@@ -80,11 +88,13 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
                 // add the fetched code from the recursive call to this one
                 dest = "[rbx]";
                 address_for_lea = fetched.dest_location;
+                can_use_lea = fetched.can_use_lea;
                 gen_code << fetched.fetch_instructions;
                 in_register = fetched.in_register;
                 
                 // now, add an instruction to move the previously fetched destination into RBX
                 gen_code << "\t" << "mov rbx, " << fetched.dest_location << std::endl;
+                instruction_used = MoveInstruction::MOV;
             }
             else {
                 throw IllegalIndirectionException(line);
@@ -94,17 +104,20 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             throw NonModifiableLValueException(line);
         }
     }
-    else if (exp->get_expression_type() == BINARY) {
-        auto lhs = dynamic_cast<Binary*>(exp.get());
-        if (lhs->get_operator() == DOT) {
+    else if (exp.get_expression_type() == BINARY) {
+        auto &lhs = static_cast<Binary&>(exp);
+        if (lhs.get_operator() == DOT) {
             dest = "[rbx]";
             gen_code << expression_util::get_exp_address(exp, symbols, structures, r, line).str();
+            can_use_lea = false;
+            address_for_lea = "rbx";
+            instruction_used = MoveInstruction::LEA;
         }
         else {
             throw NonModifiableLValueException(line);
         }
     }
-    else if (exp->get_expression_type() == INDEXED) {
+    else if (exp.get_expression_type() == INDEXED) {
         /*
 
         Indexed expressions can't be evaluated properly by this utility
@@ -119,7 +132,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         throw NonModifiableLValueException(line);
     }
     
-    return destination_information(dest, gen_code.str(), address_for_lea, in_register);
+    return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea, instruction_used);
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
@@ -140,6 +153,8 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     std::stringstream gen_code;
     std::string address_for_lea;
     bool in_register = false;
+    bool can_use_lea = false;
+    MoveInstruction instruction_used;
 
     auto dt = sym.get_data_type();
 
@@ -150,14 +165,16 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     else if (dt.get_qualities().is_const() && !is_initialization) {
         throw ConstAssignmentException(line);
     }
-    else if (dt.get_qualities().is_final() && sym.was_initialized()) {
+    else if (dt.get_qualities().is_final() && !is_initialization && sym.was_initialized()) {    // functions require parameters to be marked as initialized, so include the initialization param here to avoid errors in the call
         throw FinalAssignmentException(line);
     }
     else {
         if (dt.get_qualities().is_static()) {
             dest = "[rbx]";
             address_for_lea = "[" + sym.get_name() + "]";
+            can_use_lea = true;
             gen_code << "\t" << "lea rbx, [" << sym.get_name() << "]" << std::endl;
+            instruction_used = MoveInstruction::LEA;
         }
         else {
             // we will need the stack location no matter what
@@ -183,16 +200,19 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             ) {
                 dest = "[rbx]";
                 gen_code << "\t" << "mov rbx, " << location << std::endl;
+                instruction_used = MoveInstruction::MOV;
             }
             else if (requires_copy(sym.get_data_type())) {
                 // if we don't have a string but we do require a copy, use lea
                 // but if that value is in a register, just use mov
                 dest = "[rbx]";
-                if (!in_register) {
-                    gen_code << "\t" << "lea rbx, " << location << std::endl;
+                if (in_register) {
+                    gen_code << "\t" << "mov rbx, " << location << std::endl;
+                    instruction_used = MoveInstruction::MOV;
                 }
                 else {
-                    gen_code << "\t" << "mov rbx, " << location << std::endl;
+                    gen_code << "\t" << "lea rbx, " << location << std::endl;
+                    instruction_used = MoveInstruction::LEA;
                 }
             }
             else {
@@ -200,10 +220,11 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
             }
 
             address_for_lea = location;
+            can_use_lea = !in_register;
         }
     }
 
-    return destination_information(dest, gen_code.str(), address_for_lea, in_register);
+    return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea, instruction_used);
 }
 
 bool assign_utilities::requires_copy(DataType t) {
@@ -220,4 +241,52 @@ bool assign_utilities::requires_copy(DataType t) {
         t.get_primary() == TUPLE ||
         t.get_primary() == STRUCT
     );
+}
+
+bool assign_utilities::is_valid_move_expression(Expression &exp) {
+    /*
+
+    is_valid_move_expression
+    Determines whether the given expression may be used in a move statement
+
+    Move expressions must be modifiable-lvalues, meaning they can be:
+        * Identifiers
+        * Binary expressions using the dot operator
+        * Unary expressions using the dereference operator
+        * Indexed expressions
+    They can't be const, though they may be final (though assignment to initialized final data is still illegal)
+
+    */
+
+    bool is_valid;
+
+    if (
+        exp.get_expression_type() == LITERAL ||
+        exp.get_expression_type() == CALL_EXP
+    ) {
+        is_valid = false;
+    }
+    else if (exp.get_expression_type() == BINARY) {
+        auto &b = static_cast<Binary&>(exp);
+        if (b.get_operator() == DOT) {
+            is_valid = true;
+        }
+        else {
+            is_valid = false;
+        }
+    }
+    else if (exp.get_expression_type() == UNARY) {
+        auto &u = static_cast<Unary&>(exp);
+        if (u.get_operator() == DEREFERENCE) {
+            is_valid = true;
+        }
+        else {
+            is_valid = false;
+        }
+    }
+    else {
+        is_valid = true;
+    }
+
+    return is_valid;
 }

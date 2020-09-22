@@ -67,6 +67,25 @@ and sure enough, looking at the sample memory structure, `m.x` is located at `rb
 
 Structs may contain static members, meaning they don't need to be accessed from any one particular object. If a specific object is referenced, they may use the dot operator as normal, like `b.c`. However, if the static member is accessed without a particular object reference, it may use the attribute operator -- e.g., `a:c`.
 
+### Methods
+
+_Note: this section describes an ongoing addition to the language, one which is not currently fully-supported._
+
+Structs, like equivalent structures in other modern programming languages, supports member functions, or _methods._ These methods do not use any special syntax, other than that they are defined inside a struct definition. They may be declared there and defined elsewhere as well. For example:
+
+    def struct myStruct {
+        alloc int my_int;
+        alloc string name;
+        
+        def string get_name() {
+            return this.name;
+        }
+
+        decl void set_my_int(decl int new_value);
+    }
+
+For more information on struct methods, see [the relevant document](Methods.md).
+
 ## Construction
 
 _Note: this section describes a future addition to the language, one which is not currently present or in development within the compiler._

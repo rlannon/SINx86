@@ -38,6 +38,9 @@ class DataType
 	std::string struct_name;	// if the data type is 'struct', we need to know its name so we can look it up in the struct table
 
 	void set_width();	// sets the symbol's type based on the primary type
+    void set_must_free();   // sets _must_free based on data about the symbol
+
+    bool _must_free;
 public:
 	static const bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
 
@@ -57,7 +60,7 @@ public:
 	size_t get_array_length() const;
 	std::string get_struct_name() const;
 
-	std::shared_ptr<Expression> get_array_length_expression() const;
+	Expression *get_array_length_expression() const;
 
 	void set_primary(Type new_primary);
 	void set_subtype(DataType new_subtype);
@@ -78,6 +81,7 @@ public:
 	bool is_reference_type() const;
 
 	virtual bool must_initialize() const;
+    bool must_free() const;
 
     DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp = nullptr, std::string struct_name = "");
 	DataType (Type primary, std::vector<DataType> contained_types, symbol_qualities qualities);

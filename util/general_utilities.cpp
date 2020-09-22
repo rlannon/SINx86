@@ -30,7 +30,7 @@ bool general_utilities::returns(StatementBlock to_check) {
 
             // handle ite
 			if (s->get_statement_type() == stmt_type::IF_THEN_ELSE) {
-                to_return = ite_returns(dynamic_cast<IfThenElse*>(s.get()));
+                to_return = ite_returns(static_cast<IfThenElse*>(s.get()));
 			}
 
 			// increment the iterator
@@ -42,20 +42,25 @@ bool general_utilities::returns(StatementBlock to_check) {
 	}
 }
 
-bool general_utilities::returns(std::shared_ptr<Statement> to_check) {
-    if (to_check->get_statement_type() == SCOPE_BLOCK) {
-        ScopedBlock *block = dynamic_cast<ScopedBlock*>(to_check.get());
-        return returns(block->get_statements());
+bool general_utilities::returns(Statement &to_check) {
+    if (to_check.get_statement_type() == SCOPE_BLOCK) {
+        ScopedBlock &block = static_cast<ScopedBlock&>(to_check);
+        return returns(block.get_statements());
     }
     else {
-        return to_check->get_statement_type() == RETURN_STATEMENT;
+        return to_check.get_statement_type() == RETURN_STATEMENT;
     }
 }
 
 bool general_utilities::ite_returns(IfThenElse *to_check) {
     // both must be true for it to return true
-    bool if_returns = returns(to_check->get_if_branch());
-    bool else_returns = returns(to_check->get_else_branch());
+    bool if_returns = false;
+    if (to_check->get_if_branch())
+        if_returns = returns(*to_check->get_if_branch());
+    
+    bool else_returns = false;
+    if (to_check->get_else_branch())
+        else_returns = returns(*to_check->get_else_branch());
 
     return if_returns && else_returns;
 }

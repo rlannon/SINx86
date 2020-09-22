@@ -16,8 +16,6 @@ The implementation of the Parser member functions to parse statements, including
 	- std::shared_ptr<Statement> parse_definition(lexeme current_lex);
 	- std::shared_ptr<Statement> parse_function_call(lexeme current_lex);
 
-Keeping the statement parsing functions together makes for a smaller 'Parser.cpp' file and more readable code.
-
 */
 
 #include "Parser.h"
@@ -40,65 +38,42 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		}
 		// parse inline assembly
 		else if (current_lex.value == "asm") {
-			lexeme next = this->next();
+			if (this->peek().value == "{") {
+				this->next();
 
-			if (next.value == "<") {
-				lexeme asm_type = this->next();
-				if (asm_type.type == IDENTIFIER_LEX) {
-					std::string asm_architecture = asm_type.value;
+				// TODO: figure out how to implement line breaks in asm
 
-					if (this->peek().value == ">") {
-						this->next();
+				// continue reading values into a stringstream until we hit another curly brace
+				bool end_asm = false;
+				std::stringstream asm_code;
+
+				lexeme asm_data = this->next();
+				unsigned int current_line = asm_data.line_number;
+				
+				while (!end_asm) {
+					// if we have advanced in line number, add a newline 
+					if (asm_data.line_number > current_line) {
+						asm_code << std::endl;
+						current_line = asm_data.line_number;	// update 'current_line' -- if we advance lines from here, we will add a newline at the top of the next loop
+					}
+
+					if (asm_data.value == "}") {
+						end_asm = true;
 					}
 					else {
-						throw ParserException("Need closing angle bracket around asm type", 000, current_lex.line_number);
-					}
+						asm_code << asm_data.value;
 
-					if (this->peek().value == "{") {
-						this->next();
-
-						// TODO: figure out how to implement line breaks in asm
-
-						// continue reading values into a stringstream until we hit another curly brace
-						bool end_asm = false;
-						std::stringstream asm_code;
-
-						lexeme asm_data = this->next();
-						unsigned int current_line = asm_data.line_number;
-						
-						while (!end_asm) {
-							// if we have advanced in line number, add a newline 
-							if (asm_data.line_number > current_line) {
-								asm_code << std::endl;
-								current_line = asm_data.line_number;	// update 'current_line' -- if we advance lines from here, we will add a newline at the top of the next loop
-							}
-
-							if (asm_data.value == "}") {
-								end_asm = true;
-							}
-							else {
-								asm_code << asm_data.value;
-
-								// put a space after idents, but not if a colon follows; also put spaces before semicolons
-								if (((asm_data.type == IDENTIFIER_LEX) && (this->peek().value != ":")) || (this->peek().value == ";")) {
-									asm_code << " ";
-								}
-								// advance to the next token, but ONLY if we haven't hit the closing curly brace
-								asm_data = this->next();
-							}
+						// put a space after idents, but not if a colon follows; also put spaces before semicolons
+						if (((asm_data.type == IDENTIFIER_LEX) && (this->peek().value != ":")) || (this->peek().value == ";")) {
+							asm_code << " ";
 						}
-
-						stmt = std::make_shared<InlineAssembly>(asm_architecture, asm_code.str());
-						stmt->set_line_number(current_lex.line_number);	// sets the line number for errors to the ASM block start; any ASM errors will be made known in the assembler
+						// advance to the next token, but ONLY if we haven't hit the closing curly brace
+						asm_data = this->next();
 					}
 				}
-				else {
-					throw ParserException("Inline assembly must include the target architecture!", 000, current_lex.line_number);
-				}
-			}
-			else {
-				// syntax error; 'asm' must be followed by the type
-				throw ParserException("Inline assembly must include the target architecture (syntax is 'asm< target >{ ... }'", 000, current_lex.line_number);
+
+				stmt = std::make_shared<InlineAssembly>(asm_code.str());
+				stmt->set_line_number(current_lex.line_number);	// sets the line number for errors to the ASM block start; any ASM errors will be made known in the assembler
 			}
 		}
 		// parse a "free" statement
@@ -106,29 +81,16 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 			/*
 
 			The syntax for a free statement is:
-				free <identifier>;
+				free <expression>;
 			
-			Since free is not a function, but a keyword, unlike C; it is more like the C++ 'delete'
+			Since free is not a function, but a keyword, unlike C, it is more like the C++ 'delete'
 
 			*/
 
-			if (this->peek().type == IDENTIFIER_LEX) {
-				current_lex = this->next();
-
-				// make sure we end the statement correctly
-				if (this->peek().value == ";") {
-					this->next();
-
-					Identifier to_free(current_lex.value);
-					stmt = std::make_shared<FreeMemory>(to_free);
-				}
-				else {
-					throw MissingSemicolonError(current_lex.line_number);
-				}
-			}
-			else {
-				throw ParserException("Expected identifier after 'free'", 0, current_lex.line_number);
-			}
+			this->next();
+			auto to_free = this->parse_expression();
+			stmt = std::make_shared<FreeMemory>(to_free);
+			stmt->set_line_number(current_lex.line_number);
 		}
 		// parse a declaration
 		else if (current_lex.value == "decl") {
@@ -145,6 +107,9 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		// Parse an assignment
 		else if (current_lex.value == "let") {
 			stmt = this->parse_assignment(current_lex);
+		}
+		else if (current_lex.value == "move") {
+			stmt = this->parse_move(current_lex);
 		}
 		// Parse a return statement
 		else if (current_lex.value == "return") {
@@ -174,7 +139,11 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 			stmt = this->parse_function_call(current_lex);
 		}
 		else {
-			throw ParserException("Lexeme '" + current_lex.value + "' is not a valid beginning to a statement", 000, current_lex.line_number);
+			throw ParserException(
+                "Lexeme '" + current_lex.value + "' is not a valid beginning to a statement",
+                000,
+                current_lex.line_number
+            );
 		}
 	}
 	// otherwise, we might have a scoped block statement
@@ -467,10 +436,14 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 			}
 		}
 		else {
-			throw ParserException("The variable's type must be followed by a valid identifier", 0, next_token.line_number);
+			throw ParserException(
+                "The variable's type must be followed by a valid identifier",
+                compiler_errors::MISSING_IDENTIFIER_ERROR,
+                next_token.line_number
+            );
 		}
 	} else {
-		throw ParserException("Expected a valid data type", 111, current_lex.line_number);
+		throw ParserException("Expected a valid data type", compiler_errors::TYPE_ERROR, current_lex.line_number);
 	}
 
 	return stmt;
@@ -492,9 +465,6 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 	// get the operator character, make sure it's an equals sign
 	lexeme op_lex = this->next();
 	exp_operator op = translate_operator(op_lex.value);
-	if (op != EQUAL) {
-		op = make_compound_operator(op_lex, this->next());
-	}
 
 	if (is_valid_copy_assignment_operator(op)) {
 		// if the next lexeme is not a semicolon and the next lexeme's line number is the same as the current lexeme's line number, we are ok
@@ -518,17 +488,62 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 		}
 	}
 	else if (is_valid_move_assignment_operator(op)) {
-		// todo: move assignment
-		throw CompilerException("Move assignment currently not supported", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, op_lex.line_number);
+		throw ParserException("Move assignment operator not supported with 'let'", compiler_errors::OPERATOR_TYPE_ERROR, op_lex.line_number);
 	}
 	else {
 		throw ParserException("Unrecognized token.", 0, current_lex.line_number);
 	}
 }
 
+std::shared_ptr<Statement> Parser::parse_move(lexeme current_lex)
+{
+	/*
+
+	parse_move
+	Parses a 'move' statement
+
+	*/
+
+	std::shared_ptr<Statement> stmt = nullptr;
+	this->next();
+	
+	// get the lhs
+	auto lhs = this->parse_expression();
+	
+	// get the op
+	auto op = this->read_operator(false);
+	if (is_valid_move_assignment_operator(op)) {
+		// get the rhs
+		this->next();
+		auto rhs = this->parse_expression();
+
+		if (this->peek().value != ";") {
+			throw MissingSemicolonError(this->current_token().line_number);
+		}
+
+		// todo: ensure that we are only moving modifiable-lvalues (should this be done in the compiler class?)
+		
+		if (op == LEFT_ARROW) {
+			// rhs is rvalue (the value)
+			stmt = std::make_shared<Movement>(lhs, rhs);
+		}
+		else {
+			// lhs is rvalue (the value)
+			stmt = std::make_shared<Movement>(rhs, lhs);
+		}
+
+        stmt->set_line_number(current_lex.line_number);
+	}
+	else {
+		throw ParserException("Expected move assignment operator", compiler_errors::OPERATOR_TYPE_ERROR, current_lex.line_number);
+	}
+
+	return stmt;
+}
+
 std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt(nullptr);
+	std::shared_ptr<Statement> stmt = nullptr;
 	this->next();	// go to the expression
 
 	// if the current token is a semicolon, return a Literal Void
@@ -608,30 +623,23 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 
 std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt = nullptr;
+    auto parsed = this->parse_expression();
+    if (parsed->get_expression_type() == CALL_EXP) {
+        CallExpression *exp = static_cast<CallExpression*>(parsed.get());
 
-	// Get the function's name
-	lexeme func_name = this->next();
-	if (func_name.type == IDENTIFIER_LEX) {
-		std::vector<std::shared_ptr<Expression>> args;
-		this->next();
-		this->next();
-		lexeme cur = this->current_token();
-		while (cur.value != ")") {
-			args.push_back(this->parse_expression());
-			cur = this->next();
-		}
-		
-		// function calls as statements must *always* be followed by semicolons
-		// this is not the function to parse a call that is part of an expression
-		if (this->peek().value != ";") {
-			throw MissingSemicolonError(this->previous().line_number);
-		}
-		stmt = std::make_shared<Call>(std::make_shared<Identifier>(func_name.value), args);
-		stmt->set_line_number(current_lex.line_number);
-		return stmt;
-	}
-	else {
-		throw ParserException("Expected an identifier", 111, current_lex.line_number);
-	}
+        // if we didn't get a CallExpression, then it's an error -- we /must/ have one for a Call statement 
+        // this means if we have a binary or something else (e.g., '@x.y().z'), it's not valid
+        stmt = std::make_shared<Call>(*exp);
+        stmt->set_line_number(current_lex.line_number);
+    }
+    else {
+        throw ParserException(
+            "Expected a valid function call expression",
+            compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+            current_lex.line_number
+        );
+    }
+
+    return stmt;
 }

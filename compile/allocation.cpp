@@ -90,27 +90,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 		// perform the allocation
 		if (alloc_data.get_qualities().is_dynamic()) {
-			// dynamic allocation
-			allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
-			
-			// add the symbol and move RSP further into the stack, by the width of a pointer
-			this->add_symbol(allocated, alloc_stmt.get_line_number());
-
-			// push registers currently in use
-			allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
-
-			// allocate dynamic memory with a call to _sre_request_resource
-			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
-			allocation_ss << call_sre_function("_sre_request_resource");
-
-			// restore used registers
-			allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
-
-			// store the returned address in the space allocated for the resource
-			allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
-			allocation_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
-
-			// if we have a const here, throw an exception -- constants may not be dynamic
+            // if we have a const here, throw an exception -- constants may not be dynamic
 			if (alloc_data.get_qualities().is_const()) {
 				throw CompilerException("Use of 'const' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
 			}
@@ -119,18 +99,75 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			if (alloc_data.get_qualities().is_static()) {
 				throw CompilerException("Use of 'static' and 'dynamic' together is illegal", compiler_errors::ILLEGAL_QUALITY_ERROR, alloc_stmt.get_line_number());
 			}
+
+			// dynamic allocation -- ensure we pass PTR_WIDTH in for the width (as it will affect the stack offset)
+			allocated = generate_symbol(alloc_stmt, sin_widths::PTR_WIDTH, this->current_scope_name, this->current_scope_level, this->max_offset);
+
+			// push registers currently in use
+			allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
+
+			// allocate dynamic memory with a call to _sre_request_resource
+			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
+			allocation_ss << "\t" << "mov rsi, 0" << std::endl;
+			allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
+
+			// restore used registers
+			allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+
+			// store the returned address in the space allocated for the resource
+			allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() << "], rax" << std::endl;
+			allocation_ss << "\t" << "sub rsp, " << sin_widths::PTR_WIDTH << std::endl;
+
+            // todo: generalize array length initialization
+            // if we have an array, we need to initialize its length
+            if (alloc_data.get_primary() == ARRAY) {
+                // if we have a const length, we can use the array_length memeber; else, we need to evaluate the expression for the length
+                if (alloc_data.get_array_length_expression()->is_const()) {
+                    allocation_ss << "\t" << "mov ebx, " << alloc_data.get_array_length() << std::endl;
+                }
+                else if (alloc_data.get_array_length_expression()) {
+                    allocation_ss << "\t" << "push rax" << std::endl;
+                    // todo: push used registers?
+                    allocation_ss << this->evaluate_expression(*alloc_data.get_array_length_expression(), alloc_stmt.get_line_number()).first << std::endl;
+                    allocation_ss << "\t" << "pop rbx" << std::endl;
+                }
+                else {
+                    // if there was no array length expression, the length is zero -- write it in to be safe
+                    allocation_ss << "\t" << "mov ebx, 0" << std::endl;
+                }
+
+                // RAX contains the address, and ebx contains the length dword
+                allocation_ss << "\t" << "mov [rax], ebx" << std::endl;
+            }
+
+			// ensure we handle alloc-init for dynamic objects
+			if (alloc_stmt.was_initialized()) {
+				auto initial_value = alloc_stmt.get_initial_value();
+				allocation_ss << this->handle_alloc_init(allocated, *initial_value, alloc_stmt.get_line_number()).str();
+
+				allocated.set_initialized();
+			}
+
+			// add the symbol
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
 		}
 		else if (alloc_data.get_qualities().is_static()) {
 			data_width = 0;	// takes up no space on the stack
 			allocated = generate_symbol(alloc_stmt, data_width, "global", 0, this->max_offset);
-			this->add_symbol(allocated, alloc_stmt.get_line_number());
 
 			// we need to determine the width suffix (db, dw, resb, resw, etc)
 			size_t w = allocated.get_data_type().get_width();
 
 			// since arrays must contain a known-width type, we can just get the width of the subtype
-			if (allocated.get_data_type().get_primary() == ARRAY)
-				w = allocated.get_data_type().get_subtype().get_width();
+			if (allocated.get_data_type().get_primary() == ARRAY) {
+                const DataType &subtype = allocated.get_data_type().get_subtype();
+                if (subtype.get_qualities().is_dynamic()) {
+                    w = sin_widths::PTR_WIDTH;
+                }
+                else {
+				    w = subtype.get_width();
+                }
+            }
 			
 			char width_suffix;
 			if (w == sin_widths::BOOL_WIDTH) {
@@ -150,7 +187,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			std::string initial_value = "";
 			if (alloc_stmt.was_initialized() && alloc_stmt.get_initial_value()->is_const()) {
 				initial_value = this->evaluator.evaluate_expression(
-					alloc_stmt.get_initial_value(), 
+					*alloc_stmt.get_initial_value(), 
 					"global", 
 					0, 
 					alloc_stmt.get_line_number()
@@ -212,6 +249,10 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 				// static, non-const, uninitialized data
 				this->bss_segment << alloc_instruction.str() << std::endl;
 			}
+
+			// add the symbol to the table
+			if (alloc_stmt.was_initialized()) allocated.set_initialized();
+			this->add_symbol(allocated, alloc_stmt.get_line_number());
 		}
 		else {
 			// must be automatic memory
@@ -273,7 +314,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// initialize it, if necessary
 			if (alloc_stmt.was_initialized()) {
 				// get the initial value
-				std::shared_ptr<Expression> initial_value = alloc_stmt.get_initial_value();
+				auto &initial_value = *alloc_stmt.get_initial_value();
 
 				// make an assignment of 'initial_value' to 'allocated'
 				allocation_ss << this->handle_alloc_init(allocated, initial_value, alloc_stmt.get_line_number()).str();
@@ -286,7 +327,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 		}
 
-		// if the type is STRUCT, we need to initialize non-dynamic array members
+		// if the type is STRUCT, we need to initialize non-dynamic array members and allocate dynamic members
 		if (allocated.get_data_type().get_primary() == STRUCT) {
 			// todo: eliminate this call and initialize a function-level object earlier?
 			struct_info &info = this->get_struct_info(allocated.get_data_type().get_struct_name(), alloc_stmt.get_line_number());
@@ -315,24 +356,74 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			auto members = info.get_all_members();
 			std::string struct_addr = get_address(allocated, r);
 			allocation_ss << struct_addr;
+            
+            if (!members.empty())
+                allocation_ss << push_used_registers(this->reg_stack.peek(), true).str();
+            
 			for (auto m: members) {
-				// we only need to do this for non-dynamic arrays
-				if (m->get_data_type().get_primary() == ARRAY && !m->get_data_type().get_qualities().is_dynamic()) {
-					// evaluate the array length expression and move it (an integer) into [R15 + offset]
-					auto alloc_p = this->evaluate_expression(m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
-					allocation_ss << alloc_p.first;
-					allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;
+                // only need to worry about variables -- not member functions!
+                if (m->get_symbol_type() == SymbolType::VARIABLE) {
+                    allocation_ss << "; requesting space for member " << m->get_name() << std::endl;
 
-					// if we had a reference to an integer, we need to free it
-					if (alloc_p.second) {
-						allocation_ss << "\t" << "pop rdi" << std::endl;
-						allocation_ss << call_sre_function("_sre_free");
-					}
-				}
-				else if (m->get_data_type().must_initialize()) {
-					init_required = true;
-				}
+                    // we only need to do this for non-dynamic arrays
+                    if (m->get_data_type().get_primary() == ARRAY) {
+                        // evaluate the array length expression and move it (an integer) into [R15 + offset]
+                        auto alloc_p = this->evaluate_expression(*m->get_data_type().get_array_length_expression(), alloc_stmt.get_line_number());
+                        allocation_ss << alloc_p.first;
+
+                        // reserve space for dynamic arrays; move it in
+                        if (m->get_data_type().get_qualities().is_dynamic()) {
+                            // todo: dynamic arrays without a supplied initial length
+
+                            // call sre_request_resource
+                            // eax now contains the number of elements
+                            allocation_ss << "\t" << "push rax" << std::endl;   // preserve so we can write it in
+
+                            // request the resource
+                            size_t type_width = (m->get_data_type().get_subtype().get_qualities().is_dynamic() ? 8 : m->get_data_type().get_subtype().get_width());
+                            allocation_ss << "\t" << "mov ebx, " << type_width << std::endl;
+                            allocation_ss << "\t" << "mul ebx" << std::endl;
+                            allocation_ss << "\t" << "add rax, " << sin_widths::INT_WIDTH << std::endl;
+                            allocation_ss << "\t" << "mov rdi, rax" << std::endl;
+                            allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
+
+                            // write in the array's length
+                            allocation_ss << "\t" << "pop rbx" << std::endl;    // restore the length in ebx
+                            allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], rax" << std::endl;  // store the address of the dynamic memory in the struct
+                            allocation_ss << "\t" << "mov [rax], ebx" << std::endl; // write in the length
+                        }
+                        else {
+                            // just move in the array length
+                            allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "], eax" << std::endl;
+                        }
+
+                        // if we had a reference to an integer, we need to free it
+                        if (alloc_p.second) {
+                            allocation_ss << "\t" << "pop rdi" << std::endl;
+                            allocation_ss << call_sre_function(magic_numbers::SRE_FREE);
+                        }
+                    }
+                    // we need to allocate string members
+                    else if (m->get_data_type().get_primary() == STRING) {
+                        allocation_ss << "\t" << "mov esi, 0" << std::endl;
+                        allocation_ss << call_sincall_subroutine("sinl_string_alloc");
+                        allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "]" << ", rax" << std::endl;
+                    }
+                    // we need to reserve space for all other dynamic types
+                    else if (m->get_data_type().get_qualities().is_dynamic()) {
+                        allocation_ss << "\t" << "mov rdi, " << m->get_data_type().get_width() << std::endl;
+                        allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
+                        allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "]" << ", rax" << std::endl;
+                    }
+                    
+                    if (m->get_data_type().must_initialize()) {
+                        init_required = true;
+                    }
+                }
 			}
+
+            if (!members.empty())
+                allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
 
 			// if we needed to initialize but didn't, throw an exception
 			if (init_required && !alloc_stmt.was_initialized()) {
@@ -347,7 +438,39 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			if (push_r15) {
 				allocation_ss << "\t" << "pop r15" << std::endl;
 			}
+            else {
+                this->reg_stack.peek().clear(r);    // since we set it as in use, clear it (but only if it wasn't in use already)
+            }
 		}
+        // We need to do the same for tuples, but we iterate through them differently
+        else if (allocated.get_data_type().get_primary() == TUPLE) {
+            // we will need to manually adjust the member offset
+            size_t member_offset = 0;
+            // todo: offset for non-automatic tuples should be 0; we are calculating the offset within the tuple
+
+            for (auto m: allocated.get_data_type().get_contained_types()) {
+                if (m.get_qualities().is_dynamic()) {
+                    // todo: reserve dynamic space
+                    member_offset += sin_widths::PTR_WIDTH;
+                }
+                else if (m.get_qualities().is_static())
+                {
+                    // exception -- tuples may not have static members!
+                    throw CompilerException(
+                        "Tuple members may not be marked 'static'",
+                        compiler_errors::TYPE_VALIDITY_RULE_VIOLATION_ERROR,
+                        alloc_stmt.get_line_number()
+                    );
+                }
+                else {
+                    if (m.get_primary() == ARRAY) {
+                        allocation_ss << "\t" << "mov eax, " << m.get_array_length() << std::endl;
+                        allocation_ss << "\t" << "mov [rbp - " << allocated.get_offset() - member_offset << "], eax" << std::endl;
+                    }
+                    member_offset += m.get_width();
+                }
+            }
+        }
 	}
 	else {
 		throw TypeValidityViolation(alloc_stmt.get_line_number());	// todo: generate a more specific error saying what the policy violation was

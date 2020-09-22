@@ -9,6 +9,9 @@ def int main & long (alloc array<string> args &dynamic)
     alloc int b &unsigned: 50;
     alloc unsigned int c: a + b;
 
+    // test bit shifts
+    let c = c >> 8;
+
     // test our syntactic sugar
     let a *= 2;
     let b += 3;
@@ -30,6 +33,21 @@ def int main & long (alloc array<string> args &dynamic)
         @print("Arithmetic error.\n");
         let to_return = 1;
     }
+
+    // test floating-point arithmetic
+    alloc float f1: 1.234;
+    alloc float f2: 1.234;
+    if (f1 = f2) {
+        @print("Floats equal!\n");
+    }
+    else {
+        @print("Floats not equal\n");
+    }
+
+    alloc float f3 &long;
+    let f3 = f1 as long float + 1234.56789 &long;
+    alloc float result;
+    let result = f1 * 30 as float + f2;
 
     return to_return;
 }

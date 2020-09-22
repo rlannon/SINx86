@@ -27,6 +27,8 @@ The purpose of the Exceptions files is to implement the various custom exception
 
 */
 
+// todo: include file information in exception
+
 class CompilerException : public std::exception
 {
 protected:
@@ -35,6 +37,7 @@ protected:
 	unsigned int line;
 public:
 	explicit CompilerException(const std::string& message, unsigned int code = 0, unsigned int line = 0);
+    void set_line(unsigned int new_line);
 	virtual const char* what() const noexcept;
 };
 
@@ -276,6 +279,7 @@ public:
 
 // sometimes, we want to print an error message, but we don't need to stop compilation
 void compiler_warning(std::string message, unsigned int code, unsigned int line = 0);
+void half_precision_not_supported_warning(unsigned int line);
 
 // sometimes, we want to print a note rather than an error
 void compiler_note(std::string message, unsigned int line = 0);
