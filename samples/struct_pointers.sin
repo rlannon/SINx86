@@ -8,9 +8,9 @@ def struct point {
     alloc ptr<int> p;
 }
 
-def int main (alloc extern int param) {
+def int main (alloc dynamic array<string> args) {
     alloc int n: 10;
-    alloc int m: param;
+    alloc int m: n;
     
     alloc dynamic point coord;
     let coord.x = 0;

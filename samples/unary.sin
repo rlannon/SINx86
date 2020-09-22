@@ -1,7 +1,7 @@
 // unary.sin
 // test unary expression parsing and handling
 
-def int main() {
+def int main(alloc dynamic array<string> args) {
     alloc int x: 10;
     alloc int y;
     let y = --x;

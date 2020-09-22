@@ -1,7 +1,7 @@
 // conditional.sin
 // a test of our conditionals
 
-def void main() {
+def void main(alloc array<string> args &dynamic) {
     alloc int result;
 
     if (true)
