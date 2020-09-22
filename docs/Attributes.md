@@ -14,8 +14,8 @@ So, you might say something like:
 
     // an example of value-level attributes
     alloc string s: "hello, world!";
-    alloc int strlen = s:len &unsigned;
-    @print("The length of the string is " + strlen as string);
+    alloc int strlen &unsigned: s:len;
+    @print("The length of the string is " + @itos(strlen)); // requires itos standard library function
 
     // and type-level ones
     alloc int INT_WIDTH: int:size;
@@ -26,14 +26,14 @@ The following attributes are currently available:
 | --------- | ----------- | ----------- |
 | `len` | `unsigned int` | The number of elements in a collection; for `string` and `array`, this is contained at the head of the structure in a doubleword. For other types (`int`, `bool`, etc.), always returns 1. For `struct` types, returns the number of data members it contains |
 | `size` | `unsigned int` | The number of *bytes* the data occupies. For a type like `float` or `unsigned short int`, equivalent to `sizeof< T >`. However, unlike `sizeof< T >`, the attribute can give the sizes of variable-width types |
-| `var` | `string` | The variability of an object. Returns `var` for a variable, `final` for final data, and `const` for a constant |
+| `var` | `unsigned int` | The variability of an object. Returns `2` for a variable, `1` for final data, and `0` for a constant |
 
 Note that these attributes may be used on any value, including literal values, as all values have a type, and therefore, attributes. For example:
 
-    alloc int x: 30:size;   // assigns 2 (30 is a 'short int')
+    alloc int x: 30:size;   // assigns 4
     alloc int y: "hello, world!":len;   // assigns 12
 
-Note, though, that the compiler will issue a warning on lines 1 and 2 because we are assigning an `unsigned int` to a `signed int`, meaning we might get some data loss.
+Note, though, that the compiler will issue a warning on lines 1 and 2 because we are assigning an `unsigned int` to a `signed int`, meaning we might get some data loss. This can be fixed with a typecast (e.g., `"hello, world!":len as signed int`).
 
 ## Other uses of the attribute operator
 

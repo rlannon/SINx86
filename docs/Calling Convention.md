@@ -132,7 +132,7 @@ The only registers that are always preserved by this convention are `rbp` and `r
 
 ## Interfacing with C
 
-For more information see [this document](Interfacing%20with%20C.md).
+For more information see [this document](Interfacing%20with%20C).
 
 The SIN calling convention also allows compilers to interface with C functions, and as such, there must be a way to ensure the SIN compiler handles arguments and return values properly. As such, a few keywords exist to alert the compiler to how a function should be called in the function declaration. Note these keywords may also be used with SIN functions, but must be done in the definition (and declaration, if present).
 
@@ -146,7 +146,7 @@ In general these qualifiers default to the GCC ABIs used by Unix-like systems, b
 
 ### Calling Conventions
 
-SINCALL does not require a 16-byte stack alignment before a call, but other calling conventions do. As such, whenever a function that utilizes the calling convention for the Windows or System V ABIs, the compiler must generate code to properly align the stack on a 16-byte boundary. The [SRE](SIN%20Runtime%20Environment.md) handles this for built-in types, and the compiler will handle it when calling non-SINCALL functions.
+SINCALL does not require a 16-byte stack alignment before a call, but other calling conventions do. As such, whenever a function that utilizes the calling convention for the Windows or System V ABIs, the compiler must generate code to properly align the stack on a 16-byte boundary. The [SRE](SIN%20Runtime%20Environment) handles this for built-in types, and the compiler will handle it when calling non-SINCALL functions.
 
 #### System V ABI (Unix-like systems)
 

@@ -23,8 +23,8 @@ Here is a table listing the operators and their respective information:
 | `>=` | Greater-or-equal | 3 | Left-to-right | |
 | `=` | Equal | 3 | Left-to-right | |
 | `!=` | Not equal | 3 | Left-to-right | |
-| `<<` | Bitwise left shift | 4 | Left-to-right | |
-| `>>` | Bitwise right shift | 4 | Left-to-right | |
+| `<<` | Bitwise left shift | 4 | Left-to-right | May only be used on integral types |
+| `>>` | Bitwise right shift | 4 | Left-to-right | May only be used on integral types |
 | `+` | Binary plus | 5 | Left-to-right | |
 | `-` | Binary minus | 5 | Left-to-right | |
 | `*` | Multiplication | 6 | Left-to-right | |
@@ -39,5 +39,7 @@ Here is a table listing the operators and their respective information:
 | `-` | Unary minus | 7 | Right-to-left | |
 | `:` | Attribute selection | 8 | Left-to-right | |
 | `@` | Control transfer | 9 | Right-to-left | Used for function calls |
-| `.` | Member selection | 10 | Left-to-right | |
+| `[]` | Array and string subscripting | 9 | Right-to-left | |
+| `()` | Procedure operator | 10 | Right-to-left | Used to determine that the expression is a procedure |
+| `.` | Member selection | 10 | Left-to-right | Used for tuples and structs |
 | `::` | Scope resolution | 11 | None | |

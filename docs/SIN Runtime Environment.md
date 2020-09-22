@@ -16,7 +16,7 @@ Perhaps the most important piece of the SRE is the Memory Allocation Manager (MA
 
 The MAM implements a garbage collector for the language by using reference counting on all dynamically-allocated resources. Every time a new reference or pointer references a dynamic object, the MAM increments its reference count; every time that pointer is reassigned, or the variable goes out of scope, the reference count is decremented. Once a resource's reference count hits zero, it becomes inaccessible, and the MAM automatically (and immediately) deletes it.
 
-For more information on the MAM, see [this document](Memory%20Allocation%20Manager.md).
+For more information on the MAM, see [this document](Memory%20Allocation%20Manager).
 
 ### Bounds Checking
 

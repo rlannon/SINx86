@@ -1,13 +1,13 @@
 # SIN Documentation
 
-## Constants
+## Variability and Constants
 
 SIN utilizes a few different keywords when talking about constant values, as there are two types of constants:
 
-* Compile- or link-time constants
+* Compile- and link-time constants
 * Runtime constants
 
-The difference here is somewhat subtle, but very significant; a compile-time constant in SIN *must* be assigned with a `constexpr` or a literal value whereas a runtime constant is one whose value may be unknown at compile time, but canot change after initialization. This is more akin to Java's `final` keyword, which indicates that the *reference* may not change once it is assigned.
+The difference here is somewhat subtle, but very significant; a compile-time constant in SIN *must* be assigned with a `constexpr` or a literal value whereas a runtime constant is one whose value may be unknown at compile time but canot change after initialization. This is more akin to Java's `final` keyword, which indicates that the *reference* may not change once it is assigned.
 
 In SIN, the words `const` and `final` are used for this distinction:
 
@@ -15,13 +15,13 @@ In SIN, the words `const` and `final` are used for this distinction:
     alloc const int b: 30;  // legal; a compile-time constant, assigned a constant when initialized
     alloc final int c: a;   // legal; a runtime constant, assigned only once
 
-Note that only variables may be constant; functions must never be treated as constants because they may have side effects when called that will be as a result of their evaluation at compile time.
+Note that only allocated data may be constant; functions must never be treated as constants because they may have side effects when called.
 
 Due to the fundamental differences between the keywords, data may not be both `const` and `final` at the same time. Further, data may not be declared as both `dynamic` and `const`, as the two imply fundamentally different things (`final`, however, may be used with `dynamic`).
 
 ### The `final` keyword
 
-The keyword `final` indicates that once the data is initialized, its value is final. `final` data are not required to use alloc-init syntax (as constants do).
+The keyword `final` indicates that once the data is initialized, its value is final. `final` data are not required to use alloc-init syntax, unlike `const` data.
 
 ### The `const` keyword
 
@@ -68,4 +68,4 @@ will be parsed such that the binary expression `a + b` is *not* constant, but th
     constexpr (a + b)
     (a + b) &constexpr
 
-The above examples are the proper ways of indicating the binary expression is a `constexpr`.
+The above examples are the proper ways of indicating the binary expression is a `constexpr`. If instead you wrote: `constexpr a + constexpr b`, the compiler would evaluate `a` and `b`, but not `a + b` -- it would save this operation for runtime.

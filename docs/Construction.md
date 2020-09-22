@@ -26,7 +26,7 @@ The following is a table of default constructed values:
 | All floating-point types | 0.0 |
 | `string` | Empty string (a null byte) with length 0 |
 | `char` | `\0` |
-| Arrays, tuples, and structs | All members are constructed according to its type rules |
+| Arrays, tuples, and structs | All members are constructed according to its type rules; if an array is marked `dynamic`, it will contain no elements |
 
 However, not all data may be legally default-constructed; some types must be initialized in their allocation:
 
