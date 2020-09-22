@@ -22,7 +22,7 @@ class function_symbol: public symbol {
     */
 
     // Function arguments -- formal parameters should be stored as symbols (they are considered local variables, so they will be pushed first)
-    std::vector<symbol> formal_parameters;
+    std::vector< std::shared_ptr< symbol > > formal_parameters;
     register_usage arg_regs;    // the registers used by this signature
     bool _method;
 
@@ -33,7 +33,7 @@ public:
     bool is_method() const;
     bool requires_this() const;
 
-    std::vector<symbol> &get_formal_parameters();
+    std::vector< std::shared_ptr<symbol> > &get_formal_parameters();
     calling_convention get_calling_convention();
 
     register_usage get_arg_regs();

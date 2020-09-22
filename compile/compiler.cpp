@@ -57,12 +57,6 @@ symbol &compiler::add_symbol(symbol &to_add, unsigned int line) {
 
     */
 
-	// check for sinl_ prefix
-	// size_t pos = to_add.get_name().find("sinl_");
-	// if (pos != std::string::npos && pos == 0) {
-	// 	compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
-	// }
-
 	// insert the symbol
     std::shared_ptr<symbol> s = nullptr;
     if (to_add.get_symbol_type() == VARIABLE) {
@@ -82,6 +76,9 @@ symbol &compiler::add_symbol(symbol &to_add, unsigned int line) {
 symbol &compiler::add_symbol(std::shared_ptr<symbol> to_add, unsigned int line) {
     /*
 
+    add_symbol
+    An overloaded version to add a symbol when we already have a shared pointer to it
+
     */
 
     symbol *inserted = this->symbols.insert(to_add);
@@ -95,7 +92,7 @@ symbol &compiler::add_symbol(std::shared_ptr<symbol> to_add, unsigned int line) 
         // if it was defined, throw an error
         if (sym.is_defined()) {
             // if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
-            if (to_add.get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
+            if (to_add->get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
                 throw DuplicateDefinitionException(line);
             else
                 throw DuplicateSymbolException(line);
@@ -649,7 +646,11 @@ void compiler::generate_asm(std::string filename) {
             
             // todo: get actual command-line arguments, convert them into SIN data types
             std::vector<std::shared_ptr<Expression>> cmd_args = {};
-            for (symbol s: main_symbol.get_formal_parameters()) {
+            for (
+                auto it = main_symbol.get_formal_parameters().begin();
+                it != main_symbol.get_formal_parameters().end(); 
+                it++
+            ) {
                 // todo: get argument
             }
 

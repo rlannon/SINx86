@@ -161,14 +161,14 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
     // now, we have to iterate over the function symbol's parameters and add them to our symbol table
     // todo: optimize by enabling symbol table additions in template function?
     std::set<reg> arg_regs;
-    for (symbol &sym: func_sym.get_formal_parameters()) {
+    for (auto sym: func_sym.get_formal_parameters()) {
         // add the parameter symbol to the table
         symbol &inserted = this->add_symbol(sym, line);
         
 		// if r was passed in a register, then we must add it to arg_regs
-		reg r = sym.get_register();
+		reg r = sym->get_register();
         if (r != NO_REGISTER) {
-            arg_regs.insert(sym.get_register());
+            arg_regs.insert(sym->get_register());
         }
     }
 
@@ -338,14 +338,14 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
     this->reg_stack.push_back(register_usage());
 
     // get the formal parameters so we don't need to call a function every time
-    std::vector<symbol> &formal_parameters = s.get_formal_parameters();
+    auto &formal_parameters = s.get_formal_parameters();
 
     // ensure the number of arguments provided is less than or equal to the number expected
     if (args.size() <= s.get_formal_parameters().size()) {
         // get the width of arguments so we can calculate the offsets
         unsigned int total_offset = 0;
-        for (symbol& s: formal_parameters) {
-            total_offset += s.get_data_type().get_width();
+        for (auto s: formal_parameters) {
+            total_offset += s->get_data_type().get_width();
         }
 
         // we only need to subtract from rsp if the adjustment is non-zero
@@ -359,7 +359,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
             Expression *arg = args.at(i);
-            symbol &param = formal_parameters[i];
+            symbol &param = *formal_parameters[i];
 
             // first, ensure the types match
             DataType arg_type = expression_util::get_expression_data_type(*arg, this->symbols, this->structs, line);
