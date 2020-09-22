@@ -41,12 +41,12 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     std::stringstream handle_ss;
 
     // if we have an indexed expression as the lvalue, we need a special case (for code generation)
-    if (a.get_lvalue()->get_expression_type() == INDEXED) {
+    if (a.get_lvalue().get_expression_type() == INDEXED) {
         // make sure that the type is actually indexable/subscriptable
-        auto idx = dynamic_cast<Indexed*>(a.get_lvalue().get());
+        auto &idx = static_cast<Indexed&>(a.get_lvalue());
         if (!is_subscriptable(
                 expression_util::get_expression_data_type(
-                    idx->get_to_index(), 
+                    idx.get_to_index(), 
                     this->symbols, 
                     this->structs,
                     a.get_line_number()
@@ -77,7 +77,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     return handle_ss;
 }
 
-std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expression> rvalue, unsigned int line) {
+std::stringstream compiler::handle_alloc_init(symbol &sym, Expression &rvalue, unsigned int line) {
     /*
 
     handle_alloc_init
@@ -93,24 +93,27 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, std::shared_ptr<Expre
     reg src_reg = sym.get_data_type().get_primary() == FLOAT ? XMM0 : RAX;
 
     // we need to have a special case for ref<T> initialization
+    std::unique_ptr<Unary> u = nullptr;
     if (sym.get_data_type().get_primary() == REFERENCE) {
         // wrap the rvalue in a unary address-of expression
         // this will be fine since we will be comparing against the subtype but evaluating a pointer
-        rvalue = std::make_shared<Unary>(
-            rvalue,
+        u = std::make_unique<Unary>(
+            std::move(rvalue.get_unique()),
             exp_operator::ADDRESS
         );
+        return this->assign(sym.get_data_type(), rhs_type, p, *u.get(), line, true);
     }
+    else {
     // todo: we can utilize the copy construction method for alloc-init when used with dynamic types
-
-    return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
+        return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
+    }
 }
 
 std::stringstream compiler::assign(
     DataType lhs_type,
     DataType &rhs_type,
     assign_utilities::destination_information dest,
-    std::shared_ptr<Expression> rvalue,
+    Expression &rvalue,
     unsigned int line,
     bool is_alloc_init
 ) {
@@ -166,8 +169,21 @@ std::stringstream compiler::assign(
 
             // set up our registers/arguments
             handle_assign << "\t" << "mov rsi, rax" << std::endl;
-            handle_assign << "\t" << "mov rdi, rbx" << std::endl;
+            std::string destination_register_operand;
 
+            if (dest.instruction_used == assign_utilities::MoveInstruction::LEA) {
+                if (lhs_type.get_primary() == STRING || lhs_type.get_qualities().is_dynamic()) {
+                    destination_register_operand = "[rbx]";
+                }
+                else {
+                    destination_register_operand = "rbx";
+                }
+            }
+            else {
+                destination_register_operand = "rbx";
+            }
+            handle_assign << "\t" << "mov rdi, " << destination_register_operand << std::endl;
+            
             std::string proc_name;
             std::string assign_instruction; // if we are storing the reference in a register, we will need a different assign instruction
 
@@ -182,7 +198,14 @@ std::stringstream compiler::assign(
                     assign_instruction = "mov " + dest.address_for_lea + ", rax";
                 }
                 else {
-                    handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                    // todo: verify this works generally
+                    // if we don't have an address (e.g., it's a binary), then we can use mov with the dest
+                    if (dest.can_use_lea) {
+                        handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                    }
+                    else {
+                        handle_assign << "\t" << "mov r15, " << dest.address_for_lea << std::endl;  // still uses 'address_for_lea'
+                    }
                     assign_instruction = "mov [r15], rax";
                 }
 

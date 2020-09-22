@@ -214,7 +214,8 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			to_evaluate.get_right(),
 			this->symbols,
 			this->structs,
-			line
+			line,
+            &left_type
 		);
 
 		Type primary = left_type.get_primary();
@@ -245,7 +246,14 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			(left_type.get_width() != right_type.get_width()) &&
 			!(primary == STRING && right_type.get_primary() == CHAR)
 		) {
-			compiler_warning("Width mismatch", compiler_errors::WIDTH_MISMATCH, line);
+			compiler_warning(
+                "Width mismatch (left type is " +
+                    std::to_string(left_type.get_width()) +
+                    " bytes wide, right type is " + 
+                    std::to_string(right_type.get_width()) + ")",
+                compiler_errors::WIDTH_MISMATCH,
+                line
+            );
 		}
 
 		// ensure the types are compatible before proceeding with evaluation

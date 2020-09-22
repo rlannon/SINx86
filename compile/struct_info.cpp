@@ -19,7 +19,7 @@ std::string struct_info::get_struct_name() const
 	return this->struct_name;
 }
 
-symbol& struct_info::get_member(std::string name)
+symbol *struct_info::get_member(std::string name)
 {
 	/*
 	
@@ -28,20 +28,15 @@ symbol& struct_info::get_member(std::string name)
 	
 	*/
 
-	try {
-		std::shared_ptr<symbol> sym = this->members.find(name);
-		return *sym;
-	}
-	catch (std::exception& e) {
-		throw SymbolNotFoundException(0);	// todo: line number?
-	}
+    symbol *s = &this->members.find(name, this->struct_name);
+    return s;
 }
 
 size_t struct_info::get_width() const {
 	return this->struct_width;
 }
 
-struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned int line) {
+struct_info::struct_info(std::string name, std::vector<std::shared_ptr<symbol>> members, unsigned int line) {
     /*
     
         struct_info
@@ -60,39 +55,60 @@ struct_info::struct_info(std::string name, std::vector<symbol> members, unsigned
     this->struct_width = 0;
     this->width_known = true;
 
-    for (symbol s: members) {
+    for (auto s: members) {
         try {
-            this->members.insert(std::make_shared<symbol>(s));
+            this->members.insert(s);
 
-            size_t sym_width = s.get_data_type().get_width();
+            size_t sym_width = s->get_data_type().get_width();
             if (sym_width == 0) {
-				if (s.get_data_type().get_qualities().is_dynamic()) {
+				if (s->get_data_type().get_qualities().is_dynamic()) {
 					sym_width = sin_widths::PTR_WIDTH;
 				}
-                else if (s.get_data_type().get_primary() == ARRAY) {
-                    sym_width = s.get_data_type().get_array_length();
+                else if (s->get_data_type().get_primary() == ARRAY) {
+                    sym_width = s->get_data_type().get_array_length();
                 }
 				else {
 					this->width_known = false;	// todo: should this throw an error?
 				}
             }
 
-            this->struct_width += sym_width;
-        } catch (std::exception &e) {
-            throw DuplicateSymbolException(line);
+            // skip adding the width if we have a function -- they aren't allocated with the struct
+            if (s->get_symbol_type() != FUNCTION_SYMBOL) {
+                this->struct_width += sym_width;
+            }
+        } catch (DuplicateSymbolException &e) {
+            e.set_line(line);
+            throw e;
         }
     }
 }
 
-std::vector<std::shared_ptr<symbol>> struct_info::get_all_members() {
+std::vector<symbol*> struct_info::get_all_members() {
     // gets all struct members in a vector
     return this->members.get_all_symbols();
+}
+
+std::vector<symbol> struct_info::get_members_to_free() {
+    // returns members that must be freed
+    return this->members.get_symbols_to_free(this->struct_name, 1, false);
+}
+
+std::vector<symbol> &struct_info::get_members_to_free(std::vector<symbol> &current) {
+    // calls overloaded version on 'members'
+    return this->members.get_symbols_to_free(current, this->struct_name, 1, false);
 }
 
 struct_info::struct_info(std::string struct_name) {
     this->struct_name = struct_name;
     this->struct_width = 0;
     this->width_known = false;
+}
+
+struct_info::struct_info(const struct_info &s) {
+    this->struct_name = s.struct_name;
+    this->struct_width = s.struct_width;
+    this->members = s.members;
+    this->width_known = s.width_known;
 }
 
 struct_info::struct_info() {

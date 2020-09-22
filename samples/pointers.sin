@@ -3,7 +3,7 @@
 
 decl void print(decl final string s);
 
-def int main() {
+def int main(alloc array<string> args &dynamic) {
     alloc int x: 10;
     alloc ptr<int> p: $x;
     alloc int y: *p;

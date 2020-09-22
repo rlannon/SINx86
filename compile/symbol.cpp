@@ -143,7 +143,7 @@ symbol::symbol(
     this->current_reg = NO_REGISTER;
     this->symbol_type = VARIABLE;
     this->freed = false;    // symbols should start as allocated
-	this->initialized = false;
+    this->initialized = (type.get_primary() == STRUCT); // struct types are always constructed to a default state
 	this->is_parameter = false;
 }
 

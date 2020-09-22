@@ -48,18 +48,17 @@ void symbol_table::erase(node to_erase) {
 	*/
 
 	std::unordered_map<std::string, std::shared_ptr<symbol>>::iterator it = this->symbols.find(
-		//symbol_table::get_mangled_name(to_erase.name)
 		to_erase.name
 	);
 	if (it == this->symbols.end()) {
-		throw std::exception();
+		throw SymbolNotFoundException(0);
 	}
 	else {
 		this->symbols.erase(it);
 	}
 }
 
-std::string symbol_table::get_mangled_name(std::string org) {
+std::string symbol_table::get_mangled_name(std::string org, std::string scope_name) {
 	/*
 
 	get_mangled_name
@@ -69,10 +68,15 @@ std::string symbol_table::get_mangled_name(std::string org) {
 
 	*/
 
-	return "SIN_" + org;
+    if (scope_name == "global" || scope_name == "") {
+        return "SIN_" + org;
+    }
+    else {
+        return "SIN_" + scope_name + "_" + org;
+    }
 }
 
-bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
+symbol *symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	/*
 	
 	insert
@@ -84,12 +88,11 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 
 	// we have to make sure the symbol table doesn't include copies of data with names unmangled
 	if (this->contains(to_insert->get_name())) {
-		return false;
+		return nullptr;
 	}
 
 	auto returned = this->symbols.insert(
 		std::make_pair<>(
-			//symbol_table::get_mangled_name(to_insert->get_name()),
 			to_insert->get_name(),
 			to_insert)
 	);	// should std::unordered_map::emplace be used instead of insert?
@@ -105,19 +108,19 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	}
 	else {
 		// todo: specialize exceptions thrown here
-		throw std::exception();
+		throw DuplicateSymbolException(to_insert->get_line_defined());
 	}
 
-	return returned.second;
+	return returned.first->second.get();
 }
 
-bool symbol_table::contains(std::string symbol_name)
+bool symbol_table::contains(std::string symbol_name, std::string scope_name)
 {
 	// returns whether the symbol with a given name is in the symbol table
 	// if it can't find it with the name mangled, it will try finding the unmangled version
 	bool in_table = false;	
 	if ((bool)this->symbols.count(
-		symbol_table::get_mangled_name(symbol_name)
+		symbol_table::get_mangled_name(symbol_name, scope_name)
 	)) {
 		in_table = true;
 	}
@@ -127,7 +130,7 @@ bool symbol_table::contains(std::string symbol_name)
 	return in_table;
 }
 
-std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
+symbol& symbol_table::find(std::string to_find, std::string scope_name)
 {
 	/*
 	
@@ -139,16 +142,16 @@ std::shared_ptr<symbol>& symbol_table::find(std::string to_find)
 	*/
 
 	auto it = this->symbols.find(
-		symbol_table::get_mangled_name(to_find)
+		symbol_table::get_mangled_name(to_find, scope_name)
 	);
 	if (it == this->symbols.end()) {
 		it = this->symbols.find(to_find);
 
 		if (it == this->symbols.end())
-			throw std::exception();
+			throw SymbolNotFoundException(0);
 	}
 
-	return it->second;
+	return *it->second.get();
 }
 
 std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned int level, bool is_function) {
@@ -161,12 +164,12 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 		* is marked as dynamic
 		* is a pointer
 		* is a reference
-	If we are in a function, we need to
+	We also need to see if we have an array or a tuple, iterate through their contained types, and see if anything needs to be freed there. If so, add the array/tuple to the vector.
 
 	*/
 
 	std::vector<symbol> v;
-	stack<node> l = this->locals;
+	stack<node> l(this->locals);
 	while (
 		!l.empty() && 
 		(is_function ? 
@@ -177,16 +180,31 @@ std::vector<symbol> symbol_table::get_symbols_to_free(std::string name, unsigned
 			)
 		)
 	) {
-		symbol s = *this->find(l.pop_back().name);
-		if (
-			s.get_data_type().get_primary() == PTR ||
-			s.get_data_type().is_reference_type()
-		) {
-			v.push_back(s);
-		}
+        // todo: some of this could be done when we create the DataType or symbol objects
+		symbol &s = this->find(l.pop_back().name);
+		if (s.get_symbol_type() == VARIABLE && s.get_data_type().must_free())
+            v.push_back(s);
 	}
 
 	return v;
+}
+
+std::vector<symbol> &symbol_table::get_symbols_to_free(
+    std::vector<symbol> &current,
+    std::string name,
+    unsigned int level,
+    bool is_function
+) {
+    /*
+
+    get_symbols_to_free
+    An overloaded version that appends elements to the vector supplied and returns a new one
+
+    */
+
+    auto v = this->get_symbols_to_free(name, level, is_function);
+    current.insert(current.end(), std::make_move_iterator(v.begin()), std::make_move_iterator(v.end()));
+    return current;
 }
 
 size_t symbol_table::leave_scope(std::string name, unsigned int level)
@@ -209,19 +227,19 @@ size_t symbol_table::leave_scope(std::string name, unsigned int level)
 
 		while (!this->locals.empty() && this->locals.peek().scope_level == level && this->locals.peek().scope_name == name) {
 			// pop the last node and erase it
-			node to_erase = this->locals.pop_back();
+			auto to_erase = this->locals.pop_back();
 
 			// ensure that we don't delete symbols from the global scope
 			if (to_erase.scope_name != "global") {
-				auto s = this->find(to_erase.name);
-				if (s->get_data_type().is_reference_type()) {
+				auto &s = this->find(to_erase.name);
+				if (s.get_data_type().is_reference_type()) {
 					data_width += sin_widths::PTR_WIDTH;
 				}
-				else if (s->get_data_type().get_primary() == ARRAY) {
-					data_width += s->get_data_type().get_array_length();
+				else if (s.get_data_type().get_primary() == ARRAY) {
+					data_width += s.get_data_type().get_array_length();
 				}
 				else {
-					data_width += s->get_data_type().get_width();
+					data_width += s.get_data_type().get_width();
 				}
 
 				// erase the node
@@ -233,14 +251,44 @@ size_t symbol_table::leave_scope(std::string name, unsigned int level)
 	return data_width;
 }
 
-std::vector<std::shared_ptr<symbol>> symbol_table::get_all_symbols() {
+std::vector<symbol*> symbol_table::get_all_symbols() {
 	// gets all symbols
-	std::vector<std::shared_ptr<symbol>> v;
+	std::vector<symbol*> v;
 	for (auto s: this->symbols) {
-		v.push_back(s.second);
+		v.push_back(s.second.get());
 	}
 
 	return v;
+}
+
+std::vector<symbol*> symbol_table::get_local_structs(std::string scope_name, unsigned int scope_level, bool is_function) {
+    /*
+
+    get_local_structs
+    Gets all struct data in the given scope
+
+    */
+
+    std::vector<symbol*> v;
+    auto l = this->locals;
+
+    while (
+		!l.empty() && 
+		(is_function ? 
+			(l.peek().scope_level >= scope_level) :
+			(
+				(l.peek().scope_level == scope_level)	&& 
+				(l.peek().scope_name == scope_name)
+			)
+		)
+	) {
+        // todo: some of this could be done when we create the DataType or symbol objects
+		symbol &s = this->find(l.pop_back().name);
+		if (s.get_data_type().get_primary() == STRUCT)
+            v.push_back(&s);
+	}
+
+    return v;
 }
 
 symbol_table::symbol_table()

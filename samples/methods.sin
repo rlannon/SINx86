@@ -1,0 +1,33 @@
+// methods.sin
+// a demo of struct methods
+
+decl void print(decl string s &final);
+
+def struct myStruct {
+    alloc int _size;
+    alloc string _name;
+
+    def string get_name() {
+        return this._name;
+    }
+
+    def void set_name(alloc string new_name) {
+        let this._name = new_name;
+        return void;
+    }
+}
+
+def int main(alloc array<string> args &dynamic) {
+    alloc string s;
+    let s = "hello";
+    
+    alloc myStruct m;
+    let m._size = 0;
+    let m._name = "MYSTRUCT M";
+    @print("old name: " + @m.get_name() + "\n");
+    
+    @m.set_name("new name!");
+    @print("new name: " + @m.get_name() + "\n");
+    
+    return 0;
+}

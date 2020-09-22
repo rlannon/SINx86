@@ -16,8 +16,6 @@ The implementation of the Parser member functions to parse statements, including
 	- std::shared_ptr<Statement> parse_definition(lexeme current_lex);
 	- std::shared_ptr<Statement> parse_function_call(lexeme current_lex);
 
-Keeping the statement parsing functions together makes for a smaller 'Parser.cpp' file and more readable code.
-
 */
 
 #include "Parser.h"
@@ -141,7 +139,11 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 			stmt = this->parse_function_call(current_lex);
 		}
 		else {
-			throw ParserException("Lexeme '" + current_lex.value + "' is not a valid beginning to a statement", 000, current_lex.line_number);
+			throw ParserException(
+                "Lexeme '" + current_lex.value + "' is not a valid beginning to a statement",
+                000,
+                current_lex.line_number
+            );
 		}
 	}
 	// otherwise, we might have a scoped block statement
@@ -434,10 +436,14 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 			}
 		}
 		else {
-			throw ParserException("The variable's type must be followed by a valid identifier", 0, next_token.line_number);
+			throw ParserException(
+                "The variable's type must be followed by a valid identifier",
+                compiler_errors::MISSING_IDENTIFIER_ERROR,
+                next_token.line_number
+            );
 		}
 	} else {
-		throw ParserException("Expected a valid data type", 111, current_lex.line_number);
+		throw ParserException("Expected a valid data type", compiler_errors::TYPE_ERROR, current_lex.line_number);
 	}
 
 	return stmt;
@@ -459,9 +465,6 @@ std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 	// get the operator character, make sure it's an equals sign
 	lexeme op_lex = this->next();
 	exp_operator op = translate_operator(op_lex.value);
-	if (op != EQUAL) {
-		op = make_compound_operator(op_lex, this->next());
-	}
 
 	if (is_valid_copy_assignment_operator(op)) {
 		// if the next lexeme is not a semicolon and the next lexeme's line number is the same as the current lexeme's line number, we are ok
@@ -620,30 +623,23 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 
 std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
+	std::shared_ptr<Statement> stmt = nullptr;
+    auto parsed = this->parse_expression();
+    if (parsed->get_expression_type() == CALL_EXP) {
+        CallExpression *exp = static_cast<CallExpression*>(parsed.get());
 
-	// Get the function's name
-	lexeme func_name = this->next();
-	if (func_name.type == IDENTIFIER_LEX) {
-		std::vector<std::shared_ptr<Expression>> args;
-		this->next();
-		this->next();
-		lexeme cur = this->current_token();
-		while (cur.value != ")") {
-			args.push_back(this->parse_expression());
-			cur = this->next();
-		}
-		
-		// function calls as statements must *always* be followed by semicolons
-		// this is not the function to parse a call that is part of an expression
-		if (this->peek().value != ";") {
-			throw MissingSemicolonError(this->previous().line_number);
-		}
-		stmt = std::make_shared<Call>(std::make_shared<Identifier>(func_name.value), args);
-		stmt->set_line_number(current_lex.line_number);
-		return stmt;
-	}
-	else {
-		throw ParserException("Expected an identifier", 111, current_lex.line_number);
-	}
+        // if we didn't get a CallExpression, then it's an error -- we /must/ have one for a Call statement 
+        // this means if we have a binary or something else (e.g., '@x.y().z'), it's not valid
+        stmt = std::make_shared<Call>(*exp);
+        stmt->set_line_number(current_lex.line_number);
+    }
+    else {
+        throw ParserException(
+            "Expected a valid function call expression",
+            compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
+            current_lex.line_number
+        );
+    }
+
+    return stmt;
 }

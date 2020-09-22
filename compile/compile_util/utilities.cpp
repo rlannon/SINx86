@@ -209,7 +209,7 @@ std::string get_rax_name_variant(DataType t, unsigned int line) {
 	return reg_string;
 }
 
-struct_info define_struct(StructDefinition definition, compile_time_evaluator &cte) {
+struct_info define_struct(StructDefinition &definition, compile_time_evaluator &cte) {
     /*
     
     define_struct
@@ -228,15 +228,15 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
     std::string struct_name = definition.get_name();
 
     // iterate through our definition statements and create symbols for all struct members
-    std::vector<symbol> members;
+    std::vector<std::shared_ptr<symbol>> members;
     size_t current_offset = 0;
-    for (std::shared_ptr<Statement> s: definition.get_procedure()->statements_list) {
+    for (auto s: definition.get_procedure().statements_list) {
         size_t this_width = 0;
 
         // Only allocations are allowed within a struct body
         if (s->get_statement_type() == ALLOCATION) {
             // cast to Allocation and create a symbol
-            Allocation *alloc = dynamic_cast<Allocation*>(s.get());
+            Allocation *alloc = static_cast<Allocation*>(s.get());
 
             // first, ensure that the symbol's type is not this struct
             if ((alloc->get_type_information().get_primary() == STRUCT) && (alloc->get_type_information().get_struct_name() == struct_name)) {
@@ -249,25 +249,38 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
             // todo: once references are enabled, disallow those as well -- they can't be null, so that would cause infinite recursion, too
             else if (alloc->get_type_information().get_primary() == ARRAY) {
                 // arrays must have constant lengths or be dynamic
-                if (alloc->get_type_information().get_array_length_expression()->is_const()) {
-                    size_t array_length = stoul(
-                        cte.evaluate_expression(
-                            alloc->get_type_information().get_array_length_expression(),
-                            definition.get_name(),
-                            1,
-                            definition.get_line_number()
-                        )
-                    );
-                    array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
-                    alloc->get_type_information().set_array_length(array_length);
-                    this_width = array_length;
+                if (alloc->get_type_information().get_array_length_expression()) {
+                    if (alloc->get_type_information().get_array_length_expression()->is_const()) {
+                        size_t array_length = stoul(
+                            cte.evaluate_expression(
+                                *alloc->get_type_information().get_array_length_expression(),
+                                definition.get_name(),
+                                1,
+                                definition.get_line_number()
+                            )
+                        );
+                        array_length = array_length * alloc->get_type_information().get_subtype().get_width() + sin_widths::INT_WIDTH;
+                        alloc->get_type_information().set_array_length(array_length);
+                        // set the width
+                        if (alloc->get_type_information().is_reference_type())
+                            this_width = sin_widths::PTR_WIDTH;
+                        else
+                            this_width = array_length;
+                    }
+                    else {
+                        throw NonConstArrayLengthException(definition.get_line_number());
+                    }
                 }
                 else {
                     throw NonConstArrayLengthException(definition.get_line_number());
                 }
             }
             else {
-                this_width = alloc->get_type_information().get_width();
+                // set the width
+                if (alloc->get_type_information().is_reference_type())
+                    this_width = sin_widths::PTR_WIDTH;
+                else
+                    this_width = alloc->get_type_information().get_width();
             }
 
             symbol sym(alloc->get_name(), struct_name, 1, alloc->get_type_information(), current_offset);
@@ -276,12 +289,32 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
             // to do this, the function might have to be moved out of "utilities" and into "compiler"
 
             // add that symbol to our vector
-            members.push_back(sym);
+            members.push_back(std::make_shared<symbol>(sym));
 
             // update the data offset
             // todo: handle struct and array members
             current_offset += this_width;
-        } else {
+        }
+        else if (s->get_statement_type() == DECLARATION) {
+            Declaration *decl = static_cast<Declaration*>(s.get());
+            if (decl->is_function()) {
+                function_symbol f_sym = create_function_symbol(*decl, true, true, struct_name, 1, true);
+            }
+            else {
+                // todo: other declarations
+            }
+        }
+        else if (s->get_statement_type() == FUNCTION_DEFINITION) {
+            // cast and define the function
+            FunctionDefinition *def = static_cast<FunctionDefinition*>(s.get());
+            function_symbol f_sym = create_function_symbol(*def, true, true, struct_name, 1, true);
+            members.push_back(std::make_shared<function_symbol>(f_sym));
+        }
+        else if (s->get_statement_type() == STRUCT_DEFINITION) {
+            // todo: sub-structs
+            throw CompilerException("This feature (structs within structs) is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s->get_line_number());
+        }
+        else {
             throw StructDefinitionException(definition.get_line_number());
         }
     }
@@ -292,10 +325,10 @@ struct_info define_struct(StructDefinition definition, compile_time_evaluator &c
 
 // Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
-template function_symbol create_function_symbol(FunctionDefinition, bool, bool);
-template function_symbol create_function_symbol(Declaration, bool, bool);
+template function_symbol create_function_symbol(FunctionDefinition, bool, bool, std::string, unsigned int, bool);
+template function_symbol create_function_symbol(Declaration, bool, bool, std::string, unsigned int, bool);
 template <typename T>
-function_symbol create_function_symbol(T def, bool mangle, bool defined) {
+function_symbol create_function_symbol(T def, bool mangle, bool defined, std::string scope_name, unsigned int scope_level, bool is_method) {
     /*
 
     create_function_symbol
@@ -308,29 +341,109 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined) {
 
     */
 
-    std::string scope_name = def.get_name();
-    unsigned int scope_level = 1;
+    // todo: this function marks the scope name of parameters without mangling
+    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name(), scope_name) : def.get_name();
+    std::string inner_scope_name = name;
+    unsigned int inner_scope_level = scope_level + 1;
     size_t stack_offset = 0;
 
     // construct our formal parameters
     std::vector<symbol> formal_parameters;
 
+    // if we have a nonstatic method, we need to make sure the first parameter is 'ref<T> this' (unless it was provided -- in which case, validate)
+    bool has_this_parameter = false;
+    symbol this_parameter(
+        "this",
+        inner_scope_name,
+        inner_scope_level,
+        DataType(
+            REFERENCE,  // Default type for 'this' is ref< T >
+            DataType(
+                STRUCT,
+                DataType(),
+                symbol_qualities(),
+                nullptr,
+                scope_name
+            ),
+            symbol_qualities()
+        ),
+        0,
+        true,
+        def.get_line_number()
+    );
+    this_parameter.set_as_parameter();
+    this_parameter.set_initialized();
+
+    if (
+        is_method && 
+        !def.get_type_information().get_qualities().is_static()
+        && def.get_formal_parameters().empty()
+    ) {
+        formal_parameters.push_back(this_parameter);
+        has_this_parameter = true;
+    }
+
     // now, determine which registers can hold which parameters
-    for (std::shared_ptr<Statement> param: def.get_formal_parameters()) {
+    for (size_t i = 0; i < def.get_formal_parameters().size(); i++) {
+        // get the parameter
+        auto param = def.get_formal_parameters().at(i);
+
         // create the symbol based on our statement
         symbol param_sym;
 
         // cast to the appropriate symbol type
         if (param->get_statement_type() == DECLARATION) {
-            Declaration *param_decl = dynamic_cast<Declaration*>(param.get());
-            param_sym = generate_symbol(*param_decl, param_decl->get_type_information().get_width(), scope_name, scope_level, stack_offset);
+            Declaration *param_decl = static_cast<Declaration*>(param);
+            param_sym = generate_symbol(
+                *param_decl,
+                param_decl->get_type_information().get_width(),
+                inner_scope_name,
+                inner_scope_level,
+                stack_offset
+            );
         } else if (param->get_statement_type() == ALLOCATION) {
-            Allocation *param_alloc = dynamic_cast<Allocation*>(param.get());
+            Allocation *param_alloc = static_cast<Allocation*>(param);
             DataType t = param_alloc->get_type_information();
-            param_sym = generate_symbol(*param_alloc, t.get_width(), scope_name, scope_level, stack_offset);
+            param_sym = generate_symbol(
+                *param_alloc,
+                t.get_width(),
+                inner_scope_name,
+                inner_scope_level,
+                stack_offset
+            );
         } else {
             // todo: remove? these errors should be caught by the parser
             throw CompilerException("Invalid statement type in function signature", compiler_errors::ILLEGAL_OPERATION_ERROR, def.get_line_number());
+        }
+
+        // ensure the first parameter is 'this' if we need it
+        if (i == 0 && is_method && !has_this_parameter) {
+            // ensure we have a typename of 'this', make sure it's the right type
+            if (param_sym.get_name() == "this") {
+                auto t = param_sym.get_data_type();
+                if (
+                    (
+                        t.get_primary() == REFERENCE 
+                        || t.get_primary() == PTR
+                    ) 
+                    && t.get_subtype() == STRUCT 
+                    && t.get_struct_name() == scope_name
+                ) {
+                    has_this_parameter = true;
+                }
+                else {
+                    throw CompilerException(
+                        "Expected 'this' parameter to have type of ptr< " + scope_name + " > or ref< " + scope_name + " >",
+                        compiler_errors::INCORRECT_THIS_TYPE,
+                        def.get_line_number()
+                    );
+                }
+            }
+            else if (!def.get_type_information().get_qualities().is_static()) {
+                // we need to add a 'this' parameter if it's a nonstatic method
+                formal_parameters.push_back(this_parameter);
+                has_this_parameter = true;
+            }
         }
 
         // make sure it's marked as a paramter and marked as initialized (so that we don't get errors about uninitialized data in the function)
@@ -339,13 +452,22 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined) {
         formal_parameters.push_back(param_sym);
     }
 
+    // now, if we have a 'this' parameter and it's a static method, it's an error
+    if (has_this_parameter && def.get_type_information().get_qualities().is_static()) {           
+        throw CompilerException(
+            "Cannot have 'this' parameter for static member functions",
+            compiler_errors::ILLEGAL_THIS_PARAMETER,
+            def.get_line_number()
+        );
+    }
+
     // construct the object
-    std::string name = mangle ? symbol_table::get_mangled_name(def.get_name()) : def.get_name();
     function_symbol to_return(
-        //def.get_name(),
         name,
         def.get_type_information(),
         formal_parameters,
+        scope_name,
+        scope_level,
         def.get_calling_convention(),
         defined,
         def.get_line_number()
@@ -499,65 +621,205 @@ std::string get_address(symbol &s, reg r) {
     std::string address_info = "";
     std::string reg_name = register_usage::get_register_name(r);
 
-    // if it's static, we can just use the name
-    if (s.get_data_type().get_qualities().is_static()) {
-        address_info = "\tlea " + reg_name + ", [" + s.get_name() + "]\n";
-    }
-    // otherwise, we need to look in the stack
-    else if (s.get_data_type().is_reference_type()) {
-        address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
-    }
-    else {
-        if (s.get_offset() < 0) {
-            address_info += "\tlea " + reg_name + ", [rbp + " + std::to_string(-s.get_offset()) + "]\n";
+    // if the symbol is in a register, move the value into r
+    if (s.get_register() == NO_REGISTER) {
+        // if it's static, we can just use the name
+        if (s.get_data_type().get_qualities().is_static()) {
+            address_info = "\tlea " + reg_name + ", [" + s.get_name() + "]\n";
+        }
+        // otherwise, we need to look in the stack
+        else if (s.get_data_type().is_reference_type()) {
+            address_info = "\tmov " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
         }
         else {
-            address_info += "\tlea " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
+            if (s.get_offset() < 0) {
+                address_info += "\tlea " + reg_name + ", [rbp + " + std::to_string(-s.get_offset()) + "]\n";
+            }
+            else {
+                address_info += "\tlea " + reg_name + ", [rbp - " + std::to_string(s.get_offset()) + "]\n";
+            }
         }
+    }
+    else {
+        if (s.get_register() != r)
+            address_info = "\tmov " + reg_name + ", " + register_usage::get_register_name(s.get_register()) + "\n";
     }
 
     return address_info;
 }
 
-std::stringstream decrement_rc(register_usage &r, symbol_table& t, std::string scope, unsigned int level, bool is_function) {
+std::string get_struct_member_address(
+    symbol &struct_symbol,
+    struct_table &structs,
+    std::string member_name,
+    reg r
+) {
+    /*
+
+    get_address
+    Gets the address of a struct member
+
+    */
+
+    std::stringstream get_ss;
+
+    auto &si = structs.find(struct_symbol.get_data_type().get_struct_name(), 0);
+    symbol *member = si.get_member(member_name);
+    if (member) {
+        get_ss << get_address(struct_symbol, RAX);
+        get_ss << "\t" << "add rax, " << member->get_offset() << std::endl;
+        get_ss << "\t" << "mov " << register_usage::get_register_name(r) << ", [rax]" << std::endl;
+    }
+    else {
+        throw SymbolNotFoundException(0);
+    }
+
+    return get_ss.str();
+}
+
+std::string decrement_rc(
+    register_usage &r,
+    symbol_table& symbols,
+    struct_table &structs,
+    std::string scope,
+    unsigned int level,
+    bool is_function
+) {
     /*
 
     decrement_rc
     Decrements the RC of all local variables
 
+    @param  r   The register_usage object containing available and used registers
+    @param  symbols The symbol table to use
+    @param  structs The struct table to use
+    @param  scope   The name of the scope we are looking in
+    @param  level   The level of the scope we are leaving
     @param  is_function If we are in a function, we need to free data that's below the scope level as well
 
     */
 
     std::stringstream dec_ss;
 
-    // get the local variables that need to be freed
-    std::vector<symbol> v = t.get_symbols_to_free(scope, level, is_function);
-    if (!v.empty()) {
-        // preserve all registers to ensure the memory locations contain their respective values
-        dec_ss << push_used_registers(r, true).str();
+    // preserve registers
+    dec_ss << "\t" << "pushfq" << std::endl;
+    dec_ss << push_used_registers(r, true).str();
 
-        // preserve our status register
-        dec_ss << "\t" << "pushfq" << std::endl;
-        for (symbol& s: v) {
-            // if we have a negative number, add it instead
-            if (s.get_offset() < 0) {
-                dec_ss << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;
+    // get the local variables that need to be freed
+    auto v = symbols.get_symbols_to_free(scope, level, is_function);
+
+    // now we need to look at the structs in the scope that we are leaving and see if we need to decrement any of their memebers
+    auto local_structs = symbols.get_local_structs(scope, level, is_function);
+    for (auto ls: local_structs) {
+        struct_info &info = structs.find(ls->get_data_type().get_struct_name(), 0);
+        auto struct_members = info.get_members_to_free();
+        dec_ss << decrement_rc_util(struct_members, symbols, structs, scope, 1, false, ls);
+    }
+    // todo: right now, structs cannot contain other structs, but if this feature is added, this function must change to free reference types within /those/ structs (wouldn't get caught here)
+
+    if (!v.empty())
+        dec_ss << decrement_rc_util(v, symbols, structs, scope, level, is_function);
+
+    dec_ss << pop_used_registers(r, true).str();
+    dec_ss << "\t" << "popfq" << std::endl;
+
+    return dec_ss.str();
+}
+
+std::string decrement_rc_util(
+    std::vector<symbol> &to_free,
+    symbol_table &symbols,
+    struct_table &structs,
+    std::string scope,
+    unsigned int level,
+    bool is_function,
+    symbol *parent
+) {
+    /*
+
+    decrement_rc_util
+    The function that is called by decrement_rc
+
+    */
+
+
+    std::stringstream dec_ss;
+
+    for (symbol s: to_free) {
+        dec_ss << "; freeing symbol " << s.get_name() << std::endl;
+        if (parent) {
+            dec_ss << get_struct_member_address(*parent, structs, s.get_name(), RDI);
+        }
+        else {
+            dec_ss << get_address(s, RDI);
+        }
+
+        if (s.get_data_type().get_primary() == ARRAY) {
+            /*
+
+            To free array members, we should iterate in our assembly
+            The routine begins by:
+                * Aligning the stack to a 16-byte boundary
+                * Load R12 with the array base
+                * Load R13 with 0 (the current index)
+            It proceeds as follows:
+                * If R12 < the length of the array, continue; else, done
+                * Load RDI with [R12 + R13 * 8 + 4]
+                * Call the SRE function
+                * Increment R13
+            Finally, the routine ends by restoring the original stack alignment
+
+            Currently, pushing r12 and r13 is unnecessary as we pushed all used register before.
+
+            */
+            
+            if (s.get_data_type().get_subtype().must_free()) {
+                // preserve rdi; move rdi into r12, as the array address is now in rdi
+                dec_ss << "\t" << "push rdi" << std::endl;
+                dec_ss << "\t" << "mov r12, rdi" << std::endl;
+
+                // ensure 16-byte alignment
+                dec_ss << "\t" << "mov rax, rsp" << std::endl;
+                dec_ss << "\t" << "and rsp, -0x10" << std::endl;
+                dec_ss << "\t" << "push rax" << std::endl;
+                dec_ss << "\t" << "sub rsp, 0x08" << std::endl;
+                dec_ss << "\t" << "mov r13, 0" << std::endl;
+
+                dec_ss << ".free_array_:" << std::endl;
+                dec_ss << "\t" << "cmp r13d, [r12]" << std::endl;
+                dec_ss << "\t" << "jge .free_array_done_" << std::endl;
+                dec_ss << "\t" << "mov rdi, [r12 + r13 * 8 + 4]" << std::endl;
+                dec_ss << "\t" << "call " << magic_numbers::SRE_FREE << std::endl;
+                dec_ss << "\t" << "inc r13" << std::endl;
+                dec_ss << "\t" << "jmp .free_array_" << std::endl;
+
+                // restore original stack alignment
+                dec_ss << ".free_array_done_:" << std::endl;
+                dec_ss << "\t" << "add rsp, 0x08" << std::endl;
+                dec_ss << "\t" << "pop rsp" << std::endl;
+                dec_ss << "\t" << "pop rdi" << std::endl;   // restore rdi's original value
             }
-            else {
-                dec_ss << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
+            
+            // if the array itself must be freed, do so
+            if (s.get_data_type().must_free()) {
+                dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
-            dec_ss << "\t" << "mov rdi, [rbx]" << std::endl;
+
+        }
+        else if (s.get_data_type().get_primary() == TUPLE) {
+            // todo: free tuple members
+
+            // if the tuple itself must be freed, do so
+            if (s.get_data_type().must_free()) {
+                dec_ss << call_sre_function(magic_numbers::SRE_FREE);
+            }
+        }
+        else {
             dec_ss << call_sre_function(magic_numbers::SRE_FREE);
         }
-        // restore the status
-        dec_ss << "\t" << "popfq" << std::endl;
-
-        // restore our registers
-        dec_ss << pop_used_registers(r, true).str();
     }
 
-    return dec_ss;
+    return dec_ss.str();
 }
 
 std::stringstream call_sre_free(symbol& s) {
@@ -602,20 +864,20 @@ std::stringstream call_sre_mam_util(symbol& s, std::string func_name) {
         get_addr << "\t" << "lea rdi, " << s.get_name() << std::endl;
     }
     else if (
-        s.get_data_type().get_primary() == PTR ||
-        s.get_data_type().get_qualities().is_dynamic()
+        (s.get_data_type().get_primary() == PTR && s.get_data_type().get_qualities().is_managed()) ||
+        s.get_data_type().is_reference_type()
     ) {
         get_addr << "\t" << "mov rdi, [rbp - " << s.get_offset() << "]" << std::endl;
     }
     else {
-        get_addr << "\t" << "mov rdi, rbp" << std::endl;
-
+         // if we have a negative number for the offset, add it instead
         if (s.get_offset() < 0) {
-            get_addr << "\t" << "add rdi, " << -s.get_offset() << std::endl;
+            get_addr << "\t" << "lea rbx, [rbp + " << -s.get_offset() << "]" << std::endl;
         }
         else {
-            get_addr << "\t" << "sub rdi, " << s.get_offset() << std::endl;
+            get_addr << "\t" << "lea rbx, [rbp - " << s.get_offset() << "]" << std::endl;
         }
+        get_addr << "\t" << "mov rdi, [rbx]" << std::endl;
     }
 
     gen << get_addr.str();

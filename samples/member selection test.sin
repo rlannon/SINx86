@@ -6,7 +6,7 @@ def struct point {
 	alloc int y;
 }
 
-def void main(alloc int argc) {
+def void main(alloc array<string> args &dynamic) {
 	alloc point p;
 	let p.x = 10;
 	let p.y = 20;

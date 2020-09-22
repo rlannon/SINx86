@@ -23,13 +23,20 @@ bool function_symbol::matches(const function_symbol& right) const {
 	return name_match && ret_match && param_match;
 }
 
+bool function_symbol::is_method() const {
+    return this->_method;
+}
+
+bool function_symbol::requires_this() const {
+    return this->_method && !this->type.get_qualities().is_static();
+}
+
 calling_convention function_symbol::get_calling_convention() {
     // Get the function's calling convention
     return this->call_con;
 }
 
-std::vector<symbol> &function_symbol::get_formal_parameters() {
-    // Returns a reference to the function's expected parameters
+std::vector< std::shared_ptr<symbol>> &function_symbol::get_formal_parameters() {
     return this->formal_parameters;
 }
 
@@ -42,21 +49,22 @@ register_usage function_symbol::get_arg_regs() {
 function_symbol::function_symbol(
 	std::string function_name, 
 	DataType return_type, 
-	std::vector<symbol> formal_parameters, 
+	std::vector<symbol> formal_parameters,
+    std::string scope_name,
+    unsigned int scope_level, 
 	calling_convention call_con, 
 	bool defined,
 	unsigned int line_defined
 ) :
 	symbol(
 		function_name,
-		"global", 
-		0, 
+		scope_name, 
+		scope_level, 
 		return_type, 
 		0,
 		defined,
 		line_defined
 	),
-	formal_parameters(formal_parameters),
 	call_con(call_con)
 {
     /*
@@ -67,6 +75,15 @@ function_symbol::function_symbol(
 
     */
 
+    this->_method = this->scope_name != "global";
+
+    // Set up our formal parameters
+    for (auto &sym: formal_parameters) {
+        this->formal_parameters.push_back(
+            std::make_shared<symbol>(sym)
+        );
+    }
+
     if (this->formal_parameters.size() > 0) {
         // this->arg_regs will hold the registers used by this signature
 
@@ -75,14 +92,14 @@ function_symbol::function_symbol(
 		
 		// get the total stack offset for paramters by iterating through
 		for (auto it = this->formal_parameters.begin(); it != this->formal_parameters.end(); it++) {
-			stack_offset -= it->get_data_type().get_width();
+			stack_offset -= (*it)->get_data_type().get_width();
 		}
 
         // act based on calling convention
 		if (call_con == calling_convention::SINCALL) {
 			// determine the register for each of our formal parameters
 			bool can_pass_in_reg = true;	// once we have one argument passed on the stack, all subsequent arguments will be
-			for (symbol &sym : this->formal_parameters) {
+			for (auto sym : this->formal_parameters) {
 				
 				// todo:
 				/*
@@ -95,15 +112,22 @@ function_symbol::function_symbol(
 				*/
 				
 				// the offset for this symbol will be the total stack offset we calculated + the width of this object		
-				size_t obj_width = sym.get_data_type().get_width();
+				size_t obj_width = sym->get_data_type().get_width();
 				stack_offset += obj_width;
-				sym.set_offset(stack_offset);
+				sym->set_offset(stack_offset);
 				
 				// which register is used (or whether a register is used at all) depends on the primary type of the symbol
-				Type primary_type = sym.get_data_type().get_primary();
+				Type primary_type = sym->get_data_type().get_primary();
 				
 				// assign the register, if possible
-				if (can_pass_in_reg && (primary_type != ARRAY && primary_type != STRUCT)) {
+				if (
+                    can_pass_in_reg && 
+                    (
+                        primary_type != ARRAY && 
+                        primary_type != STRUCT &&
+                        primary_type != TUPLE
+                    )
+                ) {
 					// pass in the primary type; the get_available_register function will be able to handle it
 					reg to_use = NO_REGISTER;
 					const reg integer_registers[] = { RSI, RDI, RCX, RDX, R8, R9 };
@@ -138,14 +162,14 @@ function_symbol::function_symbol(
 					}
 
 					// set the symbol's register
-					sym.set_register(to_use);
+					sym->set_register(to_use);
 
 					// if the argument must go on the stack, so must all subsequent arguments
 					if (to_use == NO_REGISTER) {
 						can_pass_in_reg = false;
 					}
 					else {
-						this->arg_regs.set(to_use);	// mark the register as in use
+						this->arg_regs.set(to_use, sym.get());	// mark the register as in use
 					}
 				}
 				else {
@@ -166,7 +190,13 @@ function_symbol::function_symbol(
 }
 
 function_symbol::function_symbol() :
-function_symbol("", NONE, {}) {
+function_symbol(
+    "",
+    NONE,
+    {},
+    "global",
+    0
+) {
     // delegate to specialized constructor
 }
 

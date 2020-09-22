@@ -93,6 +93,57 @@ void DataType::set_width() {
 	}
 }
 
+void DataType::set_must_free() {
+    /*
+
+    set_must_free
+    Sets the _must_free member, indicating whether this data type must be freed
+
+    Note this will add array or tuple types if a contained type must be freed.
+    This will be handled by the compiler.
+
+    */
+
+    if (
+        (
+            this->primary == PTR &&
+            this->qualities.is_managed()
+        ) ||
+        this->is_reference_type()
+    ) {
+        this->_must_free = true;
+    }
+    else if (this->primary == ARRAY) {
+        if (
+            (
+                this->get_subtype().primary == PTR &&
+                this->get_subtype().qualities.is_managed()
+            ) ||
+            this->get_subtype().is_reference_type()
+        ) {
+            this->_must_free = true;
+        }
+    }
+    else if (this->primary == TUPLE) {
+        bool _free_contained = false;
+        auto it = this->contained_types.begin();
+        while (it != this->contained_types.end() && !_free_contained) {
+            if (
+                (it->primary == PTR && it->qualities.is_managed()) || it->is_reference_type())
+                _free_contained = true;
+            else {
+                it++;
+            }
+        }
+        this->_must_free = _free_contained;
+    }
+    else {
+        this->_must_free = false;
+    }
+    
+    return;
+}
+
 /*
 
 We can use the overloaded operators to do any of the following:
@@ -104,7 +155,7 @@ We can use the overloaded operators to do any of the following:
 
 DataType& DataType::operator=(const DataType &right)
 {
-	// Move assignment operator
+	// Copy assignment operator
 	if (this != &right) {
 		this->primary = right.primary;
 		this->contained_types = right.contained_types;
@@ -114,6 +165,7 @@ DataType& DataType::operator=(const DataType &right)
 		this->width = right.width;
 		this->array_length_expression = right.array_length_expression;
 	}
+    this->set_must_free();
 
 	return *this;
 }
@@ -205,13 +257,11 @@ bool DataType::is_compatible(DataType to_compare) const
 	}
 	else if (this->primary == REFERENCE) {
 		// if we have a reference type, compare the reference subtype to to_compare
-		if (!this->contained_types.empty()) {
-			compatible = this->get_subtype().is_compatible(to_compare);
-		}
-		else {
-			throw CompilerException("Expected subtype", 0, 0);
-		}
+        compatible = this->get_subtype().is_compatible(to_compare);
 	}
+    else if (to_compare.get_primary() == REFERENCE) {
+        compatible = this->is_compatible(to_compare.get_subtype());
+    }
 	else if (this->primary == ARRAY && to_compare.get_primary() == ARRAY) {
 		if (!this->contained_types.empty()) {
 			compatible = this->get_subtype().is_compatible(
@@ -268,8 +318,8 @@ std::string DataType::get_struct_name() const {
 	return this->struct_name;
 }
 
-std::shared_ptr<Expression> DataType::get_array_length_expression() const {
-	return this->array_length_expression;
+Expression *DataType::get_array_length_expression() const {
+	return this->array_length_expression.get();
 }
 
 DataType DataType::get_subtype() const {
@@ -420,7 +470,18 @@ bool DataType::must_initialize() const {
 	return init_required;
 }
 
-DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, std::shared_ptr<Expression> array_length_exp, std::string struct_name) :
+bool DataType::must_free() const {
+    return this->_must_free;
+}
+
+DataType::DataType
+(
+    Type primary,
+    DataType subtype,
+    symbol_qualities qualities,
+    std::shared_ptr<Expression> array_length_exp,
+    std::string struct_name
+):
     primary(primary),
     qualities(qualities),
 	array_length_expression(array_length_exp),
@@ -432,7 +493,7 @@ DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, s
 		subtype = DataType(CHAR);
 	}
 
-	this->contained_types = { subtype };
+	this->contained_types.push_back(subtype);
 
 	// the array length will be evaluated by the compiler; start at 0
 	this->array_length = 0;
@@ -448,6 +509,7 @@ DataType::DataType(Type primary, DataType subtype, symbol_qualities qualities, s
 
 	// set the data width
 	this->set_width();
+    this->set_must_free();
 }
 
 DataType::DataType(Type primary, std::vector<DataType> contained_types, symbol_qualities qualities):
@@ -459,6 +521,7 @@ DataType::DataType(Type primary, std::vector<DataType> contained_types, symbol_q
 	this->array_length = 0;
 	this->struct_name = "";
 	this->set_width();
+    this->set_must_free();
 }
 
 DataType::DataType(Type primary) :
@@ -482,6 +545,7 @@ DataType::DataType(const DataType &ref) {
 	this->array_length_expression = ref.array_length_expression;
 	this->struct_name = ref.struct_name;
 	this->width = ref.width;
+    this->set_must_free();
 }
 
 DataType::DataType()
@@ -492,6 +556,7 @@ DataType::DataType()
 	this->width = 0;
 	this->struct_name = "";
 	this->array_length_expression = nullptr;
+    this->_must_free = false;
 }
 
 DataType::~DataType()

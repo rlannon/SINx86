@@ -11,7 +11,7 @@ Copyright 2019 Riley Lannon
 
 #include "compiler.h"
 
-std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
+symbol *compiler::lookup(std::string name, unsigned int line) {
     /*
 
     lookup
@@ -26,24 +26,20 @@ std::shared_ptr<symbol> compiler::lookup(std::string name, unsigned int line) {
 
     */
 
-	std::shared_ptr<symbol> to_return;
+	symbol *to_return = nullptr;
 
 	try {
-		to_return = this->symbols.find(name);
+		to_return = &this->symbols.find(name);
 	}
-	catch (std::exception e) {
-		throw SymbolNotFoundException(line);
+	catch (SymbolNotFoundException &e) {
+        e.set_line(line);
+        throw e;
 	}
 
 	return to_return;
 }
 
-// we need to specify which classes can be used for our <typename T> since it's implemented in a separate file
-template void compiler::add_symbol(symbol&, unsigned int);
-template void compiler::add_symbol(function_symbol&, unsigned int);
-
-template<typename T>
-void compiler::add_symbol(T &to_add, unsigned int line) {
+symbol &compiler::add_symbol(symbol &to_add, unsigned int line) {
     /*
 
     add_symbol
@@ -61,34 +57,55 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 
     */
 
-	// check for sinl_ prefix
-	// size_t pos = to_add.get_name().find("sinl_");
-	// if (pos != std::string::npos && pos == 0) {
-	// 	compiler_warning("'sinl_' is a reserved prefix for SIN runtime environment symbols. Using this prefix may result in link-time errors due to multiple symbol definition.");
-	// }
-
 	// insert the symbol
-    std::shared_ptr<T> s = std::make_shared<T>(to_add);
-    bool ok = this->symbols.insert(s);
+    std::shared_ptr<symbol> s = nullptr;
+    if (to_add.get_symbol_type() == VARIABLE) {
+        s = std::make_shared<symbol>(to_add);
+    }
+    else if (to_add.get_symbol_type() == FUNCTION_SYMBOL) {
+        function_symbol &fs = static_cast<function_symbol&>(to_add);
+        s = std::make_shared<function_symbol>(fs);
+    }
+    else {
+        throw InvalidSymbolException(line);
+    }
+    
+    return this->add_symbol(s, line);
+}
+
+symbol &compiler::add_symbol(std::shared_ptr<symbol> to_add, unsigned int line) {
+    /*
+
+    add_symbol
+    An overloaded version to add a symbol when we already have a shared pointer to it
+
+    */
+
+    symbol *inserted = this->symbols.insert(to_add);
 
     // if the symbol could not be inserted, we *might* need to throw an exception
     // it's also possible the symbol was added as a declaration and is now being defined
-    if (!ok) {
+    if (!inserted) {
         // get the current symbol
-        auto sym = this->symbols.find(s->get_name());
+        auto &sym = this->symbols.find(to_add->get_name());
 
         // if it was defined, throw an error
-        if (sym->is_defined()) {
+        if (sym.is_defined()) {
             // if it's a function we are adding, throw a duplicate *definition* exception; else, it's a duplicate symbol
-            if (to_add.get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
+            if (to_add->get_symbol_type() == SymbolType::FUNCTION_SYMBOL)
                 throw DuplicateDefinitionException(line);
             else
                 throw DuplicateSymbolException(line);
         }
         // otherwise, mark the symbol as defined
         else {
-            sym->set_defined();
+            sym.set_defined();
         }
+
+        return sym;
+    }
+    else {
+        return *inserted;
     }
 }
 
@@ -141,7 +158,7 @@ struct_info& compiler::get_struct_info(std::string struct_name, unsigned int lin
 	return this->structs.find(struct_name, line);
 }
 
-std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature) {
+std::stringstream compiler::compile_statement(Statement &s, function_symbol *signature) {
     /*
 
         Compiles a single statement to x86, dispatching appropriately
@@ -153,21 +170,21 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     // todo: set-up functionality?
 
     // The statement will be casted to the appropriate type and dispatched
-    stmt_type s_type = s->get_statement_type();
+    stmt_type s_type = s.get_statement_type();
     switch (s_type) {
         case INCLUDE:
         {
             // includes must be in the global scope at level 0
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
                 // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
-                auto include = dynamic_cast<Include*>(s.get());
-                compile_ss << this->process_include(include->get_filename(), include->get_line_number()).str();
+                auto include = static_cast<Include&>(s);
+                compile_ss << this->process_include(include.get_filename(), include.get_line_number()).str();
             }
             else {
                 throw CompilerException(
                     "Include statements must be made in the global scope at level 0",
                     compiler_errors::INCLUDE_SCOPE_ERROR,
-                    s->get_line_number()
+                    s.get_line_number()
                 );
             }
 
@@ -176,55 +193,55 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         case DECLARATION:
         {
             // handle a declaration
-            Declaration *decl_stmt = dynamic_cast<Declaration*>(s.get());
+            auto &decl_stmt = static_cast<Declaration&>(s);
 
             // we need to ensure that the current scope is global -- declarations can only happen in the global scope, as they must be static
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
-                compile_ss << this->handle_declaration(*decl_stmt).str();
+                compile_ss << this->handle_declaration(decl_stmt).str();
             } else {
-                throw DeclarationException(decl_stmt->get_line_number());
+                throw DeclarationException(decl_stmt.get_line_number());
             }
             break;
         }
         case ALLOCATION:
         {
-            Allocation *alloc_stmt = dynamic_cast<Allocation*>(s.get());
-            compile_ss << this->allocate(*alloc_stmt).str() << std::endl;
+            auto &alloc_stmt = static_cast<Allocation&>(s);
+            compile_ss << this->allocate(alloc_stmt).str() << std::endl;
             break;
         }
         case MOVEMENT:
         {
-            Movement *move_stmt = dynamic_cast<Movement*>(s.get());
-            compile_ss << this->handle_move(*move_stmt).str() << std::endl;
+            auto &move_stmt = static_cast<Movement&>(s);
+            compile_ss << this->handle_move(move_stmt).str() << std::endl;
             break;
         }
         case ASSIGNMENT:
         {
-            Assignment *assign_stmt = dynamic_cast<Assignment*>(s.get());
-            compile_ss << this->handle_assignment(*assign_stmt).str() << std::endl;
+            auto &assign_stmt = static_cast<Assignment&>(s);
+            compile_ss << this->handle_assignment(assign_stmt).str() << std::endl;
             break;
         }
         case RETURN_STATEMENT:
         {
             // return statements may only occur within functions; if 'signature' wasn't passed to this function, then we aren't compiling code inside a function and must throw an exception
             if (signature) {
-                ReturnStatement *return_stmt = dynamic_cast<ReturnStatement*>(s.get());
-                compile_ss << this->handle_return(*return_stmt, *(signature.get())).str() << std::endl;
+                auto &return_stmt = static_cast<ReturnStatement&>(s);
+                compile_ss << this->handle_return(return_stmt, *signature).str() << std::endl;
             } else {
-                throw IllegalReturnException(s->get_line_number());
+                throw IllegalReturnException(s.get_line_number());
             }
             break;
         }
         case IF_THEN_ELSE:
 		{
 			// first, we need to cast and get the current block number (in case we have nested blocks)
-			IfThenElse *ite = dynamic_cast<IfThenElse*>(s.get());
+			auto &ite = static_cast<IfThenElse&>(s);
 			size_t current_scope_num = this->scope_block_num;
 			this->scope_block_num += 1; // increment the scope number now in case we have recursive conditionals
 			
 			// then we need to evaluate the expression; if the final result is 'true', we continue in the tree; else, we branch to 'else'
 			// if there is no else statement, it falls through to 'done'
-            auto condition_p = this->evaluate_expression(ite->get_condition(), ite->get_line_number());
+            auto condition_p = this->evaluate_expression(ite.get_condition(), ite.get_line_number());
 			compile_ss << condition_p.first;
             // todo: count
             
@@ -232,15 +249,15 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compile_ss << "\t" << "jne " << magic_numbers::ITE_ELSE_LABEL << current_scope_num << std::endl;	// compare the result of RAX with 0; if true, then the condition was false, and we should jump
 			
 			// compile the branch
-			compile_ss << this->compile_statement(ite->get_if_branch(), signature).str();
+			compile_ss << this->compile_statement(*ite.get_if_branch(), signature).str();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
 			compile_ss << "\t" << "jmp " << magic_numbers::ITE_DONE_LABEL << current_scope_num << std::endl;
 			compile_ss << magic_numbers::ITE_ELSE_LABEL << current_scope_num << ":" << std::endl;
             
 			// compile the branch, if one exists
-			if (ite->get_else_branch().get()) {
-				compile_ss << this->compile_statement(ite->get_else_branch(), signature).str();
+			if (ite.get_else_branch()) {
+				compile_ss << this->compile_statement(*ite.get_else_branch(), signature).str();
 			}
 
 			// clean-up
@@ -249,12 +266,12 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 		}
 		case WHILE_LOOP:
         {
-            WhileLoop *while_stmt = dynamic_cast<WhileLoop*>(s.get());
+            auto &while_stmt = static_cast<WhileLoop&>(s);
             
             // create a loop heading, evaluate the condition
             auto current_block_num = this->scope_block_num;
             this->scope_block_num += 1;
-            auto condition_p = this->evaluate_expression(while_stmt->get_condition(), while_stmt->get_line_number());
+            auto condition_p = this->evaluate_expression(while_stmt.get_condition(), while_stmt.get_line_number());
 
             compile_ss << magic_numbers::WHILE_LABEL << current_block_num << ":" << std::endl;
             compile_ss << condition_p.first;
@@ -263,7 +280,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compile_ss << "\t" << "jne " << magic_numbers::WHILE_DONE_LABEL << current_block_num << std::endl;
 
             // compile the loop body
-            compile_ss << this->compile_statement(while_stmt->get_branch(), signature).str();
+            compile_ss << this->compile_statement(*while_stmt.get_branch(), signature).str();
             compile_ss << "\t" << "jmp " << magic_numbers::WHILE_LABEL << current_block_num << std::endl;
 
             compile_ss << magic_numbers::WHILE_DONE_LABEL << current_block_num << ":" << std::endl;
@@ -271,37 +288,73 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
         }
         case FUNCTION_DEFINITION:
         {
-            FunctionDefinition *def_stmt = dynamic_cast<FunctionDefinition*>(s.get());
+            auto &def_stmt = static_cast<FunctionDefinition&>(s);
 
 			// ensure the function has a return value in all control paths
-			if (general_utilities::returns(*def_stmt->get_procedure().get())) {
-                if (def_stmt->get_calling_convention() == SINCALL) {
-                    compile_ss << this->define_function(*def_stmt).str() << std::endl;
+			if (general_utilities::returns(def_stmt.get_procedure())) {
+                if (def_stmt.get_calling_convention() == SINCALL) {
+                    compile_ss << this->define_function(def_stmt).str() << std::endl;
                 } else {
                     throw CompilerException(
                         "Currently, defining non-sincall functions is not supported",
-                        compiler_errors::CALLING_CONVENTION_ERROR,
-                        def_stmt->get_line_number()
+                        compiler_errors::UNSUPPORTED_FEATURE,
+                        def_stmt.get_line_number()
                     );
                 }
             } else {
-                throw NoReturnException(s->get_line_number());
+                throw NoReturnException(s.get_line_number());
             }
             break;
         }
         case STRUCT_DEFINITION:
 		{
-			StructDefinition *def_stmt = dynamic_cast<StructDefinition*>(s.get());
+			auto &def_stmt = static_cast<StructDefinition&>(s);
 
-			struct_info defined = define_struct(*def_stmt, this->evaluator);
-			this->add_struct(defined, s->get_line_number());
+            // first, define the struct
+			struct_info defined = define_struct(def_stmt, this->evaluator);
+            
+            // now we can add the struct to the table
+			this->add_struct(defined, s.get_line_number());
 
+            // now, if we had any member functions, we have to define them as well
+            // update the scope name
+            auto prev_name = this->current_scope_name;
+            auto prev_level = this->current_scope_level;
+            this->current_scope_name = defined.get_struct_name();
+            this->current_scope_level += 1;
+
+            for (auto member_s: def_stmt.get_procedure().statements_list) {
+                if (member_s->get_statement_type() == FUNCTION_DEFINITION) {
+                    auto func_def = static_cast<FunctionDefinition*>(member_s.get());
+                    auto func_sym = defined.get_member(func_def->get_name());
+                    if (func_sym->get_symbol_type() == FUNCTION_SYMBOL) {
+                        function_symbol *f = static_cast<function_symbol*>(func_sym);
+                        compile_ss << this->define_function(
+                            *f,
+                            func_def->get_procedure(),
+                            func_def->get_line_number()
+                        ).str();
+                    }
+                    else {
+                        throw CompilerException(
+                            "Expected to find member function",
+                            compiler_errors::INVALID_SYMBOL_TYPE_ERROR,
+                            func_def->get_line_number()
+                        );
+                    }
+                }
+            }
+
+            // restore the scope name
+            this->current_scope_name = prev_name;
+            this->current_scope_level = prev_level;
+            
 			break;
 		}
         case CALL:
         {
-            Call *call_stmt = dynamic_cast<Call*>(s.get());
-            compile_ss << this->call_function(*call_stmt, call_stmt->get_line_number()).first << std::endl;
+            auto &call_stmt = static_cast<Call&>(s);
+            compile_ss << this->call_function(call_stmt, call_stmt.get_line_number()).first << std::endl;
             break;
         }
         case INLINE_ASM:
@@ -311,9 +364,9 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compiler_warning(
                 "Use of inline assembly is highly discouraged as it cannot be analyzed by the compiler nor utilize certain runtime safety measures (unless done manually)",
                 compiler_errors::UNSAFE_OPERATION,
-                s->get_line_number()
+                s.get_line_number()
             );
-            InlineAssembly *asm_stmt = dynamic_cast<InlineAssembly*>(s.get());
+            auto &asm_stmt = static_cast<InlineAssembly&>(s);
 
             // todo: write asm to file
 
@@ -339,8 +392,8 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
 
             */
 
-            ScopedBlock *block = dynamic_cast<ScopedBlock*>(s.get());
-            StatementBlock ast = block->get_statements();
+            auto &block = static_cast<ScopedBlock&>(s);
+            StatementBlock ast = block.get_statements();
 
             // be sure to adjust scope levels
             unsigned int old_scope_level = this->current_scope_level;
@@ -350,14 +403,21 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
             compile_ss << this->compile_ast(ast, signature).str();
 
             // free local data
-            compile_ss << decrement_rc(this->reg_stack.peek(), this->symbols, this->current_scope_name, this->current_scope_level, false).str();
+            compile_ss << decrement_rc(
+                this->reg_stack.peek(),
+                this->symbols,
+                this->structs,
+                this->current_scope_name,
+                this->current_scope_level,
+                false
+            );
             
             // restore the scope level
             this->current_scope_level = old_scope_level;
             break;
         }
         default:
-            throw CompilerException("This statement type is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s->get_line_number());
+            throw CompilerException("This statement type is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s.get_line_number());
             break;
     };
 
@@ -367,7 +427,7 @@ std::stringstream compiler::compile_statement(std::shared_ptr<Statement> s, std:
     return compile_ss;
 }
 
-std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature) {
+std::stringstream compiler::compile_ast(StatementBlock &ast, function_symbol *signature) {
     /*
 
     compile_ast
@@ -383,17 +443,19 @@ std::stringstream compiler::compile_ast(StatementBlock &ast, std::shared_ptr<fun
     std::stringstream compile_ss;
 
     // iterate over it and compile each statement in turn, adding it to the stringstream
-    for (std::shared_ptr<Statement> s: ast.statements_list) {
-        compile_ss << this->compile_statement(s, signature).str();
+    for (auto s: ast.statements_list) {
+        compile_ss << this->compile_statement(*s.get(), signature).str();
     }
 
 	// when we leave a scope, remove local variables -- but NOT global variables (they must be retained for inclusions)
-	if (this->current_scope_name != "global") {
+	if (this->current_scope_level != 0) {
 		// todo: call leave_scope on the compile-time evaluator
 
         // free local data
-		size_t reserved_space = this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
-        if (this->current_scope_level != 1) {
+        size_t reserved_space = this->symbols.leave_scope(this->current_scope_name, this->current_scope_level);
+
+        // note we don't need to do have an "add rsp" instruction if we just had a return statement (it's unreachable)
+        if ((this->current_scope_level != 1) && (ast.statements_list.back()->get_statement_type() != RETURN_STATEMENT)) {
             compile_ss << "\t" << "add rsp, " << reserved_space << std::endl;
             this->max_offset -= reserved_space;
         }
@@ -436,7 +498,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
         // walk through the AST and handle relevant statements
         for (std::shared_ptr<Statement> s: ast.statements_list) {
             if (s->get_statement_type() == ALLOCATION) {
-                auto a = dynamic_cast<Allocation*>(s.get());
+                auto a = static_cast<Allocation*>(s.get());
 
                 // allocations must be qualified with 'extern'
                 if (a->get_type_information().get_qualities().is_extern()) {
@@ -456,7 +518,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
                 }
             }
             else if (s->get_statement_type() == FUNCTION_DEFINITION) {
-                auto f = dynamic_cast<FunctionDefinition*>(s.get());
+                auto f = static_cast<FunctionDefinition*>(s.get());
 
                 // function definitions must be 'extern'
                 if (f->get_type_information().get_qualities().is_extern()) {
@@ -473,16 +535,16 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
             }
             else if (s->get_statement_type() == STRUCT_DEFINITION) {
                 // included struct definitions
-                auto d = dynamic_cast<StructDefinition*>(s.get());
+                auto d = static_cast<StructDefinition*>(s.get());
                 struct_info s_info = define_struct(*d, this->evaluator);
                 this->add_struct(s_info, d->get_line_number());
             }
             else if (s->get_statement_type() == DECLARATION) {
-                auto d = dynamic_cast<Declaration*>(s.get());
+                auto d = static_cast<Declaration*>(s.get());
                 include_ss << this->handle_declaration(*d).str();
             }
             else if (s->get_statement_type() == INCLUDE) {
-                auto inc = dynamic_cast<Include*>(s.get());
+                auto inc = static_cast<Include*>(s.get());
                 include_ss << this->process_include(inc->get_filename(), inc->get_line_number()).str();
             }
             else {
@@ -548,13 +610,24 @@ void compiler::generate_asm(std::string filename) {
         }
 
         // now, we want to see if we have a function 'main' in the symbol table; if so, we need to set it up and call it
+        symbol *main_function = nullptr;
+
         try {
-            // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
-            std::shared_ptr<symbol> main_function = this->lookup("main", 0);
-            function_symbol main_symbol = *dynamic_cast<function_symbol*>(main_function.get());
+            main_function = this->lookup("main", 0);
+        }
+        catch (SymbolNotFoundException &e) {
+            // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
+            compiler_note("No entry point found in file \"" + filename + "\"", 0);
+            main_function = nullptr;
+        }
+
+        // if we have a main function in this file, then insert our entry point (set up stack frame and call main)
+        // if main is not a function symbol, issue a warning
+        if (main_function && main_function->get_symbol_type() == FUNCTION_SYMBOL) {
+            function_symbol &main_symbol = static_cast<function_symbol&>(*main_function);
             
             // 'main' should have a return type of 'int'; if not, issue a warning
-            if (main_function->get_data_type().get_primary() != INT) {
+            if (main_symbol.get_data_type().get_primary() != INT) {
                 compiler_warning(
                     "Function 'main' should have a return type of 'int'",
                     compiler_errors::MAIN_SIGNATURE,
@@ -564,22 +637,34 @@ void compiler::generate_asm(std::string filename) {
 
             // check parameters; should have one with type 'dynamic array<string>'
             if (main_symbol.get_formal_parameters().size() != 1) {
-                compiler_warning(
+                throw CompilerException(
                     "Function 'main' should include one argument, 'dynamic array<string> args'",
                     compiler_errors::MAIN_SIGNATURE,
                     main_function->get_line_defined()
                 );
             }
-            
-            // todo: get actual command-line arguments, convert them into SIN data types
-            std::vector<std::shared_ptr<Expression>> cmd_args = {};
-            for (symbol s: main_symbol.get_formal_parameters()) {
-                // todo: get argument
+            else {
+                auto cl_param = main_symbol.get_formal_parameters().at(0);
+                if (
+                    (cl_param->get_data_type().get_primary() != ARRAY) ||
+                    (cl_param->get_data_type().get_subtype() != STRING) ||
+                    !cl_param->get_data_type().get_qualities().is_dynamic()
+                ) {
+                    throw CompilerException(
+                        "Function 'main' should include one argument, 'dynamic array<string> args'",
+                        compiler_errors::MAIN_SIGNATURE,
+                        main_function->get_line_defined()
+                    );
+                }
             }
 
             // insert our wrapper for the program
             this->text_segment << "global " << magic_numbers::MAIN_LABEL << std::endl;
             this->text_segment << magic_numbers::MAIN_LABEL << ":" << std::endl;
+
+            // preserve argc and argv
+            this->text_segment << "\t" << "mov r12, rdi" << std::endl
+                << "\t" << "mov r13, rsi" << std::endl;
 
             // call SRE init function (takes no parameters) -- ensure 16-byte stack alignment
             this->text_segment << "\t" << "mov rax, rsp" << std::endl
@@ -590,12 +675,34 @@ void compiler::generate_asm(std::string filename) {
                 << "\t" << "call " << magic_numbers::SRE_INIT << std::endl
                 << "\t" << "add rsp, 8" << std::endl
                 << "\t" << "pop rsp" << std::endl;
+            
+            // allocate an array to hold our command line arguments
+            this->text_segment << "\t" << "mov rsi, 8" << std::endl // width of contained type is 8
+                << "\t" << "mov rdi, r12" << std::endl  // contains 'r12' elements
+                << "\t" << "pushfq" << std::endl
+                << "\t" << "push rbp" << std::endl
+                << "\t" << "mov rbp, rsp" << std::endl
+                << "\t" << "call sinl_dynamic_array_alloc" << std::endl
+                << "\t" << "mov rsp, rbp" << std::endl
+                << "\t" << "pop rbp" << std::endl
+                << "\t" << "popfq" << std::endl
+                << "\t" << "push rax" << std::endl;
+
+            // todo: get actual command-line arguments, convert them into SIN data types
+            std::vector<std::shared_ptr<Expression>> cmd_args = {};
+            for (
+                auto it = main_symbol.get_formal_parameters().begin();
+                it != main_symbol.get_formal_parameters().end(); 
+                it++
+            ) {
+                // todo: get argument, create string, insert it into the array
+            }
 
             // call the main function with SINCALL
             this->text_segment << this->sincall(main_symbol, cmd_args, 0).str();
 
             // preserve the return value and call SRE cleanup function
-            this->text_segment << "\t" << "push rax" << std::endl;
+            this->text_segment << "\t" << "mov [rsp], rax" << std::endl;
             this->text_segment << "\t" << "mov rax, rsp" << std::endl
                 << "\t" << "and rsp, -0x10" << std::endl
                 << "\t" << "push rax" << std::endl
@@ -607,17 +714,21 @@ void compiler::generate_asm(std::string filename) {
             // restore main's return value and return
             this->text_segment << "\t" << "pop rax" << std::endl;
             this->text_segment << "\t" << "ret" << std::endl;
-        } catch (SymbolNotFoundException &e) {
-            // print a warning saying no entry point was found -- but SIN files do not have to have entry points, as they might be included
-            compiler_note("No entry point found in file \"" + filename + "\"", 0);
+        }
+        else if (main_function) {
+            // if we found a symbol with the name 'main', but it wasn't a function, issue a warning
+            compiler_warning(
+                "Found a symbol 'main', but it is not a function",
+                compiler_errors::MAIN_SIGNATURE,
+                main_function->get_line_defined()
+            );
         }
 
-        // remove the extension from the file name
+        // get the name for the generated assembly file
+        // remove the extension from the file name and append ".s"
         size_t last_index = filename.find_last_of(".");
         if (last_index != std::string::npos)
             filename = filename.substr(0, last_index);
-        
-        // append ".s", the extension
         filename += ".s";
         
         // now, save text, data, and bss segments to our outfile

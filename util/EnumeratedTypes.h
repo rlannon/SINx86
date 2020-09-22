@@ -56,11 +56,12 @@ enum exp_type {
 	INDEXED,
 	BINARY,
 	UNARY,
-	VALUE_RETURNING_CALL,
+	CALL_EXP,
 	CAST,
 	ATTRIBUTE,
 	KEYWORD_EXP,
-	CONSTRUCTION_EXP
+	CONSTRUCTION_EXP,
+    PROC_EXP
 };
 
 enum attribute {
@@ -92,7 +93,8 @@ enum SymbolQuality {
 	SINCALL_CONVENTION,
 	C64_CONVENTION,
 	WINDOWS_CONVENTION,
-	EXTERN
+	EXTERN,
+    UNMANAGED
 };
 
 
@@ -139,6 +141,7 @@ enum exp_operator {
 	TYPECAST,	// the 'as' operator
 	ATTRIBUTE_SELECTION,	// :
 	CONTROL_TRANSFER,	// @, used in function calls
+    PROC_OPERATOR,  // (), marks a procedure
 	SCOPE_RESOLUTION,	//	::
 	NO_OP
 };

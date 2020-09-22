@@ -28,6 +28,7 @@ class symbol_qualities
 	bool long_q;
 	bool short_q;
 	bool extern_q;
+    bool _managed;
 
 	// function qualities -- for calling conventions, unused by other data
 	// todo: create additional, inherited class 'function_symbol_qualities' to use with functions?
@@ -49,6 +50,7 @@ public:
 	bool is_long();
 	bool is_short();
 	bool is_extern();
+    bool is_managed();
 
 	// function-specific qualities
 	bool is_sincall();

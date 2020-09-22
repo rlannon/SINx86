@@ -48,13 +48,11 @@ class Parser
 
 	// translates an operator character into an exp_operator type
 	static const exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
-	static const exp_operator make_compound_operator(lexeme l, lexeme r);
 	static const bool is_valid_copy_assignment_operator(exp_operator op);
 	static const bool is_valid_move_assignment_operator(exp_operator op);
 	exp_operator read_operator(bool peek);
 
 	// our operator and precedence handlers
-	static const std::unordered_map<std::string, exp_operator> op_strings;
 	static const std::unordered_map<exp_operator, size_t> op_precedence;	// todo: create operator class
 	static const size_t get_precedence(std::string symbol, size_t line = 0);
 	static const size_t get_precedence(exp_operator op, size_t line = 0);

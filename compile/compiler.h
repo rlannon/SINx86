@@ -56,8 +56,9 @@ class compiler {
     stack<register_usage> reg_stack;    // a stack for tracking which registers are in use in a given scope
 
     symbol_table symbols;    // todo: dynamically allocate?
-	std::shared_ptr<symbol> lookup(std::string name, unsigned int line);   // look up a symbol's name
-    template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
+	symbol *lookup(std::string name, unsigned int line);   // look up a symbol's name
+    symbol &add_symbol(symbol &to_add, unsigned int line);	// add a symbol
+    symbol &add_symbol(std::shared_ptr<symbol> to_add, unsigned int line);
 
 	struct_table structs;
 	void add_struct(struct_info to_add, unsigned int line);	// add a struct to the table
@@ -81,10 +82,10 @@ class compiler {
     size_t max_offset;
 
 	// compile an entire statement block
-	std::stringstream compile_ast(StatementBlock &ast, std::shared_ptr<function_symbol> signature = nullptr);
+	std::stringstream compile_ast(StatementBlock &ast, function_symbol *signature = nullptr);
 
 	// a function to compile a single statement
-	std::stringstream compile_statement(std::shared_ptr<Statement> s, std::shared_ptr<function_symbol> signature);
+	std::stringstream compile_statement(Statement &s, function_symbol *signature);
 
 	// allocations
 	std::stringstream allocate(Allocation alloc_stmt);
@@ -94,14 +95,14 @@ class compiler {
 	std::stringstream handle_move(Movement &m);	// move assignment
 	std::stringstream handle_alloc_init(
 		symbol &sym,
-		std::shared_ptr<Expression> rvalue,
+		Expression &rvalue,
 		unsigned int line
 	);
 	std::stringstream assign(
 		DataType lhs_type,
 		DataType &rhs_type,
 		assign_utilities::destination_information dest,
-		std::shared_ptr<Expression> rvalue,
+		Expression &rvalue,
 		unsigned int line,
 		bool is_alloc_init = false
 	);
@@ -109,7 +110,7 @@ class compiler {
 		DataType &lvalue_type,
 		DataType &rvalue_type,
 		assign_utilities::destination_information dest,
-		std::shared_ptr<Expression> rvalue,
+		Expression &rvalue,
 		unsigned int line
 	);
 
@@ -119,21 +120,25 @@ class compiler {
 	std::stringstream handle_declaration(Declaration decl_stmt);
 
 	// functions
-	std::stringstream define_function(FunctionDefinition definition);
+	std::stringstream define_function(FunctionDefinition &definition);
+    std::stringstream define_function(function_symbol &func_sym, StatementBlock prog, unsigned int line);
 
-	template<typename T> std::pair<std::string, size_t> call_function(T to_call, unsigned int line, bool allow_void = true);
-	std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
-	std::stringstream system_v_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
-	std::stringstream win64_call(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
+	std::pair<std::string, size_t> call_function(Procedure &to_call, unsigned int line, bool allow_void = true);
+	
+    std::stringstream sincall(function_symbol s, std::vector<Expression*> args, unsigned int line);
+    std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
+
+	std::stringstream system_v_call(function_symbol s, std::vector<Expression*> args, unsigned int line);
+	std::stringstream win64_call(function_symbol s, std::vector<Expression*> args, unsigned int line);
 
 	// returns
-	std::stringstream handle_return(ReturnStatement ret, function_symbol signature);
+	std::stringstream handle_return(ReturnStatement &ret, function_symbol &signature);
 	std::stringstream sincall_return(ReturnStatement &ret, DataType return_type);
 
 	// utilities that require compiler's data members
-	std::stringstream get_exp_address(std::shared_ptr<Expression> to_evaluate, reg r, unsigned int line);
+	std::stringstream get_exp_address(Expression &to_evaluate, reg r, unsigned int line);
 	std::pair<std::string, size_t> evaluate_expression(
-		std::shared_ptr<Expression> to_evaluate,
+		Expression &to_evaluate,
 		unsigned int line,
 		DataType *type_hint = nullptr
 	);

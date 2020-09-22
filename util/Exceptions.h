@@ -37,6 +37,7 @@ protected:
 	unsigned int line;
 public:
 	explicit CompilerException(const std::string& message, unsigned int code = 0, unsigned int line = 0);
+    void set_line(unsigned int new_line);
 	virtual const char* what() const noexcept;
 };
 

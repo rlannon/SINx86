@@ -22,7 +22,8 @@ const std::unordered_map<std::string, SymbolQuality> symbol_qualities::quality_s
 	{ "sincall", SINCALL_CONVENTION },
 	{ "c64", C64_CONVENTION },
 	{ "windows", WINDOWS_CONVENTION },
-	{ "extern", EXTERN }
+	{ "extern", EXTERN },
+    { "unmanaged", UNMANAGED }
 };
 
 bool symbol_qualities::operator==(const symbol_qualities& right) const {
@@ -36,7 +37,8 @@ bool symbol_qualities::operator==(const symbol_qualities& right) const {
 		(this->extern_q == right.extern_q) &&
 		(this->c64_con == right.c64_con) &&
 		(this->windows_con == right.windows_con) &&
-		(this->sincall_con == right.sincall_con)
+		(this->sincall_con == right.sincall_con) &&
+        (this->_managed == right._managed)
 	);
 }
 
@@ -94,6 +96,11 @@ bool symbol_qualities::is_extern()
 	return extern_q;
 }
 
+bool symbol_qualities::is_managed()
+{
+    return _managed;
+}
+
 bool symbol_qualities::is_sincall()
 {
 	return sincall_con;
@@ -115,18 +122,19 @@ void symbol_qualities::add_qualities(symbol_qualities to_add) {
 	// todo: refactor how qualities are stored in SymbolQualities so that we can simplify this
 	// todo: quality conflict exceptions
 
-	if (to_add.is_const()) this->add_quality(CONSTANT);
-	if (to_add.is_final()) this->add_quality(FINAL);
-	if (to_add.is_static()) this->add_quality(STATIC);
-	if (to_add.is_dynamic()) this->add_quality(DYNAMIC);
-	if (to_add.is_long()) this->add_quality(LONG);
-	if (to_add.is_short()) this->add_quality(SHORT);
-	if (to_add.is_signed()) this->add_quality(SIGNED);
+	if (to_add.const_q) this->add_quality(CONSTANT);
+	if (to_add.final_q) this->add_quality(FINAL);
+	if (to_add.static_q) this->add_quality(STATIC);
+	if (to_add.dynamic_q) this->add_quality(DYNAMIC);
+	if (to_add.long_q) this->add_quality(LONG);
+	if (to_add.short_q) this->add_quality(SHORT);
+	if (to_add.signed_q) this->add_quality(SIGNED);
 	if (to_add.is_unsigned()) this->add_quality(UNSIGNED);
-	if (to_add.is_sincall()) this->add_quality(SINCALL_CONVENTION);
-	if (to_add.is_c64()) this->add_quality(C64_CONVENTION);
-	if (to_add.is_windows()) this->add_quality(WINDOWS_CONVENTION);
-	if (to_add.is_extern()) this->add_quality(EXTERN);
+	if (to_add.sincall_con) this->add_quality(SINCALL_CONVENTION);
+	if (to_add.c64_con) this->add_quality(C64_CONVENTION);
+	if (to_add.windows_con) this->add_quality(WINDOWS_CONVENTION);
+	if (to_add.extern_q) this->add_quality(EXTERN);
+    if (!to_add._managed) this->add_quality(UNMANAGED);
 }
 
 void symbol_qualities::add_quality(SymbolQuality to_add)
@@ -176,6 +184,9 @@ void symbol_qualities::add_quality(SymbolQuality to_add)
 	else if (to_add == EXTERN) {
 		extern_q = true;
 	}
+    else if (to_add == UNMANAGED) {
+        _managed = false;
+    }
 	else {
 		// invalid quality; throw an exception
 		throw CompilerException("Quality conflict");	// todo: proper exception type
@@ -229,6 +240,9 @@ symbol_qualities::symbol_qualities(std::vector<SymbolQuality> qualities):
 		else if (*it == EXTERN) {
 			extern_q = true;
 		}
+        else if (*it == UNMANAGED) {
+            _managed = false;
+        }
 		else {
 			continue;
 		}
@@ -263,6 +277,7 @@ symbol_qualities::symbol_qualities(bool is_const, bool is_static, bool is_dynami
 	this->sincall_con = false;
 	this->c64_con = false;
 	this->windows_con = false;
+    this->_managed = true;
 }
 
 symbol_qualities::symbol_qualities()
@@ -281,6 +296,7 @@ symbol_qualities::symbol_qualities()
 	extern_q = false;
 
     _listed_unsigned = false;
+    _managed = true;
 }
 
 symbol_qualities::~symbol_qualities()

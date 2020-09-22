@@ -3,7 +3,7 @@
 
 decl void print(decl string s);
 
-def int main() {
+def int main(alloc dynamic array<string> args) {
     alloc string s: "hello";
     alloc string s2;
     let s2 = s + " world! " + s + " and how are you?";

@@ -102,13 +102,17 @@ bool Declaration::is_struct() const
 	return this->struct_definition;
 }
 
-std::shared_ptr<Expression> Declaration::get_initial_value()
+Expression *Declaration::get_initial_value()
 {
-	return this->initial_value;
+	return this->initial_value.get();
 }
 
-std::vector<std::shared_ptr<Statement>> Declaration::get_formal_parameters() {
-	return this->formal_parameters;
+std::vector<Statement*> Declaration::get_formal_parameters() {
+	std::vector<Statement*> to_return;
+    for (auto it = this->formal_parameters.begin(); it != this->formal_parameters.end(); it++) {
+        to_return.push_back(it->get());
+    }
+    return to_return;
 }
 
 calling_convention Declaration::get_calling_convention() const {
@@ -166,9 +170,9 @@ bool Allocation::was_initialized()
 	return this->initialized;
 }
 
-std::shared_ptr<Expression> Allocation::get_initial_value()
+Expression *Allocation::get_initial_value()
 {
-	return this->initial_value;
+	return this->initial_value.get();
 }
 
 Allocation::Allocation(DataType type_information, std::string value, bool initialized, std::shared_ptr<Expression> initial_value) :
@@ -189,12 +193,12 @@ Allocation::Allocation(): Statement(ALLOCATION) {
 
 /*******************	ASSIGNMENT CLASS	********************/
 
-std::shared_ptr<Expression> Assignment::get_lvalue() {
-	return this->lvalue;
+Expression & Assignment::get_lvalue() {
+	return *this->lvalue.get();
 }
 
-std::shared_ptr<Expression> Assignment::get_rvalue() {
-	return this->rvalue_ptr;
+Expression & Assignment::get_rvalue() {
+	return *this->rvalue_ptr.get();
 }
 
 Assignment::Assignment(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue) : 
@@ -228,8 +232,8 @@ Movement::Movement(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expressio
 /*******************	RETURN STATEMENT CLASS		********************/
 
 
-std::shared_ptr<Expression> ReturnStatement::get_return_exp() {
-	return this->return_exp;
+Expression & ReturnStatement::get_return_exp() {
+	return *this->return_exp.get();
 }
 
 
@@ -248,16 +252,16 @@ ReturnStatement::ReturnStatement():
 
 /*******************	ITE CLASS		********************/
 
-std::shared_ptr<Expression> IfThenElse::get_condition() {
-	return this->condition;
+Expression &IfThenElse::get_condition() {
+	return *this->condition.get();
 }
 
-std::shared_ptr<Statement> IfThenElse::get_if_branch() {
-	return this->if_branch;
+Statement *IfThenElse::get_if_branch() {
+	return this->if_branch.get();
 }
 
-std::shared_ptr<Statement> IfThenElse::get_else_branch() {
-	return this->else_branch;
+Statement *IfThenElse::get_else_branch() {
+	return this->else_branch.get();
 }
 
 IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr):
@@ -282,14 +286,14 @@ IfThenElse::IfThenElse():
 
 /*******************	WHILE LOOP CLASS		********************/
 
-std::shared_ptr<Expression> WhileLoop::get_condition()
+Expression &WhileLoop::get_condition()
 {
-	return WhileLoop::condition;
+	return *this->condition.get();
 }
 
-std::shared_ptr<Statement> WhileLoop::get_branch()
+Statement *WhileLoop::get_branch()
 {
-	return WhileLoop::branch;
+	return this->branch.get();
 }
 
 WhileLoop::WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch) : 
@@ -309,8 +313,8 @@ std::string Definition::get_name() {
 	return this->name;
 }
 
-std::shared_ptr<StatementBlock> Definition::get_procedure() {
-	return this->procedure;
+StatementBlock &Definition::get_procedure() {
+	return *this->procedure.get();
 }
 
 Definition::Definition(std::string name, std::shared_ptr<StatementBlock> procedure):
@@ -332,13 +336,17 @@ Definition::~Definition() {
 
 /*******************	FUNCTION DEFINITION CLASS		********************/
 
-DataType FunctionDefinition::get_type_information()
+DataType &FunctionDefinition::get_type_information()
 {
 	return this->return_type;
 }
 
-std::vector<std::shared_ptr<Statement>> FunctionDefinition::get_formal_parameters() {
-	return this->formal_parameters;
+std::vector<Statement*> FunctionDefinition::get_formal_parameters() {
+	std::vector<Statement*> to_return;
+    for (auto it = this->formal_parameters.begin(); it != this->formal_parameters.end(); it++) {
+        to_return.push_back(it->get());
+    }
+    return to_return;
 }
 
 calling_convention FunctionDefinition::get_calling_convention() {
@@ -369,29 +377,32 @@ StructDefinition::StructDefinition(std::string name, std::shared_ptr<StatementBl
 
 
 /*******************	FUNCTION CALL CLASS		********************/
+/*
+Expression &Call::get_func_name() {
+	return this->call_exp.get_func_name();
+}
 
-std::string Call::get_func_name() {
-	return this->func->getValue();
+CallExpression &Call::get_call_expression() {
+    return this->call_exp;
 }
 
 size_t Call::get_args_size() {
-	return this->args.size();
+	return this->call_exp.get_args_size();
 }
 
-std::shared_ptr<Expression> Call::get_arg(size_t index) {
+Expression &Call::get_arg(size_t index) {
 	// return one argument
-	return this->args[index];
+	return this->call_exp.get_arg(index);
 }
 
-std::vector<std::shared_ptr<Expression>> Call::get_args() {
+std::vector<Expression*> Call::get_args() {
 	// return all function arguments
-	return this->args;
+	return this->call_exp.get_args();
 }
-
-Call::Call(std::shared_ptr<Identifier> func, std::vector<std::shared_ptr<Expression>> args) : 
+*/
+Call::Call(CallExpression call_exp): 
 	Statement(CALL),
-	func(func),
-	args(args)
+	CallExpression(call_exp)
 {
 }
 
@@ -420,8 +431,8 @@ InlineAssembly::InlineAssembly():
 
 /*******************		FREE MEMORY CLASS		********************/
 
-std::shared_ptr<Expression> FreeMemory::get_freed_memory() {
-	return this->to_free;
+Expression &FreeMemory::get_freed_memory() {
+	return *this->to_free.get();
 }
 
 FreeMemory::FreeMemory(std::shared_ptr<Expression> to_free):
