@@ -33,7 +33,7 @@ or
 
 However, if `ptr` is used, then the appropriate syntax must be used; instead of `this.name`, you must say `(*this).name`.
 
-This reflects the reality that `this` is always the first parameter to a non-static method, and will be passed in `rsi` under [SINCALL](Calling%20Convention.md). Because of this, it is actually possible in SIN to call methods without the use of the dot operator; for example:
+This reflects the reality that `this` is always the first parameter to a non-static method, and will be passed in `rsi` under [SINCALL](Calling%20Convention). Because of this, it is actually possible in SIN to call methods without the use of the dot operator; for example:
 
     alloc myStruct m: construct {
         size: 0,

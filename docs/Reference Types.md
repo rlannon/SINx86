@@ -36,7 +36,7 @@ Strings may be marked as `dynamic`, and although this does not change where the 
 
 *A note about why* `string` *is a unique type:* The decision to add `string` to the language was done because of its ubiquity; since SIN's goal is to make the life of a programmer easier by reducing the use of confusing syntax and manual memory management, it makes more sense to have the `string` type rather than requiring programmers to create a `dynamic array<char>` and deal with the nightmares one might face in C (rather than, say, C++ or Python) every time they wish to utilize strings. While this may make the implementation of strings in the compiler a little more thorny, it reduces unnecessary difficulty when programming and so was deemed to belong in the language. Plus, it allows use of the concatenation operator (`+`) where `dynamic array<char>` would not.
 
-**NB:** It is generally a bad idea to use pointers and references to strings; because its size tends to be so variable, assignment may cause a reallocation which will result in [divergent references](Divergent%20References.md).
+**NB:** It is generally a bad idea to use pointers and references to strings; because its size tends to be so variable, assignment may cause a reallocation which will result in [divergent references](Divergent%20References).
 
 ### Temporary Instances of Reference Types
 

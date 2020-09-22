@@ -19,7 +19,7 @@ As an example, take the following case:
         return n + 1;
     }
 
-In this example, although the file containing the function `mult` was included, the function was not marked as globally available, and is therefore limited in scope to the file `sample.sin`. To make a piece of data truly global -- available to the entire program -- there are two ways this can be accomplished. One makes use of the `extern` keyword, while the other utilizes [included files](Includes.md), though they are slightly different.
+In this example, although the file containing the function `mult` was included, the function was not marked as globally available, and is therefore limited in scope to the file `sample.sin`. To make a piece of data truly global -- available to the entire program -- there are two ways this can be accomplished. One makes use of the `extern` keyword, while the other utilizes [included files](Includes), though they are slightly different.
 
 ### The `extern` keyword
 
@@ -65,7 +65,7 @@ The other way to make a symbol global is to utilize Declarative SIN and separate
 
 Here, we use a style of SIN programming called _Declarative SIN._ The idea behind Declarative SIN is that it doesn't generate any code that will go into the `.text` segment, and only create either an `extern <symbol name>` assembler directive or add an entry into the struct table. This has the benefit of faster compilation time, as everything that is parsed in the included file will be used.
 
-For more information, see the [includes](Includes.md).
+For more information, see the [includes](Includes).
 
 ### But why?
 

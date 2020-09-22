@@ -10,12 +10,13 @@ The following keywords are those which can be used to begin statements.
 
 ### Symbols
 
-* `def` - defines a block of code to be associated with a [function](Functions.md) or [struct](Structs.md)
+* `def` - defines a block of code to be associated with a [function](Functions) or [struct](Structs)
+* `decl` - declares a function or data
 * `alloc` - allocates data of a given type
 * `construct` - constructs a struct type _(Note: this feature has not yet been implemented)_
 * `free` - frees the given memory back to the environment
 * `let` - assignment keyword; always copies data
-* `move` - move keyword; copies references when possible, otherwise performs a copy _(Note: this feature has not yet been implemented.)_
+* `move` - move keyword; copies references when possible, otherwise performs a copy of the data
 
 ### Control Flow
 
@@ -53,8 +54,10 @@ Note that all *logical* operators use keywords while the bitwise operators use s
 * `string` - a string type
 * `struct` - a user-defined struct type
 * `ptr` - a 64-bit pointer type
-* `ref` - a 64-bit reference type _(not yet implemented)_
+* `ref` - a 64-bit reference type
 * `array` - a homogeneous array of data
+* `tuple` - a heterogeneous tuple
+* `proc` - a procedure _(not yet implemented)_
 
 #### Width and Sign
 
@@ -70,9 +73,22 @@ Note that all *logical* operators use keywords while the bitwise operators use s
 * `static` - data that should be allocated at compile time
 * `dynamic` - data that should be allocated at runtime on the heap; may be, but does not have to be, variable-width; may not be `const`, but may be `final`
 * `constexpr` - specifies an expression may be evaluated at compile-time (uses only literals and `const` data)
+* `extern` - data to be made globally available
 
 #### Attributes
 
 * `len` - the length (number of elements) of data
 * `size` - the size (number of bytes) of data
 * `var` - variablility
+
+#### Calling Convention
+
+* `sincall` - SIN Calling Convention
+* `c64` - x64 calling convention for C (defaults to System V ABI)
+* `windows` - Used in combination with `c64`, specifies the Windows 64-bit convention
+
+#### Other
+
+* `this` - the first parameter for struct methods
+* `null` - a null pointer literal
+* `unmanaged` - indicates a pointer should not be managed by the MAM

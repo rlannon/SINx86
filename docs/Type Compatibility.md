@@ -85,4 +85,4 @@ That also means that we are explicitly forbidden from "demoting" data from `cons
 
 By default, data defined in a particular source file may only be accessed from within that file; it has local visibility. However, there are two ways data can be made available globally -- either with the `extern` keyword or by using a `decl` statement. Data that is made available with `extern` will not undergo name mangling, and therefore will be available to, for example, a C program. Data that utilizes `decl` will still undergo name mangling, and will be available to other source files. It also allows for forward-declaration of data.
 
-See [the document on includes](Includes.md) for more information on why `decl` is important in included files.
+See [the document on includes](Includes) for more information on why `decl` is important in included files.

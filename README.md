@@ -24,7 +24,7 @@ The following is an obligatory 'hello world!' sample, including the necessary bo
 
 Like Python, functions are defined with `def`, function calls look similar enough (though they are prefixed with `@` -- this is for a future language feature). Like C and Java, the entry point of entry program is 'main', though unlike Java (and like C), the return type and arguments for this function are not fixed. It's good practice to use a return type of `int` and a single argument `dynamic array<string> args`, but it's not strictly required (though the compiler will issue a warning).
 
-For more information, check out the [guide](Basic%20Syntax.md).
+For more information, check out the [guide](Basic%20Syntax).
 
 ## Goal of the Project
 

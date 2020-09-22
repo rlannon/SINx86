@@ -40,5 +40,6 @@ Here is a table listing the operators and their respective information:
 | `:` | Attribute selection | 8 | Left-to-right | |
 | `@` | Control transfer | 9 | Right-to-left | Used for function calls |
 | `[]` | Array and string subscripting | 9 | Right-to-left | |
-| `.` | Member selection | 9 | Left-to-right | Used for tuples and structs |
-| `::` | Scope resolution | 10 | None | |
+| `()` | Procedure operator | 10 | Right-to-left | Used to determine that the expression is a procedure |
+| `.` | Member selection | 10 | Left-to-right | Used for tuples and structs |
+| `::` | Scope resolution | 11 | None | |
