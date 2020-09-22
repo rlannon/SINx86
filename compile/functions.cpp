@@ -61,7 +61,7 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
     return decl_ss;
 }
 
-std::stringstream compiler::define_function(FunctionDefinition definition) {
+std::stringstream compiler::define_function(FunctionDefinition &definition) {
     /*
     
     define_function
@@ -77,7 +77,7 @@ std::stringstream compiler::define_function(FunctionDefinition definition) {
     );
 }
 
-std::stringstream compiler::define_function(function_symbol func_sym, StatementBlock prog, unsigned int line) {
+std::stringstream compiler::define_function(function_symbol &func_sym, StatementBlock prog, unsigned int line) {
     /*
 
     define_function
@@ -160,7 +160,7 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
 
     // now, we have to iterate over the function symbol's parameters and add them to our symbol table
     // todo: optimize by enabling symbol table additions in template function?
-    std::set<reg> arg_regs;
+    std::unordered_map<symbol*, reg> arg_regs;
     for (auto sym: func_sym.get_formal_parameters()) {
         // add the parameter symbol to the table
         symbol &inserted = this->add_symbol(sym, line);
@@ -168,7 +168,9 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
 		// if r was passed in a register, then we must add it to arg_regs
 		reg r = sym->get_register();
         if (r != NO_REGISTER) {
-            arg_regs.insert(sym->get_register());
+            arg_regs.insert(
+                std::make_pair<>(&inserted, sym->get_register())
+            );
         }
     }
 
@@ -186,6 +188,12 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
 
     // now, compile the procedure using compiler::compile_ast, passing in this function's signature
     procedure_ss = this->compile_ast(prog, &func_sym);
+
+    // after compiling the AST, we need to restore the registers that our parameter symbols were contained in
+    // otherwise, when the function is called, we won't know what registers to pass arguments in
+    for (auto it = arg_regs.begin(); it != arg_regs.end(); it++) {
+        it->first->set_register(it->second);
+    }
 
     // now, put everything together in definition_ss by adding procedure_ss onto the end
     definition_ss << procedure_ss.str() << std::endl;

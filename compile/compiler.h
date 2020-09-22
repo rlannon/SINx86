@@ -120,8 +120,8 @@ class compiler {
 	std::stringstream handle_declaration(Declaration decl_stmt);
 
 	// functions
-	std::stringstream define_function(FunctionDefinition definition);
-    std::stringstream define_function(function_symbol func_sym, StatementBlock prog, unsigned int line);
+	std::stringstream define_function(FunctionDefinition &definition);
+    std::stringstream define_function(function_symbol &func_sym, StatementBlock prog, unsigned int line);
 
 	std::pair<std::string, size_t> call_function(Procedure &to_call, unsigned int line, bool allow_void = true);
 	
