@@ -39,12 +39,7 @@ symbol *compiler::lookup(std::string name, unsigned int line) {
 	return to_return;
 }
 
-// we need to specify which classes can be used for our <typename T> since it's implemented in a separate file
-template void compiler::add_symbol(symbol&, unsigned int);
-template void compiler::add_symbol(function_symbol&, unsigned int);
-
-template<typename T>
-void compiler::add_symbol(T &to_add, unsigned int line) {
+symbol &compiler::add_symbol(symbol &to_add, unsigned int line) {
     /*
 
     add_symbol
@@ -69,14 +64,33 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
 	// }
 
 	// insert the symbol
-    std::shared_ptr<T> s = std::make_shared<T>(to_add);
-    bool ok = this->symbols.insert(s);
+    std::shared_ptr<symbol> s = nullptr;
+    if (to_add.get_symbol_type() == VARIABLE) {
+        s = std::make_shared<symbol>(to_add);
+    }
+    else if (to_add.get_symbol_type() == FUNCTION_SYMBOL) {
+        function_symbol &fs = static_cast<function_symbol&>(to_add);
+        s = std::make_shared<function_symbol>(fs);
+    }
+    else {
+        throw InvalidSymbolException(line);
+    }
+    
+    return this->add_symbol(s, line);
+}
+
+symbol &compiler::add_symbol(std::shared_ptr<symbol> to_add, unsigned int line) {
+    /*
+
+    */
+
+    symbol *inserted = this->symbols.insert(to_add);
 
     // if the symbol could not be inserted, we *might* need to throw an exception
     // it's also possible the symbol was added as a declaration and is now being defined
-    if (!ok) {
+    if (!inserted) {
         // get the current symbol
-        auto &sym = this->symbols.find(s->get_name());
+        auto &sym = this->symbols.find(to_add->get_name());
 
         // if it was defined, throw an error
         if (sym.is_defined()) {
@@ -90,6 +104,11 @@ void compiler::add_symbol(T &to_add, unsigned int line) {
         else {
             sym.set_defined();
         }
+
+        return sym;
+    }
+    else {
+        return *inserted;
     }
 }
 

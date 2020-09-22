@@ -57,7 +57,8 @@ class compiler {
 
     symbol_table symbols;    // todo: dynamically allocate?
 	symbol *lookup(std::string name, unsigned int line);   // look up a symbol's name
-    template<typename T> void add_symbol(T &to_add, unsigned int line);	// add a symbol
+    symbol &add_symbol(symbol &to_add, unsigned int line);	// add a symbol
+    symbol &add_symbol(std::shared_ptr<symbol> to_add, unsigned int line);
 
 	struct_table structs;
 	void add_struct(struct_info to_add, unsigned int line);	// add a struct to the table

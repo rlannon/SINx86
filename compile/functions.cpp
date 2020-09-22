@@ -163,7 +163,7 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
     std::set<reg> arg_regs;
     for (symbol &sym: func_sym.get_formal_parameters()) {
         // add the parameter symbol to the table
-        this->add_symbol(sym, line);
+        symbol &inserted = this->add_symbol(sym, line);
         
 		// if r was passed in a register, then we must add it to arg_regs
 		reg r = sym.get_register();
@@ -190,10 +190,11 @@ std::stringstream compiler::define_function(function_symbol func_sym, StatementB
     // now, put everything together in definition_ss by adding procedure_ss onto the end
     definition_ss << procedure_ss.str() << std::endl;
 
-    // restore our scope information (except our register stack -- it was already popped)
+    // restore our scope information
     this->current_scope_name = previous_scope_name;
     this->current_scope_level = previous_scope_level;
     this->max_offset = previous_max_offset;
+    this->reg_stack.pop_back();
 
     return definition_ss;
 }
@@ -327,7 +328,11 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
     std::stringstream sincall_ss;
 
     // if registers need to be preserved, do that here
-    sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
+    bool pushed = false;
+    if (!this->reg_stack.empty()) {
+        pushed = true;
+        sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
+    }
 
     // create a new reg stack for our parameters
     this->reg_stack.push_back(register_usage());
@@ -455,7 +460,8 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
         this->reg_stack.pop_back();
 
         // if registers were preserved, restore them here
-        sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
+        if (pushed)
+            sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
     }
     else {
         // If the number of arguments supplied exceeds the number expected, throw an error -- the call does not match the signature

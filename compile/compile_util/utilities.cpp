@@ -641,7 +641,8 @@ std::string get_address(symbol &s, reg r) {
         }
     }
     else {
-        address_info = "\tmov " + reg_name + ", " + register_usage::get_register_name(s.get_register()) + "\n";
+        if (s.get_register() != r)
+            address_info = "\tmov " + reg_name + ", " + register_usage::get_register_name(s.get_register()) + "\n";
     }
 
     return address_info;
@@ -796,6 +797,7 @@ std::string decrement_rc_util(
             
             // if the array itself must be freed, do so
             if (s.get_data_type().must_free()) {
+                dec_ss << get_address(s, RDI);
                 dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
 
@@ -805,6 +807,7 @@ std::string decrement_rc_util(
 
             // if the tuple itself must be freed, do so
             if (s.get_data_type().must_free()) {
+                dec_ss << get_address(s, RDI);
                 dec_ss << call_sre_function(magic_numbers::SRE_FREE);
             }
         }

@@ -43,7 +43,7 @@ public:
 	// public member functions
 	static std::string get_mangled_name(std::string org, std::string scope_name = "global");
 	
-	bool insert(std::shared_ptr<symbol> to_insert);
+	symbol *insert(std::shared_ptr<symbol> to_insert);
 
 	bool contains(std::string symbol_name, std::string scope_name = "");
 	symbol& find(std::string to_find, std::string scope_name = "");

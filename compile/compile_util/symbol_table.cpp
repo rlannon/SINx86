@@ -76,7 +76,7 @@ std::string symbol_table::get_mangled_name(std::string org, std::string scope_na
     }
 }
 
-bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
+symbol *symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	/*
 	
 	insert
@@ -88,7 +88,7 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 
 	// we have to make sure the symbol table doesn't include copies of data with names unmangled
 	if (this->contains(to_insert->get_name())) {
-		return false;
+		return nullptr;
 	}
 
 	auto returned = this->symbols.insert(
@@ -111,7 +111,7 @@ bool symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 		throw DuplicateSymbolException(to_insert->get_line_defined());
 	}
 
-	return returned.second;
+	return returned.first->second.get();
 }
 
 bool symbol_table::contains(std::string symbol_name, std::string scope_name)
