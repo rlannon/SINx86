@@ -38,11 +38,7 @@ void DataType::set_width() {
 			this->width = sin_widths::DOUBLE_WIDTH;
 		} else if (this->qualities.is_short()) {
 			this->width = sin_widths::HALF_WIDTH;	// line number information, for the time being, will be caught wherever this type is used
-			compiler_warning(
-				"16-bit half-precision floats are not supported by the SIN compiler at this time; using 32-bit single-precision instead",
-				compiler_errors::DATA_WIDTH_ERROR,
-				0	// todo: line number information
-			);
+			half_precision_not_supported_warning(0);
 		} else {
 			this->width = sin_widths::FLOAT_WIDTH;
 		}
