@@ -2,12 +2,13 @@
 
 ## Operators
 
-This document is to serve as a reference to the operators available in SIN. It describes their uses and precedence level (where 0 is the lowest precedence). Some operators use keywords, some symbols, some a combination of both (such as `let x = y`, where the operator is technically `let ... =`).
+This document is to serve as a reference to the operators available in SIN. It describes their uses and precedence level (where 0 is the lowest precedence). Some operators use keywords, some use symbols, and some use a combination of both (such as `let x = y`, where the operator is technically `let ... =`).
 
 Here is a table listing the operators and their respective information:
 
 | Operator | Name | Precedence | Associativity | Notes |
 | -------- | ---- | ---------- | ------------- | ----- |
+| `,` | Comma | 0 | Left-to-right | |
 | `move ... ->` | Move assignment | 0 | Left-to-right | Moves data between locations where possible (by updating references), otherwise a copy is performed. Not yet implemented. |
 | `move ... <-` | Move assignment | 0 | Right-to-left | See `->` operator |
 | `let ... =` | Copy assignment | 0 | Right-to-left | Adequate for almost all assignments. Copies data between locations. Also includes all other assignment-by operators (`+=`, `-=`, `*=`, `/=`, `%=`. `&=`, `|=`, `^=`). |
@@ -43,3 +44,22 @@ Here is a table listing the operators and their respective information:
 | `()` | Procedure operator | 10 | Right-to-left | Used to determine that the expression is a procedure |
 | `.` | Member selection | 10 | Left-to-right | Used for tuples and structs |
 | `::` | Scope resolution | 11 | None | |
+
+### Compound Assignment Operators
+
+In addition to the operators listed above, SIN supports compound operators as a form of syntactic sugar in copy assignments. For example, you may say `let a += 5`, which utilizes the compound assignment operator `+=`. This will be expanded to `let a = a + 5`. These operators are _not_ supported in expressions generally, they are syntactic sugar for assignments only.
+
+SIN supports the following compound assignment operators:
+
+|Operator | Example | Expanded Form |
+| ------- | ------- | ------------- |
+| `+=` | `let x += y` | `let x = x + y` |
+| `-=` | `let x -= y` | `let x = x - y` |
+| `*=` | `let x *= y` | `let x = x * y` |
+| `/=` | `let x /= y` | `let x = x / y` |
+| `%=` | `let x %= y` | `let x = x % y` |
+| `&=` | `let x &= y` | `let x = x & y` |
+| `|=` | `let x |= y` | `let x = x | y` |
+| `^=` | `let x ^= y` | `let x = x ^ y` |
+| `<<=` | `let x <<= 1` | `let x = x << 1` |
+| `>>=` | `let x >>= 1` | `let x = x >> 1` |
