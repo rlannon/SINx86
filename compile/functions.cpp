@@ -124,7 +124,7 @@ std::stringstream compiler::define_function(function_symbol &func_sym, Statement
                     !func_sym.matches(declared_sym)
                 ) {
                     throw CompilerException(
-                        "Function signature does not match that of declaration",
+                        "Signature for '" + func_sym.get_name() + "' does not match that of declaration",
                         compiler_errors::SIGNATURE_MISMATCH,
                         line
                     );

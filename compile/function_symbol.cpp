@@ -19,7 +19,20 @@ bool function_symbol::matches(const function_symbol& right) const {
 
 	bool name_match = this->name == right.name;
 	bool ret_match = this->type == right.type;
-	bool param_match = this->formal_parameters == right.formal_parameters;
+
+	bool param_match = this->formal_parameters.size() == right.formal_parameters.size();
+    if (param_match) {
+        auto this_it = this->formal_parameters.begin();
+        auto right_it = right.formal_parameters.begin();
+
+        while (this_it != this->formal_parameters.end() && right_it != right.formal_parameters.end() && param_match) {
+            param_match = *this_it->get() == *right_it->get();
+            
+            this_it++;
+            right_it++;
+        }
+    }
+
 	return name_match && ret_match && param_match;
 }
 

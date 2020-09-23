@@ -113,6 +113,8 @@ std::unordered_map<reg, std::string> register_usage::reg_8_strings {
     { RBX, "bl" },
     { RCX, "cl" },
     { RDX, "dl" },
+    { RSI, "sil" },
+    { RDI, "dil" },
     { R8, "r8b" },
     { R9, "r9b" },
     { R10, "r10b" },

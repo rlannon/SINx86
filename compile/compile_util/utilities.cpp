@@ -532,16 +532,24 @@ std::stringstream store_symbol(symbol &s) {
     std::stringstream store_ss;
 
     DataType dt = s.get_data_type();
+    std::string store_instruction;
+    if (dt.get_primary() == FLOAT) {
+        store_instruction = (dt.get_qualities().is_long()) ? "movsd" : "movss";
+    }
+    else {
+        store_instruction = "mov";
+    }
+
     if (dt.get_qualities().is_static()) {
         store_ss << "\t" << "lea rax, [" << s.get_name() << "]" << std::endl;
-        store_ss << "\t" << "mov [rax], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+        store_ss << "\t" << store_instruction << " [rax], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
     }
     else if (dt.get_qualities().is_dynamic()) {
         store_ss << "\t" << "mov rax, [rbp - " << s.get_offset() << "]" << std::endl;
-        store_ss << "\t" << "mov [rax], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+        store_ss << "\t" << store_instruction << " [rax], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
     }
     else {
-        store_ss << "\t" << "mov [rbp - " << s.get_offset() << "], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
+        store_ss << "\t" << store_instruction << " [rbp - " << s.get_offset() << "], " << register_usage::get_register_name(s.get_register(), dt) << std::endl;
     }
 
     return store_ss;
