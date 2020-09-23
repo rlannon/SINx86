@@ -8,7 +8,7 @@ Like other C-style languages, and being an imperative language, a SIN program is
 
 ### Statements
 
-Statements in SIN must begin with either a [statement keyword](Language%20Keywords.md) or the `@` operator to call a `void`-returning function. Note only `void`-returning functions may be appear as standalone statements; value-returning functions are considered to be expressions, and so it is illegal for them to stand alone.
+Statements in SIN must begin with either a [statement keyword](Language%20Keywords) or the `@` operator to call a `void`-returning function. Note only `void`-returning functions may be appear as standalone statements; value-returning functions are considered to be expressions, and so it is illegal for them to stand alone.
 
 #### Scope Blocks
 
@@ -46,7 +46,7 @@ Also make note that in SIN, unlike C, Python, etc., the equality operator `=` an
 
 Like other C-style languages, statements in SIN rely on various types of *expressions.* The available expression types are:
 
-* _Value-returning function calls:_ A function call that returns a value to be used as an expression, such as in the statement `let x = @my_func();`
+* _Call expressions:_ A function call that returns a value to be used as an expression, such as in the statement `let x = @my_func();`
 * _Unary expressions:_ Expressions like `-3` or `$x`, which use a unary operator
 * _Binary expressions:_ Expressions using a binary operator, like `1 + 2 * 3`
 * _Symbols:_ Any symbol that must be resolved to a value somewhere in memory, such as in the statement `let x = y`, where `y` is the symbol expression
@@ -55,7 +55,7 @@ Like other C-style languages, statements in SIN rely on various types of *expres
 
 ### Operators and Precedence
 
-Operator precedence in SIN closely follows operator precedence in C and Python -- and, actually, those languages were used to determine SIN operator precedence. For information on the operators in the language, see the [appropriate relevant page](Operators.md).
+Operator precedence in SIN closely follows operator precedence in C and Python -- and, actually, those languages were used to determine SIN operator precedence. For information on the operators in the language, see the [appropriate relevant page](Operators).
 
 ## Scopes
 

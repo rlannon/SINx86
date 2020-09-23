@@ -33,7 +33,7 @@ or
 
 However, if `ptr` is used, then the appropriate syntax must be used; instead of `this.name`, you must say `(*this).name`.
 
-This reflects the reality that `this` is always the first parameter to a non-static method, and will be passed in `rsi` under [SINCALL](Calling%20Convention.md). Because of this, it is actually possible in SIN to call methods without the use of the dot operator; for example:
+This reflects the reality that `this` is always the first parameter to a non-static method, and will be passed in `rsi` under [SINCALL](Calling%20Convention). Because of this, it is actually possible in SIN to call methods without the use of the dot operator; for example:
 
     alloc myStruct m: construct {
         size: 0,
@@ -43,7 +43,9 @@ This reflects the reality that `this` is always the first parameter to a non-sta
     m.get_name();
     myStruct::get_name(m);
 
-Both of these syntaxes are acceptable. This is because `this` is the first parameter, but one which is resolved with the dot operator if the Simula-style syntax is used (`struct.member`). This is considered syntactic sugar in SIN.
+Both of these syntaxes are acceptable. This is because `this` is the first parameter, but one which is resolved with the dot operator if the Simula-style syntax is used (`struct.member`). This is considered syntactic sugar in SIN. However, since the dot operator syntax is much more widely-known, it is generally better to utilize it.
+
+Note that declaring methods outside of a class is different; non-member functions may not use the keyword `this`, they may not access private members, and they will undergo different name decoration (thus meaning their names have more limited capability for reuse).
 
 ### Name decoration
 

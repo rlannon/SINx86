@@ -95,7 +95,7 @@ These contained values may be initialized with non-const values, though they wil
 
 However, we can utilize pointers to pass in some value if we want to retain changes to that value, as is the case with any variable.
 
-When we initialize a `proc` object as an anonymous function, _this rule still applies_ because it is impossible to know for certain whether some function has contained parameters until runtime. As such, the tuple will initialize its contained values according to the rules of [type construction](Construction.md). For example:
+When we initialize a `proc` object as an anonymous function, _this rule still applies_ because it is impossible to know for certain whether some function has contained parameters until runtime. As such, the tuple will initialize its contained values according to the rules of [type construction](Construction). For example:
 
     alloc proc< bool, tuple< int, int > > divides;
     let divides = function(dividend, divisor) => {
@@ -106,3 +106,5 @@ When we initialize a `proc` object as an anonymous function, _this rule still ap
 This is perfectly legal SIN _despite the fact_ that no arguments were ever supplied to `divides`; `proc` objects are _always_ guaranteed to be callable without arguments because type construction rules apply. In this case, following the construction rules for `int`, the call to `divides` is effectively:
 
     @divides(0, 0);
+
+because an `int` will always be default-constructed to zero.

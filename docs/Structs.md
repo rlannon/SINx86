@@ -84,7 +84,7 @@ Structs, like equivalent structures in other modern programming languages, suppo
         decl void set_my_int(decl int new_value);
     }
 
-For more information on struct methods, see [the relevant document](Methods.md).
+For more information on struct methods, see [the relevant document](Methods).
 
 ## Construction
 
@@ -100,4 +100,4 @@ An important aspect of structures is that they are constructed when they are ini
 
 _(Note that the `point` in the construct expression is not strictly necessary when using alloc-init syntax, as the type is already known)_
 
-For more information on construction, see the relevant document on [type construction](Construction.md).
+For more information on construction, see the relevant document on [type construction](Construction).
