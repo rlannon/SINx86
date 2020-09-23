@@ -37,6 +37,8 @@ const std::unordered_map<std::string, exp_operator> Lexer::op_strings({
 	{"&=", AND_EQUAL},
 	{"|=", OR_EQUAL},
 	{"^=", XOR_EQUAL},
+	{"<<=", LEFT_SHIFT_EQUAL},
+	{">>=", RIGHT_SHIFT_EQUAL},
 	{"+", PLUS},
 	{"-", MINUS},
 	{"*", MULT},

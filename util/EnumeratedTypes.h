@@ -111,6 +111,8 @@ enum exp_operator {
 	AND_EQUAL,	// &=
 	OR_EQUAL,	// |=
 	XOR_EQUAL,	// ^=
+	LEFT_SHIFT_EQUAL,	// <<=
+	RIGHT_SHIFT_EQUAL,	// >>=
 	PLUS,
 	MINUS,
 	UNARY_PLUS,

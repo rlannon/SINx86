@@ -502,6 +502,12 @@ std::shared_ptr<Binary> Parser::create_compound_assignment_rvalue(
 	case XOR_EQUAL:
 		arithmetic_op = BIT_XOR;
 		break;
+	case LEFT_SHIFT_EQUAL:
+		arithmetic_op = LEFT_SHIFT;
+		break;
+	case RIGHT_SHIFT_EQUAL:
+		arithmetic_op = RIGHT_SHIFT;
+		break;
 	
 	default:
 		arithmetic_op = NO_OP;

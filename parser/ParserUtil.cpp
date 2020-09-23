@@ -104,7 +104,9 @@ const bool Parser::is_valid_copy_assignment_operator(exp_operator op) {
 		op == MOD_EQUAL ||
 		op == AND_EQUAL ||
 		op == OR_EQUAL ||
-		op == XOR_EQUAL
+		op == XOR_EQUAL ||
+		op == LEFT_SHIFT_EQUAL ||
+		op == RIGHT_SHIFT_EQUAL
 	);
 }
 
