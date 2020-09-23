@@ -1,10 +1,13 @@
 // arithmetic.sin
 // some simple arithmetic tests
 
+include "../../sinstdlib/src/header/math.sinh";
+
 decl void print(decl string s);
 
 def int main & long (alloc array<string> args &dynamic)
 {
+    // basic unsigned arithmetic
     alloc int a &unsigned: 30;
     alloc int b &unsigned: 50;
     alloc unsigned int c: a + b;
@@ -48,6 +51,16 @@ def int main & long (alloc array<string> args &dynamic)
     let f3 = f1 as long float + 1234.56789 &long;
     alloc float result;
     let result = f1 * 30 as float + f2;
+
+    // use the pow function
+    alloc long int li;
+    let li = @pow(5, 2);
+    if (li = 25) {
+        @print("Correct result from pow function\n");
+    }
+    else {
+        @print("Incorrect result from pow function\n");
+    }
 
     return to_return;
 }
