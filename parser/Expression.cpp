@@ -284,6 +284,14 @@ DataType &KeywordExpression::get_type() {
 	return this->t;
 }
 
+bool KeywordExpression::has_type_information() const {
+    return true;
+}
+
+void KeywordExpression::override_qualities(symbol_qualities sq) {
+    this->t.add_qualities(sq);
+}
+
 std::unique_ptr<Expression> KeywordExpression::get_unique() {
     return std::make_unique<KeywordExpression>(*this);
 }

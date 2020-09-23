@@ -117,6 +117,8 @@ class KeywordExpression: public Expression
 	std::string keyword;
 public:
     std::unique_ptr<Expression> get_unique() override;
+    bool has_type_information() const override;
+    void override_qualities(symbol_qualities sq) override;
 
 	std::string get_keyword();
 	DataType &get_type();
