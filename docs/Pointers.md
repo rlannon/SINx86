@@ -45,4 +45,16 @@ The above example takes it one step further -- like the C example, `a` and `b` a
 
 ### `unmanaged` pointers
 
-Because SIN [utilizes reference counting](Memory%20Allocation%20Manager) for dynamically-allocated memory, whenever the address contained within a pointer is changed, the SRE will attempt to add and remove references appropriately (the functions will have no effect if the address isn't contained within the MAM). Sometimes, however, we know that our resources will not be destroyed by the MAM while we have a pointer to them (particularly true of automatic memory). Calling the SRE every time a pointer is reseated can cause performance hits; so, if you are absolutely certain that the resource will not be cleaned up while you're using the pointer, you may utilize the `unmanaged` qualifier for a pointer. This qualifier may _only_ be used with `ptr<T>`, and indicates that the compiler should not generate calls to the SRE when modifying the address at the pointer. However, when `unmanaged` is used, the compiler will always generate a warning that the operation is potentially unsafe.
+Because SIN [utilizes reference counting](Memory%20Allocation%20Manager) for dynamically-allocated memory, whenever the address contained within a pointer is changed, the SRE will attempt to add and remove references appropriately (the functions will have no effect if the address isn't contained within the MAM). Sometimes, however, we know that our resources will not be destroyed by the MAM while we have a pointer to them (particularly true of automatic memory). Calling the SRE every time a pointer is reseated can cause performance hits, so if you are absolutely certain that the resource will not be cleaned up while you're using the pointer, you may utilize the `unmanaged` qualifier. This qualifier may _only_ be used with `ptr<T>`, and indicates that the compiler should not generate calls to the SRE when modifying the address at the pointer. However, when `unmanaged` is used, the compiler will always generate a warning that the operation is potentially unsafe.
+
+As an example, take the following SIN code:
+
+    alloc int a;
+    alloc ptr<int> a_ptr: $a;
+
+The call to `sre_add_ref` is unnecessary as `a` is automatic and therefore not managed by the MAM. As such, we can use an `unmanaged ptr` here:
+
+    alloc int a;
+    alloc ptr<int> a_ptr &unmanaged: $a;
+
+However, if we have an unmanaged pointer referencing a _managed_ resource, it is possible for the MAM to clean up the resource when a reference to it still exists. As such, programmers must exercise caution when utilizing unmanaged pointers.
