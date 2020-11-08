@@ -118,9 +118,15 @@ Values are returned in `rax` (or another variant of the register depending on th
 
 #### Non-Primitive Return Values
 
-User-defined types (structs), arrays, and strings (if necessary) return a *pointer* to the data in `RAX`. This follows the convention for so-called 'reference types' where pointers are passed and assignments use copies and pointer dereferencing under the hood.
+If a function returns any value that cannot fit into a register _by value,_ such as a struct, it is returned via the stack:
 
-Note that, since structs and arrays are written in "reverse order" onto the stack (first byte at low address, last byte at high address), we can easily copy between memory areas without needing to worry about reversing the way we write data. The formula for figuring out where a given struct member is in the stack is:
+* A pointer is passed to the function to indicate where this data is to be placed, as data cannot live below `RSP`.
+* This pointer could refer to a temporary variable, but it could also point to an existing stack-allocated variable from the caller. This allows for certain return-value optimizations.
+* Sometimes, a temporary variable is necessary; this is determined by the caller.
+* The returned value will be copied into the location indicated by the return pointer, and this pointer will be in `RAX` when the function returns.
+* This pointer will always be the first 'parameter' to the function, and will be in the stack before `this` in a member function. However, when passed in a register, it will be passed with `R9`.
+
+Remember that structs and arrays are written in "reverse order" onto the stack (first byte at low address, last byte at high address). This allows us to easily copy between memory areas without needing to worry about reversing the way we write data. The formula for figuring out where a given struct member is in the stack is:
 
     (struct_stack_offset + struct_width) - (struct_member_offset + struct_member_width)
 

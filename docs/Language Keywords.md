@@ -24,11 +24,12 @@ The following keywords are those which can be used to begin statements.
 * `else` - declares a block to be executed if the condition is not true
 * `while` - defines a condition that, while true, will cause the execution of the following statement or scoped block
 * `for` - defines a loop to iterate a specified number of times _(Note: this feature has not yet been implemented)_
+* `call` - alternative to `@` when used in call statements
+* `pass` - used to pass control to a new subroutine
 
 ### Miscellaneous
 
 * `asm` - inline assembly
-* `pass` - equivalent to Python's `pass` - does nothing (but not necessarily a `NOP` - the compiler may simply ignore it)
 
 ## Expression Keywords
 
