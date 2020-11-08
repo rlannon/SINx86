@@ -159,6 +159,12 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
     }
     else if (new_type.get_primary() == CHAR && old_type.get_primary() == INT) {
         // only integer types may be cast to char
+		
+		// warn that only the lowest byte will be considered
+		if (old_type.get_width() > new_type.get_width())
+			compiler_warning("Only the lowest byte will be considered when casting integral types to char", compiler_errors::WIDTH_MISMATCH, line);
+		
+		// we don't actually need any assembly here
     }
     else {
         // invalid cast

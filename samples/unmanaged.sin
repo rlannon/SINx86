@@ -1,0 +1,20 @@
+// unmanaged.sin
+// a test of unmanaged pointer types
+
+def int main(alloc dynamic array<string> args)
+{
+    alloc int x;
+
+    // should not generate any calls to SRE
+    alloc ptr<int> pu &unmanaged;
+    let pu = $x;
+
+    // will generate SRE calls
+    alloc ptr<int> pm;
+    let pm = pu;
+
+    // should generate an error; references are always managed
+    alloc ref<int> r &unmanaged: x;
+
+    return 0;
+}

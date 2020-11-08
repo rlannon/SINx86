@@ -131,8 +131,8 @@ std::stringstream compiler::assign(
     reg src_reg = rhs_type.get_primary() == FLOAT ? XMM0 : RAX;
 
     if (lhs_type.is_compatible(rhs_type)) {
-        // first, call sre_free on the lhs if we have a pointer
-        if (lhs_type.get_primary() == PTR && !is_alloc_init) {
+        // first, call sre_free on the lhs if we have a managed pointer (and it's not alloc-init)
+        if (lhs_type.get_primary() == PTR && lhs_type.get_qualities().is_managed() && !is_alloc_init) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
             handle_assign << call_sre_function(magic_numbers::SRE_FREE);
@@ -240,9 +240,9 @@ std::stringstream compiler::assign(
                 do_free = false;
         }
 
-        // now, call sre_add_ref on the lhs if we have a pointer OR if we have a reference and alloc-init
+        // now, call sre_add_ref on the lhs if we have a managed pointer OR if we have a reference and alloc-init
         if (
-            (lhs_type.get_primary() == PTR) ||
+            (lhs_type.get_primary() == PTR && lhs_type.get_qualities().is_managed()) ||
             (lhs_type.get_primary() == REFERENCE && is_alloc_init)
         ) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
