@@ -350,7 +350,7 @@ function_symbol create_function_symbol(T def, bool mangle, bool defined, std::st
     // construct our formal parameters
     std::vector<symbol> formal_parameters;
 
-    // if we have a nonstatic method, we need to make sure the first parameter is 'ref<T> this' (unless it was provided -- in which case, validate)
+    // if we have a nonstatic method, we need to make sure the first parameter is 'ref<T> this' (unless it was provided -- in which case, validate it)
     bool has_this_parameter = false;
     symbol this_parameter(
         "this",

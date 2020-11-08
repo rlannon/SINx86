@@ -154,7 +154,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     std::string address_for_lea;
     bool in_register = false;
     bool can_use_lea = false;
-    MoveInstruction instruction_used;
+    MoveInstruction instruction_used = MoveInstruction::MOV;
 
     auto dt = sym.get_data_type();
 
