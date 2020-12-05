@@ -9,7 +9,7 @@ Contains the function for handling move assignments
 */
 
 #include "compiler.h"
-
+#include "compile_util/function_util.h"
 
 std::stringstream compiler::handle_move(Movement &m) {
     /*
@@ -120,7 +120,7 @@ std::stringstream compiler::move(
         // first, free the value at the reference
         move_ss << push_used_registers(this->reg_stack.peek(), false).str();
         move_ss << "\t" << "mov rdi, [rbx]" << std::endl;
-        move_ss << call_sre_function(magic_numbers::SRE_FREE);
+        move_ss << function_util::call_sre_function(magic_numbers::SRE_FREE);
         move_ss << pop_used_registers(this->reg_stack.peek(), false).str();
 
         move_ss << "\t" << "mov [rbx], rax" << std::endl;
@@ -129,7 +129,7 @@ std::stringstream compiler::move(
         // now add a reference to the new value
         move_ss << push_used_registers(this->reg_stack.peek(), true).str();
         move_ss << "\t" << "mov rdi, rax" << std::endl;
-        move_ss << call_sre_function(magic_numbers::SRE_ADD_REF);
+        move_ss << function_util::call_sre_function(magic_numbers::SRE_ADD_REF);
         move_ss << pop_used_registers(this->reg_stack.peek(), true).str();
     }
     else {

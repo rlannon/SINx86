@@ -8,6 +8,7 @@ Generates code for evaluating an expression. This data will be loaded into regis
 */
 
 #include "compiler.h"
+#include "compile_util/function_util.h"
 
 // todo: add evaluation of expressions labeled 'constexpr'
 
@@ -387,7 +388,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         evaluation_ss << "\t" << "mov r13, rax" << std::endl;
         for (size_t i = 1; i < count; i++) {
             evaluation_ss << "\t" << "pop rdi" << std::endl;
-            evaluation_ss << call_sre_function(magic_numbers::SRE_FREE);
+            evaluation_ss << function_util::call_sre_function(magic_numbers::SRE_FREE);
         }
         evaluation_ss << "\t" << "push r12" << std::endl;
         evaluation_ss << "\t" << "mov rax, r13" << std::endl;
