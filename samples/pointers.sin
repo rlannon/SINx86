@@ -8,7 +8,7 @@ def int main(alloc array<string> args &dynamic) {
     alloc ptr<int> p: $x;
     alloc int y: *p;
 
-    alloc ptr<ptr<int>> p_double: $p;
+    alloc ptr<ptr<int> > p_double: $p;
     alloc int z: **p_double;
 
     if (z = x) {
@@ -30,6 +30,12 @@ def int main(alloc array<string> args &dynamic) {
 
     let p = $y;
     @print("Now, there should be only one reference to d_int\n");
+
+    alloc array<10, int> myarray;
+    alloc ptr<array<int> > array_pointer &unmanaged: $myarray;
+
+    alloc array<10, float> secondarray;
+    let array_pointer = $secondarray;
 
     return 0;
 }

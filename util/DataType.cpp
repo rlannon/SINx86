@@ -395,17 +395,14 @@ bool DataType::is_valid_type(DataType &t) {
 	is_valid_type
 	Checks to ensure the DataType object follows all of SIN's type rules
 	
+	This used to check array lengths, but this check has been moved into the compiler.
+	This allows the compile-time evaluator to verify the array has a constexpr length (unless it's dynamic)
+
 	*/
 
 	bool is_valid = true;
 
-	if (t.primary == ARRAY) {
-		// the array length must not be 0 if the array is not dynamic
-		if (t.array_length == 0 && !t.qualities.is_dynamic()) {
-			is_valid = false;
-		}
-	}
-	else if (t.primary == FLOAT) {
+	if (t.primary == FLOAT) {
 		// half-precision or short floats are not supported
 		if (t.qualities.is_short()) {
 			is_valid = false;

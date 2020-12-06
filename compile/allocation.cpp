@@ -75,6 +75,8 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 	// where it can be determined at compile-time, this space must be reserved on the stack
 	// where this is not possible, evaluate the expression and pass it to sinl_array_alloc
 
+	// todo: alert the user if an array length expression was given for an array subtype of ptr<T>
+
 	// allocate the variable if our type was valid
 	if (DataType::is_valid_type(alloc_data)) {
 		symbol allocated;
