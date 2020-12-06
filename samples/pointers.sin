@@ -34,8 +34,5 @@ def int main(alloc array<string> args &dynamic) {
     alloc array<10, int> myarray;
     alloc ptr<array<int> > array_pointer &unmanaged: $myarray;
 
-    alloc array<10, float> secondarray;
-    let array_pointer = $secondarray;
-
     return 0;
 }

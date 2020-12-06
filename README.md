@@ -59,6 +59,8 @@ This is not a full compiler suite, and as such, a few third-party applications a
 
 It is also important to note that because SIN programs utilize standard library functions that define `_start`, SIN programs begin execution from `_main`, which is invoked by `_start`. However, SIN programs would *normally* utilize `_start` to initialize the runtime, command-line arguments, etc., this functionality must be moved into `_main`. While a compiler could move these routines to the start of the user's `_main` implementation, this compiler utilizes decoration to call `SIN_main` from `_main`. By slightly decorating every function and variable name, we can work around this issue pretty easily, but this is by no means the only (or even best) way of solving the problem.
 
+Further, the compiler uses [an open-source, header-only C++ library](https://github.com/Taywee/args) for parsing program arguments (i.e. compiler flags).
+
 ### Using SIN
 
 I intend on using [GitHub Pages](rlannon.github.com/SINx86) for introductory programming materials. Note that currently, not everything is up-to-date, and the site will be updated periodically.

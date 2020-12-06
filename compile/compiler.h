@@ -42,6 +42,11 @@ class compiler {
 	std::string filename;
 	std::string file_path;
 
+	// compiler flags
+	const bool _micro_mode;
+	const bool _strict;
+	const bool _allow_unsafe;
+
     // todo: break code generation into multiple friend classes
 
 	compile_time_evaluator evaluator;	// the compile-time constant evaluator

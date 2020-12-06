@@ -29,14 +29,15 @@ Because of its extreme limitations, uSIN is better-suited than Standard SIN for 
 
 ### Supported Strictness Settings
 
-SIN supports three settings for the strictness of the compiler.
+SIN supports three settings for the strictness of the compiler. These are used in combination with the `mode` option.
 
-* **Strict Mode** (`--use-strict`): The compiler treats all warnings as errors.
-* **Normal Mode** (no flag): The compiler allows most warnings to compile, but does not allow what it considers "unsafe operations" such as inline assembly.
-* **Lax Mode** (`--use-lax`): The compiler allows all warnings to compile, warning about (but compiling) unsafe behaviors.
+* **Strict Mode** (`strict`): The compiler treats all warnings as errors and disallows unsafe operations.
+* **Normal Mode** (`normal`): The compiler allows most warnings to compile, but does not allow unsafe operations.
+* **Lax Mode** (`lax`): The compiler allows all warnings to compile and enables unsafe operations.
 
 ### General Compilation Flags
 
 Since this compiler does not link or assemble its output, its flags are more limited in functionality than, for example, GCC. However, it still supports a few options:
 
 * **Help options:** As with any good program, this compiler supports help options. You may use `-h` or `--help` for general help, or in combination with another flag for help about that specific flag.
+* **Output File Name:** The default output filename will be identical to the input file with a modified extension (e.g., '`foo.sin` will become `foo.s`), but the assembly file can be changed with the `-o` option.
