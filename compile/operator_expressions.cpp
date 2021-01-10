@@ -630,7 +630,6 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 
 				// to determine whether the comparison requires unsigned operation
 				bool requires_unsigned = false;
-				std::string fp_suffix;	// will change the instruction based on single-/double-precision
 
 				// how we compare is dependent on the type
 				if (left_type.get_primary() == STRING) {
@@ -654,15 +653,22 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 						throw CompilerException("Illegal equivalency operator on string type", compiler_errors::UNDEFINED_OPERATOR_ERROR, line);
 					}
 				}
+				// 
 				else if (left_type.get_primary() == FLOAT) {
-					// SSE has instructions for this -- use the pseudo ops
-					
+					// floating-point numbers can use the ucomiss/ucomisd instructions
+					// this is easier than the pseudo-ops
+
+					eval_ss << "\t";
+
 					if (data_width == sin_widths::DOUBLE_WIDTH) {
-						fp_suffix = "sd";
+						eval_ss << "ucomisd";
 					}
 					else {
-						fp_suffix = "ss";
+						eval_ss << "ucomiss";
 					}
+
+					// write the comparison
+					eval_ss << " xmm0, xmm1" << std::endl;
 				}
 				else {
 					// if we have two unsigned variables, use unsigned comparison
@@ -674,7 +680,6 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				
 				// a variable to hold our instruction mnemonic
 				std::string instruction = "";
-				std::string fp_instruction = "";
 
 				// todo: we could write a simple utility function to get a string for the equality based on an operator (e.g., turning EQUAL into 'e' or LESS OR EQUAL to 'le'), assuming we need to use it more than once
 				// todo: use seta/setb/setna/setnb/setae/setbe for unsigned comparisons (both operands unsigned)
@@ -683,29 +688,21 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				switch (to_evaluate.get_operator()) {
 				case exp_operator::EQUAL:
 					instruction = "sete";
-					fp_instruction = "cmpeq";
 					break;
 				case exp_operator::NOT_EQUAL:
 					instruction = "setne";
-					fp_instruction = "cmpneq";
 					break;
 				case exp_operator::GREATER:
 					instruction = "setg";
-					// no sse instruction; must invert
-					fp_instruction = "cmple";
 					break;
 				case exp_operator::LESS:
 					instruction = "setl";
-					fp_instruction = "cmplt";
 					break;
 				case exp_operator::GREATER_OR_EQUAL:
 					instruction = "setge";
-					// no sse instruction; must invert
-					fp_instruction = "cmplt";
 					break;
 				case exp_operator::LESS_OR_EQUAL:
 					instruction = "setle";
-					fp_instruction = "cmple";
 					break;
 				default:
 					// if the parser didn't catch a 'no operator', throw the exception here -- we have no more valid operators
@@ -713,34 +710,8 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 					break;
 				}
 
-				// floating-point SSE comparisons must be handled very differently than integral comparisons
-				if (primary == FLOAT) {
-					if (to_evaluate.get_operator() == GREATER) {
-						// greater is really an inverted less or equal
-						eval_ss << "\t" << fp_instruction << fp_suffix << " xmm1, xmm0" << std::endl;
-						eval_ss << "\t" << "mov" << fp_suffix << " xmm0, xmm1" << std::endl;
-					}
-					else if (to_evaluate.get_operator() == GREATER_OR_EQUAL) {
-						// greater or equal is really an inverted less than
-						eval_ss << "\t" << fp_instruction << fp_suffix << " xmm1, xmm0" << std::endl;
-						eval_ss << "\t" << "mov" << fp_suffix << " xmm0, xmm1" << std::endl;
-					}
-					else {
-						// all other comparisons can be performed normally
-						eval_ss << "\t" << fp_instruction << fp_suffix << " xmm0, xmm1" << std::endl;
-					}
-
-					// now, xmm0 contains the mask -- 0xffffffff if the result was 'true', else 0x0
-					eval_ss << "\t" << "sub rsp, " << ((data_width == sin_widths::DOUBLE_WIDTH) ? 8 : 4) << std::endl;
-					eval_ss << "\t" << "mov" << fp_suffix << " [rsp], xmm0" << std::endl;
-					eval_ss << "\t" << "mov " << ((data_width == sin_widths::DOUBLE_WIDTH) ? "rax" : "eax") << ", [rsp]" << std::endl;
-					eval_ss << "\t" << "and rax, 1" << std::endl;
-					eval_ss << "\t" << "add rsp, " << ((data_width == sin_widths::DOUBLE_WIDTH) ? 8 : 4) << std::endl;
-				}
-				else {
-					// set al accordingly
-					eval_ss << "\t" << instruction << " al" << std::endl;
-				}
+				// finally, set al based on eflags
+				eval_ss << "\t" << instruction << " al" << std::endl;
 			}
 		}
 		else {
