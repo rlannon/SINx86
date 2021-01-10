@@ -79,7 +79,7 @@ bool Lexer::eof() {
 	return eof_test == EOF;
 }
 
-char Lexer::peek() {
+const char Lexer::peek() {
 	if (!this->eof()) {
 		char ch = this->stream->peek();
 		return ch;
@@ -89,7 +89,7 @@ char Lexer::peek() {
 	}
 }
 
-char Lexer::next() {
+const char Lexer::next() {
 	if (!this->eof()) {
 		char ch = this->stream->get();
 		
@@ -105,7 +105,6 @@ char Lexer::next() {
 	}
 }
 
-
 /*
 
 Our equivalency functions.
@@ -113,7 +112,7 @@ These are used to test whether a character is of a certain type.
 
 */
 
-bool Lexer::match_character(char ch, std::string expression) {
+const bool Lexer::match_character(const char ch, const std::string &expression) {
 	try {
         // todo: is there a more efficient way to test one character against a regex?
 		return std::regex_match(std::string(1, ch), std::regex(expression));
@@ -124,61 +123,31 @@ bool Lexer::match_character(char ch, std::string expression) {
 	}
 }
 
-bool Lexer::is_whitespace(char ch) {
-	if (match_character(ch, "[ \n\t]")) {
-		return true;
-	}
-	else {
-		return false;
-	}
+const bool Lexer::is_whitespace(const char ch) {
+	return match_character(ch, "[ \n\t\r]");
 }
 
-bool Lexer::is_newline(char ch) {
-	if (match_character(ch, "(\n)")) {
-		return true;
-	}
-	else {
-		return false;
-	}
+const bool Lexer::is_newline(const char ch) const {
+	return ch == '\n';
 }
 
-bool Lexer::is_not_newline(char ch) {
-	if (ch != '\n') {
-		return true;
-	}
-	else {
-		return false;
-	}
+const bool Lexer::is_not_newline(const char ch) {
+	return ch != '\n';
 }
 
-bool Lexer::is_digit(char ch) {
-	if (match_character(ch, "[0-9]")) {
-		return true;
-	}
-	else {
-		return false;
-	}
+const bool Lexer::is_digit(const char ch) {
+	return match_character(ch, "[0-9]");
 }
 
-bool Lexer::is_letter(char ch) {
-	if (match_character(ch, "[a-zA-Z]")) {
-		return true;
-	}
-	else {
-		return false;
-	}
+const bool Lexer::is_letter(const char ch) {
+	return match_character(ch, "[a-zA-Z]");
 }
 
-bool Lexer::is_number(char ch) {
-	if (match_character(ch, "[0-9\\._]")) {
-		return true;
-	}
-	else {
-		return false;
-	}
+const bool Lexer::is_number(const char ch) {
+	return match_character(ch, "[0-9\\._]");
 }
 
-bool Lexer::is_id_start(char ch) {
+const bool Lexer::is_id_start(const char ch) {
 
 	/*
     
@@ -189,52 +158,32 @@ bool Lexer::is_id_start(char ch) {
     
     */
 
-	if (match_character(ch, "[_a-zA-Z]")) {
-		return true;
-	}
-	else {
-		return false;
-	}
+	return match_character(ch, "[_a-zA-Z]");
 }
 
-bool Lexer::is_id(char ch) {
+const bool Lexer::is_id(const char ch) {
 	/*  Returns true if the character is a valid id character  */
 
-	if (match_character(ch, id_exp)) {
-		return true;
-	}
-	else {
-		return false;
-	}
+	return match_character(ch, id_exp);
 }
 
-bool Lexer::is_punc(char ch) {
-	if (match_character(ch, punc_exp)) {
-		return true;
-	}
-	else {
-		return false;
-	}
+const bool Lexer::is_punc(const char ch) {
+	return match_character(ch, punc_exp);
 }
 
-bool Lexer::is_op_char(char ch) {
-	if (match_character(ch, op_exp)) {
-		return true;
-	}
-	else {
-		return false;
-	}
+const bool Lexer::is_op_char(const char ch) {
+	return match_character(ch, op_exp);
 }
 
-bool Lexer::is_boolean(std::string candidate) {
+const bool Lexer::is_boolean(const std::string &candidate) {
 	return (candidate == "true" || candidate == "false");
 }
 
-bool Lexer::is_keyword(std::string candidate) {
+const bool Lexer::is_keyword(const std::string &candidate) {
 	return (bool)keywords.count(candidate);
 }
 
-const bool Lexer::is_valid_operator(std::string candidate) {
+const bool Lexer::is_valid_operator(const std::string &candidate) {
 	// Checks whether the lexeme is a valid operator for maybe_binary
 	return (bool)Lexer::op_strings.count(candidate);
 }
@@ -246,7 +195,17 @@ These will read out data in the stream and return it as a string with proper for
 
 */
 
-std::string Lexer::read_while(bool (*predicate)(char)) {
+std::string Lexer::read_while(const bool (*predicate)(const char)) {
+	/*
+
+	read_while
+	Reads characters in the stream
+
+	Continues to read through characters while the predicate function returns true.
+	This will return a string containing the characters read.
+
+	*/
+
 	std::string msg = "";
 
 	this->peek();
@@ -266,7 +225,7 @@ std::string Lexer::read_while(bool (*predicate)(char)) {
 }
 
 
-std::string Lexer::read_operator() {
+const std::string Lexer::read_operator() {
 	/*
 
 	read_operator
