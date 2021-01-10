@@ -46,7 +46,7 @@ class Lexer
 	static const std::string bool_exp;
 
 	// character access functions
-	const char peek();
+	const char peek() const;
 	const char next();
 
 	// match a single character with regex (including an exception handler)
@@ -77,9 +77,8 @@ class Lexer
 	*/
 
 	static const bool is_whitespace(const char ch);	// tests if a character is \n, \t, or a space
-										// DELETE?
-	const bool is_newline(const char ch) const;	// tests for a newline character
-	
+
+	const bool is_newline(char ch) const;	// tests for a newline character
 	static const bool is_not_newline(const char ch);
 	static const bool is_digit(const char ch);		// tests whether a character is a digit; used for the first digit in a number
 	static const bool is_letter(const char ch);
@@ -108,8 +107,8 @@ public:
     static const std::unordered_map<std::string, exp_operator> op_strings;
 	static const bool is_valid_operator(const std::string &candidate);
     
-    bool eof();		// check to see if we are at the end of the file
-	bool exit_flag_is_set();	// check to see the status of the exit flag
+    const bool eof() const;		// check to see if we are at the end of the file
+	const bool exit_flag_is_set() const;	// check to see the status of the exit flag
 
 	std::ostream& write(std::ostream& os) const;	// allows a lexeme to be written to an ostream
 

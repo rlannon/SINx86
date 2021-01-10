@@ -74,24 +74,30 @@ const std::unordered_map<std::string, exp_operator> Lexer::op_strings({
 
 // Our stream access and test functions
 
-bool Lexer::eof() {
+const bool Lexer::eof() const {
 	char eof_test = this->stream->peek();
 	return eof_test == EOF;
 }
 
-const char Lexer::peek() {
-	if (!this->eof()) {
-		char ch = this->stream->peek();
-		return ch;
-	}
-	else {
+const char Lexer::peek() const {
+	if (this->eof()) {
 		return EOF;
+	}
+	else
+	{
+		return this->stream->peek();
 	}
 }
 
 const char Lexer::next() {
 	if (!this->eof()) {
 		char ch = this->stream->get();
+
+		// allow CRLF endings, ignoring carriage return
+		if (this->is_newline(ch))
+		{
+			ch = this->next();
+		}
 		
 		// increment the line number if we hit a newline character
 		if (ch == '\n') {
@@ -127,8 +133,9 @@ const bool Lexer::is_whitespace(const char ch) {
 	return match_character(ch, "[ \n\t\r]");
 }
 
-const bool Lexer::is_newline(const char ch) const {
-	return ch == '\n';
+const bool Lexer::is_newline(char ch) const {
+	// allow CRLF line endings (ignore carriage returns)
+	return (ch == '\n') || (ch == '\r' && this->peek() == '\n');
 }
 
 const bool Lexer::is_not_newline(const char ch) {
@@ -529,7 +536,7 @@ std::string Lexer::read_ident() {
 }
 
 // A function to check whether our exit flag is set or not
-bool Lexer::exit_flag_is_set() {
+const bool Lexer::exit_flag_is_set() const {
 	return exit_flag;
 }
 
