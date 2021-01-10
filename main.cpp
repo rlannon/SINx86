@@ -21,12 +21,6 @@ For a documentation of the language, see either the doc folder in this project o
 #include "compile/compile_util/constant_eval.h"
 
 
-void file_error(std::string filename) {
-	std::cerr << "**** Cannot open file '" + filename + "'!" << "\n\n" << "Press enter to exit..." << std::endl;
-	std::cin.get();
-	return;
-}
-
 int main (int argc, char **argv) {
 	// Create the argument parser
 	args::ArgumentParser parser("Compiler for the SIN programming language.", "See the GitHub repository for bug tracking, documentation, etc.");
@@ -61,7 +55,7 @@ int main (int argc, char **argv) {
 
 	// run the program
 	try {
-		std::string = mode ? args::get(mode) : "normal";
+		std::string compiler_mode{ mode ? args::get(mode) : "normal" };
 		compiler c;
 		c.generate_asm(args::get(filename));
 	}
