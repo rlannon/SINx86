@@ -35,10 +35,6 @@ Our various compiler utilities
 
 // todo: put these in their own namespace
 
-std::string call_sincall_subroutine(std::string name);
-
-bool returns(StatementBlock to_check);
-
 bool is_valid_cast(DataType &old_type, DataType &new_type);
 
 bool is_subscriptable(Type t);
@@ -50,9 +46,6 @@ bool can_pass_in_register(DataType to_check);
 std::string get_rax_name_variant(DataType t, unsigned int line);
 
 struct_info define_struct(StructDefinition &definition, compile_time_evaluator &cte);
-
-template<typename T>
-function_symbol create_function_symbol(T def, bool mangle=true, bool defined=true, std::string scope_name = "global", unsigned int scope_level = 0, bool is_method = false);
 
 template<typename T>
 symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined=true);
@@ -82,8 +75,3 @@ std::string decrement_rc_util(
     bool is_function,
     symbol *parent = nullptr
 );
-
-std::stringstream call_sre_free(symbol& s);
-std::stringstream call_sre_add_ref(symbol& s);
-std::stringstream call_sre_mam_util(symbol& s, std::string func_name);
-std::string call_sre_function(std::string func_name);

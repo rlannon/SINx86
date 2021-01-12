@@ -412,27 +412,36 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 				}
 			}
 
-			bool initialized = false;
-			std::shared_ptr<Expression> initial_value = std::make_shared<Expression>();
+			// ensure the type is valid before proceeding
+			if (DataType::is_valid_type(symbol_type_data))
+			{
 
-			// the name can be followed by a semicolon, a comma, a closing paren, or a colon
-			// if it's a colon, we have an initial value
-			if (this->peek().value == ":") {
-				this->next();
-				this->next();	// advance the iterator so it points to the first character of the expression
-				initialized = true;
-				initial_value = this->parse_expression();
-			}
+				bool initialized = false;
+				std::shared_ptr<Expression> initial_value = std::make_shared<Expression>();
 
-			// if it's a semicolon, comma, or closing paren, craft the statement and return
-			if (this->peek().value == ";" || this->peek().value == "," || this->peek().value == ")") {
-				// craft the statement
-				stmt = std::make_shared<Allocation>(symbol_type_data, new_var_name, initialized, initial_value);
-				stmt->set_line_number(next_token.line_number);	// set the line number
+				// the name can be followed by a semicolon, a comma, a closing paren, or a colon
+				// if it's a colon, we have an initial value
+				if (this->peek().value == ":") {
+					this->next();
+					this->next();	// advance the iterator so it points to the first character of the expression
+					initialized = true;
+					initial_value = this->parse_expression();
+				}
+
+				// if it's a semicolon, comma, or closing paren, craft the statement and return
+				if (this->peek().value == ";" || this->peek().value == "," || this->peek().value == ")") {
+					// craft the statement
+					stmt = std::make_shared<Allocation>(symbol_type_data, new_var_name, initialized, initial_value);
+					stmt->set_line_number(next_token.line_number);	// set the line number
+				}
+				// otherwise, it's an invalid character
+				else {
+					throw MissingSemicolonError(this->current_token().line_number);
+				}
 			}
-			// otherwise, it's an invalid character
-			else {
-				throw MissingSemicolonError(this->current_token().line_number);
+			else
+			{
+				throw TypeValidityViolation(this->current_token().line_number);
 			}
 		}
 		else {

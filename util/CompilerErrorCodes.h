@@ -96,6 +96,7 @@ namespace compiler_errors {
     const unsigned int QUALITY_CONFLICT_ERROR = 230;
     const unsigned int ILLEGAL_QUALITY_ERROR = 231;
 	const unsigned int VARIABILITY_ERROR = 232;
+	const unsigned int TYPE_MANAGEMENT_ERROR = 235;
 
     const unsigned int SIGNED_UNSIGNED_MISMATCH = 241;
     const unsigned int WIDTH_MISMATCH = 242;

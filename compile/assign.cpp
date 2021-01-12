@@ -9,6 +9,7 @@ Implementation of the assignment functions for the compiler
 
 #include "compiler.h"
 #include "compile_util/assign_util.h"
+#include "compile_util/function_util.h"
 
 // todo: overhaul assignment
 
@@ -131,11 +132,11 @@ std::stringstream compiler::assign(
     reg src_reg = rhs_type.get_primary() == FLOAT ? XMM0 : RAX;
 
     if (lhs_type.is_compatible(rhs_type)) {
-        // first, call sre_free on the lhs if we have a pointer
-        if (lhs_type.get_primary() == PTR && !is_alloc_init) {
+        // first, call sre_free on the lhs if we have a managed pointer (and it's not alloc-init)
+        if (lhs_type.get_primary() == PTR && lhs_type.get_qualities().is_managed() && !is_alloc_init) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
-            handle_assign << call_sre_function(magic_numbers::SRE_FREE);
+            handle_assign << function_util::call_sre_function(magic_numbers::SRE_FREE);
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
 
@@ -214,7 +215,7 @@ std::stringstream compiler::assign(
             // todo: other copy types
 
             // call the function
-            handle_assign << call_sincall_subroutine(proc_name);
+            handle_assign << function_util::call_sincall_subroutine(proc_name);
 
             // now, if we had a string, we need to move the returned address into where the string is located
             if (lhs_type.get_primary() == STRING) {
@@ -240,14 +241,14 @@ std::stringstream compiler::assign(
                 do_free = false;
         }
 
-        // now, call sre_add_ref on the lhs if we have a pointer OR if we have a reference and alloc-init
+        // now, call sre_add_ref on the lhs if we have a managed pointer OR if we have a reference and alloc-init
         if (
-            (lhs_type.get_primary() == PTR) ||
+            (lhs_type.get_primary() == PTR && lhs_type.get_qualities().is_managed()) ||
             (lhs_type.get_primary() == REFERENCE && is_alloc_init)
         ) {
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, " << dest.dest_location << std::endl;
-            handle_assign << call_sre_function(magic_numbers::SRE_ADD_REF);
+            handle_assign << function_util::call_sre_function(magic_numbers::SRE_ADD_REF);
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
 
@@ -256,7 +257,7 @@ std::stringstream compiler::assign(
             handle_assign << "\t" << "pop rax" << std::endl;
             handle_assign << push_used_registers(this->reg_stack.peek(), true).str();
             handle_assign << "\t" << "mov rdi, rax" << std::endl;
-            handle_assign << call_sre_function(magic_numbers::SRE_FREE);
+            handle_assign << function_util::call_sre_function(magic_numbers::SRE_FREE);
             handle_assign << pop_used_registers(this->reg_stack.peek(), true).str();
         }
     }

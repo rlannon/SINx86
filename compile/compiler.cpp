@@ -10,6 +10,7 @@ Copyright 2019 Riley Lannon
 */
 
 #include "compiler.h"
+#include "compile_util/function_util.h"
 
 symbol *compiler::lookup(std::string name, unsigned int line) {
     /*
@@ -523,7 +524,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
                 // function definitions must be 'extern'
                 if (f->get_type_information().get_qualities().is_extern()) {
                     // create the function symbol
-                    auto sym = create_function_symbol(
+                    auto sym = function_util::create_function_symbol(
                         *f,
                         false
                     );

@@ -428,6 +428,10 @@ bool DataType::is_valid_type(DataType &t) {
 			is_valid = false;
 		}
 	}
+	else if (t.primary == REFERENCE)
+	{
+		return t.qualities.is_managed();
+	}
 
 	// todo: more type checks where needed
 

@@ -9,6 +9,7 @@ Handle allocations for the compiler class.
 
 #include <sstream>
 #include "compiler.h"
+#include "compile_util/function_util.h"
 
 // todo: struct allocations -- when a struct is allocated, it should allocate all of its data members -- like a primitive form of a constructor; when free is called on a struct, it will free _all_ data, but dynamic data will not be freed when the struct goes out of scope
 
@@ -109,7 +110,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// allocate dynamic memory with a call to _sre_request_resource
 			allocation_ss << "\t" << "mov rdi, " << data_width << std::endl;
 			allocation_ss << "\t" << "mov rsi, 0" << std::endl;
-			allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
+			allocation_ss << function_util::call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
 
 			// restore used registers
 			allocation_ss << pop_used_registers(this->reg_stack.peek(), true).str();
@@ -296,7 +297,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 				// todo: get string length instead of passing 0 in
 				allocation_ss << "\t" << "mov esi, 0" << std::endl;
-				allocation_ss << call_sincall_subroutine("sinl_string_alloc");
+				allocation_ss << function_util::call_sincall_subroutine("sinl_string_alloc");
 
 				allocation_ss << "\t" << "add rsp, " << to_subtract << std::endl;
 				
@@ -385,7 +386,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                             allocation_ss << "\t" << "mul ebx" << std::endl;
                             allocation_ss << "\t" << "add rax, " << sin_widths::INT_WIDTH << std::endl;
                             allocation_ss << "\t" << "mov rdi, rax" << std::endl;
-                            allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
+                            allocation_ss << function_util::call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
 
                             // write in the array's length
                             allocation_ss << "\t" << "pop rbx" << std::endl;    // restore the length in ebx
@@ -400,19 +401,19 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
                         // if we had a reference to an integer, we need to free it
                         if (alloc_p.second) {
                             allocation_ss << "\t" << "pop rdi" << std::endl;
-                            allocation_ss << call_sre_function(magic_numbers::SRE_FREE);
+                            allocation_ss << function_util::call_sre_function(magic_numbers::SRE_FREE);
                         }
                     }
                     // we need to allocate string members
                     else if (m->get_data_type().get_primary() == STRING) {
                         allocation_ss << "\t" << "mov esi, 0" << std::endl;
-                        allocation_ss << call_sincall_subroutine("sinl_string_alloc");
+                        allocation_ss << function_util::call_sincall_subroutine("sinl_string_alloc");
                         allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "]" << ", rax" << std::endl;
                     }
                     // we need to reserve space for all other dynamic types
                     else if (m->get_data_type().get_qualities().is_dynamic()) {
                         allocation_ss << "\t" << "mov rdi, " << m->get_data_type().get_width() << std::endl;
-                        allocation_ss << call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
+                        allocation_ss << function_util::call_sre_function(magic_numbers::SRE_REQUEST_RESOURCE);
                         allocation_ss << "\t" << "mov [" << register_usage::get_register_name(r) << " + " << m->get_offset() << "]" << ", rax" << std::endl;
                     }
                     

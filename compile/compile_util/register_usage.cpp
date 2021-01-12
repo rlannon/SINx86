@@ -302,7 +302,7 @@ std::string register_usage::get_register_name(const reg to_get) {
 
 std::string register_usage::get_register_name(const reg to_get, DataType t) {
     // Get the string value of a register name based on its width
-    std::unordered_map<reg, std::string>::iterator it;
+    std::unordered_map<reg, std::string>::const_iterator it;
     bool found = false;
     if (t.get_width() == 4) {
         it = reg_32_strings.find(to_get);

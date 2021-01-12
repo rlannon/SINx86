@@ -9,6 +9,7 @@ This file contains all of the functionality to define and call functions
 */
 
 #include "compiler.h"
+#include "compile_util/function_util.h"
 
 std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
     /*
@@ -28,7 +29,7 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
 
     if (decl_stmt.is_function()) {
         // note that declared data must be marked as 'extern' so the assembler can reference it
-        function_symbol sym = create_function_symbol(
+        function_symbol sym = function_util::create_function_symbol(
             decl_stmt,
             !decl_stmt.get_type_information().get_qualities().is_extern(),
             false
@@ -69,7 +70,7 @@ std::stringstream compiler::define_function(FunctionDefinition &definition) {
     
     */
 
-    function_symbol func_sym = create_function_symbol(definition);
+    function_symbol func_sym = function_util::create_function_symbol(definition);
     return this->define_function(
         func_sym,
         definition.get_procedure(),
@@ -414,7 +415,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
                 sincall_ss << "\t" << "lea rdi, [rsp + " << param_offset << "]" << std::endl;
                 sincall_ss << push_used_registers(this->reg_stack.peek(), true).str();
                 sincall_ss << "\t" << "mov rsi, rax" << std::endl;
-                sincall_ss << call_sincall_subroutine("sinl_string_copy_construct") << std::endl;
+                sincall_ss << function_util::call_sincall_subroutine("sinl_string_copy_construct") << std::endl;
                 sincall_ss << pop_used_registers(this->reg_stack.peek(), true).str();
             }
             else if (arg_type.get_qualities().is_dynamic()) {
@@ -427,7 +428,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
             // if we needed to adjust the RC
             if (arg_p.second) {
                 sincall_ss << "\t" << "pop rdi" << std::endl;   // free the original string to free
-                sincall_ss << call_sre_function(magic_numbers::SRE_FREE);
+                sincall_ss << function_util::call_sre_function(magic_numbers::SRE_FREE);
                 // now we need to move the parameter position back because we popped the value
                 param_offset -= sin_widths::PTR_WIDTH;
             }
@@ -455,7 +456,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
         // todo: default values
 
         // call the function
-        sincall_ss << call_sincall_subroutine(s.get_name());
+        sincall_ss << function_util::call_sincall_subroutine(s.get_name());
 
         // the return value is now in RAX or XMM0, depending on the data type
 
@@ -592,7 +593,7 @@ std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return
     );
     if (t.is_reference_type() || t.get_primary() == PTR) {
         sincall_ss << "\t" << "mov rdi, rax" << std::endl;
-        sincall_ss << call_sre_function(magic_numbers::SRE_ADD_REF);
+        sincall_ss << function_util::call_sre_function(magic_numbers::SRE_ADD_REF);
     }
 
     // decrement the rc of all pointers, references, and dynamic memory

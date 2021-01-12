@@ -10,6 +10,7 @@ Note that SIN does *not* support the arrow operator as syntactic sugar; you must
 */
 
 #include "compiler.h"
+#include "compile_util/function_util.h"
 
 std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line, DataType *type_hint) {
 	/*
@@ -379,7 +380,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
                     eval_ss << "\t" << "mov rsi, rax" << std::endl;
                     eval_ss << "\t" << "mov rdi, rbx" << std::endl;
 
-                    eval_ss << call_sincall_subroutine(routine_name);
+                    eval_ss << function_util::call_sincall_subroutine(routine_name);
                     eval_ss << pop_used_registers(this->reg_stack.peek(), true).str();
                     
                     count += 1;	// string concatenation and appendment allocate resources
