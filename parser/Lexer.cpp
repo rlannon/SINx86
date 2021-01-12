@@ -74,9 +74,8 @@ const std::unordered_map<std::string, exp_operator> Lexer::op_strings({
 
 // Our stream access and test functions
 
-const bool Lexer::eof() const {
-	char eof_test = this->stream->peek();
-	return eof_test == EOF;
+const inline bool Lexer::eof() const {
+	return this->stream->peek() == EOF;
 }
 
 const char Lexer::peek() const {
@@ -90,13 +89,17 @@ const char Lexer::peek() const {
 }
 
 const char Lexer::next() {
-	if (!this->eof()) {
+	if (this->eof()) {
+		return EOF;
+	}
+	else
+	{
 		char ch = this->stream->get();
 
 		// allow CRLF endings, ignoring carriage return
-		if (this->is_newline(ch))
+		if (ch == '\r' && this->peek() == '\n')
 		{
-			ch = this->next();
+			ch = this->stream->get();
 		}
 		
 		// increment the line number if we hit a newline character
@@ -105,9 +108,6 @@ const char Lexer::next() {
 		}
 
 		return ch;
-	}
-	else {
-		return EOF;
 	}
 }
 
@@ -129,32 +129,32 @@ const bool Lexer::match_character(const char ch, const std::string &expression) 
 	}
 }
 
-const bool Lexer::is_whitespace(const char ch) {
+const inline bool Lexer::is_whitespace(const char ch) {
 	return match_character(ch, "[ \n\t\r]");
 }
 
-const bool Lexer::is_newline(char ch) const {
+const inline bool Lexer::is_newline(char ch) const {
 	// allow CRLF line endings (ignore carriage returns)
 	return (ch == '\n') || (ch == '\r' && this->peek() == '\n');
 }
 
-const bool Lexer::is_not_newline(const char ch) {
+const inline bool Lexer::is_not_newline(const char ch) {
 	return ch != '\n';
 }
 
-const bool Lexer::is_digit(const char ch) {
+const inline bool Lexer::is_digit(const char ch) {
 	return match_character(ch, "[0-9]");
 }
 
-const bool Lexer::is_letter(const char ch) {
+const inline bool Lexer::is_letter(const char ch) {
 	return match_character(ch, "[a-zA-Z]");
 }
 
-const bool Lexer::is_number(const char ch) {
+const inline bool Lexer::is_number(const char ch) {
 	return match_character(ch, "[0-9\\._]");
 }
 
-const bool Lexer::is_id_start(const char ch) {
+const inline bool Lexer::is_id_start(const char ch) {
 
 	/*
     
@@ -168,29 +168,29 @@ const bool Lexer::is_id_start(const char ch) {
 	return match_character(ch, "[_a-zA-Z]");
 }
 
-const bool Lexer::is_id(const char ch) {
+const inline bool Lexer::is_id(const char ch) {
 	/*  Returns true if the character is a valid id character  */
 
 	return match_character(ch, id_exp);
 }
 
-const bool Lexer::is_punc(const char ch) {
+const inline bool Lexer::is_punc(const char ch) {
 	return match_character(ch, punc_exp);
 }
 
-const bool Lexer::is_op_char(const char ch) {
+const inline bool Lexer::is_op_char(const char ch) {
 	return match_character(ch, op_exp);
 }
 
-const bool Lexer::is_boolean(const std::string &candidate) {
+const inline bool Lexer::is_boolean(const std::string &candidate) {
 	return (candidate == "true" || candidate == "false");
 }
 
-const bool Lexer::is_keyword(const std::string &candidate) {
+const inline bool Lexer::is_keyword(const std::string &candidate) {
 	return (bool)keywords.count(candidate);
 }
 
-const bool Lexer::is_valid_operator(const std::string &candidate) {
+const inline bool Lexer::is_valid_operator(const std::string &candidate) {
 	// Checks whether the lexeme is a valid operator for maybe_binary
 	return (bool)Lexer::op_strings.count(candidate);
 }
@@ -421,7 +421,7 @@ lexeme Lexer::read_next() {
 			type = OPERATOR;
 			value = this->read_operator();
 		}
-		else if (ch == '\n') {	// if we encounter a newline character
+		else if (this->is_newline(ch)) {	// if we encounter a newline character
 			this->peek();
 			if (this->stream->eof()) {
 				type = NULL_LEXEME;
@@ -510,7 +510,7 @@ std::string Lexer::read_char() {
 	std::string to_return = "";
 	this->next();
 	
-	while (this->peek() != '\'') {
+	while (!this->eof() && this->peek() != '\'') {
 		to_return.append(
 			1, this->next()
 		);
