@@ -185,12 +185,12 @@ bool DataType::operator!=(const DataType& right) const
 	return !this->operator==(right);
 }
 
-bool DataType::operator==(const Type right)
+bool DataType::operator==(const Type right) const
 {
 	return this->primary == right;
 }
 
-bool DataType::operator!=(const Type right)
+bool DataType::operator!=(const Type right) const
 {
 	return this->primary != right;
 }

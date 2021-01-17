@@ -284,7 +284,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                         evaluation_ss << cast_p.first;
 
                         // now, use the utility function to actually cast the type
-                        evaluation_ss << cast(old_type, c.get_new_type(), line).str();
+                        evaluation_ss << cast(old_type, c.get_new_type(), line, this->_strict).str();
                     }
                 }
                 else {

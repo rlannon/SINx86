@@ -39,7 +39,7 @@ bool is_valid_cast(DataType &old_type, DataType &new_type);
 
 bool is_subscriptable(Type t);
 
-std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line);
+std::stringstream cast(const DataType &old_type, const DataType &new_type, const unsigned int line, const bool is_strict);
 
 bool can_pass_in_register(DataType to_check);
 

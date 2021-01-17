@@ -49,8 +49,8 @@ public:
 	bool operator==(const DataType& right) const;
 	bool operator!=(const DataType& right) const;
 
-	bool operator==(const Type right);
-	bool operator!=(const Type right);
+	bool operator==(const Type right) const;
+	bool operator!=(const Type right) const;
 
 	Type get_primary() const;
 	DataType get_subtype() const;
