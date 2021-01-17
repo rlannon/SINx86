@@ -27,6 +27,8 @@ uSIN is very similar to Standard SIN, but it comes with one significant caveat: 
 
 Because of its extreme limitations, uSIN is better-suited than Standard SIN for applications like kernel development. Note that I am not suggesting uSIN would be a particularly good choice for such an endeavor.
 
+Enabling uSIN does not have any effect on how strict the compiler is; `normal` is still the default mode.
+
 ### Supported Strictness Settings
 
 SIN supports three settings for the strictness of the compiler. These are used in combination with the `mode` option.
@@ -43,5 +45,5 @@ SIN supports a few optimizations, but it does not support the traditional `-O1`,
 
 Since this compiler does not link or assemble its output, its flags are more limited in functionality than, for example, GCC. However, it still supports a few options:
 
-* **Help options:** As with any good program, this compiler supports help options. You may use `-h` or `--help` for general help, or in combination with another flag for help about that specific flag.
+* **Help options:** As with any good program, this compiler supports help options. You may use `-h` or `--help` to display the help menu.
 * **Output File Name:** The default output filename will be identical to the input file with a modified extension (e.g., '`foo.sin` will become `foo.s`), but the assembly file can be changed with the `-o` or `--outfile` option.
