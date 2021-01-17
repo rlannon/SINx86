@@ -561,7 +561,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
     return include_ss;
 }
 
-void compiler::generate_asm(std::string filename) {
+void compiler::generate_asm(std::string infile_name, std::string outfile_name) {
     /*
 
     generate_asm
@@ -578,7 +578,7 @@ void compiler::generate_asm(std::string filename) {
 
     // catch parser exceptions here
     try {
-        this->filename = filename;
+        this->filename = infile_name;
 
         // all include paths should be relative to the path of the file being compiled, unless a / or ~ is at the beginning
         size_t last_slash = filename.find_last_of("/");
@@ -724,17 +724,10 @@ void compiler::generate_asm(std::string filename) {
                 main_function->get_line_defined()
             );
         }
-
-        // get the name for the generated assembly file
-        // remove the extension from the file name and append ".s"
-        size_t last_index = filename.find_last_of(".");
-        if (last_index != std::string::npos)
-            filename = filename.substr(0, last_index);
-        filename += ".s";
         
         // now, save text, data, and bss segments to our outfile
         std::ofstream outfile;
-        outfile.open(filename, std::ios::out);
+        outfile.open(outfile_name, std::ios::out);
 
         // first, write the text section
         outfile << "section .text" << std::endl;
@@ -791,8 +784,11 @@ bool compiler::is_in_scope(symbol &sym) {
     );
 }
 
-compiler::compiler():
-    evaluator(&this->structs)
+compiler::compiler(bool allow_unsafe, bool strict, bool use_micro)
+    : evaluator(&this->structs)
+    , _allow_unsafe(allow_unsafe)
+    , _strict(strict)
+    , _micro_mode(use_micro)
 {
     // initialize our number trackers
     this->strc_num = 0;

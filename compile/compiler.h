@@ -158,8 +158,8 @@ class compiler {
 	std::stringstream process_include(std::string include_filename, unsigned int line);
 public:
     // the compiler's entry function
-    void generate_asm(std::string filename);
+    void generate_asm(std::string infile_name, std::string outfile_name);
 
-    compiler();
+    compiler(bool allow_unsafe, bool strict, bool use_micro);
     ~compiler();
 };
