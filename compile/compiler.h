@@ -38,7 +38,6 @@ class compiler {
 
     */
 
-    // The class containing our compiler
 	std::string filename;
 	std::string file_path;
 
@@ -156,6 +155,9 @@ class compiler {
 
 	// process an included file
 	std::stringstream process_include(std::string include_filename, unsigned int line);
+
+	// issue a warning or throw an exception based on flags
+	void _warn(const std::string& message, const unsigned int code, const unsigned int line);
 public:
     // the compiler's entry function
     void generate_asm(std::string infile_name, std::string outfile_name);

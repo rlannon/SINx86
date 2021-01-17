@@ -12,6 +12,35 @@ Copyright 2019 Riley Lannon
 #include "compiler.h"
 #include "compile_util/function_util.h"
 
+void compiler::_warn(const std::string& message, const unsigned int code, const unsigned int line) {
+    /*
+
+    _warn
+    Issues a warning or error based on the compiler's settings
+
+    If compiling in strict mode, this will always cause an error.
+    If compiling in normal mode, only warnings related to unsafe operations will cause an error.
+    If compiling in lax mode, this will simply display a message.
+
+    @param  message The warning message to display
+    @param  code    The code of this error/warning
+    @param  line    The line number where this occurred
+
+    */
+    
+    if (this->_strict)
+    {
+        throw CompilerException(message, code, line);
+    }
+    else
+    {
+        if (!this->_allow_unsafe && code == compiler_errors::UNSAFE_OPERATION)
+            throw CompilerException(message, code, line);
+        else
+            compiler_warning(message, code, line);
+    }
+}
+
 symbol *compiler::lookup(std::string name, unsigned int line) {
     /*
 
@@ -362,7 +391,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
         {
             // writes asm directly to file
             // warns user that this is very unsafe
-            compiler_warning(
+            this->_warn(
                 "Use of inline assembly is highly discouraged as it cannot be analyzed by the compiler nor utilize certain runtime safety measures (unless done manually)",
                 compiler_errors::UNSAFE_OPERATION,
                 s.get_line_number()
@@ -629,7 +658,7 @@ void compiler::generate_asm(std::string infile_name, std::string outfile_name) {
             
             // 'main' should have a return type of 'int'; if not, issue a warning
             if (main_symbol.get_data_type().get_primary() != INT) {
-                compiler_warning(
+                this->_warn(
                     "Function 'main' should have a return type of 'int'",
                     compiler_errors::MAIN_SIGNATURE,
                     main_function->get_line_defined()
@@ -718,7 +747,7 @@ void compiler::generate_asm(std::string infile_name, std::string outfile_name) {
         }
         else if (main_function) {
             // if we found a symbol with the name 'main', but it wasn't a function, issue a warning
-            compiler_warning(
+            this->_warn(
                 "Found a symbol 'main', but it is not a function",
                 compiler_errors::MAIN_SIGNATURE,
                 main_function->get_line_defined()

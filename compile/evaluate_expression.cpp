@@ -552,7 +552,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
     
     // check to see if it was freed; we can't know for sure, but if the compiler has it marked as freed, issue a warning that it may have been freed before the reference to it
     if (sym.was_freed())
-        compiler_warning(
+        this->_warn(
             "Symbol '" + sym.get_name() + "' may have been freed",
             compiler_errors::DATA_FREED,
             line
