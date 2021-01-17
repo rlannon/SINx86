@@ -47,3 +47,4 @@ Since this compiler does not link or assemble its output, its flags are more lim
 
 * **Help options:** As with any good program, this compiler supports help options. You may use `-h` or `--help` to display the help menu.
 * **Output File Name:** The default output filename will be identical to the input file with a modified extension (e.g., '`foo.sin` will become `foo.s`), but the assembly file can be changed with the `-o` or `--outfile` option.
+* **Version Information:** The `--version` flag can be used to get the version information; this will cause all other command-line options to be ignored, print the version, and exit.

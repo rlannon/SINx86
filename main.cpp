@@ -21,15 +21,18 @@ For a documentation of the language, see either the doc folder in this project o
 #include "compile/compile_util/constant_eval.h"
 #include "util/Exceptions.h"
 
+static const std::string VERSION = "0.0.0a";
+static const std::string YEAR = "2021";
 
 int main (int argc, char **argv) {
 	// Create the argument parser
 	args::ArgumentParser parser("Compiler for the SIN programming language.", "See the GitHub repository for bug tracking, documentation, etc.");
 	args::HelpFlag help(parser, "help", "Display this help menu", {'h', "help"});
 	args::CompletionFlag completion(parser, {"complete"});
+	args::Flag version(parser, "version", "Get the program's version number", {"version"}, args::Options::KickOut);
 
 	// File name options
-	args::Positional<std::string> filename(parser, "filename", "The .sin file to compile", args::Options::Required);
+	args::Positional<std::string> filename(parser, "filename", "The .sin file to compile");
 	args::ValueFlag<std::string> outfile(parser, "outfile", "Specify an output assmembly file", {'o', "outfile"});
 
 	// Compiler mode options
@@ -60,6 +63,26 @@ int main (int argc, char **argv) {
 	
 	// run the program
 	try {
+		// see if we asked for the version; if so, print it and exit (ignores all other flags)
+		if (version)
+		{
+			std::cout << "SIN (sinx86) " << VERSION << "\nCopyright (C) " << YEAR << " Riley Lannon" << std::endl;
+			return 0;
+		}
+		
+		// check to see if an input file was specified; if not, exit
+		std::string infile_name;
+		if (filename)
+		{
+			infile_name = args::get(filename);
+		}
+		else
+		{
+			std::cout << "No input file specified." << std::endl;
+			return 1;
+		}
+		
+
 		// get the compiler mode
 		std::string compiler_mode{ mode ? args::get(mode) : "normal" };
 		bool allow_unsafe;
@@ -80,9 +103,6 @@ int main (int argc, char **argv) {
 		}
 		
 		bool compile_micro = (use_micro ? args::get(use_micro) : false);
-
-		// get file names
-		std::string infile_name = args::get(filename);
 
 		// get the name for the generated assembly file
         // remove the extension from the file name and append ".s"
