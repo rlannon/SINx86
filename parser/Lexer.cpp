@@ -74,11 +74,11 @@ const std::unordered_map<std::string, exp_operator> Lexer::op_strings({
 
 // Our stream access and test functions
 
-const inline bool Lexer::eof() const {
+inline bool Lexer::eof() const {
 	return this->stream->peek() == EOF;
 }
 
-const char Lexer::peek() const {
+char Lexer::peek() const {
 	if (this->eof()) {
 		return EOF;
 	}
@@ -88,7 +88,7 @@ const char Lexer::peek() const {
 	}
 }
 
-const char Lexer::next() {
+char Lexer::next() {
 	if (this->eof()) {
 		return EOF;
 	}
@@ -118,7 +118,7 @@ These are used to test whether a character is of a certain type.
 
 */
 
-const bool Lexer::match_character(const char ch, const std::string &expression) {
+bool Lexer::match_character(const char ch, const std::string &expression) {
 	try {
         // todo: is there a more efficient way to test one character against a regex?
 		return std::regex_match(std::string(1, ch), std::regex(expression));
@@ -129,32 +129,32 @@ const bool Lexer::match_character(const char ch, const std::string &expression) 
 	}
 }
 
-const inline bool Lexer::is_whitespace(const char ch) {
+inline bool Lexer::is_whitespace(const char ch) {
 	return match_character(ch, "[ \n\t\r]");
 }
 
-const inline bool Lexer::is_newline(char ch) const {
+inline bool Lexer::is_newline(char ch) const {
 	// allow CRLF line endings (ignore carriage returns)
 	return (ch == '\n') || (ch == '\r' && this->peek() == '\n');
 }
 
-const inline bool Lexer::is_not_newline(const char ch) {
+inline bool Lexer::is_not_newline(const char ch) {
 	return ch != '\n';
 }
 
-const inline bool Lexer::is_digit(const char ch) {
+inline bool Lexer::is_digit(const char ch) {
 	return match_character(ch, "[0-9]");
 }
 
-const inline bool Lexer::is_letter(const char ch) {
+inline bool Lexer::is_letter(const char ch) {
 	return match_character(ch, "[a-zA-Z]");
 }
 
-const inline bool Lexer::is_number(const char ch) {
+inline bool Lexer::is_number(const char ch) {
 	return match_character(ch, "[0-9\\._]");
 }
 
-const inline bool Lexer::is_id_start(const char ch) {
+inline bool Lexer::is_id_start(const char ch) {
 
 	/*
     
@@ -168,29 +168,29 @@ const inline bool Lexer::is_id_start(const char ch) {
 	return match_character(ch, "[_a-zA-Z]");
 }
 
-const inline bool Lexer::is_id(const char ch) {
+inline bool Lexer::is_id(const char ch) {
 	/*  Returns true if the character is a valid id character  */
 
 	return match_character(ch, id_exp);
 }
 
-const inline bool Lexer::is_punc(const char ch) {
+inline bool Lexer::is_punc(const char ch) {
 	return match_character(ch, punc_exp);
 }
 
-const inline bool Lexer::is_op_char(const char ch) {
+inline bool Lexer::is_op_char(const char ch) {
 	return match_character(ch, op_exp);
 }
 
-const inline bool Lexer::is_boolean(const std::string &candidate) {
+inline bool Lexer::is_boolean(const std::string &candidate) {
 	return (candidate == "true" || candidate == "false");
 }
 
-const inline bool Lexer::is_keyword(const std::string &candidate) {
+inline bool Lexer::is_keyword(const std::string &candidate) {
 	return (bool)keywords.count(candidate);
 }
 
-const inline bool Lexer::is_valid_operator(const std::string &candidate) {
+inline bool Lexer::is_valid_operator(const std::string &candidate) {
 	// Checks whether the lexeme is a valid operator for maybe_binary
 	return (bool)Lexer::op_strings.count(candidate);
 }
@@ -202,7 +202,7 @@ These will read out data in the stream and return it as a string with proper for
 
 */
 
-std::string Lexer::read_while(const bool (*predicate)(const char)) {
+std::string Lexer::read_while(bool (*predicate)(const char)) {
 	/*
 
 	read_while
@@ -232,7 +232,7 @@ std::string Lexer::read_while(const bool (*predicate)(const char)) {
 }
 
 
-const std::string Lexer::read_operator() {
+std::string Lexer::read_operator() {
 	/*
 
 	read_operator
@@ -536,7 +536,7 @@ std::string Lexer::read_ident() {
 }
 
 // A function to check whether our exit flag is set or not
-const bool Lexer::exit_flag_is_set() const {
+bool Lexer::exit_flag_is_set() const {
 	return exit_flag;
 }
 
@@ -579,7 +579,7 @@ std::ostream& operator<<(std::ostream& os, const Lexer& lexer) {
 
 
 
-LexerException::LexerException(const std::string& err_message, const int& err_position, const char& ch) : message_(err_message), position_(err_position), ch_(ch) {
+LexerException::LexerException(const std::string& err_message, const int err_position, const char& ch) : message_(err_message), position_(err_position), ch_(ch) {
 
 }
 

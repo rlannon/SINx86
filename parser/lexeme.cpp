@@ -18,7 +18,7 @@ lexeme::lexeme() {
 	this->line_number = 0;	// initialize to 0 by default
 }
 
-lexeme::lexeme(lexeme_type type, std::string value, unsigned int line_number) :
+lexeme::lexeme(const lexeme_type type, const std::string& value, const unsigned int line_number) :
     type(type),
     value(value),
     line_number(line_number) 

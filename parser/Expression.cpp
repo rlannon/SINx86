@@ -4,7 +4,7 @@
 #include "Expression.h"
 
 
-const bool is_literal(lexeme_type candidate_type) {
+bool is_literal(const lexeme_type candidate_type) {
 	switch(candidate_type) {
 		case INT_LEX:
 		case FLOAT_LEX:

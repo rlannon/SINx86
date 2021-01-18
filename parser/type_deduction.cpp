@@ -10,7 +10,7 @@ The implementation of our type deduction functions
 
 #include "type_deduction.h"
 
-const Type type_deduction::get_type_from_lexeme(lexeme_type lex_type)
+Type type_deduction::get_type_from_lexeme(lexeme_type lex_type)
 {
 	switch (lex_type) {
 	case STRING_LEX:
@@ -28,7 +28,7 @@ const Type type_deduction::get_type_from_lexeme(lexeme_type lex_type)
 	}
 }
 
-const Type type_deduction::get_type_from_string(std::string candidate) {
+Type type_deduction::get_type_from_string(std::string candidate) {
 	// if it can, this function gets the proper type of an input string
 	// an array of the valid types as strings
 
@@ -47,7 +47,7 @@ const Type type_deduction::get_type_from_string(std::string candidate) {
 	return STRUCT;
 }
 
-const std::string type_deduction::get_string_from_type(Type candidate) {
+std::string type_deduction::get_string_from_type(Type candidate) {
 	// reverse of the above function
 
 	// for test our candidate against each item in the array of string_types; if we have a match, return the string at the same position

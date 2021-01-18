@@ -19,7 +19,7 @@ Contains the Expression class and all of its child classes; these are used by th
 #include "../util/DataType.h"
 
 
-const bool is_literal(lexeme_type candidate_type);
+bool is_literal(const lexeme_type candidate_type);
 
 // Base class for all expressions
 class Expression

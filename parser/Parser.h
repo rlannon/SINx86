@@ -47,15 +47,15 @@ class Parser
 	bool quit;
 
 	// translates an operator character into an exp_operator type
-	static const exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
-	static const bool is_valid_copy_assignment_operator(exp_operator op);
-	static const bool is_valid_move_assignment_operator(exp_operator op);
+	static exp_operator translate_operator(std::string op_string);	// given the string name for an exp_operator, returns that exp_operator
+	static bool is_valid_copy_assignment_operator(exp_operator op);
+	static bool is_valid_move_assignment_operator(exp_operator op);
 	exp_operator read_operator(bool peek);
 
 	// our operator and precedence handlers
 	static const std::unordered_map<exp_operator, size_t> op_precedence;	// todo: create operator class
-	static const size_t get_precedence(std::string symbol, size_t line = 0);
-	static const size_t get_precedence(exp_operator op, size_t line = 0);
+	static size_t get_precedence(std::string symbol, size_t line = 0);
+	static size_t get_precedence(exp_operator op, size_t line = 0);
 
 	// Some utility functions
 	bool is_at_end();	// tells us whether we have run out of tokens
@@ -68,9 +68,9 @@ class Parser
 	static bool is_type(std::string lex_value);
 	static std::string get_closing_grouping_symbol(std::string beginning_symbol);
 	static bool is_opening_grouping_symbol(std::string to_test);
-	static const bool has_return(StatementBlock to_test);
-	static const exp_operator get_unary_operator(std::string s);	// located in ParserUtil.cpp
-	static const bool is_valid_operator(lexeme l);
+	static bool has_return(StatementBlock to_test);
+	static exp_operator get_unary_operator(std::string s);	// located in ParserUtil.cpp
+	static bool is_valid_operator(lexeme l);
 
 	// get the appropriate SymbolQuality member from the lexeme containing it
 	static SymbolQuality get_quality(lexeme quality_token);
