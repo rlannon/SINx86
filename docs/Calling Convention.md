@@ -6,7 +6,7 @@ The SIN calling convention is modeled after the x64 calling conventions for Wind
 
 ### General Overview
 
-The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike `_cdecl`, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers `RSI, RDI, RCX, RDX, R8, R9`, while floating-point types will be pushed in registers `XMM0 - XMM5`. `RAX` and `RBX` are never preserved by the caller nor the callee automatically; they are considered volatile.
+The SIN convention is a **caller clean-up** convention which requires the caller to set up the stack frame for the callee and unwind it at the end. Unlike `_cdecl`, however, arguments are always pushed left-to-right, not right-to-left. Integral and pointer types will be pushed in registers `RSI, RDI, RCX, RDX, R8, R9`, while floating-point types will be pushed in registers `XMM0 - XMM5`. `RAX` and `RBX` are never preserved by the caller nor the callee automatically; they are considered volatile. `YMM` and `ZMM` registers are currently not utilized by the language.
 
 In the SINCALL convention, function arguments exist _above_ the stack frame, meaning arguments are written into memory before the new stack frame is set up. This allows for easier evaluation of their values when called. Generally, the following happens in SINCALL:
 
@@ -150,9 +150,9 @@ The SIN compiler will then know to generate code for calls to this function in a
 
 In general these qualifiers default to the GCC ABIs used by Unix-like systems, but the `&windows` qualifier may be used to specify the user wishes to use the Microsoft convention instead. If you are worried the conventions may not be correct for your system, it is always a good idea to double-check your C compiler to ensure these SIN features are compatible with your system.
 
-### Calling Conventions
+### Using Other Calling Conventions
 
-SINCALL does not require a 16-byte stack alignment before a call, but other calling conventions do. As such, whenever a function that utilizes the calling convention for the Windows or System V ABIs, the compiler must generate code to properly align the stack on a 16-byte boundary. The [SRE](SIN%20Runtime%20Environment) handles this for built-in types, and the compiler will handle it when calling non-SINCALL functions.
+SINCALL does not require a 16-byte stack alignment before a call, but other calling conventions do. As such, whenever a function that utilizes the calling convention for the Windows or System V ABIs, the compiler must generate code to properly align the stack on a 16-byte boundary. The [SRE](SIN%20Runtime%20Environment) handles this for certain built-in routines, and the compiler will handle it when calling non-SINCALL functions.
 
 #### System V ABI (Unix-like systems)
 

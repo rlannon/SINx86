@@ -2,7 +2,7 @@
 
 ## Arrays
 
-Arrays in SIN operate in a similar manner as in Java; the array's length is tracked via a 32-bit integer at the array's head, and the data follows immediately after. This allows an array's length to be checked at runtime, which is beneficial for both static and dynamic arrays. SIN arrays may have fixed or variable lengths, though this entirely depends on how the array is allocated. Automatic and static arrays are always fixed lengths, while arrays located on the heap allow dynamic lengths.
+Arrays in SIN operate in a similar manner as in Java; the array's length is tracked via a 32-bit integer at the array's head, and the data follows immediately after. This allows an array's length to be checked at runtime, which is beneficial for both static and dynamic arrays. SIN arrays may have fixed or variable lengths, though this entirely depends on how the array is allocated. Automatic and static arrays are always fixed lengths, while arrays located on the heap (with `dynamic`) allow dynamic lengths.
 
 ### Allocating an array
 

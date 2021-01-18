@@ -51,7 +51,7 @@ bool is_subscriptable(Type t) {
     return (t == ARRAY || t == STRING);
 }
 
-std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line) {
+std::stringstream cast(const DataType &old_type, const DataType &new_type, const unsigned int line, const bool is_strict) {
     /*
 
     cast
@@ -79,11 +79,24 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
         if (old_type.get_primary() == FLOAT) {
             // for float conversions, we *should* issue a warning
             if (old_type.get_width() > new_type.get_width()) {
-                compiler_warning(
-                    "Attempting to convert floating-point type to a smaller integral type; potential loss of data",
-                    compiler_errors::WIDTH_MISMATCH,
-                    line
-                );
+                // if compiling in strict mode, we must throw an exception
+                std::string message{ "Attempting to convert floating-point type to a smaller integral type; potential loss of data" };
+                if (is_strict)
+                {
+                    throw CompilerException(
+                        message,
+                        compiler_errors::WIDTH_MISMATCH,
+                        line
+                    );
+                }
+                else
+                {
+                    compiler_warning(
+                        message,
+                        compiler_errors::WIDTH_MISMATCH,
+                        line
+                    );
+                }
             }
 
             // perform the cast with the SSE conversion functions
@@ -145,11 +158,20 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
                 cast_ss << "\t" << "movzx rax, al" << std::endl;
             }
             else if (old_type.get_primary() == INT && old_type.get_width() > new_type.get_width()) {
-                compiler_warning(
-                    "Potential data loss when converting integer to floating-point number of smaller width",
-                    compiler_errors::WIDTH_MISMATCH,
-                    line
-                );
+                // if compiling in strict mode, throw an exception
+                std::string message{ "Potential data loss when converting integer to floating-point number of smaller width" };
+                if (is_strict)
+                {
+                    throw CompilerException(message, compiler_errors::WIDTH_MISMATCH, line);
+                }
+                else
+                {
+                    compiler_warning(
+                        message,
+                        compiler_errors::WIDTH_MISMATCH,
+                        line
+                    );
+                }
             }
             
             // now that the value is in RAX, use convert signed integer to scalar single/double
@@ -162,8 +184,21 @@ std::stringstream cast(DataType &old_type, DataType &new_type, unsigned int line
 		
 		// warn that only the lowest byte will be considered
 		if (old_type.get_width() > new_type.get_width())
-			compiler_warning("Only the lowest byte will be considered when casting integral types to char", compiler_errors::WIDTH_MISMATCH, line);
-		
+        {
+            std::string message{ "Only the lowest byte will be considered when casting integral types to char" };
+            if (is_strict)
+            {
+                throw CompilerException(
+                    message,
+                    compiler_errors::WIDTH_MISMATCH,
+                    line
+                );
+            }
+            else
+            {
+			    compiler_warning(message, compiler_errors::WIDTH_MISMATCH, line);
+            }
+        }
 		// we don't actually need any assembly here
     }
     else {

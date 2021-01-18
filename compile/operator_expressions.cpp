@@ -82,7 +82,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 			*/
 
 			if (unary_type.get_qualities().is_unsigned()) {
-				compiler_warning(
+				this->_warn(
 					"Note: unary minus on unsigned data may result in data loss because the compiler will not modify the data's width",
 					compiler_errors::POTENTIAL_DATA_LOSS,
 					line);
@@ -238,7 +238,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			(primary == INT) &&
 			(left_type.get_qualities().is_signed() != right_type.get_qualities().is_signed())
 		) {
-			compiler_warning("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
+			this->_warn("Signed/unsigned mismatch", compiler_errors::SIGNED_UNSIGNED_MISMATCH, line);
 		}
 		
 		// todo: generalize check for width mismatch warning
@@ -247,7 +247,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 			(left_type.get_width() != right_type.get_width()) &&
 			!(primary == STRING && right_type.get_primary() == CHAR)
 		) {
-			compiler_warning(
+			this->_warn(
                 "Width mismatch (left type is " +
                     std::to_string(left_type.get_width()) +
                     " bytes wide, right type is " + 
@@ -544,7 +544,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				// bit shifts can work on integral types
 				if (primary == INT || primary == PTR || primary == CHAR) {
 					if (left_type.get_qualities().is_signed()) {
-						compiler_warning(
+						this->_warn(
 							"The sign will be retained when shifting bits of a signed type",
 							compiler_errors::BITSHIFT_RESULT,
 							line
@@ -554,7 +554,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, un
 				}
 				else if (primary == BOOL) {
 					// boolean shifts might have weird effects
-					compiler_warning(
+					this->_warn(
 						"Bit shifting a boolean may have no effect or invert the value",
 						compiler_errors::BITSHIFT_RESULT,
 						line

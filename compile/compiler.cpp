@@ -12,6 +12,35 @@ Copyright 2019 Riley Lannon
 #include "compiler.h"
 #include "compile_util/function_util.h"
 
+void compiler::_warn(const std::string& message, const unsigned int code, const unsigned int line) {
+    /*
+
+    _warn
+    Issues a warning or error based on the compiler's settings
+
+    If compiling in strict mode, this will always cause an error.
+    If compiling in normal mode, only warnings related to unsafe operations will cause an error.
+    If compiling in lax mode, this will simply display a message.
+
+    @param  message The warning message to display
+    @param  code    The code of this error/warning
+    @param  line    The line number where this occurred
+
+    */
+    
+    if (this->_strict)
+    {
+        throw CompilerException(message, code, line);
+    }
+    else
+    {
+        if (!this->_allow_unsafe && code == compiler_errors::UNSAFE_OPERATION)
+            throw CompilerException(message, code, line);
+        else
+            compiler_warning(message, code, line);
+    }
+}
+
 symbol *compiler::lookup(std::string name, unsigned int line) {
     /*
 
@@ -362,7 +391,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
         {
             // writes asm directly to file
             // warns user that this is very unsafe
-            compiler_warning(
+            this->_warn(
                 "Use of inline assembly is highly discouraged as it cannot be analyzed by the compiler nor utilize certain runtime safety measures (unless done manually)",
                 compiler_errors::UNSAFE_OPERATION,
                 s.get_line_number()
@@ -561,7 +590,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
     return include_ss;
 }
 
-void compiler::generate_asm(std::string filename) {
+void compiler::generate_asm(std::string infile_name, std::string outfile_name) {
     /*
 
     generate_asm
@@ -578,7 +607,7 @@ void compiler::generate_asm(std::string filename) {
 
     // catch parser exceptions here
     try {
-        this->filename = filename;
+        this->filename = infile_name;
 
         // all include paths should be relative to the path of the file being compiled, unless a / or ~ is at the beginning
         size_t last_slash = filename.find_last_of("/");
@@ -629,7 +658,7 @@ void compiler::generate_asm(std::string filename) {
             
             // 'main' should have a return type of 'int'; if not, issue a warning
             if (main_symbol.get_data_type().get_primary() != INT) {
-                compiler_warning(
+                this->_warn(
                     "Function 'main' should have a return type of 'int'",
                     compiler_errors::MAIN_SIGNATURE,
                     main_function->get_line_defined()
@@ -718,23 +747,16 @@ void compiler::generate_asm(std::string filename) {
         }
         else if (main_function) {
             // if we found a symbol with the name 'main', but it wasn't a function, issue a warning
-            compiler_warning(
+            this->_warn(
                 "Found a symbol 'main', but it is not a function",
                 compiler_errors::MAIN_SIGNATURE,
                 main_function->get_line_defined()
             );
         }
-
-        // get the name for the generated assembly file
-        // remove the extension from the file name and append ".s"
-        size_t last_index = filename.find_last_of(".");
-        if (last_index != std::string::npos)
-            filename = filename.substr(0, last_index);
-        filename += ".s";
         
         // now, save text, data, and bss segments to our outfile
         std::ofstream outfile;
-        outfile.open(filename, std::ios::out);
+        outfile.open(outfile_name, std::ios::out);
 
         // first, write the text section
         outfile << "section .text" << std::endl;
@@ -791,8 +813,11 @@ bool compiler::is_in_scope(symbol &sym) {
     );
 }
 
-compiler::compiler():
-    evaluator(&this->structs)
+compiler::compiler(bool allow_unsafe, bool strict, bool use_micro)
+    : evaluator(&this->structs)
+    , _allow_unsafe(allow_unsafe)
+    , _strict(strict)
+    , _micro_mode(use_micro)
 {
     // initialize our number trackers
     this->strc_num = 0;

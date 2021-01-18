@@ -38,9 +38,13 @@ class compiler {
 
     */
 
-    // The class containing our compiler
 	std::string filename;
 	std::string file_path;
+
+	// compiler flags
+	const bool _micro_mode;
+	const bool _strict;
+	const bool _allow_unsafe;
 
     // todo: break code generation into multiple friend classes
 
@@ -151,10 +155,13 @@ class compiler {
 
 	// process an included file
 	std::stringstream process_include(std::string include_filename, unsigned int line);
+
+	// issue a warning or throw an exception based on flags
+	void _warn(const std::string& message, const unsigned int code, const unsigned int line);
 public:
     // the compiler's entry function
-    void generate_asm(std::string filename);
+    void generate_asm(std::string infile_name, std::string outfile_name);
 
-    compiler();
+    compiler(bool allow_unsafe, bool strict, bool use_micro);
     ~compiler();
 };
