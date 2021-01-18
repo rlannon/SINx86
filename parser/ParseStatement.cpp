@@ -20,12 +20,12 @@ The implementation of the Parser member functions to parse statements, including
 
 #include "Parser.h"
 
-std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
+std::unique_ptr<Statement> Parser::parse_statement(const bool is_function_parameter) {
 	// get our current lexeme and its information so we don't need to call these functions every time we need to reference it
 	lexeme current_lex = this->current_token();
 
 	// create a shared_ptr to the statement we are going to parse so that we can return it when we are done
-	std::shared_ptr<Statement> stmt = nullptr;
+	std::unique_ptr<Statement> stmt = nullptr;
 
 	// first, we will check to see if we need any keyword parsing
 	if (current_lex.type == KEYWORD_LEX) {
@@ -72,7 +72,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 					}
 				}
 
-				stmt = std::make_shared<InlineAssembly>(asm_code.str());
+				stmt = std::make_unique<InlineAssembly>(asm_code.str());
 				stmt->set_line_number(current_lex.line_number);	// sets the line number for errors to the ASM block start; any ASM errors will be made known in the assembler
 			}
 		}
@@ -89,7 +89,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 
 			this->next();
 			auto to_free = this->parse_expression();
-			stmt = std::make_shared<FreeMemory>(to_free);
+			stmt = std::make_unique<FreeMemory>(to_free);
 			stmt->set_line_number(current_lex.line_number);
 		}
 		// parse a declaration
@@ -125,7 +125,7 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		}
 		else if (current_lex.value == "pass") {
 			this->next();
-			stmt = std::make_shared<Statement>(STATEMENT_GENERAL, current_lex.line_number);	// an explicit pass will, essentially, be ignored by the compiler; it does nothing
+			stmt = std::make_unique<Statement>(STATEMENT_GENERAL, current_lex.line_number);	// an explicit pass will, essentially, be ignored by the compiler; it does nothing
 		}
 		// if none of the keywords were valid, throw an error
 		else {
@@ -155,13 +155,13 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 		// NB: scope blocks never need semicolons
 
 		// create the statement
-		stmt = std::make_shared<ScopedBlock>(scope_ast);
+		stmt = std::make_unique<ScopedBlock>(scope_ast);
 	}
 
 	// if it is a curly brace, advance the character and return a nullptr; the compiler will skip this
 	else if (current_lex.value == "}") {
 		this->next();
-		stmt = std::make_shared<Statement>(STATEMENT_GENERAL, current_lex.line_number);
+		stmt = std::make_unique<Statement>(STATEMENT_GENERAL, current_lex.line_number);
 	}
 
 	// otherwise, if the lexeme is not a valid beginning to a statement, abort
@@ -172,27 +172,25 @@ std::shared_ptr<Statement> Parser::parse_statement(bool is_function_parameter) {
 	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_include(lexeme current_lex)
+std::unique_ptr<Statement> Parser::parse_include(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt = nullptr;
-
 	lexeme next = this->next();
 
 	if (next.type == STRING_LEX) {
 		std::string filename = next.value;
 
-		stmt = std::make_shared<Include>(filename);
+		auto stmt = std::make_unique<Include>(filename);
 		stmt->set_line_number(current_lex.line_number);
+		
+		return stmt;
 	}
 	else {
 		throw ParserException("Expected a filename in quotes in 'include' statement", 0, current_lex.line_number);
 		// TODO: error numbers for includes
 	}
-
-	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is_function_parameter) {
+std::unique_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is_function_parameter) {
 	/*
 
 	Parse a declaration statement. Appropriate syntax is:
@@ -205,8 +203,8 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 	*/
 
 	lexeme next_lexeme = this->next();
-	std::shared_ptr<Expression> initial_value = nullptr;
-	std::shared_ptr<Declaration> stmt = nullptr;
+	std::unique_ptr<Expression> initial_value = nullptr;
+	std::unique_ptr<Declaration> stmt = nullptr;
 
 	// the next lexeme must be a keyword (specifically, a type or 'struct')
 	if (next_lexeme.value == "struct") {
@@ -219,7 +217,7 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 				nullptr,
 				this->next().value
 			);
-			stmt = std::make_shared<Declaration>(struct_type, "", initial_value, false, true);
+			stmt = std::make_unique<Declaration>(struct_type, "", initial_value, false, true);
 		}
 		else {
 			throw CompilerException("Expected struct name", compiler_errors::ILLEGAL_STRUCT_NAME, this->current_token().line_number);
@@ -247,7 +245,7 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 				}
 			}
 
-			std::vector<std::shared_ptr<Statement>> formal_parameters = {};
+			std::vector<std::unique_ptr<Statement>> formal_parameters = {};
 
 			// next, check to see if we have a paren following the name; if so, it's a function, so we need to get the formal parameters
 			if (this->peek().value == "(") {
@@ -260,11 +258,11 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 				// so long as we haven't hit the end of the formal parameters, continue parsing
 				while (this->peek().value != ")") {
 					this->next();
-					std::shared_ptr<Statement> next = this->parse_statement(true);
+					std::unique_ptr<Statement> next = this->parse_statement(true);
 
 					// the statement _must_ be a declaration, not an allocation
 					if (next->get_statement_type() == DECLARATION) {
-						formal_parameters.push_back(next);
+						formal_parameters.push_back(std::move(next));
 					}
 					else {
 						throw ParserException("Definitions of formal parameters in a declaration of a function must use 'decl' (not 'alloc'", 0,
@@ -294,10 +292,8 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 			
 			// finally, we must have a semicolon, a comma, or a closing paren
 			if (this->peek().value == ";" || this->peek().value == "," || this->peek().value == ")") {
-				Declaration decl_statement(symbol_type_data, var_name, initial_value, is_function, false, formal_parameters);
-				decl_statement.set_line_number(next_lexeme.line_number);
-
-				stmt = std::make_shared<Declaration>(decl_statement);
+				stmt = std::make_unique<Declaration>(symbol_type_data, var_name, initial_value, is_function, false, formal_parameters);
+				stmt->set_line_number(next_lexeme.line_number);
 			}
 			else if (this->peek().value == ":") {
 				throw ParserException("Initializations are forbidden in declaration statements", 0, next_lexeme.line_number);
@@ -318,10 +314,8 @@ std::shared_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
+std::unique_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt = nullptr;
-
 	// Get the next lexeme
 	lexeme next = this->next();
 
@@ -329,7 +323,7 @@ std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 	if (next.value == "(") {
 		// get the condition
 		this->next();
-		std::shared_ptr<Expression> condition = this->parse_expression();
+		std::unique_ptr<Expression> condition = this->parse_expression();
 
 		if (this->peek().value == ")")
 			this->next();
@@ -337,8 +331,8 @@ std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 			throw CompilerException("Expected ')' in conditional", compiler_errors::MISSING_GROUPING_SYMBOL_ERROR, this->current_token().line_number);
 		
 		// Initialize the if_block
-		std::shared_ptr<Statement> if_branch;
-		std::shared_ptr<Statement> else_branch;
+		std::unique_ptr<Statement> if_branch = nullptr;
+		std::unique_ptr<Statement> else_branch = nullptr;
 		
 		// create the branch
 		this->next();	// skip ahead to the first character of the statement
@@ -362,29 +356,24 @@ std::shared_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 			else_branch = this->parse_statement();
 
 			// construct the statement and return it
-			stmt = std::make_shared<IfThenElse>(condition, if_branch, else_branch);
+			stmt = std::make_unique<IfThenElse>(std::move(condition), std::move(if_branch), std::move(else_branch));
 		}
 		else {
 			// if we do not have an else clause, we will return the if clause alone here
-			stmt = std::make_shared<IfThenElse>(condition, if_branch);
+			stmt = std::make_unique<IfThenElse>(std::move(condition), std::move(if_branch));
 		}
 
 		stmt->set_line_number(current_lex.line_number);
+		return stmt;
 	}
 	// If condition is not enclosed in parens
 	else {
 		throw ParserException("Condition must be enclosed in parens", 331, current_lex.line_number);
 	}
-
-	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_function_parameter)
+std::unique_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_function_parameter)
 {
-	// create an object for the statement as well as the variable's name
-	std::shared_ptr<Statement> stmt;
-	std::string new_var_name = "";
-
 	// check our next token; it must be a keyword or a struct name (ident)
 	lexeme next_token = this->next();
 	if (next_token.type == KEYWORD_LEX || next_token.type == IDENTIFIER_LEX) {
@@ -395,7 +384,7 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 		// next, get the name
 		if (this->peek().type == IDENTIFIER_LEX) {
 			next_token = this->next();
-			new_var_name = next_token.value;
+			std::string new_var_name = next_token.value;
 
 			// get our postfixed qualities, if we have any
 			// now, get postfixed symbol qualities, if we have any
@@ -417,7 +406,7 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 			{
 
 				bool initialized = false;
-				std::shared_ptr<Expression> initial_value = std::make_shared<Expression>();
+				std::unique_ptr<Expression> initial_value = nullptr;
 
 				// the name can be followed by a semicolon, a comma, a closing paren, or a colon
 				// if it's a colon, we have an initial value
@@ -431,8 +420,9 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 				// if it's a semicolon, comma, or closing paren, craft the statement and return
 				if (this->peek().value == ";" || this->peek().value == "," || this->peek().value == ")") {
 					// craft the statement
-					stmt = std::make_shared<Allocation>(symbol_type_data, new_var_name, initialized, initial_value);
+					stmt = std::make_unique<Allocation>(symbol_type_data, new_var_name, initialized, std::move(initial_value));
 					stmt->set_line_number(next_token.line_number);	// set the line number
+					return stmt;
 				}
 				// otherwise, it's an invalid character
 				else {
@@ -454,11 +444,9 @@ std::shared_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 	} else {
 		throw ParserException("Expected a valid data type", compiler_errors::TYPE_ERROR, current_lex.line_number);
 	}
-
-	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
+std::unique_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 {
 
 	// Create a shared_ptr to our assignment expression

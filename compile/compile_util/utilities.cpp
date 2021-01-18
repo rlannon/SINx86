@@ -26,7 +26,7 @@ namespace function_util {
     );
 }
 
-bool is_valid_cast(DataType &old_type, DataType &new_type) {
+bool is_valid_cast(const DataType &old_type, const DataType &new_type) {
     /*
 
     is_valid_cast
@@ -47,7 +47,7 @@ bool is_valid_cast(DataType &old_type, DataType &new_type) {
     );
 }
 
-bool is_subscriptable(Type t) {
+bool is_subscriptable(const Type t) {
     return (t == ARRAY || t == STRING);
 }
 
@@ -209,7 +209,7 @@ std::stringstream cast(const DataType &old_type, const DataType &new_type, const
     return cast_ss;
 }
 
-bool can_pass_in_register(DataType to_check) {
+bool can_pass_in_register(const DataType& to_check) {
     // Checks whether the given DataType can be passed in a register or if it must be passed on the stack
 
     bool can_pass = false;
@@ -227,7 +227,7 @@ bool can_pass_in_register(DataType to_check) {
     return can_pass;
 }
 
-std::string get_rax_name_variant(DataType t, unsigned int line) {
+std::string get_rax_name_variant(const DataType& t, const unsigned int line) {
 	/*
 	
 	get_register_name
@@ -250,7 +250,7 @@ std::string get_rax_name_variant(DataType t, unsigned int line) {
 	return reg_string;
 }
 
-struct_info define_struct(StructDefinition &definition, compile_time_evaluator &cte) {
+struct_info define_struct(const StructDefinition &definition, compile_time_evaluator &cte) {
     /*
     
     define_struct
@@ -369,7 +369,7 @@ struct_info define_struct(StructDefinition &definition, compile_time_evaluator &
 template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&, bool);
 template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&, bool);
 template <typename T>
-symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined) {
+symbol generate_symbol(const T &allocation, const size_t data_width, const std::string& scope_name, const unsigned int scope_level, size_t &stack_offset, const bool defined) {
     /*
 
     generate_symbol
@@ -410,7 +410,7 @@ symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name,
     return to_return;
 }
 
-std::stringstream store_symbol(symbol &s) {
+std::stringstream store_symbol(const symbol &s) {
     /*
 
     store_symbol
@@ -479,7 +479,7 @@ std::stringstream push_used_registers(register_usage &regs, bool ignore_ab) {
     return push_ss;
 }
 
-std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
+std::stringstream pop_used_registers(const register_usage& regs, bool ignore_ab) {
     /*
 
     pop_used_registers
@@ -507,7 +507,7 @@ std::stringstream pop_used_registers(register_usage regs, bool ignore_ab) {
     return pop_ss;
 }
 
-std::string get_address(symbol &s, reg r) {
+std::string get_address(const symbol &s, const reg r) {
     /*
 
     get_address
@@ -546,10 +546,10 @@ std::string get_address(symbol &s, reg r) {
 }
 
 std::string get_struct_member_address(
-    symbol &struct_symbol,
-    struct_table &structs,
-    std::string member_name,
-    reg r
+    const symbol &struct_symbol,
+    const struct_table &structs,
+    const std::string &member_name,
+    const reg r
 ) {
     /*
 

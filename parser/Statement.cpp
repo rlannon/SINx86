@@ -10,13 +10,14 @@ The implementation of the Statement parent class and its various child classes
 
 
 #include "Statement.h"
+#include <utility>
 
 
-stmt_type Statement::get_statement_type() {
+stmt_type Statement::get_statement_type() const {
 	return Statement::statement_type;
 }
 
-unsigned int Statement::get_line_number()
+unsigned int Statement::get_line_number() const
 {
 	return this->line_number;
 }
@@ -33,11 +34,11 @@ Statement::Statement() {
 	this->scope_name = "global";
 }
 
-Statement::Statement(stmt_type statement_type) {
+Statement::Statement(const stmt_type statement_type) {
 	this->statement_type = statement_type;
 }
 
-Statement::Statement(stmt_type statement_type, unsigned int line_number) : statement_type(statement_type), line_number(line_number) {
+Statement::Statement(const stmt_type statement_type, const unsigned int line_number) : statement_type(statement_type), line_number(line_number) {
 	
 }
 
@@ -59,7 +60,7 @@ StatementBlock::~StatementBlock() {
 
 /*	Scoped Block	*/
 
-StatementBlock ScopedBlock::get_statements() {
+const StatementBlock& ScopedBlock::get_statements() const {
 	return this->statements;
 }
 
@@ -71,15 +72,15 @@ ScopedBlock::ScopedBlock(StatementBlock statements): Statement(SCOPE_BLOCK) {
 /*******************		INCLUDE CLASS		********************/
 
 
-std::string Include::get_filename() {
+const std::string& Include::get_filename() const {
 	return this->filename;
 }
 
-Include::Include(std::string filename) : Statement(INCLUDE), filename(filename) {
-}
+Include::Include(const std::string& filename) 
+	: Statement(INCLUDE)
+	, filename(filename) { }
 
-Include::Include(): Include("") {
-}
+Include::Include(): Include("") { }
 
 /*******************		DECLARATION CLASS		********************/
 
@@ -89,6 +90,11 @@ std::string Declaration::get_name() const {
 }
 
 DataType& Declaration::get_type_information() {
+	return this->type;
+}
+
+const DataType& Declaration::get_type_information() const
+{
 	return this->type;
 }
 
@@ -161,11 +167,11 @@ std::string Allocation::get_var_type_as_string(Type to_convert) {
 	return "[unknown type]";
 }
 
-std::string Allocation::get_name() {
+const std::string& Allocation::get_name() const {
 	return this->value;
 }
 
-bool Allocation::was_initialized()
+bool Allocation::was_initialized() const
 {
 	return this->initialized;
 }
@@ -175,12 +181,12 @@ Expression *Allocation::get_initial_value()
 	return this->initial_value.get();
 }
 
-Allocation::Allocation(DataType type_information, std::string value, bool initialized, std::shared_ptr<Expression> initial_value) :
+Allocation::Allocation(const DataType& type_information, const std::string& value, const bool initialized, std::unique_ptr<Expression> initial_value) :
 	Statement(ALLOCATION),
 	type_information(type_information),
 	value(value),
 	initialized(initialized),
-	initial_value(initial_value)
+	initial_value(std::move(initial_value))
 {
 }
 
@@ -193,26 +199,26 @@ Allocation::Allocation(): Statement(ALLOCATION) {
 
 /*******************	ASSIGNMENT CLASS	********************/
 
-Expression & Assignment::get_lvalue() {
+const Expression & Assignment::get_lvalue() const {
 	return *this->lvalue.get();
 }
 
-Expression & Assignment::get_rvalue() {
+const Expression & Assignment::get_rvalue() const {
 	return *this->rvalue_ptr.get();
 }
 
-Assignment::Assignment(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue) : 
+Assignment::Assignment(std::unique_ptr<Expression> lvalue, std::unique_ptr<Expression> rvalue) : 
 	Statement(ASSIGNMENT),
-	lvalue(lvalue), 
-	rvalue_ptr(rvalue) 
+	lvalue(std::move(lvalue)), 
+	rvalue_ptr(std::move(rvalue)) 
 {
 }
 
-Assignment::Assignment(Identifier lvalue, std::shared_ptr<Expression> rvalue) : 
+Assignment::Assignment(Identifier lvalue, std::unique_ptr<Expression> rvalue) : 
 	Statement(ASSIGNMENT),
-	rvalue_ptr(rvalue)
+	rvalue_ptr(std::move(rvalue))
 {
-	this->lvalue = std::make_shared<Identifier>(lvalue);
+	this->lvalue = std::make_unique<Identifier>(lvalue);
 }
 
 Assignment::Assignment():
@@ -222,8 +228,8 @@ Assignment::Assignment():
 
 // Movements
 
-Movement::Movement(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue) :
-	Assignment(lvalue, rvalue)
+Movement::Movement(std::unique_ptr<Expression> lvalue, std::unique_ptr<Expression> rvalue) :
+	Assignment(std::move(lvalue), std::move(rvalue))
 {
 	this->statement_type = MOVEMENT;	// since we call the assignment constructor, we need to override the statement type
 }
@@ -232,15 +238,15 @@ Movement::Movement(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expressio
 /*******************	RETURN STATEMENT CLASS		********************/
 
 
-Expression & ReturnStatement::get_return_exp() {
+const Expression & ReturnStatement::get_return_exp() const {
 	return *this->return_exp.get();
 }
 
 
-ReturnStatement::ReturnStatement(std::shared_ptr<Expression> exp_ptr):
+ReturnStatement::ReturnStatement(std::unique_ptr<Expression> exp_ptr):
 	Statement(RETURN_STATEMENT)
 {
-	ReturnStatement::return_exp = exp_ptr;
+	ReturnStatement::return_exp = std::move(exp_ptr);
 }
 
 ReturnStatement::ReturnStatement():
@@ -252,28 +258,28 @@ ReturnStatement::ReturnStatement():
 
 /*******************	ITE CLASS		********************/
 
-Expression &IfThenElse::get_condition() {
+const Expression &IfThenElse::get_condition() const {
 	return *this->condition.get();
 }
 
-Statement *IfThenElse::get_if_branch() {
+const Statement *IfThenElse::get_if_branch() const {
 	return this->if_branch.get();
 }
 
-Statement *IfThenElse::get_else_branch() {
+const Statement *IfThenElse::get_else_branch() const {
 	return this->else_branch.get();
 }
 
-IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr):
-	Statement(IF_THEN_ELSE)
+IfThenElse::IfThenElse(std::unique_ptr<Expression> condition_ptr, std::unique_ptr<Statement> if_branch_ptr, std::unique_ptr<Statement> else_branch_ptr)
+	: Statement(IF_THEN_ELSE)
+	, condition(std::move(condition_ptr))
+	, if_branch(std::move(if_branch_ptr))
+	, else_branch(std::move(else_branch_ptr))
 {
-	IfThenElse::condition = condition_ptr;
-	IfThenElse::if_branch = if_branch_ptr;
-	IfThenElse::else_branch = else_branch_ptr;
 }
 
-IfThenElse::IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr):
-	IfThenElse(condition_ptr, if_branch_ptr, nullptr)
+IfThenElse::IfThenElse(std::unique_ptr<Expression> condition_ptr, std::unique_ptr<Statement> if_branch_ptr):
+	IfThenElse(std::move(condition_ptr), std::move(if_branch_ptr), nullptr)
 {
 }
 
@@ -286,20 +292,20 @@ IfThenElse::IfThenElse():
 
 /*******************	WHILE LOOP CLASS		********************/
 
-Expression &WhileLoop::get_condition()
+const Expression &WhileLoop::get_condition() const
 {
 	return *this->condition.get();
 }
 
-Statement *WhileLoop::get_branch()
+const Statement *WhileLoop::get_branch() const
 {
 	return this->branch.get();
 }
 
-WhileLoop::WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch) : 
+WhileLoop::WhileLoop(std::unique_ptr<Expression> condition, std::unique_ptr<Statement> branch) : 
 	Statement(WHILE_LOOP),
-	condition(condition),
-	branch(branch)
+	condition(std::move(condition)),
+	branch(std::move(branch))
 {
 }
 
@@ -309,21 +315,19 @@ WhileLoop::WhileLoop(): Statement(WHILE_LOOP) {
 
 /*******************	DEFINITION CLASS		********************/
 
-std::string Definition::get_name() {
+const std::string& Definition::get_name() const {
 	return this->name;
 }
 
-StatementBlock &Definition::get_procedure() {
+const StatementBlock &Definition::get_procedure() const {
 	return *this->procedure.get();
 }
 
-Definition::Definition(std::string name, std::shared_ptr<StatementBlock> procedure):
-	Statement(),
-	name(name),
-	procedure(procedure)
+Definition::Definition(const std::string& name, std::unique_ptr<StatementBlock> procedure)
+	: Statement()
+	, name(name)
+	, procedure(std::move(procedure))
 {
-	this->name = name;
-	this->procedure = procedure;
 }
 
 Definition::Definition() {
@@ -336,41 +340,49 @@ Definition::~Definition() {
 
 /*******************	FUNCTION DEFINITION CLASS		********************/
 
-DataType &FunctionDefinition::get_type_information()
+const DataType &FunctionDefinition::get_type_information() const
 {
 	return this->return_type;
 }
 
-std::vector<Statement*> FunctionDefinition::get_formal_parameters() {
-	std::vector<Statement*> to_return;
+std::vector<const Statement*> FunctionDefinition::get_formal_parameters() const {
+	std::vector<const Statement*> to_return;
     for (auto it = this->formal_parameters.begin(); it != this->formal_parameters.end(); it++) {
         to_return.push_back(it->get());
     }
     return to_return;
 }
 
-calling_convention FunctionDefinition::get_calling_convention() {
+calling_convention FunctionDefinition::get_calling_convention() const {
 	return this->call_con;
 }
 
-FunctionDefinition::FunctionDefinition(std::string name, DataType return_type, std::vector<std::shared_ptr<Statement>> args_ptr, std::shared_ptr<StatementBlock> procedure_ptr, calling_convention call_con):
-	Definition(name, procedure_ptr),
-	return_type(return_type),
-	formal_parameters(args_ptr),
-	call_con(call_con)
+FunctionDefinition::FunctionDefinition(
+	const std::string& name,
+	const DataType& return_type,
+	const std::vector<std::shared_ptr<Statement>>& args_ptr,
+	std::unique_ptr<StatementBlock> procedure_ptr,
+	const calling_convention call_con
+)
+	: Definition(name, std::move(procedure_ptr))
+	, return_type(return_type)
+	, formal_parameters(args_ptr)
+	, call_con(call_con)
 {
-	FunctionDefinition::statement_type = FUNCTION_DEFINITION;
+	this->statement_type = FUNCTION_DEFINITION;
 }
 
-FunctionDefinition::FunctionDefinition() {
-	FunctionDefinition::statement_type = FUNCTION_DEFINITION;
+FunctionDefinition::FunctionDefinition()
+	: Definition()
+{
+	this->statement_type = FUNCTION_DEFINITION;
 }
 
 
 /*******************	STRUCT DEFINITION CLASS		********************/
 
-StructDefinition::StructDefinition(std::string name, std::shared_ptr<StatementBlock> procedure_ptr):
-	Definition(name, procedure_ptr)
+StructDefinition::StructDefinition(const std::string& name, std::unique_ptr<StatementBlock> procedure_ptr):
+	Definition(name, std::move(procedure_ptr))
 {
 	this->statement_type = STRUCT_DEFINITION;
 }
@@ -400,7 +412,7 @@ std::vector<Expression*> Call::get_args() {
 	return this->call_exp.get_args();
 }
 */
-Call::Call(CallExpression call_exp): 
+Call::Call(const CallExpression& call_exp): 
 	Statement(CALL),
 	CallExpression(call_exp)
 {
@@ -412,12 +424,12 @@ Call::Call(): Statement(CALL) {
 
 /*******************		INLINE ASM CLASS		********************/
 
-std::string InlineAssembly::get_asm_code()
+const std::string& InlineAssembly::get_asm_code() const
 {
 	return this->asm_code;
 }
 
-InlineAssembly::InlineAssembly(std::string asm_code) : 
+InlineAssembly::InlineAssembly(const std::string& asm_code) : 
 	Statement(INLINE_ASM),
 	asm_code(asm_code)
 {
@@ -431,7 +443,7 @@ InlineAssembly::InlineAssembly():
 
 /*******************		FREE MEMORY CLASS		********************/
 
-Expression &FreeMemory::get_freed_memory() {
+const Expression &FreeMemory::get_freed_memory() const {
 	return *this->to_free.get();
 }
 

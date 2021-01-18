@@ -1,0 +1,42 @@
+// floating_point.sin
+// a test of SIN's floating-point functions
+
+decl void print(decl string s);
+
+def int main(alloc dynamic array<string> args)
+{
+    alloc float f: 1.2345;
+    alloc float f2: 1.2345;
+
+    if (f >= f2 )
+    {
+        @print("f >= f2\n");
+    }
+    else
+    {
+        @print("f < f2\n");
+    }
+
+    if (f = f2)
+    {
+        @print("f = f2\n");
+    }
+    else
+    {
+        @print("f != f2\n");
+    }
+
+    alloc int i: 10;
+    alloc int i2: 10;
+
+    if (i >= i2)
+    {
+        @print("i >= i2\n");
+    }
+    else
+    {
+        @print("i < i2\n");
+    }
+
+    return 0;
+}

@@ -35,28 +35,28 @@ Our various compiler utilities
 
 // todo: put these in their own namespace
 
-bool is_valid_cast(DataType &old_type, DataType &new_type);
+bool is_valid_cast(const DataType &old_type, const DataType &new_type);
 
-bool is_subscriptable(Type t);
+bool is_subscriptable(const Type t);
 
 std::stringstream cast(const DataType &old_type, const DataType &new_type, const unsigned int line, const bool is_strict);
 
-bool can_pass_in_register(DataType to_check);
+bool can_pass_in_register(const DataType& to_check);
 
-std::string get_rax_name_variant(DataType t, unsigned int line);
+std::string get_rax_name_variant(const DataType& t, const unsigned int line);
 
-struct_info define_struct(StructDefinition &definition, compile_time_evaluator &cte);
+struct_info define_struct(const StructDefinition &definition, compile_time_evaluator &cte);
 
 template<typename T>
-symbol generate_symbol(T &allocation, size_t data_width, std::string scope_name, unsigned int scope_level, size_t &stack_offset, bool defined=true);
+symbol generate_symbol(const T &allocation, const size_t data_width, const std::string& scope_name, const unsigned int scope_level, size_t &stack_offset, const bool defined=true);
 
-std::stringstream store_symbol(symbol& s);
+std::stringstream store_symbol(const symbol& s);
 
 std::stringstream push_used_registers(register_usage &regs, bool ignore_ab = false);
-std::stringstream pop_used_registers(register_usage regs, bool ignore_ab = false);
+std::stringstream pop_used_registers(const register_usage& regs, bool ignore_ab = false);
 
-std::string get_address(symbol &s, reg r);
-std::string get_struct_member_address(symbol &struct_symbol, struct_table &structs, std::string member_name, reg r);
+std::string get_address(const symbol &s, const reg r);
+std::string get_struct_member_address(const symbol &struct_symbol, const struct_table &structs, const std::string& member_name, const reg r);
 
 std::string decrement_rc(
     register_usage &r,

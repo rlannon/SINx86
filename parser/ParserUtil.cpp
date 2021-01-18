@@ -336,10 +336,15 @@ bool Parser::has_return(StatementBlock to_test)
 				WhileLoop* while_loop = static_cast<WhileLoop*>(last_statement);
 
 				// while loops are a little simpler, we can simply pass in the branch for the while loop
-                if (while_loop->get_branch())
-    				return general_utilities::returns(*while_loop->get_branch());
-                else
-                    return false;
+				const Statement* branch = while_loop->get_branch();
+				if (branch)
+				{
+					return general_utilities::returns(*branch);
+				}
+				else
+				{
+					return false;
+				}
     		}
 			else {
 				return false;

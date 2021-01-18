@@ -177,14 +177,15 @@ class Procedure: public Expression
     std::shared_ptr<Expression> name;
     std::shared_ptr<ListExpression> args;
 public:
-    Expression &get_func_name();
-    ListExpression &get_args();
-    Expression &get_arg(size_t arg_no);
-    size_t get_num_args();
+    const Expression &get_func_name() const;
+    const ListExpression &get_args() const;
+    const Expression &get_arg(size_t arg_no) const;
+    size_t get_num_args() const;
 
     std::unique_ptr<Expression> get_unique() override;
     void insert_arg(Expression &to_insert, size_t index);
 
+	Procedure(const Procedure& other);
     Procedure(std::shared_ptr<Expression> proc_name, std::shared_ptr<ListExpression> proc_args);
     Procedure(std::shared_ptr<Expression> proc_name, ListExpression *proc_args);
     Procedure();
@@ -196,6 +197,7 @@ public:
     std::unique_ptr<Expression> get_unique() override;
 
 	CallExpression(Procedure *proc);
+	CallExpression(const CallExpression& other);
 	CallExpression();
 };
 

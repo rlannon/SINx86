@@ -365,19 +365,19 @@ Unary::Unary(): Expression(UNARY) {
 
 // Parsing function calls
 
-Expression &Procedure::get_func_name() {
+const Expression &Procedure::get_func_name() const {
     return *this->name.get();
 }
 
-ListExpression &Procedure::get_args() {
+const ListExpression &Procedure::get_args() const {
     return *this->args.get();
 }
 
-Expression &Procedure::get_arg(size_t arg_no) {
+const Expression &Procedure::get_arg(size_t arg_no) const {
     return *this->args->get_list().at(arg_no);
 }
 
-size_t Procedure::get_num_args() {
+size_t Procedure::get_num_args() const {
     return this->args->get_list().size();
 }
 
@@ -387,6 +387,13 @@ std::unique_ptr<Expression> Procedure::get_unique() {
 
 void Procedure::insert_arg(Expression &to_insert, size_t index) {
     this->args->add_item(to_insert, index);
+}
+
+Procedure::Procedure(const Procedure& other)
+	: Expression(PROC_EXP)
+	, name(other.name)
+	, args(other.args)
+{
 }
 
 Procedure::Procedure(
@@ -443,6 +450,12 @@ CallExpression::CallExpression(
     Procedure(*proc)
 {
     this->expression_type = CALL_EXP;
+}
+
+CallExpression::CallExpression(const CallExpression& other)
+	: Procedure(other)
+{
+	this->expression_type = CALL_EXP;
 }
 
 CallExpression::CallExpression()
