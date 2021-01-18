@@ -273,7 +273,7 @@ public:
 class Call : public Statement, public CallExpression
 {
 public:
-	Call(const CallExpression& call_exp);
+	Call(CallExpression& call_exp);
 	Call();
 };
 

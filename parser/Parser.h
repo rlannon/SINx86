@@ -109,27 +109,27 @@ class Parser
 	put default argument here because we call "parse_expression" in "maybe_binary"; as a reuslt, "his_prec" appears as if it is being passed to the next maybe_binary, but isn't because we parse an expression before we parse the binary, meaning my_prec gets set to 0, and not to his_prec as it should
 	Note we also have a 'not_binary' flag here; if the expression is indexed, we may not want to have a binary expression parsed
 	*/
-	std::shared_ptr<Expression> parse_expression(
-		size_t prec=0,
+	std::unique_ptr<Expression> parse_expression(
+		const size_t prec=0,
 		std::string grouping_symbol = "(",
 		bool not_binary = false,
-		bool omit_equals = false
+		const bool omit_equals = false
 	);
-	std::shared_ptr<Expression> maybe_binary(
-		std::shared_ptr<Expression> left,
-		size_t my_prec,
-		std::string grouping_symbol = "(",
-		bool omit_equals = false
+	std::unique_ptr<Expression> maybe_binary(
+		std::unique_ptr<Expression> left,
+		const size_t my_prec,
+		const std::string& grouping_symbol = "(",
+		const bool omit_equals = false
 	);	// check to see if we need to fashion a binary expression
-	static std::shared_ptr<Binary> create_compound_assignment_rvalue(
-		std::shared_ptr<Expression> left,
-		std::shared_ptr<Expression> right,
-		exp_operator op
+	static std::unique_ptr<Binary> create_compound_assignment_rvalue(
+		std::unique_ptr<Expression> left,
+		std::unique_ptr<Expression> right,
+		const exp_operator op
 	);
 public:
 	// our entry function
 	StatementBlock create_ast();
 
-	Parser(std::string filename);
+	Parser(const std::string& filename);
 	~Parser();
 };

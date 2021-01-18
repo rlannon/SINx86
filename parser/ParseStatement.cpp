@@ -321,6 +321,9 @@ std::unique_ptr<Statement> Parser::parse_ite(lexeme current_lex)
 
 	// Check to see if condition is enclosed in parens
 	if (next.value == "(") {
+		// create the statement pointer
+		std::unique_ptr<Statement> stmt = nullptr;
+
 		// get the condition
 		this->next();
 		std::unique_ptr<Expression> condition = this->parse_expression();
@@ -420,7 +423,7 @@ std::unique_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 				// if it's a semicolon, comma, or closing paren, craft the statement and return
 				if (this->peek().value == ";" || this->peek().value == "," || this->peek().value == ")") {
 					// craft the statement
-					stmt = std::make_unique<Allocation>(symbol_type_data, new_var_name, initialized, std::move(initial_value));
+					auto stmt = std::make_unique<Allocation>(symbol_type_data, new_var_name, initialized, std::move(initial_value));
 					stmt->set_line_number(next_token.line_number);	// set the line number
 					return stmt;
 				}
@@ -448,15 +451,9 @@ std::unique_ptr<Statement> Parser::parse_allocation(lexeme current_lex, bool is_
 
 std::unique_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 {
-
-	// Create a shared_ptr to our assignment expression
-	std::shared_ptr<Assignment> assign;
-	// Create an object for our left expression
-	std::shared_ptr<Expression> lvalue;
-
 	// parse an expression for our lvalue (the compiler will verify the type later)
 	this->next();	// Parser::parse_expression must have the token pointer on the first token of the expression
-	lvalue = this->parse_expression(0, "(", false, true);
+	std::unique_ptr<Expression> lvalue = this->parse_expression(0, "(", false, true);
 
 	// now, "lvalue" should hold the proper variable reference for the assignment
 	// get the operator character, make sure it's an equals sign
@@ -466,16 +463,15 @@ std::unique_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 	if (is_valid_copy_assignment_operator(op)) {
 		// if the next lexeme is not a semicolon and the next lexeme's line number is the same as the current lexeme's line number, we are ok
 		if ((this->peek().value != ";") && (this->peek().line_number == current_lex.line_number)) {
-			// create a shared_ptr for our rvalue expression
-			std::shared_ptr<Expression> rvalue;
+			// get our rvalue expression
 			this->next();
-			rvalue = this->parse_expression();
+			std::unique_ptr<Expression> rvalue = this->parse_expression();
 
 			if (op != EQUAL) {
-				rvalue = Parser::create_compound_assignment_rvalue(lvalue, rvalue, op);
+				rvalue = Parser::create_compound_assignment_rvalue(std::move(lvalue), std::move(rvalue), op);
 			}
 
-			assign = std::make_shared<Assignment>(lvalue, rvalue);
+			auto assign = std::make_unique<Assignment>(std::move(lvalue), std::move(rvalue));
 			assign->set_line_number(current_lex.line_number);
 			return assign;
 		}
@@ -492,7 +488,7 @@ std::unique_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 	}
 }
 
-std::shared_ptr<Statement> Parser::parse_move(lexeme current_lex)
+std::unique_ptr<Statement> Parser::parse_move(lexeme current_lex)
 {
 	/*
 
@@ -501,10 +497,8 @@ std::shared_ptr<Statement> Parser::parse_move(lexeme current_lex)
 
 	*/
 
-	std::shared_ptr<Statement> stmt = nullptr;
+	// get the lhs of the movement
 	this->next();
-	
-	// get the lhs
 	auto lhs = this->parse_expression();
 	
 	// get the op
@@ -519,28 +513,29 @@ std::shared_ptr<Statement> Parser::parse_move(lexeme current_lex)
 		}
 
 		// todo: ensure that we are only moving modifiable-lvalues (should this be done in the compiler class?)
+		// todo: do this in a semantic analysis phase
 		
+		std::unique_ptr<Statement> stmt = nullptr;
 		if (op == LEFT_ARROW) {
 			// rhs is rvalue (the value)
-			stmt = std::make_shared<Movement>(lhs, rhs);
+			stmt = std::make_unique<Movement>(lhs, rhs);
 		}
 		else {
 			// lhs is rvalue (the value)
-			stmt = std::make_shared<Movement>(rhs, lhs);
+			stmt = std::make_unique<Movement>(rhs, lhs);
 		}
 
         stmt->set_line_number(current_lex.line_number);
+		return stmt;
 	}
 	else {
 		throw ParserException("Expected move assignment operator", compiler_errors::OPERATOR_TYPE_ERROR, current_lex.line_number);
 	}
-
-	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
+std::unique_ptr<Statement> Parser::parse_return(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt = nullptr;
+	std::unique_ptr<Statement> stmt = nullptr;
 	this->next();	// go to the expression
 
 	// if the current token is a semicolon, return a Literal Void
@@ -557,16 +552,16 @@ std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
 		}
 
 		// craft the statement
-		stmt = std::make_shared<ReturnStatement>(std::make_shared<Literal>(VOID, "", NONE));
+		stmt = std::make_unique<ReturnStatement>(std::make_shared<Literal>(VOID, "", NONE));
 		stmt->set_line_number(current_lex.line_number);
 	}
 	// otherwise, we must have an expression
 	else {
 		// get the return expression
-		std::shared_ptr<Expression> return_exp = this->parse_expression();
+		auto return_exp = this->parse_expression();
 
 		// create a return statement from it and set the line number
-		stmt = std::make_shared<ReturnStatement>(return_exp);
+		stmt = std::make_unique<ReturnStatement>(return_exp);
 		stmt->set_line_number(current_lex.line_number);
 	}
 
@@ -574,33 +569,28 @@ std::shared_ptr<Statement> Parser::parse_return(lexeme current_lex)
 	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
+std::unique_ptr<Statement> Parser::parse_while(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt;
-
 	// A while loop is very similar to an ITE in how we parse it; the only difference is we don't need to check for an "else" branch
-	std::shared_ptr<Expression> condition;	// create the object for our condition
-	StatementBlock branch;	// and for the loop body
 	lexeme next = this->next();
 
 	if (next.value == "(") {
 		// get condition
 		this->next();
-		condition = this->parse_expression();
+		auto condition = this->parse_expression();
 		
 		if (this->peek().value == ")")
+		{
 			this->next();
+		}
 		else
 		{
 			throw CompilerException("Expected parentheses around conditional", compiler_errors::MISSING_GROUPING_SYMBOL_ERROR, this->current_token().line_number);
 		}
 
-		// initialize the branch
-		std::shared_ptr<Statement> branch;
-
 		// create the branch
 		this->next();
-		branch = this->parse_statement();
+		auto branch = this->parse_statement();
 
 		// if there was a single statement, ensure there was a semicolon
 		if (this->peek().value == ";")
@@ -608,27 +598,26 @@ std::shared_ptr<Statement> Parser::parse_while(lexeme current_lex)
 		else if (this->current_token().value != "}")
 			throw MissingSemicolonError(this->current_token().line_number);
 		
-		stmt = std::make_shared<WhileLoop>(condition, branch);
+		auto stmt = std::make_unique<WhileLoop>(std::move(condition), std::move(branch));
 		stmt->set_line_number(current_lex.line_number);
+		return stmt;
 	}
 	else {
 		throw ParserException("Expected a condition", 331, current_lex.line_number);
 	}
-
-	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
+std::unique_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
 {
-	std::shared_ptr<Statement> stmt = nullptr;
     auto parsed = this->parse_expression();
     if (parsed->get_expression_type() == CALL_EXP) {
         CallExpression *exp = static_cast<CallExpression*>(parsed.get());
 
         // if we didn't get a CallExpression, then it's an error -- we /must/ have one for a Call statement 
         // this means if we have a binary or something else (e.g., '@x.y().z'), it's not valid
-        stmt = std::make_shared<Call>(*exp);
+        auto stmt = std::make_unique<Call>(*exp);
         stmt->set_line_number(current_lex.line_number);
+		return stmt;
     }
     else {
         throw ParserException(
@@ -637,6 +626,4 @@ std::shared_ptr<Statement> Parser::parse_function_call(lexeme current_lex)
             current_lex.line_number
         );
     }
-
-    return stmt;
 }

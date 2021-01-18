@@ -78,7 +78,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     return handle_ss;
 }
 
-std::stringstream compiler::handle_alloc_init(symbol &sym, Expression &rvalue, unsigned int line) {
+std::stringstream compiler::handle_alloc_init(symbol &sym, std::unique_ptr<rvalue>, unsigned int line) {
     /*
 
     handle_alloc_init
@@ -99,7 +99,7 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, Expression &rvalue, u
         // wrap the rvalue in a unary address-of expression
         // this will be fine since we will be comparing against the subtype but evaluating a pointer
         u = std::make_unique<Unary>(
-            std::move(rvalue.get_unique()),
+            std::move(rvalue),
             exp_operator::ADDRESS
         );
         return this->assign(sym.get_data_type(), rhs_type, p, *u.get(), line, true);

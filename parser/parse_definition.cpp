@@ -10,7 +10,7 @@ Contains the implementation of the parser's functions to construct definitions f
 
 #include "Parser.h"
 
-std::shared_ptr<Statement> Parser::parse_definition(lexeme current_lex) {
+std::unique_ptr<Statement> Parser::parse_definition(lexeme current_lex) {
 	/*
 
 	parse_definition
@@ -35,7 +35,7 @@ std::shared_ptr<Statement> Parser::parse_definition(lexeme current_lex) {
 	}
 }
 
-std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex) {
+std::unique_ptr<Statement> Parser::parse_function_definition(lexeme current_lex) {
 	/*
 
 	parse_function_definition
@@ -68,8 +68,7 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 
 		if (this->peek().value == "(") {
 			this->next();
-			// Create our arguments vector and our StatementBlock variable
-			StatementBlock procedure;
+			// Create our arguments vector
 			std::vector<std::shared_ptr<Statement>> args;
 			// Populate our arguments vector if there are arguments
 			if (this->peek().value != ")") {
@@ -104,7 +103,7 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 					parser_warning("Empty function definition", this->current_token().line_number);	// print a warning and don't advance the token pointer
 				}
 
-				procedure = this->create_ast();
+				auto procedure = this->create_ast();
 				this->next();	// skip closing curly brace
 
 				// check to see if 'procedure' has a return statement using has_return
@@ -113,17 +112,20 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 				// if so, return it; otherwise, throw an error
 				if (returned) {
 					// Return the pointer to our function
-					stmt = std::make_shared<FunctionDefinition>(func_name.value, func_type_data, args, std::make_shared<StatementBlock>(procedure), call_con);
+					auto stmt = std::make_unique<FunctionDefinition>(func_name.value, func_type_data, args, std::make_unique<StatementBlock>(procedure), call_con);
 					stmt->set_line_number(current_lex.line_number);
+					return stmt;
 				}
 				else {
 					throw ParserException("All functions must return a value (if type is void, use 'return void')", 0, current_lex.line_number);
 				}
 			}
+			// if no curly brace
 			else {
 				throw ParserException("Function definition requires use of curly braces after arguments", 331, current_lex.line_number);
 			}
 		}
+		// if no parens
 		else {
 			throw ParserException("Function definition requires '(' and ')'", 331, current_lex.line_number);
 		}
@@ -132,11 +134,9 @@ std::shared_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 	else {
 		throw ParserException("Expected identifier", 330, current_lex.line_number);
 	}
-
-	return stmt;
 }
 
-std::shared_ptr<Statement> Parser::parse_struct_definition(lexeme current_lex) {
+std::unique_ptr<Statement> Parser::parse_struct_definition(lexeme current_lex) {
     /*
 
     parse_struct_definition
@@ -148,9 +148,6 @@ std::shared_ptr<Statement> Parser::parse_struct_definition(lexeme current_lex) {
     @return A shared_ptr to the parsed statement
 
     */
-
-    std::shared_ptr<Statement> stmt;
-    StatementBlock procedure;
 
     lexeme struct_name = this->next();
     if (struct_name.type == IDENTIFIER_LEX) {
@@ -166,17 +163,17 @@ std::shared_ptr<Statement> Parser::parse_struct_definition(lexeme current_lex) {
             }
 
             // parse the struct definition
-            procedure = this->create_ast();
+            auto procedure = this->create_ast();
             this->next();   // skip the closing curly brace
+
+			// construct the struct definition and return it
+    		auto stmt = std::make_unique<StructDefinition>(struct_name.value, std::make_unique<StatementBlock>(procedure));
+    		stmt->set_line_number(current_lex.line_number);
+    		return stmt;
         } else {
             throw ParserException("Expected scoped block in struct definition", 0, this->peek().line_number);
         }
     } else {
         throw ParserException("Expected identifier for struct name", 0, struct_name.line_number);
     }
-
-    // construct the struct definition and return it
-    stmt = std::make_shared<StructDefinition>(struct_name.value, std::make_shared<StatementBlock>(procedure));
-    stmt->set_line_number(current_lex.line_number);
-    return stmt;
 }
