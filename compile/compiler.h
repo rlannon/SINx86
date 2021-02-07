@@ -130,7 +130,7 @@ class compiler {
 	std::pair<std::string, size_t> call_function(const Procedure &to_call, unsigned int line, bool allow_void = true);
 	
     std::stringstream sincall(const function_symbol& s, std::vector<const Expression*> args, unsigned int line);
-    std::stringstream sincall(const function_symbol& s, std::vector<std::shared_ptr<Expression>>& args, unsigned int line);
+    std::stringstream sincall(const function_symbol& s, std::vector<std::unique_ptr<Expression>>& args, unsigned int line);
 
 	std::stringstream system_v_call(const function_symbol& s, std::vector<Expression*> args, unsigned int line);
 	std::stringstream win64_call(const function_symbol& s, std::vector<Expression*> args, unsigned int line);

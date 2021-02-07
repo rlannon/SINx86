@@ -719,7 +719,7 @@ void compiler::generate_asm(const std::string& infile_name, std::string outfile_
                 << "\t" << "push rax" << std::endl;
 
             // todo: get actual command-line arguments, convert them into SIN data types
-            std::vector<std::shared_ptr<Expression>> cmd_args = {};
+            std::vector<std::unique_ptr<Expression>> cmd_args;
             for (
                 auto it = main_symbol.get_formal_parameters().begin();
                 it != main_symbol.get_formal_parameters().end(); 

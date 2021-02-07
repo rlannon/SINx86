@@ -306,7 +306,7 @@ std::pair<std::string, size_t> compiler::call_function(const Procedure &to_call,
     return std::make_pair<>(call_ss.str(), count);
 }
 
-std::stringstream compiler::sincall(const function_symbol& s, std::vector<std::shared_ptr<Expression>>& args, unsigned int line) {
+std::stringstream compiler::sincall(const function_symbol& s, std::vector<std::unique_ptr<Expression>>& args, unsigned int line) {
     /*
 
     sincall
@@ -315,8 +315,8 @@ std::stringstream compiler::sincall(const function_symbol& s, std::vector<std::s
     */
 
     std::vector<const Expression*> to_pass;
-    for (auto elem: args) {
-        to_pass.push_back(elem.get());
+    for (auto it = args.begin(); it != args.end(); it++) {
+        to_pass.push_back(it->get());
     }
     return this->sincall(s, to_pass, line);
 }
