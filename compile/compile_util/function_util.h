@@ -23,10 +23,10 @@ namespace function_util
 
     template<typename T>
     function_symbol create_function_symbol(
-        T def,
+        const T& def,
         bool mangle=true,
         bool defined=true,
-        std::string scope_name = "global",
+        const std::string& scope_name = "global",
         unsigned int scope_level = 0, 
         bool is_method = false
     );

@@ -8,9 +8,9 @@ Copyright 2020 Riley Lannon
 #include "assign_util.h"
 
 assign_utilities::destination_information::destination_information(
-    std::string dest_location,
-    std::string fetch_instructions,
-    std::string address_for_lea,
+    const std::string& dest_location,
+    const std::string& fetch_instructions,
+    const std::string& address_for_lea,
     bool in_register,
     bool can_use_lea,
     MoveInstruction instruction_used
@@ -24,10 +24,10 @@ assign_utilities::destination_information::destination_information(
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
-    Expression &exp,
+    const Expression &exp,
     symbol_table &symbols,
     struct_table &structures,
-    std::string scope_name,
+    const std::string& scope_name,
     unsigned int scope_level,
     unsigned int line,
     reg r,
@@ -54,7 +54,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     // generate code based on the expression type
     if (exp.get_expression_type() == IDENTIFIER) {
         // get the symbol information
-        auto &lhs = static_cast<Identifier&>(exp);
+        auto &lhs = static_cast<const Identifier&>(exp);
         auto &sym = symbols.find(lhs.getValue());
         auto p = fetch_destination_operand(sym, symbols, line, r, is_initialization);
         dest = p.dest_location;
@@ -69,7 +69,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     }
     else if (exp.get_expression_type() == UNARY) {
         // get the unary
-        auto &lhs = static_cast<Unary&>(exp);
+        auto &lhs = static_cast<const Unary&>(exp);
         if (lhs.get_operator() == exp_operator::DEREFERENCE) {
             // ensure the expression has a pointer type; else, indirection is illegal
             auto op_t = expression_util::get_expression_data_type(lhs.get_operand(), symbols, structures, line);
@@ -105,7 +105,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
         }
     }
     else if (exp.get_expression_type() == BINARY) {
-        auto &lhs = static_cast<Binary&>(exp);
+        auto &lhs = static_cast<const Binary&>(exp);
         if (lhs.get_operator() == DOT) {
             dest = "[rbx]";
             gen_code << expression_util::get_exp_address(exp, symbols, structures, r, line).str();
@@ -136,7 +136,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
 }
 
 assign_utilities::destination_information assign_utilities::fetch_destination_operand(
-    symbol &sym,
+    const symbol &sym,
     symbol_table &symbols,\
     unsigned int line,
     reg r,
@@ -227,7 +227,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     return destination_information(dest, gen_code.str(), address_for_lea, in_register, can_use_lea, instruction_used);
 }
 
-bool assign_utilities::requires_copy(DataType t) {
+bool assign_utilities::requires_copy(const DataType& t) {
     /*
 
     requires_copy
@@ -243,7 +243,7 @@ bool assign_utilities::requires_copy(DataType t) {
     );
 }
 
-bool assign_utilities::is_valid_move_expression(Expression &exp) {
+bool assign_utilities::is_valid_move_expression(const Expression &exp) {
     /*
 
     is_valid_move_expression
@@ -267,7 +267,7 @@ bool assign_utilities::is_valid_move_expression(Expression &exp) {
         is_valid = false;
     }
     else if (exp.get_expression_type() == BINARY) {
-        auto &b = static_cast<Binary&>(exp);
+        auto &b = static_cast<const Binary&>(exp);
         if (b.get_operator() == DOT) {
             is_valid = true;
         }
@@ -276,7 +276,7 @@ bool assign_utilities::is_valid_move_expression(Expression &exp) {
         }
     }
     else if (exp.get_expression_type() == UNARY) {
-        auto &u = static_cast<Unary&>(exp);
+        auto &u = static_cast<const Unary&>(exp);
         if (u.get_operator() == DEREFERENCE) {
             is_valid = true;
         }

@@ -46,72 +46,72 @@ bool symbol_qualities::operator!=(const symbol_qualities& right) const {
 	return !this->operator==(right);
 }
 
-bool symbol_qualities::is_long()
+bool symbol_qualities::is_long() const
 {
     return long_q;
 }
 
-bool symbol_qualities::is_short()
+bool symbol_qualities::is_short() const
 {
     return short_q;
 }
 
-bool symbol_qualities::is_const()
+bool symbol_qualities::is_const() const
 {
 	return const_q;
 }
 
-bool symbol_qualities::is_final()
+bool symbol_qualities::is_final() const
 {
 	return final_q;
 }
 
-bool symbol_qualities::is_dynamic()
+bool symbol_qualities::is_dynamic() const
 {
 	return dynamic_q;
 }
 
-bool symbol_qualities::is_static()
+bool symbol_qualities::is_static() const
 {
 	return static_q;
 }
 
-bool symbol_qualities::is_signed()
+bool symbol_qualities::is_signed() const
 {
 	return signed_q;
 }
 
-bool symbol_qualities::is_unsigned()
+bool symbol_qualities::is_unsigned() const
 {
 	return !signed_q;
 }
 
-bool symbol_qualities::has_sign_quality()
+bool symbol_qualities::has_sign_quality() const
 {
     return signed_q || _listed_unsigned;
 }
 
-bool symbol_qualities::is_extern()
+bool symbol_qualities::is_extern() const
 {
 	return extern_q;
 }
 
-bool symbol_qualities::is_managed()
+bool symbol_qualities::is_managed() const
 {
     return _managed;
 }
 
-bool symbol_qualities::is_sincall()
+bool symbol_qualities::is_sincall() const
 {
 	return sincall_con;
 }
 
-bool symbol_qualities::is_c64()
+bool symbol_qualities::is_c64() const
 {
 	return c64_con;
 }
 
-bool symbol_qualities::is_windows()
+bool symbol_qualities::is_windows() const
 {
 	return windows_con;
 }

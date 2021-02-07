@@ -44,21 +44,20 @@ bool function_symbol::requires_this() const {
     return this->_method && !this->type.get_qualities().is_static();
 }
 
-calling_convention function_symbol::get_calling_convention() {
+calling_convention function_symbol::get_calling_convention() const {
     // Get the function's calling convention
     return this->call_con;
 }
 
-std::vector< std::shared_ptr<symbol>> &function_symbol::get_formal_parameters() {
+const std::vector< std::shared_ptr<symbol>> &function_symbol::get_formal_parameters() const {
     return this->formal_parameters;
 }
 
-register_usage function_symbol::get_arg_regs() {
+const register_usage& function_symbol::get_arg_regs() const {
     // Returns the registers used by parameters
     return this->arg_regs;
 }
 
-// for the time being, at least, all functions must be in the global scope at level 0
 function_symbol::function_symbol(
 	std::string function_name, 
 	DataType return_type, 
@@ -88,7 +87,8 @@ function_symbol::function_symbol(
 
     */
 
-    this->_method = this->scope_name != "global";
+   	// set the _method property
+    this->_method = (this->scope_name != "global") && !return_type.get_qualities().is_static();
 
     // Set up our formal parameters
     for (auto &sym: formal_parameters) {

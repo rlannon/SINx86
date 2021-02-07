@@ -33,10 +33,10 @@ public:
     bool is_method() const;
     bool requires_this() const;
 
-    std::vector< std::shared_ptr<symbol> > &get_formal_parameters();
-    calling_convention get_calling_convention();
+    const std::vector< std::shared_ptr<symbol> > &get_formal_parameters() const;
+    calling_convention get_calling_convention() const;
 
-    register_usage get_arg_regs();
+    const register_usage& get_arg_regs() const;
 
     // constructors
     function_symbol(

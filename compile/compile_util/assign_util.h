@@ -33,9 +33,9 @@ namespace assign_utilities {
         MoveInstruction instruction_used;
 
         destination_information(
-            std::string dest_location,
-            std::string fetch_instructions,
-            std::string address_for_lea = "",
+            const std::string& dest_location,
+            const std::string& fetch_instructions,
+            const std::string& address_for_lea = "",
             bool in_register=false,
             bool can_use_lea=false,
             MoveInstruction instruction_used = MOV
@@ -43,22 +43,22 @@ namespace assign_utilities {
     };
 
     destination_information fetch_destination_operand(
-        Expression &exp,
+        const Expression &exp,
         symbol_table &symbols,
         struct_table &structures,
-        std::string scope_name,
+        const std::string& scope_name,
         unsigned int scope_level,
         unsigned int line,
         reg r = RBX,
         bool is_initialization = false
     );
     destination_information fetch_destination_operand(
-        symbol &sym,
+        const symbol &sym,
         symbol_table &symbols,
         unsigned int line,
         reg r = RBX,
         bool is_initialization = false
     );
-    bool requires_copy(DataType t);
-    bool is_valid_move_expression(Expression &exp);
+    bool requires_copy(const DataType& t);
+    bool is_valid_move_expression(const Expression &exp);
 };

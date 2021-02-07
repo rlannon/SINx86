@@ -69,7 +69,7 @@ std::unique_ptr<Statement> Parser::parse_function_definition(lexeme current_lex)
 		if (this->peek().value == "(") {
 			this->next();
 			// Create our arguments vector
-			std::vector<std::shared_ptr<Statement>> args;
+			std::vector<std::unique_ptr<Statement>> args;
 			// Populate our arguments vector if there are arguments
 			if (this->peek().value != ")") {
 				this->next();

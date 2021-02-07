@@ -89,7 +89,7 @@ std::unique_ptr<Statement> Parser::parse_statement(const bool is_function_parame
 
 			this->next();
 			auto to_free = this->parse_expression();
-			stmt = std::make_unique<FreeMemory>(to_free);
+			stmt = std::make_unique<FreeMemory>(std::move(to_free));
 			stmt->set_line_number(current_lex.line_number);
 		}
 		// parse a declaration
@@ -217,7 +217,7 @@ std::unique_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 				nullptr,
 				this->next().value
 			);
-			stmt = std::make_unique<Declaration>(struct_type, "", initial_value, false, true);
+			stmt = std::make_unique<Declaration>(struct_type, "", std::move(initial_value), false, true);
 		}
 		else {
 			throw CompilerException("Expected struct name", compiler_errors::ILLEGAL_STRUCT_NAME, this->current_token().line_number);
@@ -292,7 +292,7 @@ std::unique_ptr<Statement> Parser::parse_declaration(lexeme current_lex, bool is
 			
 			// finally, we must have a semicolon, a comma, or a closing paren
 			if (this->peek().value == ";" || this->peek().value == "," || this->peek().value == ")") {
-				stmt = std::make_unique<Declaration>(symbol_type_data, var_name, initial_value, is_function, false, formal_parameters);
+				stmt = std::make_unique<Declaration>(symbol_type_data, var_name, std::move(initial_value), is_function, false, formal_parameters);
 				stmt->set_line_number(next_lexeme.line_number);
 			}
 			else if (this->peek().value == ":") {
@@ -518,11 +518,11 @@ std::unique_ptr<Statement> Parser::parse_move(lexeme current_lex)
 		std::unique_ptr<Statement> stmt = nullptr;
 		if (op == LEFT_ARROW) {
 			// rhs is rvalue (the value)
-			stmt = std::make_unique<Movement>(lhs, rhs);
+			stmt = std::make_unique<Movement>(std::move(lhs), std::move(rhs));
 		}
 		else {
 			// lhs is rvalue (the value)
-			stmt = std::make_unique<Movement>(rhs, lhs);
+			stmt = std::make_unique<Movement>(std::move(rhs), std::move(lhs));
 		}
 
         stmt->set_line_number(current_lex.line_number);
@@ -552,7 +552,7 @@ std::unique_ptr<Statement> Parser::parse_return(lexeme current_lex)
 		}
 
 		// craft the statement
-		stmt = std::make_unique<ReturnStatement>(std::make_shared<Literal>(VOID, "", NONE));
+		stmt = std::make_unique<ReturnStatement>(std::make_unique<Literal>(VOID, "", NONE));
 		stmt->set_line_number(current_lex.line_number);
 	}
 	// otherwise, we must have an expression
@@ -561,7 +561,7 @@ std::unique_ptr<Statement> Parser::parse_return(lexeme current_lex)
 		auto return_exp = this->parse_expression();
 
 		// create a return statement from it and set the line number
-		stmt = std::make_unique<ReturnStatement>(return_exp);
+		stmt = std::make_unique<ReturnStatement>(std::move(return_exp));
 		stmt->set_line_number(current_lex.line_number);
 	}
 

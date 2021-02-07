@@ -14,7 +14,7 @@ Various utility functions for expression evaluation
 
 namespace expression_util {
     std::stringstream get_exp_address(
-        Expression &exp,
+        const Expression &exp,
         symbol_table &symbols,
         struct_table &structs,
         reg r,
@@ -22,7 +22,7 @@ namespace expression_util {
     );
 
     std::stringstream evaluate_member_selection(
-        Binary &to_evaluate,
+        const Binary &to_evaluate,
         symbol_table &symbols,
         struct_table &structs,
         reg r,
@@ -31,11 +31,11 @@ namespace expression_util {
     );
 
     DataType get_expression_data_type(
-        Expression &to_eval,
+        const Expression &to_eval,
         symbol_table& symbols,
         struct_table& structs,
         unsigned int line,
-        DataType *type_hint = nullptr
+        const DataType *type_hint = nullptr
     );
 
     size_t get_width(
@@ -49,14 +49,14 @@ namespace expression_util {
     );
 
     symbol &get_function_symbol(
-        Expression &func_name,
+        const Expression &func_name,
         struct_table &structs,
         symbol_table &symbols,
         unsigned int line
     );
 
     struct_info &get_struct_type(
-        Expression &exp,
+        const Expression &exp,
         struct_table &structs,
         symbol_table &symbols,
         unsigned int line

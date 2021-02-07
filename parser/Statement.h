@@ -60,7 +60,7 @@ class ScopedBlock: public Statement
 	StatementBlock statements;
 public:
 	const StatementBlock& get_statements() const;
-	ScopedBlock(StatementBlock statements);
+	ScopedBlock(const StatementBlock& statements);
 };
 
 class Include : public Statement
@@ -91,12 +91,12 @@ class Declaration : public Statement
 
 	std::string name;
 
-	std::shared_ptr<Expression> initial_value;
+	std::unique_ptr<Expression> initial_value;
 
-	std::vector<std::shared_ptr<Statement>> formal_parameters;
+	std::vector<std::unique_ptr<Statement>> formal_parameters;
 	calling_convention call_con;
 public:
-	std::string get_name() const;
+	const std::string& get_name() const;
 
 	DataType& get_type_information();
 	const DataType& get_type_information() const;
@@ -107,9 +107,11 @@ public:
 	Expression *get_initial_value();
 
 	std::vector<Statement*> get_formal_parameters();
+	std::vector<const Statement*> get_formal_parameters() const;
 	calling_convention get_calling_convention() const;
 
-	Declaration(DataType type, std::string var_name, std::shared_ptr<Expression> initial_value = std::make_shared<Expression>(EXPRESSION_GENERAL), bool is_function = false, bool is_struct = false, std::vector<std::shared_ptr<Statement>> formal_parameters = {});
+	Declaration(const DataType& type, const std::string& var_name, std::unique_ptr<Expression>&& initial_value = std::make_unique<Expression>(EXPRESSION_GENERAL), bool is_function = false, bool is_struct = false);
+	Declaration(const DataType& type, const std::string& var_name, std::unique_ptr<Expression>&& initial_value, bool is_function, bool is_struct, std::vector<std::unique_ptr<Statement>>& formal_parameters);
 	Declaration();
 };
 
@@ -148,13 +150,14 @@ class Allocation : public Statement
 	std::unique_ptr<Expression> initial_value;
 public:
 	DataType& get_type_information();
+	const DataType& get_type_information() const;
 	static std::string get_var_type_as_string(Type to_convert);
 	const std::string& get_name() const;
 
 	bool was_initialized() const;
-	Expression *get_initial_value();
+	const Expression *get_initial_value() const;
 
-	Allocation(const DataType& type_information, const std::string& value, const bool was_initialized = false, std::unique_ptr<Expression> initial_value = nullptr);	// use default parameters to allow us to use alloc-define syntax, but we don't have to
+	Allocation(const DataType& type_information, const std::string& value, const bool was_initialized = false, std::unique_ptr<Expression>&& initial_value = nullptr);	// use default parameters to allow us to use alloc-define syntax, but we don't have to
 	Allocation();
 };
 
@@ -167,8 +170,8 @@ public:
 	const Expression &get_lvalue() const;
 	const Expression &get_rvalue() const;
 
-	Assignment(std::unique_ptr<Expression> lvalue, std::unique_ptr<Expression> rvalue);
-	Assignment(Identifier lvalue, std::unique_ptr<Expression> rvalue);
+	Assignment(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression>&& rvalue);
+	Assignment(const Identifier& lvalue, std::unique_ptr<Expression>&& rvalue);
 	Assignment();
 };
 
@@ -176,16 +179,16 @@ class Movement : public Assignment
 {
 	// Similar to an assignment, but should be marked as a movement
 public:
-	Movement(std::unique_ptr<Expression> lvalue, std::unique_ptr<Expression> rvalue);
+	Movement(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression>&& rvalue);
 };
 
 class ReturnStatement : public Statement
 {
-	std::shared_ptr<Expression> return_exp;
+	std::unique_ptr<Expression> return_exp;
 public:
 	const Expression &get_return_exp() const;
 
-	ReturnStatement(std::unique_ptr<Expression> exp_ptr);
+	ReturnStatement(std::unique_ptr<Expression>&& exp_ptr);
 	ReturnStatement();
 };
 
@@ -199,8 +202,8 @@ public:
 	const Statement *get_if_branch() const;
 	const Statement *get_else_branch() const;
 
-	IfThenElse(std::unique_ptr<Expression> condition_ptr, std::unique_ptr<Statement> if_branch_ptr, std::unique_ptr<Statement> else_branch_ptr);
-	IfThenElse(std::unique_ptr<Expression> condition_ptr, std::unique_ptr<Statement> if_branch_ptr);
+	IfThenElse(std::unique_ptr<Expression>&& condition_ptr, std::unique_ptr<Statement>&& if_branch_ptr, std::unique_ptr<Statement>&& else_branch_ptr);
+	IfThenElse(std::unique_ptr<Expression>&& condition_ptr, std::unique_ptr<Statement>&& if_branch_ptr);
 	IfThenElse();
 };
 
@@ -212,7 +215,7 @@ public:
 	const Expression &get_condition() const;
 	const Statement *get_branch() const;
 
-	WhileLoop(std::unique_ptr<Expression> condition, std::unique_ptr<Statement> branch);
+	WhileLoop(std::unique_ptr<Expression>&& condition, std::unique_ptr<Statement>&& branch);
 	WhileLoop();
 };
 
@@ -235,7 +238,7 @@ public:
 	const std::string& get_name() const;
 	const StatementBlock &get_procedure() const;
 
-	Definition(const std::string& name, std::unique_ptr<StatementBlock> procedure);
+	Definition(const std::string& name, std::unique_ptr<StatementBlock>&& procedure);
 	Definition();
 	~Definition();
 };
@@ -243,7 +246,7 @@ public:
 class FunctionDefinition : public Definition
 {
 	// arguments and return types are only used for function definitions, so they should be inaccessible to child classes
-	std::vector<std::shared_ptr<Statement>> formal_parameters;
+	std::vector<std::unique_ptr<Statement>> formal_parameters;
 	DataType return_type;
 
 	calling_convention call_con;
@@ -255,8 +258,8 @@ public:
 	FunctionDefinition(
         const std::string& name,
         const DataType& return_type,
-        const std::vector<std::shared_ptr<Statement>>& args_ptr,
-        std::unique_ptr<StatementBlock> procedure_ptr,
+        std::vector<std::unique_ptr<Statement>>& args_ptr,
+        std::unique_ptr<StatementBlock>&& procedure_ptr,
         const calling_convention call_con = SINCALL
     );
 	FunctionDefinition();
@@ -266,7 +269,7 @@ class StructDefinition : public Definition
 {
 	// A class for our struct definitions
 public:
-	StructDefinition(const std::string& name, std::unique_ptr<StatementBlock> producedure_ptr);
+	StructDefinition(const std::string& name, std::unique_ptr<StatementBlock>&& producedure_ptr);
 	StructDefinition();
 };
 
@@ -289,10 +292,10 @@ public:
 
 class FreeMemory : public Statement
 {
-	std::shared_ptr<Expression> to_free;
+	std::unique_ptr<Expression> to_free;
 public:
 	const Expression &get_freed_memory() const;
 
-	FreeMemory(std::shared_ptr<Expression> to_free);
+	FreeMemory(std::unique_ptr<Expression>&& to_free);
 	FreeMemory();
 };

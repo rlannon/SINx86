@@ -64,7 +64,7 @@ const StatementBlock& ScopedBlock::get_statements() const {
 	return this->statements;
 }
 
-ScopedBlock::ScopedBlock(StatementBlock statements): Statement(SCOPE_BLOCK) {
+ScopedBlock::ScopedBlock(const StatementBlock& statements): Statement(SCOPE_BLOCK) {
 	this->statements = statements;
 }
 
@@ -85,7 +85,7 @@ Include::Include(): Include("") { }
 /*******************		DECLARATION CLASS		********************/
 
 
-std::string Declaration::get_name() const {
+const std::string& Declaration::get_name() const {
 	return this->name;
 }
 
@@ -121,32 +121,48 @@ std::vector<Statement*> Declaration::get_formal_parameters() {
     return to_return;
 }
 
+std::vector<const Statement*> Declaration::get_formal_parameters() const {
+	std::vector<const Statement*> to_return;
+    for (auto it = this->formal_parameters.begin(); it != this->formal_parameters.end(); it++) {
+        to_return.push_back(it->get());
+    }
+    return to_return;
+}
+
 calling_convention Declaration::get_calling_convention() const {
 	return this->call_con;
 }
 
 // Constructors
-Declaration::Declaration(DataType type, std::string var_name, std::shared_ptr<Expression> initial_value, bool is_function, bool is_struct, std::vector<std::shared_ptr<Statement>> formal_parameters) :
-	Statement(DECLARATION),
-	type(type),
-	name(var_name),
-	initial_value(initial_value),
-	function_definition(is_function),
-	struct_definition(is_struct),
-	formal_parameters(formal_parameters)
+Declaration::Declaration(const DataType& type, const std::string& var_name, std::unique_ptr<Expression>&& initial_value, bool is_function, bool is_struct)
+	: Statement(DECLARATION)
+	, type(type)
+	, name(var_name)
+	, initial_value(std::move(initial_value))
+	, function_definition(is_function)
+	, struct_definition(is_struct)
 {
 	this->call_con = SINCALL;
 }
-
-Declaration::Declaration():
-Declaration(DataType(), "", nullptr, false, false, {}) {
-	
+Declaration::Declaration(const DataType& type, const std::string& var_name, std::unique_ptr<Expression>&& initial_value, bool is_function, bool is_struct, std::vector<std::unique_ptr<Statement>>& formal_parameters)
+	: Declaration(type, var_name, std::move(initial_value), is_function, is_struct)
+{
+	for (auto it = formal_parameters.begin(); it != formal_parameters.end(); it++)
+	{
+		this->formal_parameters.push_back(std::move(*it));
+	}
 }
+
+Declaration::Declaration()
+	: Declaration(DataType(), "", nullptr, false, false) { }
 
 /*******************	ALLOCATION CLASS	********************/
 
-
 DataType& Allocation::get_type_information() {
+	return this->type_information;
+}
+
+const DataType& Allocation::get_type_information() const {
 	return this->type_information;
 }
 
@@ -176,12 +192,12 @@ bool Allocation::was_initialized() const
 	return this->initialized;
 }
 
-Expression *Allocation::get_initial_value()
+const Expression *Allocation::get_initial_value() const
 {
 	return this->initial_value.get();
 }
 
-Allocation::Allocation(const DataType& type_information, const std::string& value, const bool initialized, std::unique_ptr<Expression> initial_value) :
+Allocation::Allocation(const DataType& type_information, const std::string& value, const bool initialized, std::unique_ptr<Expression>&& initial_value) :
 	Statement(ALLOCATION),
 	type_information(type_information),
 	value(value),
@@ -207,14 +223,14 @@ const Expression & Assignment::get_rvalue() const {
 	return *this->rvalue_ptr.get();
 }
 
-Assignment::Assignment(std::unique_ptr<Expression> lvalue, std::unique_ptr<Expression> rvalue) : 
+Assignment::Assignment(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression>&& rvalue) : 
 	Statement(ASSIGNMENT),
 	lvalue(std::move(lvalue)), 
 	rvalue_ptr(std::move(rvalue)) 
 {
 }
 
-Assignment::Assignment(Identifier lvalue, std::unique_ptr<Expression> rvalue) : 
+Assignment::Assignment(const Identifier& lvalue, std::unique_ptr<Expression>&& rvalue) : 
 	Statement(ASSIGNMENT),
 	rvalue_ptr(std::move(rvalue))
 {
@@ -228,7 +244,7 @@ Assignment::Assignment():
 
 // Movements
 
-Movement::Movement(std::unique_ptr<Expression> lvalue, std::unique_ptr<Expression> rvalue) :
+Movement::Movement(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression>&& rvalue) :
 	Assignment(std::move(lvalue), std::move(rvalue))
 {
 	this->statement_type = MOVEMENT;	// since we call the assignment constructor, we need to override the statement type
@@ -243,10 +259,10 @@ const Expression & ReturnStatement::get_return_exp() const {
 }
 
 
-ReturnStatement::ReturnStatement(std::unique_ptr<Expression> exp_ptr):
-	Statement(RETURN_STATEMENT)
+ReturnStatement::ReturnStatement(std::unique_ptr<Expression>&& exp_ptr)
+	: Statement(RETURN_STATEMENT)
+	, return_exp(std::move(exp_ptr))
 {
-	ReturnStatement::return_exp = std::move(exp_ptr);
 }
 
 ReturnStatement::ReturnStatement():
@@ -270,7 +286,11 @@ const Statement *IfThenElse::get_else_branch() const {
 	return this->else_branch.get();
 }
 
-IfThenElse::IfThenElse(std::unique_ptr<Expression> condition_ptr, std::unique_ptr<Statement> if_branch_ptr, std::unique_ptr<Statement> else_branch_ptr)
+IfThenElse::IfThenElse(
+	std::unique_ptr<Expression>&& condition_ptr,
+	std::unique_ptr<Statement>&& if_branch_ptr,
+	std::unique_ptr<Statement>&& else_branch_ptr
+)
 	: Statement(IF_THEN_ELSE)
 	, condition(std::move(condition_ptr))
 	, if_branch(std::move(if_branch_ptr))
@@ -278,7 +298,7 @@ IfThenElse::IfThenElse(std::unique_ptr<Expression> condition_ptr, std::unique_pt
 {
 }
 
-IfThenElse::IfThenElse(std::unique_ptr<Expression> condition_ptr, std::unique_ptr<Statement> if_branch_ptr):
+IfThenElse::IfThenElse(std::unique_ptr<Expression>&& condition_ptr, std::unique_ptr<Statement>&& if_branch_ptr):
 	IfThenElse(std::move(condition_ptr), std::move(if_branch_ptr), nullptr)
 {
 }
@@ -302,7 +322,7 @@ const Statement *WhileLoop::get_branch() const
 	return this->branch.get();
 }
 
-WhileLoop::WhileLoop(std::unique_ptr<Expression> condition, std::unique_ptr<Statement> branch) : 
+WhileLoop::WhileLoop(std::unique_ptr<Expression>&& condition, std::unique_ptr<Statement>&& branch) : 
 	Statement(WHILE_LOOP),
 	condition(std::move(condition)),
 	branch(std::move(branch))
@@ -323,7 +343,7 @@ const StatementBlock &Definition::get_procedure() const {
 	return *this->procedure.get();
 }
 
-Definition::Definition(const std::string& name, std::unique_ptr<StatementBlock> procedure)
+Definition::Definition(const std::string& name, std::unique_ptr<StatementBlock>&& procedure)
 	: Statement()
 	, name(name)
 	, procedure(std::move(procedure))
@@ -360,15 +380,18 @@ calling_convention FunctionDefinition::get_calling_convention() const {
 FunctionDefinition::FunctionDefinition(
 	const std::string& name,
 	const DataType& return_type,
-	const std::vector<std::shared_ptr<Statement>>& args_ptr,
-	std::unique_ptr<StatementBlock> procedure_ptr,
+	std::vector<std::unique_ptr<Statement>>& args_ptr,
+	std::unique_ptr<StatementBlock>&& procedure_ptr,
 	const calling_convention call_con
 )
 	: Definition(name, std::move(procedure_ptr))
 	, return_type(return_type)
-	, formal_parameters(args_ptr)
 	, call_con(call_con)
 {
+	for (auto it = args_ptr.begin(); it != args_ptr.end(); it++)
+	{
+		this->formal_parameters.push_back(std::move(*it));
+	}
 	this->statement_type = FUNCTION_DEFINITION;
 }
 
@@ -381,7 +404,7 @@ FunctionDefinition::FunctionDefinition()
 
 /*******************	STRUCT DEFINITION CLASS		********************/
 
-StructDefinition::StructDefinition(const std::string& name, std::unique_ptr<StatementBlock> procedure_ptr):
+StructDefinition::StructDefinition(const std::string& name, std::unique_ptr<StatementBlock>&& procedure_ptr):
 	Definition(name, std::move(procedure_ptr))
 {
 	this->statement_type = STRUCT_DEFINITION;
@@ -447,9 +470,9 @@ const Expression &FreeMemory::get_freed_memory() const {
 	return *this->to_free.get();
 }
 
-FreeMemory::FreeMemory(std::shared_ptr<Expression> to_free):
+FreeMemory::FreeMemory(std::unique_ptr<Expression>&& to_free):
 	Statement(FREE_MEMORY),
-	to_free(to_free)
+	to_free(std::move(to_free))
 {
 }
 

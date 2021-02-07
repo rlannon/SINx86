@@ -29,14 +29,14 @@ std::string function_util::call_sincall_subroutine(std::string name) {
     return call_ss.str();
 }
 
-template function_symbol function_util::create_function_symbol(FunctionDefinition, bool, bool, std::string, unsigned int, bool);
-template function_symbol function_util::create_function_symbol(Declaration, bool, bool, std::string, unsigned int, bool);
+template function_symbol function_util::create_function_symbol(const FunctionDefinition&, bool, bool, const std::string&, unsigned int, bool);
+template function_symbol function_util::create_function_symbol(const Declaration&, bool, bool, const std::string&, unsigned int, bool);
 template <typename T>
 function_symbol function_util::create_function_symbol(
-    T def,
+    const T& def,
     bool mangle,
     bool defined,
-    std::string scope_name,
+    const std::string& scope_name,
     unsigned int scope_level,
     bool is_method
 ) {
@@ -104,7 +104,7 @@ function_symbol function_util::create_function_symbol(
 
         // cast to the appropriate symbol type
         if (param->get_statement_type() == DECLARATION) {
-            Declaration *param_decl = static_cast<Declaration*>(param);
+            auto param_decl = static_cast<const Declaration*>(param);
             param_sym = generate_symbol(
                 *param_decl,
                 param_decl->get_type_information().get_width(),
@@ -113,7 +113,7 @@ function_symbol function_util::create_function_symbol(
                 stack_offset
             );
         } else if (param->get_statement_type() == ALLOCATION) {
-            Allocation *param_alloc = static_cast<Allocation*>(param);
+            auto param_alloc = static_cast<const Allocation*>(param);
             DataType t = param_alloc->get_type_information();
             param_sym = generate_symbol(
                 *param_alloc,

@@ -14,9 +14,9 @@ Generates code for evaluating an expression. This data will be loaded into regis
 
 // todo: create an expression evaluation class and give it access to compiler members?
 std::pair<std::string, size_t> compiler::evaluate_expression(
-    Expression &to_evaluate,
+    const Expression &to_evaluate,
     unsigned int line,
-    DataType *type_hint
+    const DataType *type_hint
 ) {
     /*
 
@@ -47,7 +47,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case LITERAL:
         {
             // get the literal
-            Literal &literal_exp = static_cast<Literal&>(to_evaluate);
+            auto &literal_exp = static_cast<const Literal&>(to_evaluate);
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_literal(literal_exp, line, type_hint);
@@ -56,7 +56,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case IDENTIFIER:
         {
             // get the lvalue
-            Identifier &lvalue_exp = static_cast<Identifier&>(to_evaluate);
+            auto &lvalue_exp = static_cast<const Identifier&>(to_evaluate);
 
             // dispatch to our evaluation function
             evaluation_ss = this->evaluate_identifier(lvalue_exp, line);
@@ -96,7 +96,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
             // get our type information
             DataType t = expression_util::get_expression_data_type(to_evaluate, this->symbols, this->structs, line);
-            auto &le = static_cast<ListExpression&>(to_evaluate);
+            auto &le = static_cast<const ListExpression&>(to_evaluate);
             t.set_primary(le.get_list_type());
 
             size_t width = expression_util::get_width(
@@ -154,7 +154,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                 
                 // adjust the type hint
                 DataType hinted_type;
-                DataType *to_pass = nullptr;
+                const DataType *to_pass = nullptr;
                 try {
                     hinted_type = type_hint->get_contained_types().at(i);
                     to_pass = &hinted_type;
@@ -222,7 +222,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         case BINARY:
         {
 			// cast to Binary class and dispatch
-			Binary &bin_exp = static_cast<Binary&>(to_evaluate);
+			auto &bin_exp = static_cast<const Binary&>(to_evaluate);
             auto bin_p = this->evaluate_binary(bin_exp, line, type_hint);
             evaluation_ss << bin_p.first;
             count += bin_p.second;
@@ -233,14 +233,14 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case UNARY:
         {
-			Unary &unary_exp = static_cast<Unary&>(to_evaluate);
+			auto &unary_exp = static_cast<const Unary&>(to_evaluate);
 			evaluation_ss << this->evaluate_unary(unary_exp, line, type_hint).str();
             // todo: clean up unary?
             break;
         }
         case CALL_EXP:
         {
-            CallExpression &call_exp = static_cast<CallExpression&>(to_evaluate);
+            auto &call_exp = static_cast<const CallExpression&>(to_evaluate);
             auto call_p = this->call_function(call_exp, line, false);  // don't allow void functions here
             
             // add the call code
@@ -258,7 +258,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case CAST:
         {
-            auto &c = static_cast<Cast&>(to_evaluate);
+            auto &c = static_cast<const Cast&>(to_evaluate);
 
             // ensure the type to which we are casting is valid
             if (DataType::is_valid_type(c.get_new_type())) {
@@ -272,7 +272,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                         (old_type.get_primary() == INT || old_type.get_primary() == FLOAT)
                     ) {
                         // update the type
-                        auto &contained = static_cast<Literal&>(c.get_exp());
+                        Literal contained { static_cast<const Literal&>(c.get_exp()) };
                         contained.set_type(c.get_new_type());
 
                         // now, evaluate
@@ -298,7 +298,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
         }
         case ATTRIBUTE:
         {
-            auto &attr = static_cast<AttributeSelection&>(to_evaluate);
+            auto &attr = static_cast<const AttributeSelection&>(to_evaluate);
             auto t = expression_util::get_expression_data_type(attr.get_selected(), this->symbols, this->structs, line);
             auto attr_p = this->evaluate_expression(attr.get_selected(), line, type_hint);
 
@@ -401,7 +401,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
     return std::make_pair<>(evaluation_ss.str(), count);
 }
 
-std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int line, DataType *type_hint) {
+std::stringstream compiler::evaluate_literal(const Literal &to_evaluate, unsigned int line, const DataType *type_hint) {
     /*
 
     evaluate_literal
@@ -531,7 +531,7 @@ std::stringstream compiler::evaluate_literal(Literal &to_evaluate, unsigned int 
     return eval_ss;
 }
 
-std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_identifier(const Identifier &to_evaluate, unsigned int line) {
     /*
 
     Generate code for evaluating an lvalue (a variable)
@@ -696,7 +696,7 @@ std::stringstream compiler::evaluate_identifier(Identifier &to_evaluate, unsigne
 	return eval_ss;
 }
 
-std::stringstream compiler::evaluate_indexed(Indexed &to_evaluate, unsigned int line) {
+std::stringstream compiler::evaluate_indexed(const Indexed &to_evaluate, unsigned int line) {
     /*
 
     evaluate_indexed

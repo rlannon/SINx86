@@ -56,7 +56,7 @@ std::stringstream push_used_registers(register_usage &regs, bool ignore_ab = fal
 std::stringstream pop_used_registers(const register_usage& regs, bool ignore_ab = false);
 
 std::string get_address(const symbol &s, const reg r);
-std::string get_struct_member_address(const symbol &struct_symbol, const struct_table &structs, const std::string& member_name, const reg r);
+std::string get_struct_member_address(const symbol &struct_symbol, struct_table &structs, const std::string& member_name, const reg r);
 
 std::string decrement_rc(
     register_usage &r,

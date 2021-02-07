@@ -17,10 +17,10 @@ namespace function_util {
 
     template<typename T>
     function_symbol create_function_symbol(
-        T def,
+        const T& def,
         bool mangle=true,
         bool defined=true,
-        std::string scope_name = "global",
+        const std::string& scope_name = "global",
         unsigned int scope_level = 0, 
         bool is_method = false
     );
@@ -337,7 +337,7 @@ struct_info define_struct(const StructDefinition &definition, compile_time_evalu
             current_offset += this_width;
         }
         else if (s->get_statement_type() == DECLARATION) {
-            Declaration *decl = static_cast<Declaration*>(s.get());
+            const Declaration *decl = static_cast<const Declaration*>(s.get());
             if (decl->is_function()) {
                 function_symbol f_sym = function_util::create_function_symbol(*decl, true, true, struct_name, 1, true);
             }
@@ -347,7 +347,7 @@ struct_info define_struct(const StructDefinition &definition, compile_time_evalu
         }
         else if (s->get_statement_type() == FUNCTION_DEFINITION) {
             // cast and define the function
-            FunctionDefinition *def = static_cast<FunctionDefinition*>(s.get());
+            const FunctionDefinition *def = static_cast<const FunctionDefinition*>(s.get());
             function_symbol f_sym = function_util::create_function_symbol(*def, true, true, struct_name, 1, true);
             members.push_back(std::make_shared<function_symbol>(f_sym));
         }
@@ -366,8 +366,8 @@ struct_info define_struct(const StructDefinition &definition, compile_time_evalu
 
 // Since the declaration and implementation are in separate files, we need to say which types may be used with our template functions
 
-template symbol generate_symbol(Declaration&, size_t, std::string, unsigned int, size_t&, bool);
-template symbol generate_symbol(Allocation&, size_t, std::string, unsigned int, size_t&, bool);
+template symbol generate_symbol(const Declaration&, const size_t, const std::string&, const unsigned int, size_t&, const bool);
+template symbol generate_symbol(const Allocation&, const size_t, const std::string&, const unsigned int, size_t&, const bool);
 template <typename T>
 symbol generate_symbol(const T &allocation, const size_t data_width, const std::string& scope_name, const unsigned int scope_level, size_t &stack_offset, const bool defined) {
     /*
@@ -391,7 +391,7 @@ symbol generate_symbol(const T &allocation, const size_t data_width, const std::
 
     */
 
-    DataType &type_info = allocation.get_type_information();
+    const DataType &type_info = allocation.get_type_information();
     bool mangle = !type_info.get_qualities().is_extern();   // don't mangle the name if we have the extern quality set
 
     stack_offset += data_width;
@@ -547,7 +547,7 @@ std::string get_address(const symbol &s, const reg r) {
 
 std::string get_struct_member_address(
     const symbol &struct_symbol,
-    const struct_table &structs,
+    struct_table &structs,
     const std::string &member_name,
     const reg r
 ) {

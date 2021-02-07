@@ -64,11 +64,11 @@ void Literal::set_type(DataType t) {
 	this->type = t;
 }
 
-DataType Literal::get_data_type() {
+const DataType& Literal::get_data_type() const {
 	return this->type;
 }
 
-std::string Literal::get_value() {
+const std::string& Literal::get_value() const {
 	return this->value;
 }
 
@@ -103,15 +103,15 @@ Literal::Literal(): Expression(LITERAL) {
 }
 
 
-std::string Identifier::getValue() {
+const std::string& Identifier::getValue() const {
 	return this->value;
 }
 
-void Identifier::setValue(std::string new_value) {
+void Identifier::setValue(const std::string& new_value) {
 	this->value = new_value;
 }
 
-Identifier::Identifier(std::string value) : Expression(IDENTIFIER), value(value) {
+Identifier::Identifier(const std::string& value) : Expression(IDENTIFIER), value(value) {
 }
 
 Identifier::Identifier(): Identifier("") {
@@ -120,19 +120,19 @@ Identifier::Identifier(): Identifier("") {
 
 // Attribute Selection
 
-Expression &AttributeSelection::get_selected() {
-	return *this->selected.get();
+const Expression &AttributeSelection::get_selected() const {
+	return *this->selected;
 }
 
-attribute AttributeSelection::get_attribute() {
+attribute AttributeSelection::get_attribute() const {
 	return this->attrib;
 }
 
-DataType &AttributeSelection::get_data_type() {
+const DataType &AttributeSelection::get_data_type() const {
 	return this->t;
 }
 
-attribute AttributeSelection::to_attribute(std::string to_convert) {
+attribute AttributeSelection::to_attribute(const std::string& to_convert) {
     if (to_convert == "len") {
         return LENGTH;
     }
@@ -147,7 +147,7 @@ attribute AttributeSelection::to_attribute(std::string to_convert) {
     }
 }
 
-bool AttributeSelection::is_attribute(std::string a) {
+bool AttributeSelection::is_attribute(const std::string& a) {
 	return to_attribute(a) != NO_ATTRIBUTE;
 }
 
@@ -157,7 +157,7 @@ AttributeSelection::AttributeSelection(AttributeSelection &old)
 	, t(old.t)
 	, attrib(old.attrib) { }
 
-AttributeSelection::AttributeSelection(std::unique_ptr<Expression> selected, const std::string& attribute_name)
+AttributeSelection::AttributeSelection(std::unique_ptr<Expression>&& selected, const std::string& attribute_name)
 	: Expression(ATTRIBUTE)
 	, attrib( to_attribute(attribute_name) )
 	, selected( std::move(selected) )
@@ -178,7 +178,7 @@ AttributeSelection::AttributeSelection(std::unique_ptr<Expression> selected, con
 	this->t.get_qualities().add_quality(FINAL);
 }
 
-AttributeSelection::AttributeSelection(std::unique_ptr<Binary> to_deconstruct): Expression(ATTRIBUTE)
+AttributeSelection::AttributeSelection(std::unique_ptr<Binary>&& to_deconstruct): Expression(ATTRIBUTE)
 {
 	// Construct an 'AttributeSelection' object from a Binary expression
 	
@@ -344,7 +344,7 @@ const Expression &Unary::get_operand() const {
 	return *this->operand.get();
 }
 
-Unary::Unary(std::unique_ptr<Expression> operand, const exp_operator op)
+Unary::Unary(std::unique_ptr<Expression> operand, exp_operator op)
 	: Expression(UNARY)
 	, operand(std::move(operand))
 	, op(op) { }
@@ -438,12 +438,12 @@ CallExpression::CallExpression()
 }
 
 
-Expression &Indexed::get_index_value()
+const Expression &Indexed::get_index_value() const
 {
 	return *this->index_value.get();
 }
 
-Expression &Indexed::get_to_index()
+const Expression &Indexed::get_to_index() const
 {
 	return *this->to_index.get();
 }
@@ -457,11 +457,11 @@ Indexed::Indexed(): Indexed(nullptr, nullptr)
 {
 }
 
-Expression &Cast::get_exp() {
-	return *this->to_cast.get();
+const Expression &Cast::get_exp() const {
+	return *this->to_cast;
 }
 
-DataType& Cast::get_new_type() {
+const DataType& Cast::get_new_type() const {
 	return this->new_type;
 }
 
@@ -475,10 +475,10 @@ Cast::Cast(std::unique_ptr<Expression> to_cast, const DataType& new_type)
 	, to_cast(std::move(to_cast))
 	, new_type(new_type) { }
 
-Cast::Cast(Binary &b): Expression(CAST) {
-	if (b.get_operator() == TYPECAST && b.get_right().get_expression_type() == KEYWORD_EXP) {
-		auto &kw = static_cast<const KeywordExpression&>(b.get_right());
-		this->to_cast = std::move( b.get_left_unique() );
+Cast::Cast(std::unique_ptr<Binary> b): Expression(CAST) {
+	if (b->get_operator() == TYPECAST && b->get_right().get_expression_type() == KEYWORD_EXP) {
+		auto &kw = static_cast<const KeywordExpression&>(b->get_right());
+		this->to_cast = std::move( b->get_left_unique() );
 		this->new_type = kw.get_type();
 	}
 	else {

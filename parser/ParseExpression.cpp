@@ -428,21 +428,25 @@ std::unique_ptr<Expression> Parser::maybe_binary(
 				auto binary = std::make_unique<Binary>(std::move(left), std::move(right), op);	// "next" still contains the op_char; we haven't updated it yet
 
 				// if the left and right sides are constants, the whole expression is a constant
-				if (left->is_const() && right->is_const())
+				if (binary->get_left().is_const() && binary->get_right().is_const())
 					binary->set_const();
 				
 				// now, call maybe_binary based on the binary type (transform the statement)
-				to_check = std::move(binary);
 				if (binary->get_operator() == ATTRIBUTE_SELECTION) {
 					to_check = std::make_unique<AttributeSelection>(
 						std::unique_ptr<Binary>(
-							static_cast<Binary*>(to_check.release())
+							static_cast<Binary*>(binary.release())
 						)
 					);
 				}
 				else if (binary->get_operator() == TYPECAST) {
-					to_check = std::make_unique<Cast>(*binary.get());
+					to_check = std::make_unique<Cast>(std::move(binary));
 				}
+				else
+				{
+					to_check = std::move(binary);
+				}
+				
 
 				// ensure we still have a valid expression
 				if (to_check->get_expression_type() == EXPRESSION_GENERAL) {

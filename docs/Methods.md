@@ -23,29 +23,7 @@ Like many other programming languages, structs support member functions, or meth
 
 ### `this` parameter
 
-Like C++ and Java, the keyword `this` is used to denote the structure in reference to which the method is being called. By default, `this` is of the type `ref<T>`, but the type may be explicitly stated and changed to `ptr<T>`; for example:
-
-    def string myStruct::get_name(alloc ref<myStruct> this)
-
-or
-
-    def string myStruct::get_name(alloc ptr<myStruct> this)
-
-However, if `ptr` is used, then the appropriate syntax must be used; instead of `this.name`, you must say `(*this).name`.
-
-This reflects the reality that `this` is always the first parameter to a non-static method, and will be passed in `rsi` under [SINCALL](Calling%20Convention). Because of this, it is actually possible in SIN to call methods without the use of the dot operator; for example:
-
-    alloc myStruct m: construct {
-        size: 0,
-        name: "m",
-    }
-
-    m.get_name();
-    myStruct::get_name(m);
-
-Both of these syntaxes are acceptable. This is because `this` is the first parameter, but one which is resolved with the dot operator if the Simula-style syntax is used (`struct.member`). This is considered syntactic sugar in SIN. However, since the dot operator syntax is much more widely-known, it is generally better to utilize it.
-
-Note that declaring methods outside of a class is different; non-member functions may not use the keyword `this`, they may not access private members, and they will undergo different name decoration (thus meaning their names have more limited capability for reuse).
+Like C++ and Java, the keyword `this` is used to denote the structure in reference to which the method is being called. Unlike C++, `this` is always a reference, not a pointer.
 
 ### Name decoration
 

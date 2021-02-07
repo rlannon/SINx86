@@ -51,8 +51,8 @@ class Literal : public Expression
 	std::string value;
 public:
 	void set_type(DataType t);
-	DataType get_data_type();
-	std::string get_value();
+	const DataType& get_data_type() const;
+	const std::string& get_value() const;
 
 	void override_qualities(symbol_qualities sq) override;
 	bool has_type_information() const override;
@@ -68,10 +68,10 @@ class Identifier : public Expression
 protected:
 	std::string value;	// the name of the variable
 public:
-	std::string getValue();
-	void setValue(std::string new_value);
+	const std::string& getValue() const;
+	void setValue(const std::string& new_value);
 
-    Identifier(std::string value);
+    Identifier(const std::string& value);
 	Identifier();
 };
 
@@ -96,8 +96,8 @@ class Indexed : public Expression
 	std::unique_ptr<Expression> index_value;	// the index value is simply an expression
 	std::unique_ptr<Expression> to_index;	// what we are indexing
 public:
-	Expression &get_index_value();
-	Expression &get_to_index();
+	const Expression &get_index_value() const;
+	const Expression &get_to_index() const;
 
 	Indexed(std::unique_ptr<Expression> to_index, std::unique_ptr<Expression> index_value);
 	Indexed();
@@ -159,7 +159,7 @@ public:
 	exp_operator get_operator() const;
 	const Expression &get_operand() const;
 
-	Unary(std::unique_ptr<Expression> operand, const exp_operator op);
+	Unary(std::unique_ptr<Expression> operand, exp_operator op);
 	Unary();
 };
 
@@ -196,12 +196,12 @@ class Cast : public Expression
 	std::unique_ptr<Expression> to_cast;	// any expression can be casted
 	DataType new_type;	// the new type for the expression
 public:
-    Expression &get_exp();
-	DataType &get_new_type();
+    const Expression &get_exp() const;
+	const DataType &get_new_type() const;
 
     Cast(Cast &old);
     Cast(std::unique_ptr<Expression> to_cast, const DataType& new_type);
-	Cast(Binary &b);
+	Cast(std::unique_ptr<Binary> b);
 };
 
 // Attribute selection
@@ -211,14 +211,14 @@ class AttributeSelection : public Expression
 	attribute attrib;
 	DataType t;
 public:
-	static attribute to_attribute(std::string to_convert);
-	static bool is_attribute(std::string a);
+	static attribute to_attribute(const std::string& to_convert);
+	static bool is_attribute(const std::string& a);
 
-    Expression &get_selected();
-	attribute get_attribute();
-	DataType &get_data_type();
+    const Expression &get_selected() const;
+	attribute get_attribute() const;
+	const DataType &get_data_type() const;
 
     AttributeSelection(AttributeSelection &old);
-	AttributeSelection(std::unique_ptr<Expression> selected, const std::string& attribute_name);
-	AttributeSelection(std::unique_ptr<Binary> to_deconstruct);
+	AttributeSelection(std::unique_ptr<Expression>&& selected, const std::string& attribute_name);
+	AttributeSelection(std::unique_ptr<Binary>&& to_deconstruct);
 };

@@ -10,7 +10,7 @@ The implementation of our compile-time evaluation functionality
 
 #include "constant_eval.h"
 
-std::string compile_time_evaluator::evaluate_literal(Literal & exp)
+std::string compile_time_evaluator::evaluate_literal(const Literal & exp)
 {
 	/*
 	
@@ -22,7 +22,7 @@ std::string compile_time_evaluator::evaluate_literal(Literal & exp)
 	return exp.get_value();
 }
 
-std::string compile_time_evaluator::evaluate_lvalue(Identifier & exp, std::string scope_name, unsigned int scope_level, unsigned int line)
+std::string compile_time_evaluator::evaluate_lvalue(const Identifier & exp, const std::string& scope_name, unsigned int scope_level, unsigned int line)
 {
 	/*
 	
@@ -35,7 +35,7 @@ std::string compile_time_evaluator::evaluate_lvalue(Identifier & exp, std::strin
 	return to_return.get_value();
 }
 
-std::string compile_time_evaluator::evaluate_unary(Unary & exp, std::string scope_name, unsigned int scope_level, unsigned int line)
+std::string compile_time_evaluator::evaluate_unary(const Unary & exp, const std::string& scope_name, unsigned int scope_level, unsigned int line)
 {
 	/*
 	
@@ -114,12 +114,12 @@ std::string compile_time_evaluator::evaluate_unary(Unary & exp, std::string scop
 	}
 }
 
-std::string compile_time_evaluator::evaluate_binary(Binary & exp, std::string scope_name, unsigned int scope_level, unsigned int line)
+std::string compile_time_evaluator::evaluate_binary(const Binary & exp, const std::string& scope_name, unsigned int scope_level, unsigned int line)
 {
 	return std::string();
 }
 
-std::string compile_time_evaluator::evaluate_expression(Expression &to_evaluate, std::string scope_name, unsigned int scope_level, unsigned int line)
+std::string compile_time_evaluator::evaluate_expression(const Expression &to_evaluate, const std::string& scope_name, unsigned int scope_level, unsigned int line)
 {
 	/*
 	
@@ -137,20 +137,20 @@ std::string compile_time_evaluator::evaluate_expression(Expression &to_evaluate,
 	std::string evaluated_expression = "";
 
 	if (to_evaluate.get_expression_type() == LITERAL) {
-		Literal &exp = static_cast<Literal&>(to_evaluate);
+		auto &exp = static_cast<const Literal&>(to_evaluate);
 		evaluated_expression = compile_time_evaluator::evaluate_literal(exp);
 	}
 	else if (to_evaluate.get_expression_type() == IDENTIFIER) {
-		Identifier &lvalue = static_cast<Identifier&>(to_evaluate);
+		auto &lvalue = static_cast<const Identifier&>(to_evaluate);
 		evaluated_expression = this->evaluate_lvalue(lvalue, scope_name, scope_level, line);
 	}
 	else if (to_evaluate.get_expression_type() == UNARY) {
-		Unary &unary = static_cast<Unary&>(to_evaluate);
+		auto &unary = static_cast<const Unary&>(to_evaluate);
 		evaluated_expression = this->evaluate_unary(unary, scope_name, scope_level, line);
 	}
 	else if (to_evaluate.get_expression_type() == LIST) {
 		// for lists, just evaluate each element individually and concatenate
-		auto &l = static_cast<ListExpression&>(to_evaluate);
+		auto &l = static_cast<const ListExpression&>(to_evaluate);
 		for (auto elem: l.get_list()) {
 			evaluated_expression += this->evaluate_expression(*elem, scope_name, scope_level, line) + ",";
 		}
