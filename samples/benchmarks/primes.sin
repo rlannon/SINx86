@@ -4,7 +4,7 @@
 // declare some sinstdlib functions
 
 decl void print(decl string s);
-decl string itos(decl int n);
+//decl string itos(decl int n);
 
 def string itos(alloc int n) {
     // a very simple itos implementation

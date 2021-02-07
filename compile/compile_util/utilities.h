@@ -49,6 +49,16 @@ struct_info define_struct(const StructDefinition &definition, compile_time_evalu
 
 template<typename T>
 symbol generate_symbol(const T &allocation, const size_t data_width, const std::string& scope_name, const unsigned int scope_level, size_t &stack_offset, const bool defined=true);
+symbol generate_symbol(
+    const DataType &type_information,
+    const std::string& symbol_name,
+    size_t data_width,
+    bool defined,
+    const std::string& scope_name,
+    unsigned int scope_level,
+    size_t& stack_offset,
+    unsigned int line_number
+);
 
 std::stringstream store_symbol(const symbol& s);
 

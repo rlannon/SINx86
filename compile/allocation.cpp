@@ -262,7 +262,16 @@ std::stringstream compiler::allocate(const Allocation& alloc_stmt) {
 			// allocate memory on the stack
 
 			// construct the symbol
-			allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
+			allocated = generate_symbol(
+				alloc_data,
+				alloc_stmt.get_name(),
+				data_width,
+				alloc_stmt.was_initialized(),
+				this->current_scope_name,
+				this->current_scope_level,
+				this->max_offset,
+				alloc_stmt.get_line_number()
+			);
 
 			/*
 			

@@ -410,6 +410,34 @@ symbol generate_symbol(const T &allocation, const size_t data_width, const std::
     return to_return;
 }
 
+symbol generate_symbol(
+    const DataType &type_information,
+    const std::string& symbol_name,
+    size_t data_width,
+    bool defined,
+    const std::string& scope_name,
+    unsigned int scope_level,
+    size_t& stack_offset,
+    unsigned int line_number
+) {
+    // An overload; this will allow allocation to use the type information it fetches and calculates
+
+    bool mangle = !type_information.get_qualities().is_extern();
+    stack_offset += data_width;
+    std::string name = mangle ? symbol_table::get_mangled_name(symbol_name) : symbol_name;
+    symbol to_return(
+        symbol_name,
+        scope_name,
+        scope_level,
+        type_information,
+        stack_offset,
+        defined,
+        line_number
+    );
+
+    return to_return;
+}
+
 std::stringstream store_symbol(const symbol &s) {
     /*
 
