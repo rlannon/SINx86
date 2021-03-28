@@ -252,8 +252,7 @@ CompoundAssignment::CompoundAssignment(
 	std::unique_ptr<Expression>&& lvalue,
 	std::unique_ptr<Expression>&& rvalue,
 	exp_operator op
-)	: Assignment(std::move(lvalue), std::move(rvalue))
-	, _op(op)
+)	: Assignment(std::move(lvalue), std::make_unique<Binary>(lvalue->clone(), std::move(rvalue), op))
 {
 	this->statement_type = COMPOUND_ASSIGNMENT;
 }

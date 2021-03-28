@@ -37,6 +37,11 @@ public:
 	virtual bool has_type_information() const;
 	bool was_overridden() const;
 
+	virtual std::unique_ptr<Expression> clone() const
+	{
+		return std::make_unique<Expression>();
+	}
+
 	Expression(const exp_type expression_type);
 	Expression();
 
@@ -57,8 +62,13 @@ public:
 	void override_qualities(symbol_qualities sq) override;
 	bool has_type_information() const override;
 
-    Literal(Type data_type, std::string value, Type subtype = NONE);
-	Literal(DataType t, std::string value);
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<Literal>(type, value);
+	}
+
+    Literal(Type data_type, const std::string& value, Type subtype = NONE);
+	Literal(const DataType& t, const std::string& value);
 	Literal();
 };
 
@@ -70,6 +80,11 @@ protected:
 public:
 	const std::string& getValue() const;
 	void setValue(const std::string& new_value);
+
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<Identifier>(value);
+	}
 
     Identifier(const std::string& value);
 	Identifier();
@@ -86,6 +101,17 @@ public:
 
     void add_item(std::unique_ptr<Expression> to_add, const size_t index);
 
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		auto le = std::make_unique<ListExpression>();
+		le->primary = primary;
+		for (auto it = list_members.begin(); it != list_members.end(); it++)
+		{
+			le->list_members.push_back(it->get()->clone());
+		}
+		return le;
+	}
+
 	ListExpression(std::vector<std::unique_ptr<Expression>>& list_members, Type list_type);
 	ListExpression(std::unique_ptr<Expression> arg, Type list_type);
 	ListExpression();
@@ -98,6 +124,14 @@ class Indexed : public Expression
 public:
 	const Expression &get_index_value() const;
 	const Expression &get_to_index() const;
+
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<Indexed>(
+			to_index->clone(),
+			index_value->clone()
+		);
+	}
 
 	Indexed(std::unique_ptr<Expression> to_index, std::unique_ptr<Expression> index_value);
 	Indexed();
@@ -113,8 +147,15 @@ public:
 
 	const std::string& get_keyword() const;
 	const DataType &get_type() const;
-	KeywordExpression(std::string keyword);
-	KeywordExpression(DataType t);
+
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<KeywordExpression>(t, keyword);
+	}
+
+	KeywordExpression(const std::string& keyword);
+	KeywordExpression(const DataType& t);
+	KeywordExpression(const DataType& t, const std::string& keyword);
 };
 
 // Address Of -- the address of a variable
@@ -123,6 +164,11 @@ class AddressOf : public Expression
 	std::shared_ptr<Expression> target;
 public:
 	Expression &get_target();
+
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<AddressOf>(target);
+	}
 
     AddressOf(std::shared_ptr<Expression> target);
 	AddressOf();
@@ -147,6 +193,15 @@ public:
 
 	exp_operator get_operator() const;
 
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<Binary>(
+			left_exp->clone(),
+			right_exp->clone(),
+			op
+		);
+	}
+
 	Binary(std::unique_ptr<Expression> left, std::unique_ptr<Expression> right, const exp_operator op);
 	Binary();
 };
@@ -159,6 +214,11 @@ public:
 	exp_operator get_operator() const;
 	const Expression &get_operand() const;
 
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<Unary>(operand->clone(), op);
+	}
+
 	Unary(std::unique_ptr<Expression> operand, exp_operator op);
 	Unary();
 };
@@ -168,7 +228,7 @@ public:
 class Procedure: public Expression
 {
     std::unique_ptr<Expression> name;
-    std::unique_ptr<ListExpression> args;
+    std::unique_ptr<Expression> args;
 public:
     const Expression &get_func_name() const;
     const ListExpression &get_args() const;
@@ -177,8 +237,13 @@ public:
 
     void insert_arg(std::unique_ptr<Expression> to_insert, const size_t index);
 
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<Procedure>(name->clone(), args->clone());
+	}
+
 	Procedure(Procedure& other);
-    Procedure(std::unique_ptr<Expression> proc_name, std::unique_ptr<ListExpression> proc_args);
+    Procedure(std::unique_ptr<Expression> proc_name, std::unique_ptr<Expression> proc_args);
     Procedure();
 };
 
@@ -199,6 +264,11 @@ public:
     const Expression &get_exp() const;
 	const DataType &get_new_type() const;
 
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		return std::make_unique<Cast>(to_cast->clone(), new_type);
+	}
+
     Cast(Cast &old);
     Cast(std::unique_ptr<Expression> to_cast, const DataType& new_type);
 	Cast(std::unique_ptr<Binary> b);
@@ -218,7 +288,14 @@ public:
 	attribute get_attribute() const;
 	const DataType &get_data_type() const;
 
+	inline virtual std::unique_ptr<Expression> clone() const override
+	{
+		auto c = std::make_unique<AttributeSelection>(selected->clone(), attrib, t);
+		return c;
+	}
+
     AttributeSelection(AttributeSelection &old);
 	AttributeSelection(std::unique_ptr<Expression>&& selected, const std::string& attribute_name);
 	AttributeSelection(std::unique_ptr<Binary>&& to_deconstruct);
+	AttributeSelection(std::unique_ptr<Expression>&& selected, attribute attrib, const DataType& t);
 };

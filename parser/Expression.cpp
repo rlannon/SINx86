@@ -3,7 +3,6 @@
 
 #include "Expression.h"
 
-
 bool is_literal(const lexeme_type candidate_type) {
 	switch(candidate_type) {
 		case INT_LEX:
@@ -81,7 +80,7 @@ bool Literal::has_type_information() const {
 	return true;
 }
 
-Literal::Literal(Type data_type, std::string value, Type subtype) : Expression(LITERAL), value(value) {
+Literal::Literal(Type data_type, const std::string& value, Type subtype) : Expression(LITERAL), value(value) {
     // symbol qualities for our DataType object
     bool const_q = true;
     bool long_q = false;
@@ -93,7 +92,7 @@ Literal::Literal(Type data_type, std::string value, Type subtype) : Expression(L
 	this->type = DataType(data_type, subtype, qualities);
 }
 
-Literal::Literal(DataType t, std::string value): Expression(LITERAL) {
+Literal::Literal(const DataType& t, const std::string& value): Expression(LITERAL) {
 	this->type = t;
 	this->value = value;
 }
@@ -111,11 +110,12 @@ void Identifier::setValue(const std::string& new_value) {
 	this->value = new_value;
 }
 
-Identifier::Identifier(const std::string& value) : Expression(IDENTIFIER), value(value) {
-}
+Identifier::Identifier(const std::string& value)
+	: Expression(IDENTIFIER)
+	, value(value) { }
 
-Identifier::Identifier(): Identifier("") {
-}
+Identifier::Identifier()
+	: Identifier("") { }
 
 
 // Attribute Selection
@@ -211,6 +211,11 @@ AttributeSelection::AttributeSelection(std::unique_ptr<Binary>&& to_deconstruct)
 	this->t.get_qualities().add_quality(FINAL);
 }
 
+AttributeSelection::AttributeSelection(std::unique_ptr<Expression>&& selected, attribute attrib, const DataType& t)
+	: selected(std::move(selected))
+	, attrib(attrib)
+	, t(t) { }
+
 // Lists
 
 bool ListExpression::has_type_information() const {
@@ -284,17 +289,22 @@ void KeywordExpression::override_qualities(symbol_qualities sq) {
     this->t.add_qualities(sq);
 }
 
-KeywordExpression::KeywordExpression(std::string keyword):
+KeywordExpression::KeywordExpression(const std::string& keyword):
 	Expression(KEYWORD_EXP),
 	keyword(keyword)
 {
 }
 
-KeywordExpression::KeywordExpression(DataType t):
+KeywordExpression::KeywordExpression(const DataType& t):
 	KeywordExpression("")
 {
 	this->t = t;
 }
+
+KeywordExpression::KeywordExpression(const DataType& t, const std::string& keyword)
+	: Expression(KEYWORD_EXP)
+	, t(t)
+	, keyword(keyword) { }
 
 std::unique_ptr<Expression> Binary::get_left_unique()
 {
@@ -362,19 +372,19 @@ const Expression &Procedure::get_func_name() const {
 }
 
 const ListExpression &Procedure::get_args() const {
-    return *this->args.get();
+    return dynamic_cast<ListExpression&>(*args);
 }
 
 const Expression &Procedure::get_arg(size_t arg_no) const {
-    return *this->args->get_list().at(arg_no);
+    return *dynamic_cast<ListExpression*>(args.get())->get_list().at(arg_no);
 }
 
 size_t Procedure::get_num_args() const {
-    return this->args->get_list().size();
+    return dynamic_cast<ListExpression*>(args.get())->get_list().size();
 }
 
 void Procedure::insert_arg(std::unique_ptr<Expression> to_insert, const size_t index) {
-    this->args->add_item(std::move(to_insert), index);
+    dynamic_cast<ListExpression*>(args.get())->add_item(std::move(to_insert), index);
 }
 
 Procedure::Procedure(Procedure& other)
@@ -384,7 +394,7 @@ Procedure::Procedure(Procedure& other)
 {
 }
 
-Procedure::Procedure(std::unique_ptr<Expression> proc_name, std::unique_ptr<ListExpression> proc_args)
+Procedure::Procedure(std::unique_ptr<Expression> proc_name, std::unique_ptr<Expression> proc_args)
 	: Expression(PROC_EXP)
 	, name(std::move(proc_name))
 	, args(std::move(proc_args)) { }
