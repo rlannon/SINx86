@@ -470,62 +470,41 @@ std::unique_ptr<Expression> Parser::maybe_binary(
 	}
 }
 
-std::unique_ptr<Binary> Parser::create_compound_assignment_rvalue(
-	std::unique_ptr<Expression> left,
-	std::unique_ptr<Expression> right,
-	const exp_operator op
-) {
+exp_operator Parser::get_compound_arithmetic_op(const exp_operator op)
+{
 	/*
 
-	create_compound_assignment_rvalue
+	get_compound_arithmetic_op
+	Gets the corresponding arithmetic operator for a compound one.
 
-	This function is used to expand a statement like:
-		let a *= b;
-	into its full form,
-		let a = a * b;
-	This simply creates a binary expression from the two parts where the rvalue is the right side and the lvalue is the left.
-	This will also translate the compound operator (e.g., MULT_EQUAL to MULT)
+	For example, turns "+=" into "+"
 
 	*/
 
-	exp_operator arithmetic_op;
 	switch (op)
 	{
 	case PLUS_EQUAL:
-		arithmetic_op = PLUS;
-		break;
+		return PLUS;
 	case MINUS_EQUAL:
-		arithmetic_op = MINUS;
-		break;
+		return MINUS;
 	case MULT_EQUAL:
-		arithmetic_op = MULT;
-		break;
+		return MULT;
 	case DIV_EQUAL:
-		arithmetic_op = DIV;
-		break;
+		return DIV;
 	case MOD_EQUAL:
-		arithmetic_op = MODULO;
-		break;
+		return MODULO;
 	case AND_EQUAL:
-		arithmetic_op = BIT_AND;
-		break;
+		return BIT_AND;
 	case OR_EQUAL:
-		arithmetic_op = BIT_OR;
-		break;
+		return BIT_OR;
 	case XOR_EQUAL:
-		arithmetic_op = BIT_XOR;
-		break;
+		return BIT_XOR;
 	case LEFT_SHIFT_EQUAL:
-		arithmetic_op = LEFT_SHIFT;
-		break;
+		return LEFT_SHIFT;
 	case RIGHT_SHIFT_EQUAL:
-		arithmetic_op = RIGHT_SHIFT;
-		break;
+		return RIGHT_SHIFT;
 	
 	default:
-		arithmetic_op = NO_OP;
-		break;
+		return NO_OP;
 	}
-
-	return std::make_unique<Binary>(std::move(left), std::move(right), arithmetic_op);
 }

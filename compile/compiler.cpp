@@ -245,6 +245,7 @@ std::stringstream compiler::compile_statement(const Statement &s, function_symbo
             compile_ss << this->handle_move(move_stmt).str() << std::endl;
             break;
         }
+        case COMPOUND_ASSIGNMENT:
         case ASSIGNMENT:
         {
             auto &assign_stmt = static_cast<const Assignment&>(s);

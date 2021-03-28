@@ -163,6 +163,7 @@ public:
 
 class Assignment : public Statement
 {
+protected:
 	std::unique_ptr<Expression> lvalue;
 	std::unique_ptr<Expression> rvalue_ptr;
 public:
@@ -173,6 +174,16 @@ public:
 	Assignment(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression>&& rvalue);
 	Assignment(const Identifier& lvalue, std::unique_ptr<Expression>&& rvalue);
 	Assignment();
+};
+
+class CompoundAssignment : public Assignment
+{
+	exp_operator _op;
+public:
+	exp_operator get_operator() const;
+
+	CompoundAssignment(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression> && rvalue, exp_operator op);
+	CompoundAssignment();
 };
 
 class Movement : public Assignment

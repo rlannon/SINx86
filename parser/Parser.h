@@ -121,11 +121,7 @@ class Parser
 		const std::string& grouping_symbol = "(",
 		const bool omit_equals = false
 	);	// check to see if we need to fashion a binary expression
-	static std::unique_ptr<Binary> create_compound_assignment_rvalue(
-		std::unique_ptr<Expression> left,
-		std::unique_ptr<Expression> right,
-		const exp_operator op
-	);
+	static exp_operator get_compound_arithmetic_op(const exp_operator op);
 public:
 	// our entry function
 	StatementBlock create_ast();

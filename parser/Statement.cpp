@@ -242,6 +242,27 @@ Assignment::Assignment():
 {
 }
 
+// Compound Assignments
+exp_operator CompoundAssignment::get_operator() const
+{
+	return _op;
+}
+
+CompoundAssignment::CompoundAssignment(
+	std::unique_ptr<Expression>&& lvalue,
+	std::unique_ptr<Expression>&& rvalue,
+	exp_operator op
+)	: Assignment(std::move(lvalue), std::move(rvalue))
+	, _op(op)
+{
+	this->statement_type = COMPOUND_ASSIGNMENT;
+}
+
+CompoundAssignment::CompoundAssignment()
+{
+	this->statement_type = COMPOUND_ASSIGNMENT;
+}
+
 // Movements
 
 Movement::Movement(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression>&& rvalue) :

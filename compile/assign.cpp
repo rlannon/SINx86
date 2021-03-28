@@ -61,6 +61,7 @@ std::stringstream compiler::handle_assignment(const Assignment &a) {
         std::stringstream overwrite;
 
         // if RAX is used to fetch the RHS, we need to preserve it on the stack before determining the index
+        // note that floating point types are exempt here since XMM register will be used
         bool must_push = rhs_type.get_primary() != FLOAT;
         if (must_push)
             overwrite << "\t" << "push rax" << std::endl;

@@ -467,13 +467,21 @@ std::unique_ptr<Statement> Parser::parse_assignment(lexeme current_lex)
 			this->next();
 			std::unique_ptr<Expression> rvalue = this->parse_expression();
 
-			if (op != EQUAL) {
-				rvalue = Parser::create_compound_assignment_rvalue(std::move(lvalue), std::move(rvalue), op);
+			if (op == EQUAL) {
+				auto assign = std::make_unique<Assignment>(std::move(lvalue), std::move(rvalue));
+				assign->set_line_number(current_lex.line_number);
+				return assign;
 			}
-
-			auto assign = std::make_unique<Assignment>(std::move(lvalue), std::move(rvalue));
-			assign->set_line_number(current_lex.line_number);
-			return assign;
+			else
+			{
+				auto assign = std::make_unique<CompoundAssignment>(
+					std::move(lvalue),
+					std::move(rvalue),
+					Parser::get_compound_arithmetic_op(op)
+				);
+				assign->set_line_number(current_lex.line_number);
+				return assign;
+			}
 		}
 		// otherwise, we have a syntax error -- we didn't get an expression where we expected it
 		else {
