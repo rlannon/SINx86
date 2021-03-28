@@ -84,7 +84,21 @@ char Lexer::peek() const {
 	}
 	else
 	{
-		return this->stream->peek();
+		char ch = this->stream->peek();
+		if (ch == '\r')
+		{
+			ch = this->stream->get();
+			if (this->stream->peek() == '\n')
+			{
+				return '\n';
+			}
+			else
+			{
+				this->stream->unget();
+			}
+		}
+
+		return ch;
 	}
 }
 
@@ -133,13 +147,12 @@ inline bool Lexer::is_whitespace(const char ch) {
 	return match_character(ch, "[ \n\t\r]");
 }
 
-inline bool Lexer::is_newline(char ch) const {
-	// allow CRLF line endings (ignore carriage returns)
-	return (ch == '\n') || (ch == '\r' && this->peek() == '\n');
+inline bool Lexer::is_newline(const char ch) {
+	return (ch == '\n');
 }
 
 inline bool Lexer::is_not_newline(const char ch) {
-	return ch != '\n';
+	return !is_newline(ch);
 }
 
 inline bool Lexer::is_digit(const char ch) {
@@ -202,7 +215,7 @@ These will read out data in the stream and return it as a string with proper for
 
 */
 
-std::string Lexer::read_while(bool (*predicate)(const char)) {
+std::string Lexer::read_while(const std::function<bool(const char)>& predicate) {
 	/*
 
 	read_while
@@ -295,7 +308,12 @@ lexeme Lexer::read_next() {
 
 			while (is_comment) {
 				this->next();	// eat the comment character
-				this->read_while(&this->is_not_newline);	// skip characters until we hit a newline character
+				this->read_while(
+					[&, this] (const char c) -> bool
+					{
+						return !this->is_newline(c);
+					}
+				);	// skip characters until we hit a newline character
 				this->next();	// eat the newline character
 
 				// if we have whitespace (e.g., a tab), skip it

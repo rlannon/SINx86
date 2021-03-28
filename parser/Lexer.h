@@ -78,7 +78,7 @@ class Lexer
 
 	static bool is_whitespace(const char ch);	// tests if a character is \n, \t, or a space
 
-	bool is_newline(char ch) const;	// tests for a newline character
+	static bool is_newline(char ch);	// tests for a newline character
 	static bool is_not_newline(const char ch);
 	static bool is_digit(const char ch);		// tests whether a character is a digit; used for the first digit in a number
 	static bool is_letter(const char ch);
@@ -94,7 +94,7 @@ class Lexer
 
 	static bool is_keyword(const std::string &candidate);	// test whether the string is a keyword (such as alloc or let) or an identifier (such as a variable name)
 
-	std::string read_while(bool(*predicate)(const char));
+	std::string read_while(const std::function<bool(const char)>& predicate);
 	std::string read_operator();
 
 	void read_lexeme();
