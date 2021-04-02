@@ -265,10 +265,11 @@ std::stringstream compiler::compile_statement(const Statement &s, function_symbo
         }
         case IF_THEN_ELSE:
 		{
-            // todo: if/else blocks will mess up our register tracking; an if block may mark registers as in use/not in use
-            // these changes should not extend to the else block
-            // we must determine all the registers that could possibly be touched and ensure that the data will not be
-            // corrupted on any possible control path 
+            // todo: utilize reg stacks here
+            // there is some functionality for this in the works, but it doesn't work right now (we get errors compiling the .sin)
+            // this is located in control_util
+            // for now, we will just store all register variables back in the stack before and after each branch
+            compile_ss << this->reg_stack.peek().store_all_symbols();
 
 			// first, we need to cast and get the current block number (in case we have nested blocks)
 			auto &ite = static_cast<const IfThenElse&>(s);
@@ -286,6 +287,7 @@ std::stringstream compiler::compile_statement(const Statement &s, function_symbo
 			
 			// compile the branch
 			compile_ss << this->compile_statement(*ite.get_if_branch(), signature).str();
+            compile_ss << this->reg_stack.peek().store_all_symbols();
 
 			// now, we need to jump to "done" to ensure the "else" branch is not automatically executed
 			compile_ss << "\t" << "jmp " << magic_numbers::ITE_DONE_LABEL << current_scope_num << std::endl;
@@ -294,11 +296,12 @@ std::stringstream compiler::compile_statement(const Statement &s, function_symbo
 			// compile the branch, if one exists
 			if (ite.get_else_branch()) {
 				compile_ss << this->compile_statement(*ite.get_else_branch(), signature).str();
+                compile_ss << this->reg_stack.peek().store_all_symbols();
 			}
 
 			// clean-up
 			compile_ss << magic_numbers::ITE_DONE_LABEL << current_scope_num << ":" << std::endl;
-			break;
+            break;
 		}
 		case WHILE_LOOP:
         {
@@ -320,6 +323,7 @@ std::stringstream compiler::compile_statement(const Statement &s, function_symbo
 
             // compile the loop body
             compile_ss << this->compile_statement(*while_stmt.get_branch(), signature).str();
+            compile_ss << reg_stack.peek().store_all_symbols();
             compile_ss << "\t" << "jmp " << magic_numbers::WHILE_LABEL << current_block_num << std::endl;
 
             compile_ss << magic_numbers::WHILE_DONE_LABEL << current_block_num << ":" << std::endl;

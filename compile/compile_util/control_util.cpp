@@ -40,9 +40,9 @@ std::string control_util::restore_register_variables(
     for (auto reg_it = entering.all_regs.begin(); reg_it != entering.all_regs.end(); reg_it++)
     {
         // we only care about this register if it's being used in the context we are leaving
-        if (leaving.is_in_use(*reg_it))
+        if (leaving.is_in_use(*reg_it) && leaving.get_contained_symbol(*reg_it))
         {
-            if (entering.is_in_use(*reg_it))
+            if (entering.is_in_use(*reg_it) && entering.get_contained_symbol(*reg_it))
             {
                 auto leaving_sym = leaving.get_contained_symbol(*reg_it);
                 auto entering_sym = leaving.get_contained_symbol(*reg_it);
@@ -56,9 +56,12 @@ std::string control_util::restore_register_variables(
                         leaving_sym->set_register(reg::NO_REGISTER);
                     }
 
+                    leaving.clear(*reg_it);
+
                     // now, reload the register
                     // note that because this function will transfer the symbol
                     gen_code << expression_util::load_into_register(*entering_sym, *reg_it, entering);
+                    entering.set(*reg_it, entering_sym);
                 }
             }
             else

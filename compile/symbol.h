@@ -58,8 +58,8 @@ public:
 
     void set_as_parameter();
 
-    std::string get_name() const;
-    std::string get_scope_name() const;
+    const std::string& get_name() const;
+    const std::string& get_scope_name() const;
     unsigned int get_scope_level() const;
 
     inline bool is_accessible_from(const std::string& scope_name, const unsigned int scope_level) const noexcept
@@ -67,7 +67,7 @@ public:
         return (scope_name == this->scope_name && scope_level >= this->scope_level);
     }
 
-    DataType get_data_type() const;
+    const DataType& get_data_type() const;
     int get_offset() const;
 
     bool is_defined() const;

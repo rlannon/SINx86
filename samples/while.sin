@@ -1,0 +1,13 @@
+// while.sin
+
+def int main(alloc dynamic array<string> args)
+{
+    alloc int i: 0;
+    alloc int j: 0;
+    while (i < 10)
+    {
+        let j = j + i;
+        let i += 1;
+    }
+    return 0;
+}

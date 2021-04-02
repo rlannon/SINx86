@@ -54,12 +54,12 @@ void symbol::set_as_parameter() {
 	this->is_parameter = true;
 }
 
-std::string symbol::get_name() const {
+const std::string& symbol::get_name() const {
 	// get the symbol name
 	return this->name;
 }
 
-std::string symbol::get_scope_name() const {
+const std::string& symbol::get_scope_name() const {
 	// get the name of the symbol's scope
 	return this->scope_name;
 }
@@ -70,7 +70,7 @@ unsigned int symbol::get_scope_level() const
 	return this->scope_level;
 }
 
-DataType symbol::get_data_type() const {
+const DataType& symbol::get_data_type() const {
 	// get the DataType object of the symbol
 	return this->type;
 }
