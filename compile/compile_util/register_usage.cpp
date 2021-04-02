@@ -193,6 +193,28 @@ void register_usage::clear_contained_symbol(reg r) {
     }
 }
 
+std::string register_usage::store_all_symbols()
+{
+    /*
+
+    store_all_symbols
+    Stores all symbols currently in registers into their memory locations
+
+    */
+
+    std::stringstream store_ss;
+    for (auto it = regs.begin(); it != regs.end(); it++)
+    {
+        if (it->second.contained)
+        {
+            store_ss << store_symbol(*it->second.contained).str();
+            it->second.contained = nullptr;
+            it->second.in_use = false;
+        }
+    }
+    return store_ss.str();
+}
+
 void register_usage::set(reg to_set, symbol* s) {
     // Sets a given register to 'in use'
     auto it = this->regs.find(to_set);
@@ -300,7 +322,7 @@ std::string register_usage::get_register_name(const reg to_get) {
 	}
 }
 
-std::string register_usage::get_register_name(const reg to_get, DataType t) {
+std::string register_usage::get_register_name(const reg to_get, const DataType& t) {
     // Get the string value of a register name based on its width
     std::unordered_map<reg, std::string>::const_iterator it;
     bool found = false;

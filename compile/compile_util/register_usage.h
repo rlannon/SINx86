@@ -20,6 +20,9 @@ A class to track the current general-purpose registers in use
 #include "../../util/DataType.h"
 #include "../symbol.h"
 
+// forward declaration to allow this to be used by 'store_all_symbols'
+std::stringstream store_symbol(const symbol& s);
+
 class register_usage {
     /*
 
@@ -60,6 +63,8 @@ public:
     symbol* get_contained_symbol(reg r); // checks whether the register contains a symbol
     void clear_contained_symbol(reg r); // sets the contained symbol to nullptr
 
+    std::string store_all_symbols();   // stores all symbols currently in registers into their respective memory locations
+
     // todo: change to one function, 'set_available' ?
     void set(reg to_set, symbol* s=nullptr);
     void clear(reg to_clear);
@@ -72,7 +77,7 @@ public:
     
     // get the name of a register
     static std::string get_register_name(const reg to_get);    // full 64-bit register
-    static std::string get_register_name(const reg to_get, DataType t); // get the appropriate name based on type width
+    static std::string get_register_name(const reg to_get, const DataType& t); // get the appropriate name based on type width
 
     register_usage();
     ~register_usage();

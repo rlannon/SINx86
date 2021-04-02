@@ -573,6 +573,9 @@ std::stringstream compiler::evaluate_identifier(const Identifier &to_evaluate, u
                 throw VoidException(line);
             }
             else if (can_pass_in_register(sym.get_data_type())) {
+
+                // todo: utilize expression_util::load_into_register
+
                 // the data width determines which register size to use
                 std::string reg_string = get_rax_name_variant(sym.get_data_type(), line);
 

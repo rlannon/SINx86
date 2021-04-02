@@ -62,6 +62,11 @@ public:
     std::string get_scope_name() const;
     unsigned int get_scope_level() const;
 
+    inline bool is_accessible_from(const std::string& scope_name, const unsigned int scope_level) const noexcept
+    {
+        return (scope_name == this->scope_name && scope_level >= this->scope_level);
+    }
+
     DataType get_data_type() const;
     int get_offset() const;
 
