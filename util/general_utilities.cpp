@@ -8,7 +8,7 @@ Copyright 2020 Riley Lannon
 
 #include "general_utilities.h"
 
-bool general_utilities::returns(StatementBlock to_check) {
+bool general_utilities::returns(const StatementBlock& to_check) {
 	/*
 	
 	returns
@@ -23,7 +23,7 @@ bool general_utilities::returns(StatementBlock to_check) {
 		bool to_return = true;
 
 		// iterate through statements to see if we have an if/else block; if so, check *those* for return values
-		std::vector<std::shared_ptr<Statement>>::iterator it = to_check.statements_list.begin();
+		auto it = to_check.statements_list.begin();
 		while (it != to_check.statements_list.end() && to_return) {
 			// get the statement pointer
             std::shared_ptr<Statement> s = *it;
@@ -42,9 +42,9 @@ bool general_utilities::returns(StatementBlock to_check) {
 	}
 }
 
-bool general_utilities::returns(Statement &to_check) {
+bool general_utilities::returns(const Statement &to_check) {
     if (to_check.get_statement_type() == SCOPE_BLOCK) {
-        ScopedBlock &block = static_cast<ScopedBlock&>(to_check);
+        auto &block = static_cast<const ScopedBlock&>(to_check);
         return returns(block.get_statements());
     }
     else {
@@ -52,7 +52,7 @@ bool general_utilities::returns(Statement &to_check) {
     }
 }
 
-bool general_utilities::ite_returns(IfThenElse *to_check) {
+bool general_utilities::ite_returns(const IfThenElse *to_check) {
     // both must be true for it to return true
     bool if_returns = false;
     if (to_check->get_if_branch())
@@ -65,7 +65,7 @@ bool general_utilities::ite_returns(IfThenElse *to_check) {
     return if_returns && else_returns;
 }
 
-bool general_utilities::is_bitwise(exp_operator op) {
+bool general_utilities::is_bitwise(const exp_operator op) {
     /*
 
     is_bitwise

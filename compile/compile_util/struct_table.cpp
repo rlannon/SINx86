@@ -38,7 +38,7 @@ bool struct_table::contains(std::string name) {
 	return (it != this->structs.end());
 }
 
-struct_info& struct_table::find(std::string name, unsigned int line) {
+struct_info& struct_table::find(const std::string& name, unsigned int line) {
 	/*
 	
 	find

@@ -11,7 +11,7 @@ This file contains all of the functionality to define and call functions
 #include "compiler.h"
 #include "compile_util/function_util.h"
 
-std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
+std::stringstream compiler::handle_declaration(const Declaration& decl_stmt) {
     /*
 
     declare_function
@@ -62,7 +62,7 @@ std::stringstream compiler::handle_declaration(Declaration decl_stmt) {
     return decl_ss;
 }
 
-std::stringstream compiler::define_function(FunctionDefinition &definition) {
+std::stringstream compiler::define_function(const FunctionDefinition &definition) {
     /*
     
     define_function
@@ -208,7 +208,7 @@ std::stringstream compiler::define_function(function_symbol &func_sym, Statement
     return definition_ss;
 }
 
-std::pair<std::string, size_t> compiler::call_function(Procedure &to_call, unsigned int line, bool allow_void) {
+std::pair<std::string, size_t> compiler::call_function(const Procedure &to_call, unsigned int line, bool allow_void) {
     /*
 
     call_function
@@ -259,15 +259,20 @@ std::pair<std::string, size_t> compiler::call_function(Procedure &to_call, unsig
         }
 
         // check to see if we have a 'this' parameter that needs evaluation
+        std::vector<const Expression*> to_pass;
         if (func_sym.requires_this() && to_call.get_func_name().get_expression_type() == BINARY) {
-            Binary &bin_name = static_cast<Binary&>(to_call.get_func_name());
-            to_call.insert_arg(bin_name.get_left(), 0);
+            auto &bin_name = static_cast<const Binary&>(to_call.get_func_name());
+            to_pass.push_back(&bin_name.get_left());
+        }
+        for (auto elem: to_call.get_args().get_list())
+        {
+            to_pass.push_back(elem);
         }
 
         // behaves according to the calling convention
         if (func_sym.get_calling_convention() == calling_convention::SINCALL) {
             // SIN calling convention
-            call_ss << this->sincall(func_sym, to_call.get_args().get_list(), line).str(); // todo: return this function's result directly?
+            call_ss << this->sincall(func_sym, to_pass, line).str(); // todo: return this function's result directly?
 		}
 		else if (func_sym.get_calling_convention() == calling_convention::SYSTEM_V) {
 			throw CompilerException(
@@ -301,7 +306,7 @@ std::pair<std::string, size_t> compiler::call_function(Procedure &to_call, unsig
     return std::make_pair<>(call_ss.str(), count);
 }
 
-std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line) {
+std::stringstream compiler::sincall(const function_symbol& s, std::vector<std::unique_ptr<Expression>>& args, unsigned int line) {
     /*
 
     sincall
@@ -309,14 +314,14 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<std::shared_p
 
     */
 
-    std::vector<Expression*> to_pass;
-    for (auto elem: args) {
-        to_pass.push_back(elem.get());
+    std::vector<const Expression*> to_pass;
+    for (auto it = args.begin(); it != args.end(); it++) {
+        to_pass.push_back(it->get());
     }
     return this->sincall(s, to_pass, line);
 }
 
-std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> args, unsigned int line) {
+std::stringstream compiler::sincall(const function_symbol& s, std::vector<const Expression*> args, unsigned int line) {
     /*
 
     sincall
@@ -367,7 +372,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
         // iterate over our arguments, ensure the types match and that we have an appropriate number
         for (size_t i = 0; i < args.size(); i++) {
             // get the argument and its corresponding symbol
-            Expression *arg = args.at(i);
+            const Expression *arg = args.at(i);
             symbol &param = *formal_parameters[i];
 
             // first, ensure the types match
@@ -481,7 +486,7 @@ std::stringstream compiler::sincall(function_symbol s, std::vector<Expression*> 
     return sincall_ss;
 }
 
-std::stringstream compiler::system_v_call(function_symbol s, std::vector<Expression*> args, unsigned int line)
+std::stringstream compiler::system_v_call(const function_symbol& s, std::vector<Expression*> args, unsigned int line)
 {
     std::stringstream system_v_call_ss;
 
@@ -490,7 +495,7 @@ std::stringstream compiler::system_v_call(function_symbol s, std::vector<Express
     return system_v_call_ss;
 }
 
-std::stringstream compiler::win64_call(function_symbol s, std::vector<Expression*> args, unsigned int line)
+std::stringstream compiler::win64_call(const function_symbol& s, std::vector<Expression*> args, unsigned int line)
 {
     std::stringstream win64_call_ss;
 
@@ -501,7 +506,7 @@ std::stringstream compiler::win64_call(function_symbol s, std::vector<Expression
 
 // Function returns
 
-std::stringstream compiler::handle_return(ReturnStatement &ret, function_symbol &signature) {
+std::stringstream compiler::handle_return(const ReturnStatement &ret, function_symbol &signature) {
     /*
 
     handle_return
@@ -563,7 +568,7 @@ std::stringstream compiler::handle_return(ReturnStatement &ret, function_symbol 
     return ret_ss;
 }
 
-std::stringstream compiler::sincall_return(ReturnStatement &ret, DataType return_type) {
+std::stringstream compiler::sincall_return(const ReturnStatement &ret, DataType return_type) {
     /*
 
     sincall_return

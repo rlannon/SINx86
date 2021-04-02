@@ -13,7 +13,7 @@ Implementation of the assignment functions for the compiler
 
 // todo: overhaul assignment
 
-std::stringstream compiler::handle_assignment(Assignment &a) {
+std::stringstream compiler::handle_assignment(const Assignment &a) {
     /*
 
     handle_assignment
@@ -44,7 +44,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     // if we have an indexed expression as the lvalue, we need a special case (for code generation)
     if (a.get_lvalue().get_expression_type() == INDEXED) {
         // make sure that the type is actually indexable/subscriptable
-        auto &idx = static_cast<Indexed&>(a.get_lvalue());
+        auto &idx = static_cast<const Indexed&>(a.get_lvalue());
         if (!is_subscriptable(
                 expression_util::get_expression_data_type(
                     idx.get_to_index(), 
@@ -61,6 +61,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
         std::stringstream overwrite;
 
         // if RAX is used to fetch the RHS, we need to preserve it on the stack before determining the index
+        // note that floating point types are exempt here since XMM registers will be used
         bool must_push = rhs_type.get_primary() != FLOAT;
         if (must_push)
             overwrite << "\t" << "push rax" << std::endl;
@@ -78,7 +79,7 @@ std::stringstream compiler::handle_assignment(Assignment &a) {
     return handle_ss;
 }
 
-std::stringstream compiler::handle_alloc_init(symbol &sym, Expression &rvalue, unsigned int line) {
+std::stringstream compiler::handle_alloc_init(const symbol &sym, const Expression& rvalue, unsigned int line) {
     /*
 
     handle_alloc_init
@@ -94,27 +95,26 @@ std::stringstream compiler::handle_alloc_init(symbol &sym, Expression &rvalue, u
     reg src_reg = sym.get_data_type().get_primary() == FLOAT ? XMM0 : RAX;
 
     // we need to have a special case for ref<T> initialization
-    std::unique_ptr<Unary> u = nullptr;
-    if (sym.get_data_type().get_primary() == REFERENCE) {
+    /*if (sym.get_data_type().get_primary() == REFERENCE) {
         // wrap the rvalue in a unary address-of expression
         // this will be fine since we will be comparing against the subtype but evaluating a pointer
-        u = std::make_unique<Unary>(
-            std::move(rvalue.get_unique()),
+        std::unique_ptr<Unary> u = std::make_unique<Unary>(
+            rvalue,
             exp_operator::ADDRESS
         );
-        return this->assign(sym.get_data_type(), rhs_type, p, *u.get(), line, true);
+        return this->assign(sym.get_data_type(), rhs_type, p, *u, line, true);
     }
-    else {
+    else {*/
     // todo: we can utilize the copy construction method for alloc-init when used with dynamic types
         return this->assign(sym.get_data_type(), rhs_type, p, rvalue, line, true);
-    }
+    //}
 }
 
 std::stringstream compiler::assign(
-    DataType lhs_type,
-    DataType &rhs_type,
+    const DataType& lhs_type,
+    const DataType &rhs_type,
     assign_utilities::destination_information dest,
-    Expression &rvalue,
+    const Expression &rvalue,
     unsigned int line,
     bool is_alloc_init
 ) {

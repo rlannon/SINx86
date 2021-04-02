@@ -195,7 +195,7 @@ bool DataType::operator!=(const Type right) const
 	return this->primary != right;
 }
 
-const bool DataType::is_valid_type_promotion(symbol_qualities left, symbol_qualities right) {
+const bool DataType::is_valid_type_promotion(const symbol_qualities& left, const symbol_qualities& right) {
 	/*
 	
 	is_valid_type_promotion
@@ -302,7 +302,11 @@ Type DataType::get_primary() const
 	return this->primary;
 }
 
-symbol_qualities DataType::get_qualities() const {
+const symbol_qualities& DataType::get_qualities() const {
+	return this->qualities;
+}
+
+symbol_qualities& DataType::get_qualities() {
 	return this->qualities;
 }
 
@@ -314,7 +318,7 @@ std::string DataType::get_struct_name() const {
 	return this->struct_name;
 }
 
-Expression *DataType::get_array_length_expression() const {
+const Expression *DataType::get_array_length_expression() const {
 	return this->array_length_expression.get();
 }
 
@@ -326,6 +330,10 @@ DataType DataType::get_subtype() const {
 	}
 
 	return to_return;
+}
+
+const std::vector<DataType> &DataType::get_contained_types() const {
+	return this->contained_types;
 }
 
 std::vector<DataType> &DataType::get_contained_types() {
@@ -389,7 +397,7 @@ size_t DataType::get_width() const {
 	return this->width;
 }
 
-bool DataType::is_valid_type(DataType &t) {
+bool DataType::is_valid_type(const DataType &t) {
 	/*
 	
 	is_valid_type

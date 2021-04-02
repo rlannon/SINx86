@@ -10,11 +10,11 @@ Contains the implementations of the functions to parse expressions.
 
 #include "Parser.h"
 
-std::shared_ptr<Expression> Parser::parse_expression(
-	size_t prec,
+std::unique_ptr<Expression> Parser::parse_expression(
+	const size_t prec,
 	std::string grouping_symbol,
 	bool not_binary,
-	bool omit_equals
+	const bool omit_equals
 ) {
 	/*
 
@@ -26,7 +26,7 @@ std::shared_ptr<Expression> Parser::parse_expression(
 	lexeme current_lex = this->current_token();
 
 	// Create a pointer to our first value
-	std::shared_ptr<Expression> left = nullptr;
+	std::unique_ptr<Expression> left = nullptr;
 	bool is_const = false;
 
 	// first, check to see if we have the 'constexpr' keyword
@@ -39,11 +39,11 @@ std::shared_ptr<Expression> Parser::parse_expression(
 	// note that curly braces are NOT included here; they are parsed separately as they are not considered grouping symbols in the same way as parentheses and brackets are
 	if (is_opening_grouping_symbol(current_lex.value)) {
 		grouping_symbol = current_lex.value;
-        std::shared_ptr<Expression> temp = nullptr;
+        std::unique_ptr<Expression> temp = nullptr;
         
         // we might have an empty list
         if (this->peek().value == get_closing_grouping_symbol(grouping_symbol)) {
-            temp = std::make_shared<ListExpression>();
+            temp = std::make_unique<ListExpression>();
         }
         else {
     		this->next();
@@ -96,12 +96,12 @@ std::shared_ptr<Expression> Parser::parse_expression(
             if (not_binary)
                 return temp;
             else
-    			return this->maybe_binary(temp, prec, grouping_symbol);
+    			return this->maybe_binary(std::move(temp), prec, grouping_symbol);
 		}
 		// if we had a comma, we need to parse a list
 		else if (this->peek().value == ",") {
 			// ensure we have a valid grouping symbol for our list and set the expression's primary type accordingly
-			std::string list_grouping_symbol = current_lex.value;
+			const std::string& list_grouping_symbol = current_lex.value;
 			Type list_type;
 			if (list_grouping_symbol == "(") {
 				list_type = TUPLE;
@@ -121,7 +121,8 @@ std::shared_ptr<Expression> Parser::parse_expression(
 			is_const = true;
 
 			// create a copy of 'left' because 'left' will need to hold the list expression -- and contain the value currently in 'left'
-			std::vector<std::shared_ptr<Expression>> list_members = { temp };
+			std::vector<std::unique_ptr<Expression>> list_members;
+			list_members.push_back(std::move(temp));
 			left = nullptr;
 
 			// as long as the next character is not a comma, we have more lexemes to parse
@@ -134,7 +135,7 @@ std::shared_ptr<Expression> Parser::parse_expression(
 					if (!elem->is_const())
 						is_const = false;
 					
-					list_members.push_back(elem);
+					list_members.push_back(std::move(elem));
 				}
 				catch (std::exception &e) {
 					throw ParserException(
@@ -152,7 +153,7 @@ std::shared_ptr<Expression> Parser::parse_expression(
 				throw UnclosedGroupingSymbolError(this->current_token().line_number);
 			}
 
-			left = std::make_shared<ListExpression>(list_members, list_type);
+			left = std::make_unique<ListExpression>(list_members, list_type);
 			not_binary = true;	// list literals are not allowed to be a part of binary expressions because dynamically resizable arrays are not first class types
 		}
 		else {
@@ -166,14 +167,14 @@ std::shared_ptr<Expression> Parser::parse_expression(
 	}
 	// if it is not an expression within a grouping symbol, it is parsed below
 	else if (is_literal(current_lex.type)) {
-		left = std::make_shared<Literal>(
+		left = std::make_unique<Literal>(
 			type_deduction::get_type_from_lexeme(current_lex.type),
 			current_lex.value
 		);
 	}
 	else if (current_lex.type == IDENTIFIER_LEX) {
 		// make an LValue expression
-		left = std::make_shared<Identifier>(current_lex.value);
+		left = std::make_unique<Identifier>(current_lex.value);
 	}
 	// if we have a keyword to begin an expression (could be 'not' or an attribute selection like int:size)
 	else if (current_lex.type == KEYWORD_LEX) {
@@ -181,16 +182,16 @@ std::shared_ptr<Expression> Parser::parse_expression(
 			// the logical not operator
 			this->next();
 			auto negated = this->parse_expression(get_precedence(NOT, current_lex.line_number));
-			left = std::make_shared<Unary>(negated, NOT);
+			left = std::make_unique<Unary>(std::move(negated), NOT);
 		}
 		else if (AttributeSelection::is_attribute(current_lex.value)) {
 			// if we have an attribute, parse out a keyword expression
-			left = std::make_shared<KeywordExpression>(current_lex.value);
+			left = std::make_unique<KeywordExpression>(current_lex.value);
 		}
 		else {
 			try {
 				auto t = this->get_type(grouping_symbol);
-				left = std::make_shared<KeywordExpression>(t);
+				left = std::make_unique<KeywordExpression>(t);
 			} catch (ParserException& e) {
 				throw UnexpectedKeywordError(current_lex.value, current_lex.line_number);
 			}
@@ -204,7 +205,7 @@ std::shared_ptr<Expression> Parser::parse_expression(
             auto func_name = this->parse_expression(get_precedence(exp_operator::CONTROL_TRANSFER));
             if (func_name->get_expression_type() == PROC_EXP) {
                 auto proc_exp = static_cast<Procedure*>(func_name.get());
-                left = std::make_shared<CallExpression>(proc_exp);
+                left = std::make_unique<CallExpression>(proc_exp);
             }
             else {
                 // todo: valid call expressions without proc objects
@@ -228,8 +229,8 @@ std::shared_ptr<Expression> Parser::parse_expression(
 
 				// advance the token pointer and parse the expression
 				this->next();
-				std::shared_ptr<Expression> operand = this->parse_expression(precedence);	// parse an expression at the precedence level of our unary operator
-				left = std::make_shared<Unary>(operand, unary_op);
+				auto operand = this->parse_expression(precedence);	// parse an expression at the precedence level of our unary operator
+				left = std::make_unique<Unary>(std::move(operand), unary_op);
 			}
 		}
 	}
@@ -303,15 +304,15 @@ std::shared_ptr<Expression> Parser::parse_expression(
 			return left;
 		}
 		
-		return this->maybe_binary(left, prec, grouping_symbol, omit_equals);
+		return this->maybe_binary(std::move(left), prec, grouping_symbol, omit_equals);
 	}
 }
 
-std::shared_ptr<Expression> Parser::maybe_binary(
-	std::shared_ptr<Expression> left,
-	size_t my_prec,
-	std::string grouping_symbol,
-	bool omit_equals
+std::unique_ptr<Expression> Parser::maybe_binary(
+	std::unique_ptr<Expression> left,
+	const size_t my_prec,
+	const std::string& grouping_symbol,
+	const bool omit_equals
 ) {
 	/*
 
@@ -376,13 +377,13 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 			this->read_operator(false);
 			this->next();
 
-			std::shared_ptr<Expression> to_check = nullptr;
+			std::unique_ptr<Expression> to_check = nullptr;
 
 			// we might have an indexed expression here
 			if (op == INDEX) {
 				auto index_value = this->parse_expression(0, "[");	// the prec level should be zero because it is an isolated expression
 				this->next();
-				to_check = std::make_shared<Indexed>(left, index_value);
+				to_check = std::make_unique<Indexed>(std::move(left), std::move(index_value));
 			}
             else if (op == PROC_OPERATOR) {
                 // Procedures require a little special care as well
@@ -390,13 +391,17 @@ std::shared_ptr<Expression> Parser::maybe_binary(
                 auto arg_exp = this->parse_expression(0, grouping_symbol, true, omit_equals);
                 
                 if (arg_exp->get_expression_type() == LIST) {
-                    auto l = static_cast<ListExpression*>(arg_exp.get());
-                    to_check = std::make_shared<Procedure>(left, l);
+                    to_check = std::make_unique<Procedure>(
+						std::move(left), 
+						std::unique_ptr<ListExpression>(
+							static_cast<ListExpression*>(arg_exp.release())
+						)
+					);
                 }
                 else if (this->current_token().value == ")") {
                     // if there was only one argument, the parser will emit that expression alone
-                    auto l = std::make_shared<ListExpression>(std::vector<std::shared_ptr<Expression>>({ arg_exp }), TUPLE);
-                    to_check = std::make_shared<Procedure>(left, l);
+                    auto l = std::make_unique<ListExpression>(std::unique_ptr<Expression>{ std::move(arg_exp) }, TUPLE);
+                    to_check = std::make_unique<Procedure>(std::move(left), std::move(l));
                 }
                 else {
                     throw ParserException(
@@ -420,20 +425,28 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 				);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
 				// Create the binary expression
-				auto binary = std::make_shared<Binary>(left, right, op);	// "next" still contains the op_char; we haven't updated it yet
+				auto binary = std::make_unique<Binary>(std::move(left), std::move(right), op);	// "next" still contains the op_char; we haven't updated it yet
 
 				// if the left and right sides are constants, the whole expression is a constant
-				if (left->is_const() && right->is_const())
+				if (binary->get_left().is_const() && binary->get_right().is_const())
 					binary->set_const();
 				
 				// now, call maybe_binary based on the binary type (transform the statement)
-				to_check = binary;
 				if (binary->get_operator() == ATTRIBUTE_SELECTION) {
-					to_check = std::make_shared<AttributeSelection>(*binary.get());
+					to_check = std::make_unique<AttributeSelection>(
+						std::unique_ptr<Binary>(
+							static_cast<Binary*>(binary.release())
+						)
+					);
 				}
 				else if (binary->get_operator() == TYPECAST) {
-					to_check = std::make_shared<Cast>(*binary.get());
+					to_check = std::make_unique<Cast>(std::move(binary));
 				}
+				else
+				{
+					to_check = std::move(binary);
+				}
+				
 
 				// ensure we still have a valid expression
 				if (to_check->get_expression_type() == EXPRESSION_GENERAL) {
@@ -446,7 +459,7 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 			}
 			
 			// call maybe_binary again at the old prec level in case this expression is part of a higher precedence one
-			return this->maybe_binary(to_check, my_prec, grouping_symbol, omit_equals);
+			return this->maybe_binary(std::move(to_check), my_prec, grouping_symbol, omit_equals);
 		}
 		else {
 			return left;
@@ -457,62 +470,41 @@ std::shared_ptr<Expression> Parser::maybe_binary(
 	}
 }
 
-std::shared_ptr<Binary> Parser::create_compound_assignment_rvalue(
-	std::shared_ptr<Expression> left,
-	std::shared_ptr<Expression> right,
-	exp_operator op
-) {
+exp_operator Parser::get_compound_arithmetic_op(const exp_operator op)
+{
 	/*
 
-	create_compound_assignment_rvalue
+	get_compound_arithmetic_op
+	Gets the corresponding arithmetic operator for a compound one.
 
-	This function is used to expand a statement like:
-		let a *= b;
-	into its full form,
-		let a = a * b;
-	This simply creates a binary expression from the two parts where the rvalue is the right side and the lvalue is the left.
-	This will also translate the compound operator (e.g., MULT_EQUAL to MULT)
+	For example, turns "+=" into "+"
 
 	*/
 
-	exp_operator arithmetic_op;
 	switch (op)
 	{
 	case PLUS_EQUAL:
-		arithmetic_op = PLUS;
-		break;
+		return PLUS;
 	case MINUS_EQUAL:
-		arithmetic_op = MINUS;
-		break;
+		return MINUS;
 	case MULT_EQUAL:
-		arithmetic_op = MULT;
-		break;
+		return MULT;
 	case DIV_EQUAL:
-		arithmetic_op = DIV;
-		break;
+		return DIV;
 	case MOD_EQUAL:
-		arithmetic_op = MODULO;
-		break;
+		return MODULO;
 	case AND_EQUAL:
-		arithmetic_op = BIT_AND;
-		break;
+		return BIT_AND;
 	case OR_EQUAL:
-		arithmetic_op = BIT_OR;
-		break;
+		return BIT_OR;
 	case XOR_EQUAL:
-		arithmetic_op = BIT_XOR;
-		break;
+		return BIT_XOR;
 	case LEFT_SHIFT_EQUAL:
-		arithmetic_op = LEFT_SHIFT;
-		break;
+		return LEFT_SHIFT;
 	case RIGHT_SHIFT_EQUAL:
-		arithmetic_op = RIGHT_SHIFT;
-		break;
+		return RIGHT_SHIFT;
 	
 	default:
-		arithmetic_op = NO_OP;
-		break;
+		return NO_OP;
 	}
-
-	return std::make_shared<Binary>(left, right, arithmetic_op);
 }

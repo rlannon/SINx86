@@ -48,13 +48,13 @@ public:
     bool operator!=(const symbol& right) const;
 
     // to update our offset
-    void set_offset(int new_offset);    // must be public -- cannot be protected because it will be accessed through a pointer
+    void set_offset(const int new_offset);    // must be public -- cannot be protected because it will be accessed through a pointer
     
     // our getters
     SymbolType get_symbol_type() const;
 
     reg get_register() const;
-    void set_register(reg to_set);
+    void set_register(const reg to_set);
 
     void set_as_parameter();
 
@@ -75,20 +75,19 @@ public:
     void set_initialized();
     void free();
 
-    void set_line(unsigned int l);
+    void set_line(const unsigned int l);
     unsigned int get_line_defined() const;
 
     // constructors
     explicit symbol(
-        std::string name,
-        std::string scope_name,
-        unsigned int scope_level,
-        DataType type_information,
-        unsigned int offset,
-        bool defined=true,
-        unsigned int line_defined=0
+        const std::string& name,
+        const std::string& scope_name,
+        const unsigned int scope_level,
+        const DataType& type_information,
+        const unsigned int offset,
+        const bool defined=true,
+        const unsigned int line_defined=0
     );
-    //symbol(symbol &&r);
     symbol();
     virtual ~symbol(); // the destructor must be virtual for the sake of the child class
 };

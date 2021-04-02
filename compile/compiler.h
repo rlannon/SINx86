@@ -60,13 +60,13 @@ class compiler {
     stack<register_usage> reg_stack;    // a stack for tracking which registers are in use in a given scope
 
     symbol_table symbols;    // todo: dynamically allocate?
-	symbol *lookup(std::string name, unsigned int line);   // look up a symbol's name
+	symbol *lookup(const std::string& name, unsigned int line);   // look up a symbol's name
     symbol &add_symbol(symbol &to_add, unsigned int line);	// add a symbol
     symbol &add_symbol(std::shared_ptr<symbol> to_add, unsigned int line);
 
 	struct_table structs;
-	void add_struct(struct_info to_add, unsigned int line);	// add a struct to the table
-    struct_info& get_struct_info(std::string struct_name, unsigned int line);   // gets the data about a given struct
+	void add_struct(const struct_info& to_add, unsigned int line);	// add a struct to the table
+    struct_info& get_struct_info(const std::string& struct_name, unsigned int line);   // gets the data about a given struct
 
 	// We need to track the number for string constants, if/else blocks, etc.
 	size_t strc_num;
@@ -89,69 +89,69 @@ class compiler {
 	std::stringstream compile_ast(StatementBlock &ast, function_symbol *signature = nullptr);
 
 	// a function to compile a single statement
-	std::stringstream compile_statement(Statement &s, function_symbol *signature);
+	std::stringstream compile_statement(const Statement &s, function_symbol *signature);
 
 	// allocations
-	std::stringstream allocate(Allocation alloc_stmt);
+	std::stringstream allocate(const Allocation& alloc_stmt);
 
 	// assignments
-	std::stringstream handle_assignment(Assignment &a);	// copy assignment
-	std::stringstream handle_move(Movement &m);	// move assignment
+	std::stringstream handle_assignment(const Assignment &a);	// copy assignment
+	std::stringstream handle_move(const Movement &m);	// move assignment
 	std::stringstream handle_alloc_init(
-		symbol &sym,
-		Expression &rvalue,
+		const symbol &sym,
+		const Expression &rvalue,
 		unsigned int line
 	);
 	std::stringstream assign(
-		DataType lhs_type,
-		DataType &rhs_type,
+		const DataType& lhs_type,
+		const DataType &rhs_type,
 		assign_utilities::destination_information dest,
-		Expression &rvalue,
+		const Expression &rvalue,
 		unsigned int line,
 		bool is_alloc_init = false
 	);
 	std::stringstream move(
-		DataType &lvalue_type,
-		DataType &rvalue_type,
-		assign_utilities::destination_information dest,
-		Expression &rvalue,
+		const DataType &lvalue_type,
+		const DataType &rvalue_type,
+		const assign_utilities::destination_information& dest,
+		const Expression &rvalue,
 		unsigned int line
 	);
 
 	// todo: handle assignments for char, float, etc.
 
 	// declarations
-	std::stringstream handle_declaration(Declaration decl_stmt);
+	std::stringstream handle_declaration(const Declaration& decl_stmt);
 
 	// functions
-	std::stringstream define_function(FunctionDefinition &definition);
+	std::stringstream define_function(const FunctionDefinition &definition);
     std::stringstream define_function(function_symbol &func_sym, StatementBlock prog, unsigned int line);
 
-	std::pair<std::string, size_t> call_function(Procedure &to_call, unsigned int line, bool allow_void = true);
+	std::pair<std::string, size_t> call_function(const Procedure &to_call, unsigned int line, bool allow_void = true);
 	
-    std::stringstream sincall(function_symbol s, std::vector<Expression*> args, unsigned int line);
-    std::stringstream sincall(function_symbol s, std::vector<std::shared_ptr<Expression>> args, unsigned int line);
+    std::stringstream sincall(const function_symbol& s, std::vector<const Expression*> args, unsigned int line);
+    std::stringstream sincall(const function_symbol& s, std::vector<std::unique_ptr<Expression>>& args, unsigned int line);
 
-	std::stringstream system_v_call(function_symbol s, std::vector<Expression*> args, unsigned int line);
-	std::stringstream win64_call(function_symbol s, std::vector<Expression*> args, unsigned int line);
+	std::stringstream system_v_call(const function_symbol& s, std::vector<Expression*> args, unsigned int line);
+	std::stringstream win64_call(const function_symbol& s, std::vector<Expression*> args, unsigned int line);
 
 	// returns
-	std::stringstream handle_return(ReturnStatement &ret, function_symbol &signature);
-	std::stringstream sincall_return(ReturnStatement &ret, DataType return_type);
+	std::stringstream handle_return(const ReturnStatement &ret, function_symbol &signature);
+	std::stringstream sincall_return(const ReturnStatement &ret, DataType return_type);
 
 	// utilities that require compiler's data members
-	std::stringstream get_exp_address(Expression &to_evaluate, reg r, unsigned int line);
+	std::stringstream get_exp_address(const Expression &to_evaluate, reg r, unsigned int line);
 	std::pair<std::string, size_t> evaluate_expression(
-		Expression &to_evaluate,
+		const Expression &to_evaluate,
 		unsigned int line,
-		DataType *type_hint = nullptr
+		const DataType *type_hint = nullptr
 	);
-	std::stringstream evaluate_literal(Literal &to_evaluate, unsigned int line, DataType *type_hint = nullptr);
-	std::stringstream evaluate_identifier(Identifier &to_evaluate, unsigned int line);
-	std::stringstream evaluate_indexed(Indexed &to_evaluate, unsigned int line);
-	std::stringstream evaluate_unary(Unary &to_evaluate, unsigned int line, DataType *type_hint = nullptr);
-	std::pair<std::string, size_t> evaluate_binary(Binary &to_evaluate, unsigned int line, DataType *type_hint = nullptr);
-	std::stringstream get_address_of(Unary &u, reg r, unsigned int line);
+	std::stringstream evaluate_literal(const Literal &to_evaluate, unsigned int line, const DataType *type_hint = nullptr);
+	std::stringstream evaluate_identifier(const Identifier &to_evaluate, unsigned int line);
+	std::stringstream evaluate_indexed(const Indexed &to_evaluate, unsigned int line);
+	std::stringstream evaluate_unary(const Unary &to_evaluate, unsigned int line, const DataType *type_hint = nullptr);
+	std::pair<std::string, size_t> evaluate_binary(const Binary &to_evaluate, unsigned int line, const DataType *type_hint = nullptr);
+	std::stringstream get_address_of(const Unary &u, reg r, unsigned int line);
 
 	// process an included file
 	std::stringstream process_include(std::string include_filename, unsigned int line);
@@ -160,7 +160,7 @@ class compiler {
 	void _warn(const std::string& message, const unsigned int code, const unsigned int line);
 public:
     // the compiler's entry function
-    void generate_asm(std::string infile_name, std::string outfile_name);
+    void generate_asm(const std::string& infile_name, std::string outfile_name);
 
     compiler(bool allow_unsafe, bool strict, bool use_micro);
     ~compiler();

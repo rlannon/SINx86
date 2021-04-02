@@ -21,7 +21,7 @@ class struct_table {
 public:
 	bool insert(struct_info to_add);
 	bool contains(std::string name);
-	struct_info& find(std::string name, unsigned int line);
+	struct_info& find(const std::string& name, unsigned int line);
 
 	struct_table();
 	~struct_table();

@@ -23,7 +23,7 @@ namespace type_deduction {
     const Type types[10]{ CHAR, INT, FLOAT, STRING, BOOL, VOID, PTR, RAW, ARRAY, STRUCT };
 
     // functions
-	const Type get_type_from_lexeme(lexeme_type lex_type);
-	const Type get_type_from_string(std::string candidate);
-    const std::string get_string_from_type(Type candidate);
+	Type get_type_from_lexeme(lexeme_type lex_type);
+	Type get_type_from_string(std::string candidate);
+    std::string get_string_from_type(Type candidate);
 }

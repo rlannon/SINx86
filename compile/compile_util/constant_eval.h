@@ -23,11 +23,11 @@ This file contains the function/class declarations required for the compiler's c
 // must be forward-declared to avoid a circular dependency
 namespace expression_util {
 	DataType get_expression_data_type(
-		Expression &to_eval,
+		const Expression &to_eval,
 		symbol_table& symbols,
 		struct_table& structs,
 		unsigned int line,
-        DataType *type_hint
+        const DataType *type_hint
 	);
 }
 
@@ -45,18 +45,18 @@ class compile_time_evaluator {
 
 	*/
 
-	const_symbol lookup(std::string sym_name, std::string scope_name, unsigned int scope_level, unsigned int line) const;
+	const const_symbol& lookup(const std::string& sym_name, const std::string& scope_name, unsigned int scope_level, unsigned int line) const;
 
-	void leave_scope(std::string name, unsigned int level);
+	void leave_scope(const std::string& name, unsigned int level);
 
-	static std::string evaluate_literal(Literal& exp);
-	std::string evaluate_lvalue(Identifier& exp, std::string scope_name, unsigned int scope_level, unsigned int line);
-	std::string evaluate_unary(Unary & exp, std::string scope_name, unsigned int scope_level, unsigned int line);
-	std::string evaluate_binary(Binary & exp, std::string scope_name, unsigned int scope_level, unsigned int line);
+	static std::string evaluate_literal(const Literal& exp);
+	std::string evaluate_lvalue(const Identifier& exp, const std::string& scope_name, unsigned int scope_level, unsigned int line);
+	std::string evaluate_unary(const Unary & exp, const std::string& scope_name, unsigned int scope_level, unsigned int line);
+	std::string evaluate_binary(const Binary & exp, const std::string& scope_name, unsigned int scope_level, unsigned int line);
 public:
-	void add_constant(Allocation &alloc, symbol &s);	// located in utility file
+	void add_constant(const Allocation &alloc, const symbol &s);	// located in utility file
 
-	std::string evaluate_expression(Expression &to_evaluate, std::string scope_name, unsigned int scope_level, unsigned int line);
+	std::string evaluate_expression(const Expression &to_evaluate, const std::string& scope_name, unsigned int scope_level, unsigned int line);
 
 	compile_time_evaluator();
 	compile_time_evaluator(struct_table* structs);

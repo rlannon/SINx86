@@ -3,8 +3,7 @@
 
 #include "Expression.h"
 
-
-const bool is_literal(lexeme_type candidate_type) {
+bool is_literal(const lexeme_type candidate_type) {
 	switch(candidate_type) {
 		case INT_LEX:
 		case FLOAT_LEX:
@@ -18,12 +17,12 @@ const bool is_literal(lexeme_type candidate_type) {
 }
 
 
-bool Expression::is_const()
+bool Expression::is_const() const
 {
 	return this->_const;
 }
 
-exp_type Expression::get_expression_type()
+exp_type Expression::get_expression_type() const
 {
 	return this->expression_type;
 }
@@ -47,11 +46,7 @@ bool Expression::was_overridden() const {
 	return this->overridden;
 }
 
-std::unique_ptr<Expression> Expression::get_unique() {
-    return std::make_unique<Expression>(*this);
-}
-
-Expression::Expression(exp_type expression_type) : expression_type(expression_type) {
+Expression::Expression(const exp_type expression_type) : expression_type(expression_type) {
 	this->_const = false;	// all expressions default to being non-const
 	this->overridden = false;
 }
@@ -68,11 +63,11 @@ void Literal::set_type(DataType t) {
 	this->type = t;
 }
 
-DataType Literal::get_data_type() {
+const DataType& Literal::get_data_type() const {
 	return this->type;
 }
 
-std::string Literal::get_value() {
+const std::string& Literal::get_value() const {
 	return this->value;
 }
 
@@ -85,11 +80,7 @@ bool Literal::has_type_information() const {
 	return true;
 }
 
-std::unique_ptr<Expression> Literal::get_unique() {
-    return std::make_unique<Literal>(*this);
-}
-
-Literal::Literal(Type data_type, std::string value, Type subtype) : Expression(LITERAL), value(value) {
+Literal::Literal(Type data_type, const std::string& value, Type subtype) : Expression(LITERAL), value(value) {
     // symbol qualities for our DataType object
     bool const_q = true;
     bool long_q = false;
@@ -101,7 +92,7 @@ Literal::Literal(Type data_type, std::string value, Type subtype) : Expression(L
 	this->type = DataType(data_type, subtype, qualities);
 }
 
-Literal::Literal(DataType t, std::string value): Expression(LITERAL) {
+Literal::Literal(const DataType& t, const std::string& value): Expression(LITERAL) {
 	this->type = t;
 	this->value = value;
 }
@@ -111,40 +102,37 @@ Literal::Literal(): Expression(LITERAL) {
 }
 
 
-std::string Identifier::getValue() {
+const std::string& Identifier::getValue() const {
 	return this->value;
 }
 
-void Identifier::setValue(std::string new_value) {
+void Identifier::setValue(const std::string& new_value) {
 	this->value = new_value;
 }
 
-std::unique_ptr<Expression> Identifier::get_unique() {
-    return std::make_unique<Identifier>(*this);
-}
+Identifier::Identifier(const std::string& value)
+	: Expression(IDENTIFIER)
+	, value(value) { }
 
-Identifier::Identifier(std::string value) : Expression(IDENTIFIER), value(value) {
-}
-
-Identifier::Identifier(): Identifier("") {
-}
+Identifier::Identifier()
+	: Identifier("") { }
 
 
 // Attribute Selection
 
-Expression &AttributeSelection::get_selected() {
-	return *this->selected.get();
+const Expression &AttributeSelection::get_selected() const {
+	return *this->selected;
 }
 
-attribute AttributeSelection::get_attribute() {
+attribute AttributeSelection::get_attribute() const {
 	return this->attrib;
 }
 
-DataType &AttributeSelection::get_data_type() {
+const DataType &AttributeSelection::get_data_type() const {
 	return this->t;
 }
 
-attribute AttributeSelection::to_attribute(std::string to_convert) {
+attribute AttributeSelection::to_attribute(const std::string& to_convert) {
     if (to_convert == "len") {
         return LENGTH;
     }
@@ -159,51 +147,46 @@ attribute AttributeSelection::to_attribute(std::string to_convert) {
     }
 }
 
-bool AttributeSelection::is_attribute(std::string a) {
+bool AttributeSelection::is_attribute(const std::string& a) {
 	return to_attribute(a) != NO_ATTRIBUTE;
 }
 
-std::unique_ptr<Expression> AttributeSelection::get_unique() {
-    return std::make_unique<AttributeSelection>(*this);
-}
+AttributeSelection::AttributeSelection(AttributeSelection &old)
+	: Expression(ATTRIBUTE)
+	, selected(std::move(old.selected))
+	, t(old.t)
+	, attrib(old.attrib) { }
 
-AttributeSelection::AttributeSelection(AttributeSelection &old): Expression(ATTRIBUTE) {
-    this->selected = std::move(old.selected);
-    this->t = old.t;
-    this->attrib = old.attrib;
-}
-
-AttributeSelection::AttributeSelection(Expression &selected, std::string attribute_name):
-	Expression(ATTRIBUTE)
+AttributeSelection::AttributeSelection(std::unique_ptr<Expression>&& selected, const std::string& attribute_name)
+	: Expression(ATTRIBUTE)
+	, attrib( to_attribute(attribute_name) )
+	, selected( std::move(selected) )
+	, t(
+		DataType{
+			INT,
+			NONE,
+			symbol_qualities(
+				false,	// not const
+				false,	// not static
+				false,	// not dynamic
+				false	// not signed
+			)	// not long, short, or extern
+		}
+	)
 {
-	this->attrib = to_attribute(attribute_name);
-    this->selected = std::move(selected.get_unique());
-
-	// set the type
-	this->t = 
-	DataType(
-		INT,
-		NONE,
-		symbol_qualities(
-			false,	// not const
-			false,	// not static
-			false,	// not dynamic
-			false	// not signed
-		)	// not long, short, or extern
-	);
-
 	// all attributes are final; they are not necessarily known at compile time, but they are not directly modifiable
 	this->t.get_qualities().add_quality(FINAL);
 }
 
-AttributeSelection::AttributeSelection(Binary &to_deconstruct): Expression(ATTRIBUTE)
+AttributeSelection::AttributeSelection(std::unique_ptr<Binary>&& to_deconstruct): Expression(ATTRIBUTE)
 {
 	// Construct an 'AttributeSelection' object from a Binary expression
 	
 	// as long as we have a valid binary expression, continue
-	if (to_deconstruct.get_right().get_expression_type() == KEYWORD_EXP) {
-		this->selected = std::move(to_deconstruct.get_left().get_unique());
-		auto right = static_cast<KeywordExpression&>(to_deconstruct.get_right());
+	if (to_deconstruct->get_right().get_expression_type() == KEYWORD_EXP) {
+		this->selected = std::move(to_deconstruct->get_left_unique());
+
+		auto right = static_cast<const KeywordExpression&>(to_deconstruct->get_right());
 		this->attrib = to_attribute(right.get_keyword());
 	}
 	else {
@@ -228,6 +211,11 @@ AttributeSelection::AttributeSelection(Binary &to_deconstruct): Expression(ATTRI
 	this->t.get_qualities().add_quality(FINAL);
 }
 
+AttributeSelection::AttributeSelection(std::unique_ptr<Expression>&& selected, attribute attrib, const DataType& t)
+	: selected(std::move(selected))
+	, attrib(attrib)
+	, t(t) { }
+
 // Lists
 
 bool ListExpression::has_type_information() const {
@@ -238,25 +226,21 @@ Type ListExpression::get_list_type() const {
 	return this->primary;
 }
 
-std::vector<Expression*> ListExpression::get_list()
+std::vector<const Expression*> ListExpression::get_list() const
 {
-    std::vector<Expression*> to_return;
+    std::vector<const Expression*> to_return;
     for (auto it = this->list_members.begin(); it != this->list_members.end(); it++) {
         to_return.push_back(it->get());
     }
 	return to_return;
 }
 
-std::unique_ptr<Expression> ListExpression::get_unique() {
-    return std::make_unique<ListExpression>(*this);
-}
-
-void ListExpression::add_item(Expression &to_add, size_t index) {
+void ListExpression::add_item(std::unique_ptr<Expression> to_add, const size_t index) {
     if (index <= this->list_members.size()) {
         auto it = this->list_members.begin() + index;
         this->list_members.insert(
             it,
-            std::move(to_add.get_unique())
+            std::move(to_add)
         );
     }
     else {
@@ -264,23 +248,36 @@ void ListExpression::add_item(Expression &to_add, size_t index) {
     }
 }
 
-ListExpression::ListExpression(std::vector<std::shared_ptr<Expression>> list_members, Type list_type) :
-	Expression(LIST),
-	list_members(list_members),
-	primary(list_type)
+ListExpression::ListExpression(std::vector<std::unique_ptr<Expression>>& list_members, Type list_type)
+	: Expression(LIST)
+	, primary(list_type)
 {
+	for (auto it = list_members.begin(); it != list_members.end(); it++)
+	{
+		this->list_members.push_back(std::move(*it));
+	}
 }
 
-ListExpression::ListExpression(): ListExpression({}, NONE) {
+ListExpression::ListExpression(std::unique_ptr<Expression> arg, Type list_type)
+	: Expression(LIST)
+	, primary(list_type)
+{
+	this->list_members.push_back(std::move(arg));
+}
+
+ListExpression::ListExpression()
+	: Expression(LIST)
+{
+	this->primary = NONE;	
 }
 
 // Keyword Expressions -- necessary for some expressions
 
-std::string KeywordExpression::get_keyword() {
+const std::string& KeywordExpression::get_keyword() const {
 	return this->keyword;
 }
 
-DataType &KeywordExpression::get_type() {
+const DataType &KeywordExpression::get_type() const {
 	return this->t;
 }
 
@@ -292,46 +289,53 @@ void KeywordExpression::override_qualities(symbol_qualities sq) {
     this->t.add_qualities(sq);
 }
 
-std::unique_ptr<Expression> KeywordExpression::get_unique() {
-    return std::make_unique<KeywordExpression>(*this);
-}
-
-KeywordExpression::KeywordExpression(std::string keyword):
+KeywordExpression::KeywordExpression(const std::string& keyword):
 	Expression(KEYWORD_EXP),
 	keyword(keyword)
 {
 }
 
-KeywordExpression::KeywordExpression(DataType t):
+KeywordExpression::KeywordExpression(const DataType& t):
 	KeywordExpression("")
 {
 	this->t = t;
 }
 
-Expression &Binary::get_left() {
+KeywordExpression::KeywordExpression(const DataType& t, const std::string& keyword)
+	: Expression(KEYWORD_EXP)
+	, t(t)
+	, keyword(keyword) { }
+
+std::unique_ptr<Expression> Binary::get_left_unique()
+{
+	return std::move(this->left_exp);
+}
+
+std::unique_ptr<Expression> Binary::get_right_unique()
+{
+	return std::move(this->right_exp);
+}
+
+const Expression &Binary::get_left() const {
 	return *this->left_exp.get();
 }
 
-Expression &Binary::get_right() {
+const Expression &Binary::get_right() const {
 	return *this->right_exp.get();
 }
 
-exp_operator Binary::get_operator() {
+exp_operator Binary::get_operator() const {
 	return this->op;
 }
 
-std::unique_ptr<Expression> Binary::get_unique() {
-    return std::make_unique<Binary>(*this);
-}
-
 Binary::Binary(
-	std::shared_ptr<Expression> left_exp,
-	std::shared_ptr<Expression> right_exp,
-	exp_operator op
+	std::unique_ptr<Expression> left_exp,
+	std::unique_ptr<Expression> right_exp,
+	const exp_operator op
 ):
 	Expression(BINARY),
-	left_exp(left_exp),
-	right_exp(right_exp),
+	left_exp(std::move(left_exp)),
+	right_exp(std::move(right_exp)),
 	op(op)
 {
 }
@@ -342,20 +346,18 @@ Binary::Binary(): Expression(BINARY) {
 
 
 
-exp_operator Unary::get_operator() {
+exp_operator Unary::get_operator() const {
 	return this->op;
 }
 
-Expression &Unary::get_operand() {
+const Expression &Unary::get_operand() const {
 	return *this->operand.get();
 }
 
-std::unique_ptr<Expression> Unary::get_unique() {
-    return std::make_unique<Unary>(*this);
-}
-
-Unary::Unary(std::shared_ptr<Expression> operand, exp_operator op) : Expression(UNARY), operand(operand), op(op) {
-}
+Unary::Unary(std::unique_ptr<Expression> operand, exp_operator op)
+	: Expression(UNARY)
+	, operand(std::move(operand))
+	, op(op) { }
 
 Unary::Unary(): Expression(UNARY) {
 	this->op = NO_OP;
@@ -365,49 +367,42 @@ Unary::Unary(): Expression(UNARY) {
 
 // Parsing function calls
 
-Expression &Procedure::get_func_name() {
+const Expression &Procedure::get_func_name() const {
     return *this->name.get();
 }
 
-ListExpression &Procedure::get_args() {
-    return *this->args.get();
+const ListExpression &Procedure::get_args() const {
+    return dynamic_cast<ListExpression&>(*args);
 }
 
-Expression &Procedure::get_arg(size_t arg_no) {
-    return *this->args->get_list().at(arg_no);
+const Expression &Procedure::get_arg(size_t arg_no) const {
+    return *dynamic_cast<ListExpression*>(args.get())->get_list().at(arg_no);
 }
 
-size_t Procedure::get_num_args() {
-    return this->args->get_list().size();
+size_t Procedure::get_num_args() const {
+    return dynamic_cast<ListExpression*>(args.get())->get_list().size();
 }
 
-std::unique_ptr<Expression> Procedure::get_unique() {
-    return std::make_unique<Procedure>(*this);
+void Procedure::insert_arg(std::unique_ptr<Expression> to_insert, const size_t index) {
+    dynamic_cast<ListExpression*>(args.get())->add_item(std::move(to_insert), index);
 }
 
-void Procedure::insert_arg(Expression &to_insert, size_t index) {
-    this->args->add_item(to_insert, index);
-}
-
-Procedure::Procedure(
-    std::shared_ptr<Expression> proc_name, 
-    std::shared_ptr<ListExpression> proc_args
-):
-    Expression(PROC_EXP),
-    name(proc_name),
-    args(proc_args)
+Procedure::Procedure(Procedure& other)
+	: Expression(PROC_EXP)
+	, name(std::move(other.name))
+	, args(std::move(other.args))
 {
 }
 
-Procedure::Procedure(std::shared_ptr<Expression> proc_name, ListExpression *proc_args): Expression(PROC_EXP) {
-    this->name = proc_name;
-    this->args = std::make_shared<ListExpression>(*proc_args);
-}
+Procedure::Procedure(std::unique_ptr<Expression> proc_name, std::unique_ptr<Expression> proc_args)
+	: Expression(PROC_EXP)
+	, name(std::move(proc_name))
+	, args(std::move(proc_args)) { }
 
-Procedure::Procedure(): Expression(PROC_EXP)
-{
-    this->name = nullptr;
-}
+Procedure::Procedure()
+	: Expression(PROC_EXP)
+	, name(nullptr)
+	, args(nullptr) { }
 
 /*
 Expression &CallExpression::get_func_name() {
@@ -427,10 +422,6 @@ size_t CallExpression::get_args_size() {
 }
 */
 
-std::unique_ptr<Expression> CallExpression::get_unique() {
-    return std::make_unique<CallExpression>(*this);
-}
-
 /*
 void CallExpression::insert_arg(Expression &to_insert, size_t index) {
     this->proc->insert_arg(to_insert, index);
@@ -445,47 +436,43 @@ CallExpression::CallExpression(
     this->expression_type = CALL_EXP;
 }
 
+CallExpression::CallExpression(CallExpression& other)
+	: Procedure(other)
+{
+	this->expression_type = CALL_EXP;
+}
+
 CallExpression::CallExpression()
 {
     this->expression_type = CALL_EXP;
 }
 
 
-Expression &Indexed::get_index_value()
+const Expression &Indexed::get_index_value() const
 {
 	return *this->index_value.get();
 }
 
-Expression &Indexed::get_to_index()
+const Expression &Indexed::get_to_index() const
 {
 	return *this->to_index.get();
 }
 
-std::unique_ptr<Expression> Indexed::get_unique() {
-    return std::make_unique<Indexed>(*this);
-}
-
-Indexed::Indexed(std::shared_ptr<Expression> to_index, std::shared_ptr<Expression> index_value): Expression(INDEXED)
-{
-	this->to_index = to_index;
-	this->index_value = index_value;
-}
+Indexed::Indexed(std::unique_ptr<Expression> to_index, std::unique_ptr<Expression> index_value)
+	: Expression(INDEXED)
+	, to_index(std::move(to_index))
+	, index_value(std::move(index_value)) { }
 
 Indexed::Indexed(): Indexed(nullptr, nullptr)
 {
 }
 
-Expression &Cast::get_exp() {
-	return *this->to_cast.get();
+const Expression &Cast::get_exp() const {
+	return *this->to_cast;
 }
 
-DataType& Cast::get_new_type() {
+const DataType& Cast::get_new_type() const {
 	return this->new_type;
-}
-
-std::unique_ptr<Expression> Cast::get_unique() {
-    // overriden virtual method
-    return std::make_unique<Cast>(*this);
 }
 
 Cast::Cast(Cast &old): Expression(CAST) {
@@ -493,15 +480,15 @@ Cast::Cast(Cast &old): Expression(CAST) {
     this->to_cast = std::move(old.to_cast);
 }
 
-Cast::Cast(Expression &to_cast, DataType new_type): Expression(CAST) {
-	this->to_cast = std::move(to_cast.get_unique());
-	this->new_type = new_type;
-}
+Cast::Cast(std::unique_ptr<Expression> to_cast, const DataType& new_type)
+	: Expression(CAST)
+	, to_cast(std::move(to_cast))
+	, new_type(new_type) { }
 
-Cast::Cast(Binary &b): Expression(CAST) {
-	if (b.get_operator() == TYPECAST && b.get_right().get_expression_type() == KEYWORD_EXP) {
-		auto &kw = static_cast<KeywordExpression&>(b.get_right());
-		this->to_cast = std::move(b.get_left().get_unique());
+Cast::Cast(std::unique_ptr<Binary> b): Expression(CAST) {
+	if (b->get_operator() == TYPECAST && b->get_right().get_expression_type() == KEYWORD_EXP) {
+		auto &kw = static_cast<const KeywordExpression&>(b->get_right());
+		this->to_cast = std::move( b->get_left_unique() );
 		this->new_type = kw.get_type();
 	}
 	else {

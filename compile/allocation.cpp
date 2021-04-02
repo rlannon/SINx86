@@ -13,7 +13,7 @@ Handle allocations for the compiler class.
 
 // todo: struct allocations -- when a struct is allocated, it should allocate all of its data members -- like a primitive form of a constructor; when free is called on a struct, it will free _all_ data, but dynamic data will not be freed when the struct goes out of scope
 
-std::stringstream compiler::allocate(Allocation alloc_stmt) {
+std::stringstream compiler::allocate(const Allocation& alloc_stmt) {
 	/*
     
 	allocate
@@ -30,7 +30,7 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 
 	std::stringstream allocation_ss;
 
-	DataType &alloc_data = alloc_stmt.get_type_information();
+	DataType alloc_data = alloc_stmt.get_type_information();
 	size_t data_width = expression_util::get_width(
 		alloc_data,
 		this->evaluator,
@@ -262,7 +262,16 @@ std::stringstream compiler::allocate(Allocation alloc_stmt) {
 			// allocate memory on the stack
 
 			// construct the symbol
-			allocated = generate_symbol(alloc_stmt, data_width, this->current_scope_name, this->current_scope_level, this->max_offset);
+			allocated = generate_symbol(
+				alloc_data,
+				alloc_stmt.get_name(),
+				data_width,
+				alloc_stmt.was_initialized(),
+				this->current_scope_name,
+				this->current_scope_level,
+				this->max_offset,
+				alloc_stmt.get_line_number()
+			);
 
 			/*
 			

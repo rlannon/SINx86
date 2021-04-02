@@ -23,5 +23,5 @@ struct lexeme {
 	bool operator==(const lexeme& b);
 
 	lexeme();
-	lexeme(lexeme_type type, std::string value, unsigned int line_number);
+	lexeme(const lexeme_type type, const std::string& value, const unsigned int line_number);
 };

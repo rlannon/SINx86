@@ -63,9 +63,9 @@ StatementBlock Parser::create_ast() {
 }
 
 
-Parser::Parser(std::string filename) {
-	this->filename = filename;
-
+Parser::Parser(const std::string& filename)
+	: filename(filename) 
+{
 	// create a lexer
 	std::ifstream infile;
 	infile.open(filename, std::ios::in);

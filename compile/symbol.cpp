@@ -44,7 +44,7 @@ reg symbol::get_register() const {
     return this->current_reg;
 }
 
-void symbol::set_register(reg to_set) {
+void symbol::set_register(const reg to_set) {
 	// change register where the symbol currently resides
     this->current_reg = to_set;
 }
@@ -80,7 +80,7 @@ int symbol::get_offset() const {
 	return this->offset;
 }
 
-void symbol::set_offset(int new_offset) {
+void symbol::set_offset(const int new_offset) {
 	// sets the new offset
 	this->offset = new_offset;
 }
@@ -113,7 +113,7 @@ void symbol::free() {
     this->freed = true;
 }
 
-void symbol::set_line(unsigned int l) {
+void symbol::set_line(const unsigned int l) {
 	// sets the line number of the symbol
 	this->line_defined = l;
 }
@@ -124,13 +124,13 @@ unsigned int symbol::get_line_defined() const {
 }
 
 symbol::symbol(
-	std::string name,
-	std::string scope_name,
-	unsigned int scope_level,
-	DataType type_information,
-	unsigned int stack_offset,
-	bool defined,
-	unsigned int line_defined
+	const std::string& name,
+	const std::string& scope_name,
+	const unsigned int scope_level,
+	const DataType& type_information,
+	const unsigned int stack_offset,
+	const bool defined,
+	const unsigned int line_defined
 ): 
     name(name),
     scope_name(scope_name),

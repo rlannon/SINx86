@@ -79,11 +79,11 @@ exp_operator Parser::read_operator(bool peek) {
 	return op;
 }
 
-const bool Parser::is_valid_operator(lexeme l) {
+bool Parser::is_valid_operator(lexeme l) {
     return Lexer::is_valid_operator(l.value);
 }
 
-const exp_operator Parser::translate_operator(std::string op_string) {
+exp_operator Parser::translate_operator(std::string op_string) {
 	// try and find the operator
 	auto it = Lexer::op_strings.find(op_string);
 	if (it == Lexer::op_strings.end()) {
@@ -94,7 +94,7 @@ const exp_operator Parser::translate_operator(std::string op_string) {
 	}
 }
 
-const bool Parser::is_valid_copy_assignment_operator(exp_operator op) {
+bool Parser::is_valid_copy_assignment_operator(exp_operator op) {
 	return (
 		op == EQUAL ||
 		op == PLUS_EQUAL ||
@@ -110,18 +110,18 @@ const bool Parser::is_valid_copy_assignment_operator(exp_operator op) {
 	);
 }
 
-const bool Parser::is_valid_move_assignment_operator(exp_operator op) {
+bool Parser::is_valid_move_assignment_operator(exp_operator op) {
 	return (op == LEFT_ARROW || op == RIGHT_ARROW);
 }
 
-const size_t Parser::get_precedence(std::string symbol, size_t line) {
+size_t Parser::get_precedence(std::string symbol, size_t line) {
 	// get the precedence of an operator based on the string
 
 	size_t precedence = 0;
 	return Parser::get_precedence(Parser::translate_operator(symbol), line);
 }
 
-const size_t Parser::get_precedence(exp_operator op, size_t line) {
+size_t Parser::get_precedence(exp_operator op, size_t line) {
 	size_t precedence = 0;
 	
 	std::unordered_map<exp_operator, size_t>::const_iterator it = Parser::op_precedence.find(op);
@@ -278,7 +278,7 @@ bool Parser::is_opening_grouping_symbol(std::string to_test)
 	return (to_test == "(" || to_test == "[" || to_test == "{");
 }
 
-const bool Parser::has_return(StatementBlock to_test)
+bool Parser::has_return(StatementBlock to_test)
 {
 	/*
 	
@@ -336,10 +336,15 @@ const bool Parser::has_return(StatementBlock to_test)
 				WhileLoop* while_loop = static_cast<WhileLoop*>(last_statement);
 
 				// while loops are a little simpler, we can simply pass in the branch for the while loop
-                if (while_loop->get_branch())
-    				return general_utilities::returns(*while_loop->get_branch());
-                else
-                    return false;
+				const Statement* branch = while_loop->get_branch();
+				if (branch)
+				{
+					return general_utilities::returns(*branch);
+				}
+				else
+				{
+					return false;
+				}
     		}
 			else {
 				return false;
@@ -690,7 +695,7 @@ calling_convention Parser::get_calling_convention(symbol_qualities sq, unsigned 
 	return c;
 }
 
-const exp_operator Parser::get_unary_operator(std::string s) {
+exp_operator Parser::get_unary_operator(std::string s) {
 	/*
 
 	Gets an exp_operator from a string; if it is not a valid unary operator, returns NO_OP

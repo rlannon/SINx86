@@ -42,7 +42,7 @@ class DataType
 
     bool _must_free;
 public:
-	static const bool is_valid_type_promotion(symbol_qualities left, symbol_qualities right);
+	static const bool is_valid_type_promotion(const symbol_qualities& left, const symbol_qualities& right);
 
 	DataType& operator=(const DataType &right);
 
@@ -54,13 +54,17 @@ public:
 
 	Type get_primary() const;
 	DataType get_subtype() const;
+	const std::vector<DataType> &get_contained_types() const;
 	std::vector<DataType> &get_contained_types();
 	bool has_subtype() const;
-	symbol_qualities get_qualities() const;
+	
+	const symbol_qualities& get_qualities() const;
+	symbol_qualities& get_qualities();
+
 	size_t get_array_length() const;
 	std::string get_struct_name() const;
 
-	Expression *get_array_length_expression() const;
+	const Expression *get_array_length_expression() const;
 
 	void set_primary(Type new_primary);
 	void set_subtype(DataType new_subtype);
@@ -77,7 +81,7 @@ public:
 
 	size_t get_width() const;
 
-	static bool is_valid_type(DataType &t);
+	static bool is_valid_type(const DataType &t);
 	bool is_reference_type() const;
 
 	virtual bool must_initialize() const;

@@ -41,7 +41,7 @@ void compiler::_warn(const std::string& message, const unsigned int code, const 
     }
 }
 
-symbol *compiler::lookup(std::string name, unsigned int line) {
+symbol *compiler::lookup(const std::string& name, unsigned int line) {
     /*
 
     lookup
@@ -139,7 +139,7 @@ symbol &compiler::add_symbol(std::shared_ptr<symbol> to_add, unsigned int line) 
     }
 }
 
-void compiler::add_struct(struct_info to_add, unsigned int line) {
+void compiler::add_struct(const struct_info& to_add, unsigned int line) {
 	/*
 	
 	add_struct
@@ -169,7 +169,7 @@ void compiler::add_struct(struct_info to_add, unsigned int line) {
     }
 }
 
-struct_info& compiler::get_struct_info(std::string struct_name, unsigned int line) {
+struct_info& compiler::get_struct_info(const std::string& struct_name, unsigned int line) {
     /*
     
     get_struct_info
@@ -188,7 +188,7 @@ struct_info& compiler::get_struct_info(std::string struct_name, unsigned int lin
 	return this->structs.find(struct_name, line);
 }
 
-std::stringstream compiler::compile_statement(Statement &s, function_symbol *signature) {
+std::stringstream compiler::compile_statement(const Statement &s, function_symbol *signature) {
     /*
 
         Compiles a single statement to x86, dispatching appropriately
@@ -207,7 +207,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
             // includes must be in the global scope at level 0
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
                 // Included files will not be added more than once in any compilation process -- so we don't need anything like "pragma once"
-                auto include = static_cast<Include&>(s);
+                auto &include = static_cast<const Include&>(s);
                 compile_ss << this->process_include(include.get_filename(), include.get_line_number()).str();
             }
             else {
@@ -223,7 +223,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
         case DECLARATION:
         {
             // handle a declaration
-            auto &decl_stmt = static_cast<Declaration&>(s);
+            auto &decl_stmt = static_cast<const Declaration&>(s);
 
             // we need to ensure that the current scope is global -- declarations can only happen in the global scope, as they must be static
             if (this->current_scope_name == "global" && this->current_scope_level == 0) {
@@ -235,19 +235,20 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
         }
         case ALLOCATION:
         {
-            auto &alloc_stmt = static_cast<Allocation&>(s);
+            auto &alloc_stmt = static_cast<const Allocation&>(s);
             compile_ss << this->allocate(alloc_stmt).str() << std::endl;
             break;
         }
         case MOVEMENT:
         {
-            auto &move_stmt = static_cast<Movement&>(s);
+            auto &move_stmt = static_cast<const Movement&>(s);
             compile_ss << this->handle_move(move_stmt).str() << std::endl;
             break;
         }
+        case COMPOUND_ASSIGNMENT:
         case ASSIGNMENT:
         {
-            auto &assign_stmt = static_cast<Assignment&>(s);
+            auto &assign_stmt = static_cast<const Assignment&>(s);
             compile_ss << this->handle_assignment(assign_stmt).str() << std::endl;
             break;
         }
@@ -255,7 +256,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
         {
             // return statements may only occur within functions; if 'signature' wasn't passed to this function, then we aren't compiling code inside a function and must throw an exception
             if (signature) {
-                auto &return_stmt = static_cast<ReturnStatement&>(s);
+                auto &return_stmt = static_cast<const ReturnStatement&>(s);
                 compile_ss << this->handle_return(return_stmt, *signature).str() << std::endl;
             } else {
                 throw IllegalReturnException(s.get_line_number());
@@ -265,7 +266,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
         case IF_THEN_ELSE:
 		{
 			// first, we need to cast and get the current block number (in case we have nested blocks)
-			auto &ite = static_cast<IfThenElse&>(s);
+			auto &ite = static_cast<const IfThenElse&>(s);
 			size_t current_scope_num = this->scope_block_num;
 			this->scope_block_num += 1; // increment the scope number now in case we have recursive conditionals
 			
@@ -296,7 +297,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
 		}
 		case WHILE_LOOP:
         {
-            auto &while_stmt = static_cast<WhileLoop&>(s);
+            auto &while_stmt = static_cast<const WhileLoop&>(s);
             
             // create a loop heading, evaluate the condition
             auto current_block_num = this->scope_block_num;
@@ -318,7 +319,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
         }
         case FUNCTION_DEFINITION:
         {
-            auto &def_stmt = static_cast<FunctionDefinition&>(s);
+            auto &def_stmt = static_cast<const FunctionDefinition&>(s);
 
 			// ensure the function has a return value in all control paths
 			if (general_utilities::returns(def_stmt.get_procedure())) {
@@ -338,7 +339,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
         }
         case STRUCT_DEFINITION:
 		{
-			auto &def_stmt = static_cast<StructDefinition&>(s);
+			auto &def_stmt = static_cast<const StructDefinition&>(s);
 
             // first, define the struct
 			struct_info defined = define_struct(def_stmt, this->evaluator);
@@ -383,7 +384,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
 		}
         case CALL:
         {
-            auto &call_stmt = static_cast<Call&>(s);
+            auto &call_stmt = static_cast<const Call&>(s);
             compile_ss << this->call_function(call_stmt, call_stmt.get_line_number()).first << std::endl;
             break;
         }
@@ -396,7 +397,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
                 compiler_errors::UNSAFE_OPERATION,
                 s.get_line_number()
             );
-            auto &asm_stmt = static_cast<InlineAssembly&>(s);
+            auto &asm_stmt = static_cast<const InlineAssembly&>(s);
 
             // todo: write asm to file
 
@@ -422,7 +423,7 @@ std::stringstream compiler::compile_statement(Statement &s, function_symbol *sig
 
             */
 
-            auto &block = static_cast<ScopedBlock&>(s);
+            auto &block = static_cast<const ScopedBlock&>(s);
             StatementBlock ast = block.get_statements();
 
             // be sure to adjust scope levels
@@ -528,7 +529,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
         // walk through the AST and handle relevant statements
         for (std::shared_ptr<Statement> s: ast.statements_list) {
             if (s->get_statement_type() == ALLOCATION) {
-                auto a = static_cast<Allocation*>(s.get());
+                auto a = static_cast<const Allocation*>(s.get());
 
                 // allocations must be qualified with 'extern'
                 if (a->get_type_information().get_qualities().is_extern()) {
@@ -548,7 +549,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
                 }
             }
             else if (s->get_statement_type() == FUNCTION_DEFINITION) {
-                auto f = static_cast<FunctionDefinition*>(s.get());
+                auto f = static_cast<const FunctionDefinition*>(s.get());
 
                 // function definitions must be 'extern'
                 if (f->get_type_information().get_qualities().is_extern()) {
@@ -565,16 +566,16 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
             }
             else if (s->get_statement_type() == STRUCT_DEFINITION) {
                 // included struct definitions
-                auto d = static_cast<StructDefinition*>(s.get());
+                auto d = static_cast<const StructDefinition*>(s.get());
                 struct_info s_info = define_struct(*d, this->evaluator);
                 this->add_struct(s_info, d->get_line_number());
             }
             else if (s->get_statement_type() == DECLARATION) {
-                auto d = static_cast<Declaration*>(s.get());
+                auto d = static_cast<const Declaration*>(s.get());
                 include_ss << this->handle_declaration(*d).str();
             }
             else if (s->get_statement_type() == INCLUDE) {
-                auto inc = static_cast<Include*>(s.get());
+                auto inc = static_cast<const Include*>(s.get());
                 include_ss << this->process_include(inc->get_filename(), inc->get_line_number()).str();
             }
             else {
@@ -590,7 +591,7 @@ std::stringstream compiler::process_include(std::string include_filename, unsign
     return include_ss;
 }
 
-void compiler::generate_asm(std::string infile_name, std::string outfile_name) {
+void compiler::generate_asm(const std::string& infile_name, std::string outfile_name) {
     /*
 
     generate_asm
@@ -719,7 +720,7 @@ void compiler::generate_asm(std::string infile_name, std::string outfile_name) {
                 << "\t" << "push rax" << std::endl;
 
             // todo: get actual command-line arguments, convert them into SIN data types
-            std::vector<std::shared_ptr<Expression>> cmd_args = {};
+            std::vector<std::unique_ptr<Expression>> cmd_args;
             for (
                 auto it = main_symbol.get_formal_parameters().begin();
                 it != main_symbol.get_formal_parameters().end(); 

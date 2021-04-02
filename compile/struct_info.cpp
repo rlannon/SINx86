@@ -19,7 +19,7 @@ std::string struct_info::get_struct_name() const
 	return this->struct_name;
 }
 
-symbol *struct_info::get_member(std::string name)
+symbol *struct_info::get_member(const std::string& name)
 {
 	/*
 	
@@ -36,7 +36,7 @@ size_t struct_info::get_width() const {
 	return this->struct_width;
 }
 
-struct_info::struct_info(std::string name, std::vector<std::shared_ptr<symbol>> members, unsigned int line) {
+struct_info::struct_info(const std::string& name, const std::vector<std::shared_ptr<symbol>>& members, const unsigned int line) {
     /*
     
         struct_info
@@ -98,7 +98,7 @@ std::vector<symbol> &struct_info::get_members_to_free(std::vector<symbol> &curre
     return this->members.get_symbols_to_free(current, this->struct_name, 1, false);
 }
 
-struct_info::struct_info(std::string struct_name) {
+struct_info::struct_info(const std::string& struct_name) {
     this->struct_name = struct_name;
     this->struct_width = 0;
     this->width_known = false;

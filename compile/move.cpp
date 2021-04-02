@@ -11,7 +11,7 @@ Contains the function for handling move assignments
 #include "compiler.h"
 #include "compile_util/function_util.h"
 
-std::stringstream compiler::handle_move(Movement &m) {
+std::stringstream compiler::handle_move(const Movement &m) {
     /*
 
     handle_move
@@ -88,10 +88,10 @@ std::stringstream compiler::handle_move(Movement &m) {
 }
 
 std::stringstream compiler::move(
-    DataType &lvalue_type,
-    DataType &rvalue_type,
-    assign_utilities::destination_information dest,
-    Expression &rvalue,
+    const DataType &lvalue_type,
+    const DataType &rvalue_type,
+    const assign_utilities::destination_information& dest,
+    const Expression &rvalue,
     unsigned int line
 ) {
     /*

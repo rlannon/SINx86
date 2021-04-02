@@ -10,7 +10,7 @@ The implementations of various utility functions for the compile_time_evaluator 
 
 #include "constant_eval.h"
 
-void compile_time_evaluator::add_constant(Allocation & alloc, symbol & s)
+void compile_time_evaluator::add_constant(const Allocation & alloc, const symbol & s)
 {
 	/*
 
@@ -37,7 +37,7 @@ void compile_time_evaluator::add_constant(Allocation & alloc, symbol & s)
     }
 }
 
-const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string scope_name, unsigned int scope_level, unsigned int line) const {
+const const_symbol& compile_time_evaluator::lookup(const std::string& sym_name, const std::string& scope_name, unsigned int scope_level, unsigned int line) const {
 	/*
 
 	lookup
@@ -57,8 +57,7 @@ const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string sc
 	const_symbol to_return;
 
 	try {
-		symbol& s = this->constants->find(sym_name);
-		const_symbol &to_return = dynamic_cast<const_symbol&>(s);
+		return dynamic_cast<const const_symbol&>(this->constants->find(sym_name));
 	}
 	catch (SymbolNotFoundException & e) {
 		e.set_line(line);
@@ -71,11 +70,9 @@ const_symbol compile_time_evaluator::lookup(std::string sym_name, std::string sc
             line
         );
     }
-
-	return to_return;
 }
 
-void compile_time_evaluator::leave_scope(std::string name, unsigned int level)
+void compile_time_evaluator::leave_scope(const std::string& name, unsigned int level)
 {
 	/*
 

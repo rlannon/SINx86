@@ -12,7 +12,7 @@ Note that SIN does *not* support the arrow operator as syntactic sugar; you must
 #include "compiler.h"
 #include "compile_util/function_util.h"
 
-std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line, DataType *type_hint) {
+std::stringstream compiler::evaluate_unary(const Unary &to_evaluate, unsigned int line, const DataType *type_hint) {
 	/*
 
 	evaluate_unary
@@ -158,7 +158,7 @@ std::stringstream compiler::evaluate_unary(Unary &to_evaluate, unsigned int line
 	return eval_ss;
 }
 
-std::pair<std::string, size_t> compiler::evaluate_binary(Binary &to_evaluate, unsigned int line, DataType *type_hint) {
+std::pair<std::string, size_t> compiler::evaluate_binary(const Binary &to_evaluate, unsigned int line, const DataType *type_hint) {
 	/*
 
 	evaluate_binary

@@ -34,14 +34,14 @@ protected:
 	// TODO: add scope information to statements in Parser
 
 public:
-	stmt_type get_statement_type();
+	stmt_type get_statement_type() const;
 
-	unsigned int get_line_number();
+	unsigned int get_line_number() const;
 	void set_line_number(unsigned int line_number);
 
 	Statement();
-	Statement(stmt_type statement_type);
-	Statement(stmt_type statement_type, unsigned int line_number);
+	Statement(const stmt_type statement_type);
+	Statement(const stmt_type statement_type, const unsigned int line_number);
 	virtual ~Statement();
 };
 
@@ -59,16 +59,16 @@ class ScopedBlock: public Statement
 {
 	StatementBlock statements;
 public:
-	StatementBlock get_statements();
-	ScopedBlock(StatementBlock statements);
+	const StatementBlock& get_statements() const;
+	ScopedBlock(const StatementBlock& statements);
 };
 
 class Include : public Statement
 {
 	std::string filename;
 public:
-	std::string get_filename();
-	Include(std::string filename);
+	const std::string& get_filename() const;
+	Include(const std::string& filename);
 	Include();
 };
 
@@ -91,23 +91,27 @@ class Declaration : public Statement
 
 	std::string name;
 
-	std::shared_ptr<Expression> initial_value;
+	std::unique_ptr<Expression> initial_value;
 
-	std::vector<std::shared_ptr<Statement>> formal_parameters;
+	std::vector<std::unique_ptr<Statement>> formal_parameters;
 	calling_convention call_con;
 public:
-	std::string get_name() const;
+	const std::string& get_name() const;
 
 	DataType& get_type_information();
+	const DataType& get_type_information() const;
+
 	bool is_function() const;
 	bool is_struct() const;
 
 	Expression *get_initial_value();
 
 	std::vector<Statement*> get_formal_parameters();
+	std::vector<const Statement*> get_formal_parameters() const;
 	calling_convention get_calling_convention() const;
 
-	Declaration(DataType type, std::string var_name, std::shared_ptr<Expression> initial_value = std::make_shared<Expression>(EXPRESSION_GENERAL), bool is_function = false, bool is_struct = false, std::vector<std::shared_ptr<Statement>> formal_parameters = {});
+	Declaration(const DataType& type, const std::string& var_name, std::unique_ptr<Expression>&& initial_value = std::make_unique<Expression>(EXPRESSION_GENERAL), bool is_function = false, bool is_struct = false);
+	Declaration(const DataType& type, const std::string& var_name, std::unique_ptr<Expression>&& initial_value, bool is_function, bool is_struct, std::vector<std::unique_ptr<Statement>>& formal_parameters);
 	Declaration();
 };
 
@@ -142,76 +146,87 @@ class Allocation : public Statement
 	// If we have an alloc-define statement, we will need:
 	bool initialized;	// whether the variable was defined upon allocation
 
-	std::shared_ptr<Identifier> struct_name;	// structs will require a name
-
-	std::shared_ptr<Expression> initial_value;	// todo: use the parser to expand allocations with initial values into two statements
+	Identifier struct_name;	// structs will require a name
+	std::unique_ptr<Expression> initial_value;
 public:
 	DataType& get_type_information();
+	const DataType& get_type_information() const;
 	static std::string get_var_type_as_string(Type to_convert);
-	std::string get_name();
+	const std::string& get_name() const;
 
-	bool was_initialized();
-	Expression *get_initial_value();
+	bool was_initialized() const;
+	const Expression *get_initial_value() const;
 
-	Allocation(DataType type_information, std::string value, bool was_initialized = false, std::shared_ptr<Expression> initial_value = std::make_shared<Expression>());	// use default parameters to allow us to use alloc-define syntax, but we don't have to
+	Allocation(const DataType& type_information, const std::string& value, const bool was_initialized = false, std::unique_ptr<Expression>&& initial_value = nullptr);	// use default parameters to allow us to use alloc-define syntax, but we don't have to
 	Allocation();
 };
 
 class Assignment : public Statement
 {
-	std::shared_ptr<Expression> lvalue;
-	std::shared_ptr<Expression> rvalue_ptr;
+protected:
+	std::unique_ptr<Expression> lvalue;
+	std::unique_ptr<Expression> rvalue_ptr;
 public:
 	// get the variables / expressions themselves
-	Expression &get_lvalue();
-	Expression &get_rvalue();
+	const Expression &get_lvalue() const;
+	const Expression &get_rvalue() const;
 
-	Assignment(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue);
-	Assignment(Identifier lvalue, std::shared_ptr<Expression> rvalue);
+	Assignment(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression>&& rvalue);
+	Assignment(const Identifier& lvalue, std::unique_ptr<Expression>&& rvalue);
 	Assignment();
+};
+
+class CompoundAssignment : public Assignment
+{
+	exp_operator _op;
+public:
+	exp_operator get_operator() const;
+
+	CompoundAssignment(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression> && rvalue, exp_operator op);
+	CompoundAssignment();
 };
 
 class Movement : public Assignment
 {
 	// Similar to an assignment, but should be marked as a movement
 public:
-	Movement(std::shared_ptr<Expression> lvalue, std::shared_ptr<Expression> rvalue);
+	Movement(std::unique_ptr<Expression>&& lvalue, std::unique_ptr<Expression>&& rvalue);
 };
 
 class ReturnStatement : public Statement
 {
-	std::shared_ptr<Expression> return_exp;
+	std::unique_ptr<Expression> return_exp;
 public:
-	Expression &get_return_exp();
+	const Expression &get_return_exp() const;
 
-	ReturnStatement(std::shared_ptr<Expression> exp_ptr);
+	ReturnStatement(std::unique_ptr<Expression>&& exp_ptr);
 	ReturnStatement();
 };
 
 class IfThenElse : public Statement
 {
-	std::shared_ptr<Expression> condition;
-	std::shared_ptr<Statement> if_branch;	// branches may be single statements or scope blocks
-	std::shared_ptr<Statement> else_branch;
+	std::unique_ptr<Expression> condition;
+	std::unique_ptr<Statement> if_branch;	// branches may be single statements or scope blocks
+	std::unique_ptr<Statement> else_branch;
 public:
-	Expression &get_condition();
-	Statement *get_if_branch();
-	Statement *get_else_branch();
+	const Expression &get_condition() const;
+	const Statement *get_if_branch() const;
+	const Statement *get_else_branch() const;
 
-	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr, std::shared_ptr<Statement> else_branch_ptr);
-	IfThenElse(std::shared_ptr<Expression> condition_ptr, std::shared_ptr<Statement> if_branch_ptr);
+	IfThenElse(std::unique_ptr<Expression>&& condition_ptr, std::unique_ptr<Statement>&& if_branch_ptr, std::unique_ptr<Statement>&& else_branch_ptr);
+	IfThenElse(std::unique_ptr<Expression>&& condition_ptr, std::unique_ptr<Statement>&& if_branch_ptr);
 	IfThenElse();
 };
 
 class WhileLoop : public Statement
 {
-	std::shared_ptr<Expression> condition;
-	std::shared_ptr<Statement> branch;
+	std::unique_ptr<Expression> condition;
+	std::unique_ptr<Statement> branch;
 public:
-	Expression &get_condition();
-	Statement *get_branch();
+	const Expression &get_condition() const;
+	const Statement *get_branch() const;
 
-	WhileLoop(std::shared_ptr<Expression> condition, std::shared_ptr<Statement> branch);
+	WhileLoop(std::unique_ptr<Expression>&& condition, std::unique_ptr<Statement>&& branch);
 	WhileLoop();
 };
 
@@ -229,12 +244,12 @@ class Definition: public Statement
 	// The parent class for definitions
 protected:
 	std::string name;
-	std::shared_ptr<StatementBlock> procedure;  // does this need to be a shared_ptr?
+	std::unique_ptr<StatementBlock> procedure;
 public:
-	std::string get_name();
-	StatementBlock &get_procedure();
+	const std::string& get_name() const;
+	const StatementBlock &get_procedure() const;
 
-	Definition(std::string name, std::shared_ptr<StatementBlock> procedure);
+	Definition(const std::string& name, std::unique_ptr<StatementBlock>&& procedure);
 	Definition();
 	~Definition();
 };
@@ -242,21 +257,21 @@ public:
 class FunctionDefinition : public Definition
 {
 	// arguments and return types are only used for function definitions, so they should be inaccessible to child classes
-	std::vector<std::shared_ptr<Statement>> formal_parameters;
+	std::vector<std::unique_ptr<Statement>> formal_parameters;
 	DataType return_type;
 
 	calling_convention call_con;
 public:
-	DataType &get_type_information();
-	std::vector<Statement*> get_formal_parameters();
-	calling_convention get_calling_convention();
+	const DataType &get_type_information() const;
+	std::vector<const Statement*> get_formal_parameters() const;
+	calling_convention get_calling_convention() const;
 
 	FunctionDefinition(
-        std::string name,
-        DataType return_type,
-        std::vector<std::shared_ptr<Statement>> param_ptr,
-        std::shared_ptr<StatementBlock> procedure_ptr,
-        calling_convention call_con = SINCALL
+        const std::string& name,
+        const DataType& return_type,
+        std::vector<std::unique_ptr<Statement>>& args_ptr,
+        std::unique_ptr<StatementBlock>&& procedure_ptr,
+        const calling_convention call_con = SINCALL
     );
 	FunctionDefinition();
 };
@@ -265,14 +280,14 @@ class StructDefinition : public Definition
 {
 	// A class for our struct definitions
 public:
-	StructDefinition(std::string name, std::shared_ptr<StatementBlock> producedure_ptr);
+	StructDefinition(const std::string& name, std::unique_ptr<StatementBlock>&& producedure_ptr);
 	StructDefinition();
 };
 
 class Call : public Statement, public CallExpression
 {
 public:
-	Call(CallExpression call_exp);
+	Call(CallExpression& call_exp);
 	Call();
 };
 
@@ -280,18 +295,18 @@ class InlineAssembly : public Statement
 {
 	std::string asm_code;
 public:
-	std::string get_asm_code();
+	const std::string& get_asm_code() const;
 
-	InlineAssembly(std::string asm_code);
+	InlineAssembly(const std::string& asm_code);
 	InlineAssembly();
 };
 
 class FreeMemory : public Statement
 {
-	std::shared_ptr<Expression> to_free;
+	std::unique_ptr<Expression> to_free;
 public:
-	Expression &get_freed_memory();
+	const Expression &get_freed_memory() const;
 
-	FreeMemory(std::shared_ptr<Expression> to_free);
+	FreeMemory(std::unique_ptr<Expression>&& to_free);
 	FreeMemory();
 };

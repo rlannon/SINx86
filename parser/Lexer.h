@@ -46,11 +46,11 @@ class Lexer
 	static const std::string bool_exp;
 
 	// character access functions
-	const char peek() const;
-	const char next();
+	char peek() const;
+	char next();
 
 	// match a single character with regex (including an exception handler)
-	static const bool match_character(const char ch, const std::string &expression);
+	static bool match_character(const char ch, const std::string &expression);
 
 	/*
 
@@ -76,26 +76,26 @@ class Lexer
 
 	*/
 
-	static const bool is_whitespace(const char ch);	// tests if a character is \n, \t, or a space
+	static bool is_whitespace(const char ch);	// tests if a character is \n, \t, or a space
 
-	const bool is_newline(char ch) const;	// tests for a newline character
-	static const bool is_not_newline(const char ch);
-	static const bool is_digit(const char ch);		// tests whether a character is a digit; used for the first digit in a number
-	static const bool is_letter(const char ch);
-	static const bool is_number(const char ch);		// includes a decimal point; for reading a number, not just a digit
+	static bool is_newline(char ch);	// tests for a newline character
+	static bool is_not_newline(const char ch);
+	static bool is_digit(const char ch);		// tests whether a character is a digit; used for the first digit in a number
+	static bool is_letter(const char ch);
+	static bool is_number(const char ch);		// includes a decimal point; for reading a number, not just a digit
 
-	static const bool is_id_start(const char ch);	// determine starting character of an identifier (cannot start with a number)
-	static const bool is_id(const char ch);			// determine if the current character is a valid id character (can contain numbers within)
+	static bool is_id_start(const char ch);	// determine starting character of an identifier (cannot start with a number)
+	static bool is_id(const char ch);			// determine if the current character is a valid id character (can contain numbers within)
 
-	static const bool is_punc(const char ch);
-	static const bool is_op_char(const char ch);
+	static bool is_punc(const char ch);
+	static bool is_op_char(const char ch);
 
-	static const bool is_boolean(const std::string &candidate);
+	static bool is_boolean(const std::string &candidate);
 
-	static const bool is_keyword(const std::string &candidate);	// test whether the string is a keyword (such as alloc or let) or an identifier (such as a variable name)
+	static bool is_keyword(const std::string &candidate);	// test whether the string is a keyword (such as alloc or let) or an identifier (such as a variable name)
 
-	std::string read_while(const bool(*predicate)(const char));
-	const std::string read_operator();
+	std::string read_while(const std::function<bool(const char)>& predicate);
+	std::string read_operator();
 
 	void read_lexeme();
 
@@ -105,10 +105,10 @@ class Lexer
 
 public:
     static const std::unordered_map<std::string, exp_operator> op_strings;
-	static const bool is_valid_operator(const std::string &candidate);
+	static bool is_valid_operator(const std::string &candidate);
     
-    const bool eof() const;		// check to see if we are at the end of the file
-	const bool exit_flag_is_set() const;	// check to see the status of the exit flag
+    bool eof() const;		// check to see if we are at the end of the file
+	bool exit_flag_is_set() const;	// check to see the status of the exit flag
 
 	std::ostream& write(std::ostream& os) const;	// allows a lexeme to be written to an ostream
 
@@ -132,7 +132,7 @@ class LexerException : public std::exception {
 	int position_;
 	char ch_;
 public:
-	explicit LexerException(const std::string& err_message, const int& err_position, const char& ch);
+	explicit LexerException(const std::string& err_message, const int err_position, const char& ch);
 	virtual const char* what() const noexcept;
 	char get_char();
 	int get_pos();
