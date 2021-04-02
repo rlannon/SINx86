@@ -18,15 +18,15 @@ def string itos(alloc int n) {
         alloc int remainder: n % 10;
 
         // append the character; update n
-        let s = s + characters[remainder];
-        let n = n / 10;
+        let s += characters[remainder];
+        let n /= 10;
     }
 
     alloc string to_return: "";
     let i = s:len;
     while (i > 0) {
-        let to_return = to_return + s[i - 1];
-        let i = i - 1;
+        let to_return += s[i - 1];
+        let i -= 1;
     }
 
     return to_return;
@@ -39,17 +39,14 @@ def bool is_prime(alloc unsigned int candidate) {
     if (candidate < 2) {
         let prime = false;
     }
-    else if (candidate = 2) {
-        let prime = true;
-    }
-    else {
+    else {  // we need to have a "mov [rbp + 16], esi" instruction here -- but none is present
         alloc int i &unsigned: 2;
-        while (i < candidate and prime) {
-            if (candidate % i = 0) {
+        while ((i < candidate) and prime) {
+            if ((candidate % i) = 0) {
                 let prime = false;
             }
             else {
-                let i = i + 1;
+                let i += 1;
             }
         }
     }
@@ -59,15 +56,20 @@ def bool is_prime(alloc unsigned int candidate) {
 
 def int main(alloc dynamic array<string> args) {
     // calculate the first 1000 primes
-    alloc unsigned int i: 1;
+    alloc unsigned int i: 0;
     alloc unsigned int count: 0;
     while (i < 1000) {
+    //    @print("Testing:" + @itos(i) + "...\n");
         if (@is_prime(i)) {
-            let count = count + 1;
+            let count += 1;
             @print(@itos(i) + ", ");
         }
-
-        let i = i + 1;
+    //    else
+    //    {
+    //        @print(@itos(i) + " is not prime!\n");
+    //    }
+    
+        let i += 1;
     }
     @print("\n");
     @print("Found " + @itos(count) + " primes\n");

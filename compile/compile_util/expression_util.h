@@ -61,4 +61,10 @@ namespace expression_util {
         symbol_table &symbols,
         unsigned int line
     );
+
+    std::string load_into_register(
+        symbol& sym,
+        reg destination,
+        register_usage& context
+    );
 }

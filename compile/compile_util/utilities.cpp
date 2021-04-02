@@ -448,7 +448,7 @@ std::stringstream store_symbol(const symbol &s) {
 
     std::stringstream store_ss;
 
-    DataType dt = s.get_data_type();
+    const DataType& dt = s.get_data_type();
     std::string store_instruction;
     if (dt.get_primary() == FLOAT) {
         store_instruction = (dt.get_qualities().is_long()) ? "movsd" : "movss";

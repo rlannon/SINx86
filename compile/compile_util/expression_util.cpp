@@ -627,3 +627,72 @@ struct_info &expression_util::get_struct_type(
         );
     }
 }
+
+std::string expression_util::load_into_register(
+    symbol& sym,
+    reg destination,
+    register_usage& context
+) {
+    /*
+
+    load_into_register
+    Loads a given symbol 'sym' into a register 'destination'
+
+    Note this does not work for struct members. This function also assumes the symbol can be put into a register.
+
+    */
+
+    std::stringstream load_ss;
+    const std::string reg_string = register_usage::get_register_name(destination, sym.get_data_type());
+    const auto reg64_name = register_usage::get_register_name(destination);
+
+    // how we get this data depends on where it lives
+    if (sym.get_data_type().get_qualities().is_static()) {
+        // static memory can be looked up by name -- variables are in the .bss, .data, or .rodata section
+        load_ss << "\t" << "lea " << reg64_name << ", [" << sym.get_name() << "]" << std::endl;
+        load_ss << "\t" << "mov " << reg_string << ", [" << reg64_name << "]" << std::endl;
+    } 
+    else if (sym.get_data_type().get_qualities().is_dynamic()) {
+        // dynamic memory
+        // since dynamic variables are really just pointers, we need to get the pointer and then dereference it
+
+        // get the dereferenced pointer
+        if (
+            sym.get_data_type().get_primary() == STRING ||
+            sym.get_data_type().get_primary() == ARRAY || 
+            sym.get_data_type() == STRUCT || 
+            sym.get_data_type().get_primary() == TUPLE
+        ) {
+            load_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+        }
+        else {
+            load_ss << "\t" << "mov " << reg64_name << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+            load_ss << "\t" << "mov " << reg_string << ", [" << reg64_name << "]" << std::endl;
+        }
+    } 
+    else {
+        /*
+        
+        automatic memory
+        get the stack offset; instruction should be something like
+            mov rax, [rbp - 4]
+        If the value is in a register, then just perform a register move
+        
+        */
+
+        if (sym.get_register() == NO_REGISTER) {
+            load_ss << "\t" << "mov " << reg_string << ", [rbp - " << sym.get_offset() << "]" << std::endl;
+        }
+        else {
+            auto old_register = sym.get_register();
+            load_ss << "\t" << "mov " << reg_string << ", " << register_usage::get_register_name(old_register) << std::endl;
+            context.clear(old_register);
+        }
+    }
+
+    // ensure we mark the symbol as being in this register
+    sym.set_register(destination);
+    context.set(destination, &sym);
+
+    return load_ss.str();
+}
