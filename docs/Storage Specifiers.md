@@ -25,4 +25,4 @@ Automatic memory is memory that utilizes the stack. Like C, automatic memory is 
 
 ### Dynamic Memory
 
-Dynamic memory utilizes the `dynamic` keyword and causes the data to be allocated on the heap at run time. `dynamic` data, due to its nature of having an unknown-until-runtime nature to it, cannot be marked as `const`; instead, `final` should be used for `dynamic` data that the programmer does not want altered.
+Dynamic memory utilizes the `dynamic` keyword and causes the data to be allocated on the heap at run time. `dynamic` data, due to its nature of having a location and value knowable only at runtime, cannot be marked as `const`; instead, `final` should be used for `dynamic` data that the programmer does not want altered.

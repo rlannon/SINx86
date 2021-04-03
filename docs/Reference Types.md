@@ -42,16 +42,17 @@ Strings may be marked as `dynamic`, and although this does not change where the 
 
 Sometimes, expressions will yield temporary instances of reference types that need to be freed after the expression has been used. Take the following example:
 
-    decl string itos(decl int n);   // an integer-to-string function
+    decl string itos(decl final int n);   // an integer-to-string function
+    decl void print(decl final string str);
     
     def int main(alloc dynamic array<string> args) {
         @print(@itos(1000));
         return 0;
     }
 
-We obviously can't decrement the reference count of the value returned by `itos` in its `return` statement; doing so would potentially free the resource and give us garbage (if we were allowed to access that address at all). So, that value must live until the parameter `n` is initialized. `dynamic` and `string` types in SIN _always_ use a copy assignment; the only case where the compmiler is allowed to copy the address is when the type is `ref<T>` or `ptr<T>`.
+We obviously can't decrement the reference count of the value returned by `itos` in its `return` statement; doing so would potentially free the resource and give us garbage (if we were allowed to access that address at all). So, that value must live until the parameter to `print` is initialized. `dynamic` and `string` types in SIN _always_ use a copy assignment; the only case where the compmiler is allowed to copy the address is when the type is `ref<T>` or `ptr<T>`.
 
-As a result of SIN's assignment semantics, the parameter `n` must be copy-constructed (to use C++ or OOP parlance). And, in order to clean up these values, we utilize an approach similar to what an object-oriented language would do with destructors (rather than let the GC handle it, which could lead to major problems). As such, we must do something like (using pseudocode):
+As a result of SIN's assignment semantics, the parameter `str` must be copy-constructed (to use C++ or OOP parlance). And, in order to clean up these values, we utilize an approach similar to what an object-oriented language would do with destructors (rather than let the GC handle it, which could lead to major problems). As such, we must do something like (using pseudocode):
 
     temp = itos(1000)
     call copy_construct(temp, &print.params[0])
