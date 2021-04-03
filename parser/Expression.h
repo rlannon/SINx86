@@ -299,3 +299,62 @@ public:
 	AttributeSelection(std::unique_ptr<Binary>&& to_deconstruct);
 	AttributeSelection(std::unique_ptr<Expression>&& selected, attribute attrib, const DataType& t);
 };
+
+// Construction expression
+class Construction : public Expression
+{
+public:
+	/*
+
+	The purpose of the Construction::Constructor class is to contain information about one particular initialization
+	For example, in the construction:
+		construct
+		{
+			x: 10,
+			y: 20,
+			z: 30,
+		};
+	each of those lines would have its own instance of Constructor.
+	
+	*/
+	class Constructor
+	{
+		std::unique_ptr<Expression> _member;	// this should probably always be an identifier
+		std::unique_ptr<Expression> _value;
+	public:
+		inline const Expression& get_member() const
+		{
+			return *_member;
+		}
+
+		inline const Expression& get_value() const
+		{
+			return *_value;
+		}
+
+		Constructor(std::unique_ptr<Expression>&& member, std::unique_ptr<Expression>&& value);
+		inline Constructor(const Constructor& other)
+			: _member(other._member->clone())
+			, _value(other._member->clone())
+		{
+		}
+		~Constructor() = default;
+	};
+
+	inline const Constructor* get_initializer(const size_t index)
+	{
+		try
+		{
+			return &_initializers.at(index);
+		}
+		catch (std::out_of_range& e)
+		{
+			return nullptr;
+		}
+	}
+
+	inline Construction() { }
+	~Construction();
+private:
+	std::vector<Constructor> _initializers;
+};

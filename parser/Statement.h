@@ -284,6 +284,26 @@ public:
 	StructDefinition();
 };
 
+class ConstructionStatement : public Statement
+{
+	// When used as a statement, a construction takes a particular object to construct
+	std::unique_ptr<Expression> _to_construct;
+	std::unique_ptr<Construction> _construction;
+public:
+	inline const Expression& get_to_construct() const
+	{
+		return *_to_construct;
+	}
+
+	inline const Construction& get_construction() const
+	{
+		return *_construction;
+	}
+
+	ConstructionStatement(std::unique_ptr<Expression>&& to_construct, std::unique_ptr<Expression>&& construction);
+	~ConstructionStatement() = default;
+};
+
 class Call : public Statement, public CallExpression
 {
 public:

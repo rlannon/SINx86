@@ -101,7 +101,7 @@ because `r` has already been assigned as a reference to `y` and is now syntactic
         r: 50,
     };
 
-This is because a `construct` _statement_ acts as a regular assignment if the data was already initialized; it does not create a new object. A `construct` _expression_ will create a new, anonymous object.
+This is because a `construct` _statement_ acts as a regular assignment if the data was already initialized; it does not create a new object. A `construct` _expression_ will create a new, anonymous object. In both cases, the compiler will utilize the address of the existing object and construct the object in its place.
 
 ### The `default` keyword
 

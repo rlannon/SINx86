@@ -127,6 +127,10 @@ std::unique_ptr<Statement> Parser::parse_statement(const bool is_function_parame
 			this->next();
 			stmt = std::make_unique<Statement>(STATEMENT_GENERAL, current_lex.line_number);	// an explicit pass will, essentially, be ignored by the compiler; it does nothing
 		}
+		else if (current_lex.value == "construct")
+		{
+
+		}
 		// if none of the keywords were valid, throw an error
 		else {
 			throw ParserException("Invalid keyword", 211, current_lex.line_number);
