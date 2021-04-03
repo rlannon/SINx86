@@ -188,6 +188,10 @@ std::unique_ptr<Expression> Parser::parse_expression(
 			// if we have an attribute, parse out a keyword expression
 			left = std::make_unique<KeywordExpression>(current_lex.value);
 		}
+		else if (current_lex.value == "construct")
+		{
+			left = this->parse_construction_body(current_lex);
+		}
 		else {
 			try {
 				auto t = this->get_type(grouping_symbol);
@@ -339,7 +343,7 @@ std::unique_ptr<Expression> Parser::maybe_binary(
 		next.value == ";" || 
 		next.value == get_closing_grouping_symbol(grouping_symbol) || 
 		next.value == "," || 
-		(next.value == "=" && omit_equals)
+		(next.value == "=" && omit_equals)	// todo: should we also break on next.value == ":" && omit_equals ? Because : can be init syntax
 	) {
 		return left;
 	}

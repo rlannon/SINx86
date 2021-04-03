@@ -104,8 +104,8 @@ class Parser
 	std::unique_ptr<Statement> parse_function_call(lexeme current_lex);
 
 	// Parsing the body of a construction requires special consideration
-	std::unique_ptr<Statement> parse_construction(lexeme current_lex);
-	std::unique_ptr<Construction> parse_construction_body(lexeme current_lex);
+	std::unique_ptr<Statement> parse_construction(const lexeme& current_lex);
+	std::unique_ptr<Construction> parse_construction_body(const lexeme& current_lex);
 
 	// Parsing expressions
 

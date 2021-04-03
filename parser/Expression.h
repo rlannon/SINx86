@@ -354,6 +354,8 @@ public:
 	}
 
 	inline Construction() { }
+	inline Construction(std::vector<Constructor>&& initializers)
+		: _initializers( std::move(initializers) ) { }
 	~Construction();
 private:
 	std::vector<Constructor> _initializers;
