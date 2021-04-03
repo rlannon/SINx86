@@ -13,10 +13,12 @@ The implementation of the lexer
 // The list of language keywords
 const std::set<std::string> Lexer::keywords{
 	"alloc", "and", "array", "as", "asm", "bool", "char", "const", 
-	"constexpr", "c64", "decl", "def", "dynamic", "else", "extern", "final", "float", "free", "if", "include", "int", 
-	"len", "let", "long", "move", "not", "null", "or", "pass", "private", "proc", "ptr", "public", "raw", "readonly", "realloc", 
-	"return", "short", "signed", "sincall", "size",  "static", "string", "struct", "tuple", "typename", "unmanaged", "unsigned", "var", "void", 
-	"while", "windows", "xor"
+	"constexpr", "construct", "c64", "decl", "def", "default", "dynamic", "else", 
+	"extern", "final", "float", "free", "if", "include", "int", "is", "len", 
+	"let", "long", "move", "not", "null", "or", "pass", "private", "proc", 
+	"ptr", "public", "raw", "readonly", "realloc", "return", "short", 
+	"signed", "sincall", "size", "static", "string", "struct", "tuple", 
+	"typename", "unmanaged", "unsigned", "var", "void", "while", "windows", "xor"
 };
 
 // Our regular expressions

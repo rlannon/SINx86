@@ -19,15 +19,15 @@ In SIN, data may not be referenced before it is initialized, either with an assi
 
 What is the value of `y`? It depends on the truthiness of `some_condition`; if `true`, `y` will be equal to 30. But if not, then what _does_ `y` equal? In some languages, this might be undefined or maybe even illegal behavior. In this example, `y` is assigned with the value `x`, which has not been initialized. However, the compiler has no way of knowing whether a pointer is pointing to uninitialized data.
 
-If `p`'s allocation had occurred immediately after `x`'s, then the compiler would have issued an error because `x` was _definitely_ left uninitialized. However, in this example, the SIN compiler will only issue a warning here, stating that `p` is being assigned the address of potentially uninitialized data, but it is not strictly illegal because of _default type construction._ In order to maintain data safety and preventing the use of garbage data, all data in SIN will be constructed to some default value if it is left uninitialized in the allocation. However, the compiler will still issue errors if some piece of uninitialized data is accessed (unless via a pointer). As such, following SIN's type construction rules, in the above example, `y` will be equal to 0.
+If `p`'s allocation had occurred immediately after `x`'s, then the compiler _could_ issue an error because `x` was _definitely_ left uninitialized. However, this behavior is not illegal in SIN because of _default type construction._ In order to maintain data safety and preventing the use of garbage data, all data in SIN will be constructed to some default value if it is left uninitialized in the allocation. However, the compiler will still issue errors if some piece of uninitialized data is accessed (unless via a pointer). As such, following SIN's type construction rules, in the above example, `y` will be equal to 0.
 
-The following is a table of default constructed values:
+The only thing default construction does is initialize all of the bytes making up the object to `0x00`. The following is a table of default constructed values:
 
 | Type | Default value |
 | ---- | ------------- |
-| All integral types | 0 |
+| All integral types | `0` |
 | Pointers | `null` |
-| All floating-point types | 0.0 |
+| All floating-point types | `0.0` |
 | `string` | Empty string (a null byte) with length 0 |
 | `char` | `\0` |
 | Arrays, tuples, and structs | All members are constructed according to its type rules; if an array is marked `dynamic`, it will contain no elements |
@@ -35,7 +35,7 @@ The following is a table of default constructed values:
 However, not all data may be legally default-constructed; some types must be initialized in their allocation:
 
 * All data marked `const` must be initialized with a constant expression (`constexpr` or a literal)
-* All references must supply the address of the referent using alloc-init syntax
+* All references (`ref<T>`) must supply the address of the referent using alloc-init syntax
 
 ### The `construct` keyword
 
@@ -45,7 +45,7 @@ Perhaps the most important aspect of `construct` is its use with structs. Unlike
     let p.x = 10;
     alloc int n: p.y;
 
-In this case, the compiler will allow the use of `p.y` because it will consider the struct `p` as having been initialized -- it is not required to track every individual member. However, it is obvious that `p.y` will really be uninitialized. To solve this problem, SIN utilizes _type construction_ and allows for a Rust-like construction to be specified when a struct is allocated.
+In this case, the compiler will allow the use of `p.y` because it will consider the struct `p` as having been initialized -- it is not required to track every individual member. However, it is obvious that `p.y` will really be uninitialized by any expression and instead will contain its type's default value (zero). To solve this problem, SIN utilizes _type construction_ and allows for a Rust-like construction to be specified when a struct is allocated.
 
 So, in the above example, we could say:
 
@@ -102,3 +102,38 @@ because `r` has already been assigned as a reference to `y` and is now syntactic
     };
 
 This is because a `construct` _statement_ acts as a regular assignment if the data was already initialized; it does not create a new object. A `construct` _expression_ will create a new, anonymous object.
+
+### The `default` keyword
+
+Sometimes, a user may want to only intialize some members in a structure's `construct` expression (e.g., its `ref` members) and default-construct the rest. In such cases, it can be tedious to write out every member's initialization. To work around this, SIN also allows the use of the `default` keyword inside of a struct to explicitly default-initialize all other members. For example, the following struct:
+
+    def struct ex
+    {
+        alloc ref<array<int> > r;
+        alloc int x;
+        alloc int y;
+        alloc int z;
+        alloc float f;
+        alloc float d &long;
+    }
+
+can be initialized as follows:
+
+    alloc ex e: construct {
+        r: some_array,
+        d: 1.2345,
+        default
+    };
+
+This will initialize the `r` and `d` members explicitly, and default-construct all other members. Regular construction rules apply, meaning it is still required to initialize references. For example, this would be illegal:
+
+    alloc ex c: construct {
+        x: 10,
+        default     // ERR: reference member 'r' was not initialized 
+    };
+
+You may also utilize the `default` keyword redundantly to signify a particular variable should be default-constructed. However, this is generally unnecessary. For example:
+
+    alloc int x: default;   // default-initializes x
+
+This usage will cause a compiler note to be generated alerting the programmer to this redundancy.
