@@ -1,0 +1,21 @@
+// default_construction
+// a demo of how default-constructing variables works
+
+decl void print(decl final string s);
+
+def int main(alloc dynamic array<string> args)
+{
+    alloc bool b;   // initializes to false
+    alloc ptr<bool> p: $b;  // OK
+        
+    if (b)
+    {
+        @print("true!\n");  // unreachable
+    }
+    else
+    {
+        @print("false!\n");
+    }
+
+    return 0;
+}

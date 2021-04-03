@@ -6,6 +6,7 @@ Copyright 2020 Riley Lannon
 */
 
 #include "assign_util.h"
+#include "function_util.h"
 
 assign_utilities::destination_information::destination_information(
     const std::string& dest_location,
@@ -38,7 +39,7 @@ assign_utilities::destination_information assign_utilities::fetch_destination_op
     fetch_destination_operand
     Fetches the destination for the given expression
     
-    This function returns both the location and the code to fetch it in a pair<string, string>
+    This function returns both the location and the code to fetch it.
 
     */
 
@@ -289,4 +290,111 @@ bool assign_utilities::is_valid_move_expression(const Expression &exp) {
     }
 
     return is_valid;
+}
+
+std::string assign_utilities::do_assign(
+    const reg src_reg,
+    const DataType& lhs_type,
+    const destination_information& dest,
+    register_usage& context, 
+    const unsigned int line,
+    bool& do_free
+) {
+    /*
+
+    do_assign
+    Generates code for an assignment from 'src_reg' to 'dest'
+
+    */
+
+    std::stringstream handle_assign;
+
+    std::string src = register_usage::get_register_name(src_reg, lhs_type);
+
+    // make the assignment
+    if (lhs_type.get_primary() == TUPLE) {
+        handle_assign << push_used_registers(context, true).str();
+
+        // set up our registers/arguments
+        handle_assign << "\t" << "mov rsi, rax" << std::endl;
+        handle_assign << "\t" << "mov rdi, rbx" << std::endl;
+
+        // copy byte for byte
+        // todo: ensure array evaluation utilizes type hints so that the data is the appropriate number of bytes
+        handle_assign << "\t" << "mov rcx, " << lhs_type.get_width() << std::endl;
+        handle_assign << "\t" << "rep movsb" << std::endl;
+
+        handle_assign << pop_used_registers(context, true).str();
+    }
+    else if (assign_utilities::requires_copy(lhs_type)) {
+        handle_assign << push_used_registers(context, true).str();
+
+        // set up our registers/arguments
+        handle_assign << "\t" << "mov rsi, rax" << std::endl;
+        std::string destination_register_operand = "rbx";
+        if (
+            (dest.instruction_used == assign_utilities::MoveInstruction::LEA) &&
+            (lhs_type.get_primary() == STRING || lhs_type.get_qualities().is_dynamic())
+        ) {
+            destination_register_operand = "[rbx]";
+        }
+        handle_assign << "\t" << "mov rdi, " << destination_register_operand << std::endl;
+        
+        std::string proc_name;
+        std::string assign_instruction; // if we are storing the reference in a register, we will need a different assign instruction
+
+        // if we have an array, we don't need to worry about the address changing (they are never resized by array_copy)
+        if (lhs_type.get_primary() == ARRAY) {
+            handle_assign << "\t" << "mov ecx, " << lhs_type.get_subtype().get_width() << std::endl;
+            proc_name = "sinl_array_copy";
+        }
+        // strings are different; they are automatically resized and so string_copy will return an address
+        else {
+            if (dest.in_register) {
+                assign_instruction = "mov " + dest.address_for_lea + ", rax";
+            }
+            else {
+                // todo: verify this works generally
+                // if we don't have an address (e.g., it's a binary), then we can use mov with the dest
+                if (dest.can_use_lea) {
+                    handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                }
+                else {
+                    handle_assign << "\t" << "mov r15, " << dest.address_for_lea << std::endl;  // still uses 'address_for_lea'
+                }
+                assign_instruction = "mov [r15], rax";
+            }
+
+            proc_name = "sinl_string_copy";
+        }
+        // todo: other copy types
+
+        // call the function
+        handle_assign << function_util::call_sincall_subroutine(proc_name);
+
+        // now, if we had a string, we need to move the returned address into where the string is located
+        if (lhs_type.get_primary() == STRING) {
+            handle_assign << "\t" << assign_instruction << std::endl;
+        }
+
+        handle_assign << pop_used_registers(context, true).str();
+    }
+    else {
+        // move 'src' into the 'location' (a register or memory address)
+        std::string instruction;
+        if (lhs_type.get_primary() == FLOAT) {
+            instruction = lhs_type.get_width() == sin_widths::DOUBLE_WIDTH ? "movsd" : "movss";
+        }
+        else {
+            instruction = "mov";
+        }
+
+        handle_assign << "\t" << instruction << " " << dest.dest_location << ", " << src << std::endl;
+        
+        // if the returned value was a reference, we just performed a reference copy here
+        if (do_free)
+            do_free = false;
+    }
+    
+    return handle_assign.str();
 }

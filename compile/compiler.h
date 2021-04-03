@@ -105,7 +105,7 @@ class compiler {
 	std::stringstream assign(
 		const DataType& lhs_type,
 		const DataType &rhs_type,
-		assign_utilities::destination_information dest,
+		const assign_utilities::destination_information& dest,
 		const Expression &rvalue,
 		unsigned int line,
 		bool is_alloc_init = false

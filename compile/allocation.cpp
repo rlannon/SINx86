@@ -10,6 +10,7 @@ Handle allocations for the compiler class.
 #include <sstream>
 #include "compiler.h"
 #include "compile_util/function_util.h"
+#include "compile_util/construct.h"
 
 // todo: struct allocations -- when a struct is allocated, it should allocate all of its data members -- like a primitive form of a constructor; when free is called on a struct, it will free _all_ data, but dynamic data will not be freed when the struct goes out of scope
 
@@ -147,9 +148,17 @@ std::stringstream compiler::allocate(const Allocation& alloc_stmt) {
 			if (alloc_stmt.was_initialized()) {
 				auto initial_value = alloc_stmt.get_initial_value();
 				allocation_ss << this->handle_alloc_init(allocated, *initial_value, alloc_stmt.get_line_number()).str();
-
-				allocated.set_initialized();
 			}
+			else
+			{
+				allocation_ss << construct_util::default_construct(
+					allocated,
+					this->symbols,
+					this->reg_stack.peek(),
+					alloc_stmt.get_line_number()
+				);
+			}
+			allocated.set_initialized();
 
 			// add the symbol
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
@@ -254,7 +263,8 @@ std::stringstream compiler::allocate(const Allocation& alloc_stmt) {
 			}
 
 			// add the symbol to the table
-			if (alloc_stmt.was_initialized()) allocated.set_initialized();
+			// symbols in BSS are considered to be initialized (default construction)
+			allocated.set_initialized();
 			this->add_symbol(allocated, alloc_stmt.get_line_number());
 		}
 		else {
@@ -323,17 +333,27 @@ std::stringstream compiler::allocate(const Allocation& alloc_stmt) {
 			// subtract the width of the type from RSP
 			allocation_ss << "\t" << "sub rsp, " << data_width << std::endl;
 
-			// initialize it, if necessary
+			// initialize / default construct it
 			if (alloc_stmt.was_initialized()) {
 				// get the initial value
 				auto &initial_value = *alloc_stmt.get_initial_value();
 
 				// make an assignment of 'initial_value' to 'allocated'
 				allocation_ss << this->handle_alloc_init(allocated, initial_value, alloc_stmt.get_line_number()).str();
-
-				// mark the symbol as initialized
-				allocated.set_initialized();
 			}
+			else
+			{
+				// default construction
+				allocation_ss << construct_util::default_construct(
+					allocated,
+					this->symbols,
+					this->reg_stack.peek(),
+					alloc_stmt.get_line_number()
+				);
+			}
+
+			// the symbol must have been initialized (through initialization or default construction)
+			allocated.set_initialized();
 
 			// add it to the table
 			this->add_symbol(allocated, alloc_stmt.get_line_number());

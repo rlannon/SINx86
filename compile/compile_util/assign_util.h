@@ -25,12 +25,12 @@ namespace assign_utilities {
 
     struct destination_information
     {
-        std::string dest_location;
-        std::string fetch_instructions;
+        std::string dest_location;      // the location
+        std::string fetch_instructions; // the instructions to fetch it
         std::string address_for_lea;    // if we need 'lea' (e.g., for strings), we should track the pointer here
-        bool in_register;
-        bool can_use_lea;
-        MoveInstruction instruction_used;
+        bool in_register;   // whether it's in a register
+        bool can_use_lea;   // whether it can use the lea instruction
+        MoveInstruction instruction_used;   // the instruction to use (MOV or LEA)
 
         destination_information(
             const std::string& dest_location,
@@ -61,4 +61,13 @@ namespace assign_utilities {
     );
     bool requires_copy(const DataType& t);
     bool is_valid_move_expression(const Expression &exp);
+
+    std::string do_assign(
+        const reg src_reg, 
+        const DataType& lhs_type, 
+        const destination_information& dest, 
+        register_usage& context, 
+        const unsigned int line,
+        bool& do_free
+    );
 };
