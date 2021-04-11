@@ -40,7 +40,7 @@ std::unique_ptr<Statement> Parser::parse_construction()
     return std::make_unique<ConstructionStatement>(std::move(to_construct), std::move(body));
 }
 
-std::unique_ptr<Construction> Parser::parse_construction_body()
+std::unique_ptr<Construction> Parser::parse_construction_body(const bool has_type, const std::string& explicit_type)
 {
     /*
 
@@ -96,7 +96,13 @@ std::unique_ptr<Construction> Parser::parse_construction_body()
             }
         }
 
-        return std::make_unique<Construction>(std::move(initializers));
+        auto ctor = std::make_unique<Construction>(std::move(initializers));
+        if (has_type)
+        {
+            ctor->set_explicit_type(explicit_type);
+        }
+        
+        return ctor;
     }
     else
     {

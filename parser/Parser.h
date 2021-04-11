@@ -105,7 +105,7 @@ class Parser
 
 	// Parsing the body of a construction requires special consideration
 	std::unique_ptr<Statement> parse_construction();
-	std::unique_ptr<Construction> parse_construction_body();
+	std::unique_ptr<Construction> parse_construction_body(const bool has_type = false, const std::string& explicit_type = "");
 
 	// Parsing expressions
 
@@ -124,7 +124,7 @@ class Parser
 	{
 		return parse_expression(0, "(", false, false, allow_brace);
 	}
-	
+
 	std::unique_ptr<Expression> maybe_binary(
 		std::unique_ptr<Expression> left,
 		const size_t my_prec,

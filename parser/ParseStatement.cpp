@@ -130,6 +130,7 @@ std::unique_ptr<Statement> Parser::parse_statement(const bool is_function_parame
 		else if (current_lex.value == "construct")
 		{
 			stmt = this->parse_construction();
+			stmt->set_line_number(current_lex.line_number);
 		}
 		// if none of the keywords were valid, throw an error
 		else {

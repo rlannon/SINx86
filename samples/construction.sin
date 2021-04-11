@@ -18,5 +18,11 @@ def int main(alloc dynamic array<string> args)
         z: 30,
     };
 
+    alloc point3d second: construct point3d {
+        x: 100 * 2,
+        y: x + 1,
+        z: y * 5,
+    };
+
     return 0;
 }

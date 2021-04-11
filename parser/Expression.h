@@ -353,6 +353,14 @@ public:
 		}
 	}
 
+	inline bool has_explicit_type() const noexcept { return _has_explicit_type; }
+	inline const std::string& get_explicit_type() const noexcept { return _explicit_type; }
+	inline void set_explicit_type(const std::string& type_name)
+	{
+		this->_explicit_type = type_name;
+		_has_explicit_type = true;
+	}
+
 	inline Construction() { }
 	inline Construction(std::vector<Constructor>&& initializers)
 		: _initializers( std::move(initializers) ) { }
@@ -360,4 +368,6 @@ public:
 	virtual ~Construction() = default;
 private:
 	std::vector<Constructor> _initializers;
+	std::string _explicit_type;
+	bool _has_explicit_type;
 };

@@ -191,7 +191,16 @@ std::unique_ptr<Expression> Parser::parse_expression(
 		}
 		else if (current_lex.value == "construct")
 		{
-			left = this->parse_construction_body();
+			std::string explicit_type = "";
+			bool has_type = false;
+			if (this->peek().type == KEYWORD_LEX || this->peek().type == IDENTIFIER_LEX)
+			{
+				explicit_type = this->next().value;
+				has_type = true;
+			}
+
+			left = this->parse_construction_body(has_type, explicit_type);
+			grouping_symbol = this->next().value;	// update grouping symbol for things to be parsed correctly
 		}
 		else {
 			try {
