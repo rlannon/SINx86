@@ -332,25 +332,21 @@ public:
 			return *_value;
 		}
 
-		inline Constructor(std::unique_ptr<Expression>&& member, std::unique_ptr<Expression>&& value)
+		Constructor(std::unique_ptr<Expression>& member, std::unique_ptr<Expression>& value)
 			: _member(std::move(member))
 			, _value(std::move(value)) { }
-		inline Constructor(const Constructor& other)
+		Constructor(const Constructor& other)
 			: _member(other._member->clone())
-			, _value(other._member->clone()) { }
+			, _value(other._value->clone()) { }
 		~Constructor() = default;
 	};
 
-	inline const Constructor* get_initializer(const size_t index)
+	inline const Constructor* get_initializer(const size_t index) const noexcept
 	{
-		try
-		{
+		if (index < _initializers.size())
 			return &_initializers.at(index);
-		}
-		catch (std::out_of_range& e)
-		{
+		else
 			return nullptr;
-		}
 	}
 
 	inline bool has_explicit_type() const noexcept { return _has_explicit_type; }

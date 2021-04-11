@@ -53,3 +53,20 @@ std::string construct_util::default_construct(const symbol& sym, symbol_table& s
 
     return construct_ss.str();
 }
+
+bool construct_util::is_valid_construction(const ConstructionStatement& s, const struct_info& to_construct_type)
+{
+    return !(
+        !s.get_construction().has_default() &&
+        (
+            to_construct_type.members_size() != 
+            s.get_construction().num_initializations()
+        )
+    ) && !(
+        s.get_construction().has_default() &&
+        (
+            to_construct_type.members_size() ==
+            s.get_construction().num_initializations()
+        )
+    );
+}

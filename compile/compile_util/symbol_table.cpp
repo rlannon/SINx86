@@ -114,7 +114,7 @@ symbol *symbol_table::insert(std::shared_ptr<symbol> to_insert) {
 	return returned.first->second.get();
 }
 
-bool symbol_table::contains(std::string symbol_name, std::string scope_name)
+bool symbol_table::contains(std::string symbol_name, std::string scope_name) const
 {
 	// returns whether the symbol with a given name is in the symbol table
 	// if it can't find it with the name mangled, it will try finding the unmangled version
@@ -130,7 +130,7 @@ bool symbol_table::contains(std::string symbol_name, std::string scope_name)
 	return in_table;
 }
 
-symbol& symbol_table::find(std::string to_find, std::string scope_name)
+symbol& symbol_table::find(std::string to_find, std::string scope_name) const
 {
 	/*
 	

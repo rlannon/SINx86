@@ -9,6 +9,7 @@ Code for object construction
 */
 
 #include "compiler.h"
+#include "compile_util/construct.h"
 
 std::string compiler::construct_object(const ConstructionStatement& s)
 {
@@ -23,59 +24,65 @@ std::string compiler::construct_object(const ConstructionStatement& s)
 
     */
 
+    // todo: extract this into a function
+
     const symbol *to_construct_symbol = nullptr;
     const struct_info *to_construct_type = nullptr;
-    
+    std::string lookup_name;
+
     if (s.get_to_construct().get_expression_type() == IDENTIFIER)
     {
         const auto& exp = static_cast<const Identifier&>(s.get_to_construct());
-        try
-        {
-            to_construct_type = &this->get_struct_info(
-                exp.getValue(),
-                s.get_line_number()
-            );
-        }
-        catch(const UndefinedException& e)
-        {
-            try
-            {
-                to_construct_symbol = this->lookup(
-                    exp.getValue(),
-                    s.get_line_number()
-                );
-
-                to_construct_type = &this->get_struct_info(
-                    to_construct_symbol->get_data_type().get_struct_name(),
-                    s.get_line_number()
-                );
-            }
-            catch(const SymbolNotFoundException& e)
-            {
-                throw CompilerException(
-                    "Unknown identifier '" + exp.getValue() + "' in construction",
-                    compiler_errors::UNDEFINED_ERROR,
-                    s.get_line_number()
-                );
-            }
-            catch (const UndefinedException& e)
-            {
-                throw CompilerException(
-                    "Structure required in construction statements",
-                    compiler_errors::TYPE_ERROR,
-                    s.get_line_number()
-                );
-            }
-        }
+        lookup_name = exp.getValue();
     }
     else
     {
-        // what else could it be?
+        // todo: what else could it be?
         throw CompilerException (
             "Invalid Expression type in construction",
             compiler_errors::INVALID_EXPRESSION_TYPE_ERROR,
             s.get_line_number()
         );
+    }
+
+    // now that we have the name to look up, fetch whatever data we can
+    try
+    {
+        to_construct_type = &this->get_struct_info(
+            lookup_name,
+            s.get_line_number()
+        );
+    }
+    catch(const UndefinedException& e)
+    {
+        try
+        {
+            to_construct_symbol = this->lookup(
+                lookup_name,
+                s.get_line_number()
+            );
+
+            to_construct_type = &this->get_struct_info(
+                to_construct_symbol->get_data_type().get_struct_name(),
+                s.get_line_number()
+            );
+        }
+        catch(const SymbolNotFoundException& e)
+        {
+            throw CompilerException(
+                "Unknown identifier '" + lookup_name + "' in construction",
+                compiler_errors::UNDEFINED_ERROR,
+                s.get_line_number()
+            );
+        }
+        catch (const UndefinedException& e)
+        {
+            throw CompilerException(
+                "Structure required in construction statements",
+                compiler_errors::TYPE_ERROR,
+                s.get_line_number()
+            );
+        }
     }
 
     /*
@@ -88,28 +95,20 @@ std::string compiler::construct_object(const ConstructionStatement& s)
 
     */
 
-    if (
-        (
-            !s.get_construction().has_default() &&
-            (
-                to_construct_type->members_size() != 
-                s.get_construction().num_initializations()
-            )
-        ) ||
-        (
-            s.get_construction().has_default() &&
-            (
-                to_construct_type->members_size() ==
-                s.get_construction().num_initializations()
-            )
-        )
-    ) {
+    if (!construct_util::is_valid_construction(s, *to_construct_type))
+    {
         throw CompilerException(
             "Unexpected number of initializations in construction",
             compiler_errors::CONSTRUCTION_NUMBER_INIT_ERROR,
             s.get_line_number()
         );
     }
+
+    /*
+
+    Now, perform the code generation
+
+    */
     
     std::stringstream construct_ss;
     
@@ -129,7 +128,7 @@ std::string compiler::construct_object(const ConstructionStatement& s)
     {
         // todo: create a new, anonymous symbol (on the stack) and get its address in RBX
         
-        // note: this could be improved via RVO, though that should overwrite the 'to_construct' member
+        // note: this could be improved via RVO (passing in destination address)
     }
 
     // iterate over defined elements
@@ -137,9 +136,48 @@ std::string compiler::construct_object(const ConstructionStatement& s)
     {
         // todo: evaluate and initialize each member in order
 
-        auto p = evaluate_expression(elem.get_value(), s.get_line_number());    // todo: free reference?
+        auto p = evaluate_expression(elem.get_value(), s.get_line_number());
+        construct_ss << p.first;
+
+        // the result is in RBX
+        // fetch the member offset
+        std::string member_name;
+        if (elem.get_member().get_expression_type() == IDENTIFIER)
+        {
+            member_name = static_cast<const Identifier&>(elem.get_member()).getValue();
+        }
+        else
+        {
+            // todo: what else could it be?
+            throw CompilerException(
+                "Invalid expression for construction of member",
+                compiler_errors::TYPE_ERROR,
+                s.get_line_number()
+            );
+        }
+
+        // now, utilize "mov [rbx + <offset>], <rax name>"
+        const symbol *member = to_construct_type->get_member(member_name);
+        if (member)
+        {
+            construct_ss << "\t" << 
+                "mov [rbx + " << member->get_offset() << "], " << 
+                register_usage::get_register_name(RAX, member->get_data_type()) << std::endl;
+        }
+        else
+        {
+            throw CompilerException(
+                "Unknown struct member '" + member_name + "'",
+                compiler_errors::SYMBOL_NOT_FOUND_ERROR,
+                s.get_line_number()
+            );
+        }
+
+        // todo: what to do with p.second?
     }
     
+    // todo: handle 'default'
+
     // todo: finish codegen
 
     return construct_ss.str();

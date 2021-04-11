@@ -26,7 +26,7 @@ class struct_info {
     size_t struct_width;
 public:
     std::string get_struct_name() const;   // get the struct's name
-    symbol *get_member(const std::string& name);    // get the member with a given name
+    symbol *get_member(const std::string& name) const;    // get the member with a given name
     size_t get_width() const;   // get the struct's width (0 if unknown)
     bool is_width_known() const;    // whether the width of the struct is known
 

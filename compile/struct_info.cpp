@@ -19,7 +19,7 @@ std::string struct_info::get_struct_name() const
 	return this->struct_name;
 }
 
-symbol *struct_info::get_member(const std::string& name)
+symbol *struct_info::get_member(const std::string& name) const
 {
 	/*
 	

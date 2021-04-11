@@ -79,7 +79,7 @@ std::unique_ptr<Construction> Parser::parse_construction_body(const bool has_typ
                 is_const = is_const && value->is_const();
 
                 initializers.push_back(
-                    Construction::Constructor(std::move(member), std::move(value))
+                    Construction::Constructor{member, value}
                 );
 
                 // we are now on the last lexeme of the expression; the next should be a comma
