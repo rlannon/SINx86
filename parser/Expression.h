@@ -367,9 +367,11 @@ public:
 		this->_has_default = true;
 	}
 
-	inline Construction() { }
+	inline Construction()
+		: Expression(CONSTRUCTION_EXP) { }
 	inline Construction(std::vector<Constructor>&& initializers)
-		: _initializers( std::move(initializers) ) { }
+		: Expression(CONSTRUCTION_EXP)
+		, _initializers( std::move(initializers) ) { }
 	
 	virtual ~Construction() = default;
 private:

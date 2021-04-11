@@ -61,6 +61,8 @@ std::unique_ptr<Construction> Parser::parse_construction_body(const bool has_typ
 
         std::vector<Construction::Constructor> initializers;
         bool has_default = false;
+        bool is_const = true;   // assume it can be deduced at compile-time (all expressions must be for this to remain true)
+
         while (this->peek().type != KEYWORD_LEX && this->peek().value != "}")
         {
             // Expression parsing begins on the first token of the expression
@@ -72,7 +74,10 @@ std::unique_ptr<Construction> Parser::parse_construction_body(const bool has_typ
             {
                 this->next();   // skip colon; skip ahead to first character of initialization
                 this->next();
+                
                 auto value = this->parse_expression();
+                is_const = is_const && value->is_const();
+
                 initializers.push_back(
                     Construction::Constructor(std::move(member), std::move(value))
                 );
@@ -126,6 +131,9 @@ std::unique_ptr<Construction> Parser::parse_construction_body(const bool has_typ
         
         if (has_default)
             ctor->set_default();
+        
+        if (is_const)
+            ctor->set_const();
         
         return ctor;
     }

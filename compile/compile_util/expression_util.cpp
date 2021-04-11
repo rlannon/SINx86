@@ -438,6 +438,40 @@ DataType expression_util::get_expression_data_type(
             );
             break;
         }
+        case CONSTRUCTION_EXP:
+        {
+            /*
+
+            The construction expression may have an explicit type; otherwise, 
+            use the datatype we passed in
+            
+            Regardless, a construction expression will always yield a structure 
+            (it cannot be used with primitives)
+
+            */
+
+            type_information.set_primary(STRUCT);
+            
+            auto &ctor = static_cast<const Construction&>(to_eval);
+            if (ctor.has_explicit_type())
+            {
+                type_information.set_struct_name(ctor.get_explicit_type());
+            }
+            else if (type_hint)
+            {
+                type_information = *type_hint;
+            }
+            else
+            {
+                throw CompilerException(
+                    "Cannot deduce constructed type",
+                    compiler_errors::CONSTRUCTION_TYPE_DEDUCTION_FAILURE,
+                    line
+                );
+            }
+
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
             break;

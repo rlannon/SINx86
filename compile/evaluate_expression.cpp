@@ -377,6 +377,16 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
             break;
         }
+        case CONSTRUCTION_EXP:
+        {
+            /*
+
+            Generate code for a construction
+
+            */
+
+            break;
+        }
         default:
             throw CompilerException("Invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
     }

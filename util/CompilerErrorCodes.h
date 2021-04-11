@@ -105,6 +105,10 @@ namespace compiler_errors {
     const unsigned int SIGNATURE_MISMATCH = 250;
     const unsigned int LIST_TYPE_MISMATCH = 253;
 
+    const unsigned int DEDUCATION_FAILURE = 290;
+    const unsigned int TEMPLATE_TYPE_DEDUCTION_FAILURE = 291;
+    const unsigned int CONSTRUCTION_TYPE_DEDUCTION_FAILURE = 292;
+
     // Internal errors, etc.
     const unsigned int INVALID_EXPRESSION_TYPE_ERROR = 300;
     const unsigned int TUPLE_MEMBER_SELECTION_ERROR = 301;
