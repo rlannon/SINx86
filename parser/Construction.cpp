@@ -60,6 +60,7 @@ std::unique_ptr<Construction> Parser::parse_construction_body(const bool has_typ
         */
 
         std::vector<Construction::Constructor> initializers;
+        bool has_default = false;
         while (this->peek().type != KEYWORD_LEX && this->peek().value != "}")
         {
             // Expression parsing begins on the first token of the expression
@@ -96,11 +97,35 @@ std::unique_ptr<Construction> Parser::parse_construction_body(const bool has_typ
             }
         }
 
+        // we may have ended in 'default'
+        if (this->peek().value == "default")
+        {
+            this->next();
+            has_default = true;
+            
+            // we are allowed to have a comma after the last expression
+            if (this->peek().value == ",")
+            {
+                this->next();
+            }
+
+            // we must end the expression here
+            if (this->peek().value != "}")
+            {
+                throw ParserException(
+                    "Expected closing curly brace after 'default",
+                    compiler_errors::MISSING_GROUPING_SYMBOL_ERROR,
+                    this->current_token().line_number
+                );
+            }
+        }
+
         auto ctor = std::make_unique<Construction>(std::move(initializers));
         if (has_type)
-        {
             ctor->set_explicit_type(explicit_type);
-        }
+        
+        if (has_default)
+            ctor->set_default();
         
         return ctor;
     }

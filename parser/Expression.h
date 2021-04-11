@@ -355,10 +355,16 @@ public:
 
 	inline bool has_explicit_type() const noexcept { return _has_explicit_type; }
 	inline const std::string& get_explicit_type() const noexcept { return _explicit_type; }
+	inline bool has_default() const noexcept { return _has_default; }
+	
 	inline void set_explicit_type(const std::string& type_name)
 	{
 		this->_explicit_type = type_name;
 		_has_explicit_type = true;
+	}
+	inline void set_default()
+	{
+		this->_has_default = true;
 	}
 
 	inline Construction() { }
@@ -370,4 +376,5 @@ private:
 	std::vector<Constructor> _initializers;
 	std::string _explicit_type;
 	bool _has_explicit_type;
+	bool _has_default;
 };

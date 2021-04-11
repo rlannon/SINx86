@@ -459,6 +459,20 @@ std::stringstream compiler::compile_statement(const Statement &s, function_symbo
             this->current_scope_level = old_scope_level;
             break;
         }
+        case CONSTRUCTION_STATEMENT:
+        {
+            /*
+            
+            Construction statement generation
+            The address of the struct being constructed will be taken in order to increase efficiency.
+
+            Members are guaranteed to be initialized in the order they appear in the program, meaning
+            expressions in constructions can reference other expressions within the overall construction.
+
+            */
+
+            break;
+        }
         default:
             throw CompilerException("This statement type is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s.get_line_number());
             break;
