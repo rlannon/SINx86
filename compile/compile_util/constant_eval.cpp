@@ -136,29 +136,38 @@ std::string compile_time_evaluator::evaluate_expression(const Expression &to_eva
 
 	std::string evaluated_expression = "";
 
-	if (to_evaluate.get_expression_type() == LITERAL) {
-		auto &exp = static_cast<const Literal&>(to_evaluate);
-		evaluated_expression = compile_time_evaluator::evaluate_literal(exp);
-	}
-	else if (to_evaluate.get_expression_type() == IDENTIFIER) {
-		auto &lvalue = static_cast<const Identifier&>(to_evaluate);
-		evaluated_expression = this->evaluate_lvalue(lvalue, scope_name, scope_level, line);
-	}
-	else if (to_evaluate.get_expression_type() == UNARY) {
-		auto &unary = static_cast<const Unary&>(to_evaluate);
-		evaluated_expression = this->evaluate_unary(unary, scope_name, scope_level, line);
-	}
-	else if (to_evaluate.get_expression_type() == LIST) {
-		// for lists, just evaluate each element individually and concatenate
-		auto &l = static_cast<const ListExpression&>(to_evaluate);
-		for (auto elem: l.get_list()) {
-			evaluated_expression += this->evaluate_expression(*elem, scope_name, scope_level, line) + ",";
+	switch (to_evaluate.get_expression_type())
+	{
+		case LITERAL:
+		{
+			auto &exp = static_cast<const Literal&>(to_evaluate);
+			evaluated_expression = compile_time_evaluator::evaluate_literal(exp);
 		}
-	}
-	// todo: more expression types
-	else {
-		// throw an exception as the expression was invalid
-		throw CompilerException("Could not evaluate compile-time constant; invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
+		case IDENTIFIER:
+		{
+			auto &lvalue = static_cast<const Identifier&>(to_evaluate);
+			evaluated_expression = this->evaluate_lvalue(lvalue, scope_name, scope_level, line);
+		}
+		case UNARY:
+		{
+			auto &unary = static_cast<const Unary&>(to_evaluate);
+			evaluated_expression = this->evaluate_unary(unary, scope_name, scope_level, line);
+		}
+		case LIST:
+		{
+			// for lists, just evaluate each element individually and concatenate
+			auto &l = static_cast<const ListExpression&>(to_evaluate);
+			for (auto elem: l.get_list()) {
+				evaluated_expression += this->evaluate_expression(*elem, scope_name, scope_level, line) + ",";
+			}
+		}
+		case CONSTRUCTION_EXP:
+		{
+			// todo: compile-time ctors
+		}
+		// todo: more expression types
+		default:
+			throw CompilerException("Could not evaluate compile-time constant; invalid expression type", compiler_errors::INVALID_EXPRESSION_TYPE_ERROR, line);
 	}
 	
 	return evaluated_expression;
