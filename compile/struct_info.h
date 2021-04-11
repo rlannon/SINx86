@@ -34,6 +34,11 @@ public:
     std::vector<symbol> get_members_to_free();
     std::vector<symbol> &get_members_to_free(std::vector<symbol> &current);
 
+    inline size_t members_size() const noexcept
+    {
+        return members.num_members();
+    }
+
     struct_info(const std::string& struct_name, const std::vector<std::shared_ptr<symbol>>& members, const unsigned int line);
     struct_info(const std::string& struct_name);
     struct_info(const struct_info &s);

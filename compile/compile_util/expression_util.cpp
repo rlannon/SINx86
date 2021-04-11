@@ -54,6 +54,10 @@ std::stringstream expression_util::get_exp_address(
         auto &b = static_cast<const Binary&>(exp);
         addr_ss << expression_util::evaluate_member_selection(b, symbols, structs, r, line, false).str();
     }
+    else
+    {
+        throw UndefinedException(line);
+    }
 
     return addr_ss;
 }

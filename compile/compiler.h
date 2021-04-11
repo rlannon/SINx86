@@ -120,6 +120,9 @@ class compiler {
 
 	// todo: handle assignments for char, float, etc.
 
+	// construction
+	std::string construct_object(const ConstructionStatement& s);
+
 	// declarations
 	std::stringstream handle_declaration(const Declaration& decl_stmt);
 

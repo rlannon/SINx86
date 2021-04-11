@@ -11,6 +11,7 @@ Copyright 2019 Riley Lannon
 
 #include "compiler.h"
 #include "compile_util/function_util.h"
+#include "compile_util/construct.h"
 
 void compiler::_warn(const std::string& message, const unsigned int code, const unsigned int line) {
     /*
@@ -63,7 +64,7 @@ symbol *compiler::lookup(const std::string& name, unsigned int line) {
 	}
 	catch (SymbolNotFoundException &e) {
         e.set_line(line);
-        throw e;
+        throw;
 	}
 
 	return to_return;
@@ -404,6 +405,7 @@ std::stringstream compiler::compile_statement(const Statement &s, function_symbo
         {
             // writes asm directly to file
             // warns user that this is very unsafe
+            // todo: error in strict mode
             this->_warn(
                 "Use of inline assembly is highly discouraged as it cannot be analyzed by the compiler nor utilize certain runtime safety measures (unless done manually)",
                 compiler_errors::UNSAFE_OPERATION,
@@ -471,11 +473,12 @@ std::stringstream compiler::compile_statement(const Statement &s, function_symbo
 
             */
 
+            auto &ctor = static_cast<const ConstructionStatement&>(s);
+            compile_ss << this->construct_object(ctor);
             break;
         }
         default:
             throw CompilerException("This statement type is not currently supported", compiler_errors::ILLEGAL_OPERATION_ERROR, s.get_line_number());
-            break;
     };
 
     // todo: any clean-up should go here

@@ -55,6 +55,8 @@ namespace compiler_errors {
 
     const unsigned int SELF_CONTAINMENT_ERROR = 71; // a struct may not contain an instance of itself
 
+    const unsigned int CONSTRUCTION_NUMBER_INIT_ERROR = 80; // constructions must initialize each member exactly once
+    
     // Location / definition errors
     const unsigned int SYMBOL_NOT_FOUND_ERROR = 100;
     const unsigned int UNDEFINED_ERROR = 101;

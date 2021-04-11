@@ -367,6 +367,16 @@ public:
 		this->_has_default = true;
 	}
 
+	inline const std::vector<Constructor>& get_initializers() const noexcept
+	{
+		return this->_initializers;
+	}
+
+	inline size_t num_initializations() const noexcept
+	{
+		return _initializers.size();
+	}
+
 	inline Construction()
 		: Expression(CONSTRUCTION_EXP) { }
 	inline Construction(std::vector<Constructor>&& initializers)

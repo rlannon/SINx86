@@ -55,6 +55,11 @@ public:
 	std::vector<symbol*> get_all_symbols();
     std::vector<symbol*> get_local_structs(std::string scope_name, unsigned int scope_level, bool is_function);
 
+	inline size_t num_members() const noexcept
+	{
+		return symbols.size();
+	}
+
 	// constructor, destructor
 	symbol_table();
 	~symbol_table();
