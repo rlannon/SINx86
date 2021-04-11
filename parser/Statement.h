@@ -300,7 +300,9 @@ public:
 		return *_construction;
 	}
 
-	ConstructionStatement(std::unique_ptr<Expression>&& to_construct, std::unique_ptr<Expression>&& construction);
+	ConstructionStatement(std::unique_ptr<Expression>&& to_construct, std::unique_ptr<Construction>&& construction)
+		: _to_construct(std::move(to_construct))
+		, _construction(std::move(construction)) { }
 	~ConstructionStatement() = default;
 };
 

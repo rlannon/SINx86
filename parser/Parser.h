@@ -104,8 +104,8 @@ class Parser
 	std::unique_ptr<Statement> parse_function_call(lexeme current_lex);
 
 	// Parsing the body of a construction requires special consideration
-	std::unique_ptr<Statement> parse_construction(const lexeme& current_lex);
-	std::unique_ptr<Construction> parse_construction_body(const lexeme& current_lex);
+	std::unique_ptr<Statement> parse_construction();
+	std::unique_ptr<Construction> parse_construction_body();
 
 	// Parsing expressions
 
@@ -117,13 +117,20 @@ class Parser
 		const size_t prec=0,
 		std::string grouping_symbol = "(",
 		bool not_binary = false,
-		const bool omit_equals = false
+		const bool omit_equals = false,
+		const bool allow_brace = false
 	);
+	inline std::unique_ptr<Expression> parse_expression(const bool allow_brace)
+	{
+		return parse_expression(0, "(", false, false, allow_brace);
+	}
+	
 	std::unique_ptr<Expression> maybe_binary(
 		std::unique_ptr<Expression> left,
 		const size_t my_prec,
 		const std::string& grouping_symbol = "(",
-		const bool omit_equals = false
+		const bool omit_equals = false,
+		const bool allow_brace = false
 	);	// check to see if we need to fashion a binary expression
 	static exp_operator get_compound_arithmetic_op(const exp_operator op);
 public:

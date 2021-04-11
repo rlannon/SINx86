@@ -332,12 +332,12 @@ public:
 			return *_value;
 		}
 
-		Constructor(std::unique_ptr<Expression>&& member, std::unique_ptr<Expression>&& value);
+		inline Constructor(std::unique_ptr<Expression>&& member, std::unique_ptr<Expression>&& value)
+			: _member(std::move(member))
+			, _value(std::move(value)) { }
 		inline Constructor(const Constructor& other)
 			: _member(other._member->clone())
-			, _value(other._member->clone())
-		{
-		}
+			, _value(other._member->clone()) { }
 		~Constructor() = default;
 	};
 
@@ -356,7 +356,8 @@ public:
 	inline Construction() { }
 	inline Construction(std::vector<Constructor>&& initializers)
 		: _initializers( std::move(initializers) ) { }
-	~Construction();
+	
+	virtual ~Construction() = default;
 private:
 	std::vector<Constructor> _initializers;
 };

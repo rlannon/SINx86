@@ -124,6 +124,9 @@ namespace compiler_errors {
     const unsigned int INVALID_TYPE_SYNTAX = 407;
     const unsigned int UNEXPECTED_KEYWORD_ERROR = 410;
     const unsigned int UNEXPECTED_SYMBOL_QUALITY = 412;
+
+    const unsigned int EXPECTED_INITIALIZATION = 421;
+    const unsigned int EXPECTED_LIST_INITIALIZATION = 422;
     
     const unsigned int INCOMPLETE_TYPE_ERROR = 430; // type information given was incomplete and could not be parsed
 

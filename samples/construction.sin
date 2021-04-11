@@ -1,0 +1,22 @@
+// construction.sin
+// tests 'construct' keyword
+
+def struct point3d
+{
+    alloc int x;
+    alloc int y;
+    alloc int z;
+}
+
+def int main(alloc dynamic array<string> args)
+{
+    alloc point3d point;
+    construct point
+    {
+        x: 10,
+        y: 20,
+        z: 30,
+    };
+
+    return 0;
+}

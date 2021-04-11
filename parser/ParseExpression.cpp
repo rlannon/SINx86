@@ -14,7 +14,8 @@ std::unique_ptr<Expression> Parser::parse_expression(
 	const size_t prec,
 	std::string grouping_symbol,
 	bool not_binary,
-	const bool omit_equals
+	const bool omit_equals,
+	const bool allow_brace
 ) {
 	/*
 
@@ -190,7 +191,7 @@ std::unique_ptr<Expression> Parser::parse_expression(
 		}
 		else if (current_lex.value == "construct")
 		{
-			left = this->parse_construction_body(current_lex);
+			left = this->parse_construction_body();
 		}
 		else {
 			try {
@@ -308,7 +309,7 @@ std::unique_ptr<Expression> Parser::parse_expression(
 			return left;
 		}
 		
-		return this->maybe_binary(std::move(left), prec, grouping_symbol, omit_equals);
+		return this->maybe_binary(std::move(left), prec, grouping_symbol, omit_equals, allow_brace);
 	}
 }
 
@@ -316,7 +317,8 @@ std::unique_ptr<Expression> Parser::maybe_binary(
 	std::unique_ptr<Expression> left,
 	const size_t my_prec,
 	const std::string& grouping_symbol,
-	const bool omit_equals
+	const bool omit_equals,
+	const bool allow_brace
 ) {
 	/*
 
@@ -343,7 +345,8 @@ std::unique_ptr<Expression> Parser::maybe_binary(
 		next.value == ";" || 
 		next.value == get_closing_grouping_symbol(grouping_symbol) || 
 		next.value == "," || 
-		(next.value == "=" && omit_equals)	// todo: should we also break on next.value == ":" && omit_equals ? Because : can be init syntax
+		(next.value == "=" && omit_equals) ||
+		(next.value == ":" && omit_equals)
 	) {
 		return left;
 	}
@@ -392,7 +395,7 @@ std::unique_ptr<Expression> Parser::maybe_binary(
             else if (op == PROC_OPERATOR) {
                 // Procedures require a little special care as well
                 this->back();
-                auto arg_exp = this->parse_expression(0, grouping_symbol, true, omit_equals);
+                auto arg_exp = this->parse_expression(0, grouping_symbol, true, omit_equals, allow_brace);
                 
                 if (arg_exp->get_expression_type() == LIST) {
                     to_check = std::make_unique<Procedure>(
@@ -421,11 +424,12 @@ std::unique_ptr<Expression> Parser::maybe_binary(
 				// Parse out the next expression using maybe_binary (in case there is another operator of a higher precedence following this one)
 				auto right = this->maybe_binary(
 					this->parse_expression(
-						his_prec, grouping_symbol, false, omit_equals
+						his_prec, grouping_symbol, false, omit_equals, allow_brace
 					),
 					his_prec,
 					grouping_symbol,
-					omit_equals
+					omit_equals,
+					allow_brace
 				);	// make sure his_prec gets passed into parse_expression so that it is actually passed into maybe_binary
 
 				// Create the binary expression
@@ -463,11 +467,15 @@ std::unique_ptr<Expression> Parser::maybe_binary(
 			}
 			
 			// call maybe_binary again at the old prec level in case this expression is part of a higher precedence one
-			return this->maybe_binary(std::move(to_check), my_prec, grouping_symbol, omit_equals);
+			return this->maybe_binary(std::move(to_check), my_prec, grouping_symbol, omit_equals, allow_brace);
 		}
 		else {
 			return left;
 		}
+	}
+	else if (next.value == "{" && allow_brace)
+	{
+		return left;
 	}
 	else {
 		throw InvalidTokenException(next.value, next.line_number);
