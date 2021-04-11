@@ -365,7 +365,7 @@ std::string assign_utilities::do_assign(
                 assign_instruction = "mov [r15], rax";
             }
 
-            proc_name = "sinl_string_copy";
+            proc_name = "sinl_string_copy"; // todo: why is this being done with a struct? this should just be a memcpy
         }
         // todo: other copy types
 
