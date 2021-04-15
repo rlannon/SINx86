@@ -349,7 +349,7 @@ std::string assign_utilities::do_assign(
             proc_name = "sinl_array_copy";
         }
         // strings are different; they are automatically resized and so string_copy will return an address
-        else {
+        else if (lhs_type.get_primary() == STRING) {
             if (dest.in_register) {
                 assign_instruction = "mov " + dest.address_for_lea + ", rax";
             }
@@ -365,9 +365,23 @@ std::string assign_utilities::do_assign(
                 assign_instruction = "mov [r15], rax";
             }
 
-            proc_name = "sinl_string_copy"; // todo: why is this being done with a struct? this should just be a memcpy
+            proc_name = "sinl_string_copy";
         }
-        // todo: other copy types
+        else if (lhs_type.get_primary() == STRUCT)
+        {
+            /*
+
+            structs require copies as well, but we need to know its width
+            we can, however, just use a simple memcpy
+
+            */
+
+            // todo: struct copies
+        }
+        else
+        {
+            // todo: other copy types
+        }
 
         // call the function
         handle_assign << function_util::call_sincall_subroutine(proc_name);
