@@ -14,7 +14,7 @@ Implementation of construction-related functions.
 
 #include <sstream>
 
-std::string construct_util::default_construct(const symbol& sym, symbol_table& symbols, register_usage& context, const unsigned int line)
+std::string construct_util::default_construct(const symbol& sym, symbol_table& symbols, struct_table& structs, register_usage& context, const unsigned int line)
 {
     /*
 
@@ -48,7 +48,8 @@ std::string construct_util::default_construct(const symbol& sym, symbol_table& s
         p,
         context,
         line,
-        do_free
+        do_free,
+        structs
     );
 
     return construct_ss.str();

@@ -153,7 +153,8 @@ std::stringstream compiler::assign(
             dest,
             this->reg_stack.peek(),
             line,
-            do_free
+            do_free,
+            structs
         );
 
         // now, call sre_add_ref on the lhs if we have a managed pointer OR if we have a reference and alloc-init

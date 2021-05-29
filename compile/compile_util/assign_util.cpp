@@ -298,7 +298,8 @@ std::string assign_utilities::do_assign(
     const destination_information& dest,
     register_usage& context, 
     const unsigned int line,
-    bool& do_free
+    bool& do_free,
+    const struct_table& structs
 ) {
     /*
 
@@ -372,15 +373,17 @@ std::string assign_utilities::do_assign(
             /*
 
             structs require copies as well, but we need to know its width
-            we can, however, just use a simple memcpy
+            because of this, we can essentially perform a memcpy
 
             */
 
-            // todo: struct copies
+            const auto& struct_data = structs.find(lhs_type.get_struct_name(), line);
+            handle_assign << "\t" << "mov ecx, " << struct_data.get_width() << std::endl;
+            proc_name = "sinl_struct_copy";
         }
         else
         {
-            // todo: other copy types
+            throw TypeException(line);
         }
 
         // call the function

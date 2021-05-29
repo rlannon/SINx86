@@ -68,6 +68,7 @@ namespace assign_utilities {
         const destination_information& dest, 
         register_usage& context, 
         const unsigned int line,
-        bool& do_free
+        bool& do_free,
+        const struct_table& structs
     );
 };
