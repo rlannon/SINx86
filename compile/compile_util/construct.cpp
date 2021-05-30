@@ -14,7 +14,11 @@ Implementation of construction-related functions.
 
 #include <sstream>
 
-std::string construct_util::default_construct(const symbol& sym, symbol_table& symbols, struct_table& structs, register_usage& context, const unsigned int line)
+std::string construct_util::default_construct(  const symbol& sym, 
+                                                symbol_table& symbols, 
+                                                struct_table& structs, 
+                                                register_usage& context, 
+                                                const unsigned int line ) 
 {
     /*
 
@@ -39,18 +43,33 @@ std::string construct_util::default_construct(const symbol& sym, symbol_table& s
 
     reg to_use = sym.get_data_type().get_primary() == FLOAT ? XMM0 : RAX;
     auto reg_name = register_usage::get_register_name(to_use);
-    construct_ss << "\t" << "mov " << reg_name << ", 0" << std::endl;
-    bool do_free = false;   // required for the utility
 
-    construct_ss << assign_utilities::do_assign(
-        to_use,
-        sym.get_data_type(),
-        p,
-        context,
-        line,
-        do_free,
-        structs
-    );
+    if (assign_utilities::requires_copy(sym.get_data_type()))
+    {
+        // types requiring copies will use the zero_assign function
+        construct_ss << assign_utilities::zero_assign(
+            to_use,
+            sym.get_data_type(),
+            p,
+            context,
+            structs,
+            line
+        );
+    }
+    else
+    {
+        construct_ss << "\t" << "mov " << reg_name << ", 0" << std::endl;
+        bool do_free = false;   // required for the utility
+        construct_ss << assign_utilities::do_assign(
+            to_use,
+            sym.get_data_type(),
+            p,
+            context,
+            line,
+            do_free,
+            structs
+        );
+    }
 
     return construct_ss.str();
 }

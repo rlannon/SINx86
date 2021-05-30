@@ -71,4 +71,13 @@ namespace assign_utilities {
         bool& do_free,
         const struct_table& structs
     );
+
+    std::string zero_assign(
+        const reg src_reg,
+        const DataType& lhs_type,
+        const destination_information& dest,
+        register_usage& context,
+        const struct_table& structs,
+        const unsigned int line
+    );
 };
