@@ -318,6 +318,7 @@ std::pair<std::string, size_t> compiler::evaluate_binary(const Binary &to_evalua
 			}
 			else {
 				// restore the lhs
+				eval_ss << "; todo: get safe register" << std::endl;
 				eval_ss << "\t" << "mov rbx, rax" << std::endl;
 				
 				// if we had something to free, it's the next thing on the stack

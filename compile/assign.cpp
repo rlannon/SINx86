@@ -141,21 +141,25 @@ std::stringstream compiler::assign(
         }
 
         // evaluate the rvalue, then the destination (lvalue)
-        auto handle_p = this->evaluate_expression(rvalue, line, &lhs_type); // ensure we give evaluate_expression the lhs type as a hint
+        auto handle_p = this->evaluate_expression(rvalue, line, &lhs_type, &dest); // ensure we give evaluate_expression the lhs type as a hint
         handle_assign << handle_p.first;
         bool do_free = handle_p.second > 0;
-        
-        handle_assign << dest.fetch_instructions;
 
-        handle_assign << assign_utilities::do_assign(
-            src_reg,
-            lhs_type,
-            dest,
-            this->reg_stack.peek(),
-            line,
-            do_free,
-            structs
-        );
+        // if we have alloc_init and a construction expression, don't call do_assign
+        if ( !(is_alloc_init && rvalue.get_expression_type() == CONSTRUCTION_EXP))
+        {   
+            handle_assign << dest.fetch_instructions;
+
+            handle_assign << assign_utilities::do_assign(
+                src_reg,
+                lhs_type,
+                dest,
+                this->reg_stack.peek(),
+                line,
+                do_free,
+                structs
+            );
+        }
 
         // now, call sre_add_ref on the lhs if we have a managed pointer OR if we have a reference and alloc-init
         if (

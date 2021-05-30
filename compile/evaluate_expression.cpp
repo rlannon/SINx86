@@ -16,7 +16,8 @@ Generates code for evaluating an expression. This data will be loaded into regis
 std::pair<std::string, size_t> compiler::evaluate_expression(
     const Expression &to_evaluate,
     unsigned int line,
-    const DataType *type_hint
+    const DataType *type_hint,
+    const assign_utilities::destination_information *dest
 ) {
     /*
 
@@ -385,6 +386,28 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
 
             */
 
+            evaluation_ss << "; assigning object to address: " << dest->address_for_lea << std::endl;
+            evaluation_ss << dest->fetch_instructions;
+
+            auto &ction = static_cast<const Construction&>(to_evaluate);
+            struct_info *struct_type;
+            if (type_hint)
+            {
+                struct_type = &this->structs.find(type_hint->get_struct_name(), line);
+            }
+            else
+            {
+                throw UndefinedException(line);
+            }
+            this->reg_stack.peek().set(RBX);
+            evaluation_ss << this->generate_construction(
+                ction,
+                struct_type,
+                line,
+                RBX
+            );
+            this->reg_stack.peek().clear(RBX);
+            
             break;
         }
         default:

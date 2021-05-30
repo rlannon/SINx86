@@ -109,9 +109,9 @@ std::string compiler::construct_object(const ConstructionStatement& s)
     Now, perform the code generation
 
     */
-    
+
     std::stringstream construct_ss;
-    
+
     // the first thing we need to go is get the address of the
     // object in question; that will allow us to get all addresses
     if (to_construct_symbol)
@@ -124,19 +124,46 @@ std::string compiler::construct_object(const ConstructionStatement& s)
             s.get_line_number()
         ).str();
     }
+    else if (to_construct_type)
+    {
+        // Create space on the stack for this anonymous object
+        construct_ss << "\t" << "sub rsp, " << to_construct_type->get_width() << std::endl;
+        construct_ss << "\t" << "mov rbx, rsp" << std::endl;
+        this->max_offset += to_construct_type->get_width();
+    }
     else
     {
-        // todo: create a new, anonymous symbol (on the stack) and get its address in RBX
-        
-        // note: this could be improved via RVO (passing in destination address)
+        throw UndefinedException(s.get_line_number());
     }
+    
+    construct_ss << generate_construction(  s.get_construction(),
+                                            to_construct_type,
+                                            s.get_line_number(),
+                                            RBX );
+    
+    return construct_ss.str();
+}
+
+std::string compiler::generate_construction(const Construction &construction_expression,
+                                            const struct_info *to_construct_type,
+                                            const unsigned int line,
+                                            reg r)
+{
+    /*
+
+    generate_construction
+    Generates code for a construction statement, storing the results in the data pointed to by _r_.
+
+    */
+
+    std::stringstream construct_ss;
 
     // iterate over defined elements
-    for (const auto& elem: s.get_construction().get_initializers())
+    for (const auto& elem: construction_expression.get_initializers())
     {
         // todo: evaluate and initialize each member in order
 
-        auto p = evaluate_expression(elem.get_value(), s.get_line_number());
+        auto p = evaluate_expression(elem.get_value(), line);
         construct_ss << p.first;
 
         // the result is in RBX
@@ -152,7 +179,7 @@ std::string compiler::construct_object(const ConstructionStatement& s)
             throw CompilerException(
                 "Invalid expression for construction of member",
                 compiler_errors::TYPE_ERROR,
-                s.get_line_number()
+                line
             );
         }
 
@@ -169,7 +196,7 @@ std::string compiler::construct_object(const ConstructionStatement& s)
             throw CompilerException(
                 "Unknown struct member '" + member_name + "'",
                 compiler_errors::SYMBOL_NOT_FOUND_ERROR,
-                s.get_line_number()
+                line
             );
         }
 

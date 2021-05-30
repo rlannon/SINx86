@@ -122,6 +122,10 @@ class compiler {
 
 	// construction
 	std::string construct_object(const ConstructionStatement& s);
+	std::string generate_construction(	const Construction &construction_expression,
+										const struct_info *to_construct_type,
+										const unsigned int line,
+										reg r	);
 
 	// declarations
 	std::stringstream handle_declaration(const Declaration& decl_stmt);
@@ -147,7 +151,8 @@ class compiler {
 	std::pair<std::string, size_t> evaluate_expression(
 		const Expression &to_evaluate,
 		unsigned int line,
-		const DataType *type_hint = nullptr
+		const DataType *type_hint = nullptr,
+		const assign_utilities::destination_information *dest = nullptr
 	);
 	std::stringstream evaluate_literal(const Literal &to_evaluate, unsigned int line, const DataType *type_hint = nullptr);
 	std::stringstream evaluate_identifier(const Identifier &to_evaluate, unsigned int line);
