@@ -200,9 +200,12 @@ std::pair<std::string, size_t> compiler::evaluate_binary(const Binary &to_evalua
 	size_t count = 0;
 
 	// act based on the operator
-	if (to_evaluate.get_operator() == DOT) {
+	if (to_evaluate.get_operator() == DOT)
+	{
 		eval_ss << expression_util::evaluate_member_selection(to_evaluate, this->symbols, this->structs, RAX, line).str();
-	} else {
+	} 
+	else
+	{
 		// get the left and right branches
 
 		DataType left_type = expression_util::get_expression_data_type(
@@ -318,7 +321,6 @@ std::pair<std::string, size_t> compiler::evaluate_binary(const Binary &to_evalua
 			}
 			else {
 				// restore the lhs
-				eval_ss << "; todo: get safe register" << std::endl;
 				eval_ss << "\t" << "mov rbx, rax" << std::endl;
 				
 				// if we had something to free, it's the next thing on the stack

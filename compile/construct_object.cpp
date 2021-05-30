@@ -139,7 +139,7 @@ std::string compiler::construct_object(const ConstructionStatement& s)
     construct_ss << generate_construction(  s.get_construction(),
                                             to_construct_type,
                                             s.get_line_number(),
-                                            RBX );
+                                            R15 );
     
     return construct_ss.str();
 }
@@ -157,6 +157,11 @@ std::string compiler::generate_construction(const Construction &construction_exp
     */
 
     std::stringstream construct_ss;
+    std::string dest_reg = register_usage::get_register_name(r);
+    if (r != RBX)
+    {
+        construct_ss << "\t" << "mov " << dest_reg << ", rbx" << std::endl;
+    }
 
     // iterate over defined elements
     for (const auto& elem: construction_expression.get_initializers())
@@ -183,12 +188,12 @@ std::string compiler::generate_construction(const Construction &construction_exp
             );
         }
 
-        // now, utilize "mov [rbx + <offset>], <rax name>"
+        // now, utilize "mov [<dest> + <offset>], <rax>"
         const symbol *member = to_construct_type->get_member(member_name);
         if (member)
         {
             construct_ss << "\t" << 
-                "mov [rbx + " << member->get_offset() << "], " << 
+                "mov [" << dest_reg << " + " << member->get_offset() << "], " << 
                 register_usage::get_register_name(RAX, member->get_data_type()) << std::endl;
         }
         else

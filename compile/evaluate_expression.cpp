@@ -404,7 +404,7 @@ std::pair<std::string, size_t> compiler::evaluate_expression(
                 ction,
                 struct_type,
                 line,
-                RBX
+                R15
             );
             this->reg_stack.peek().clear(RBX);
             
