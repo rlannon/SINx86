@@ -298,7 +298,8 @@ std::string assign_utilities::do_assign(
     const destination_information& dest,
     register_usage& context, 
     const unsigned int line,
-    bool& do_free
+    bool& do_free,
+    const struct_table& structs
 ) {
     /*
 
@@ -316,7 +317,7 @@ std::string assign_utilities::do_assign(
         handle_assign << push_used_registers(context, true).str();
 
         // set up our registers/arguments
-        handle_assign << "\t" << "mov rsi, rax" << std::endl;
+        handle_assign << "\t" << "mov rsi, " << src << std::endl;
         handle_assign << "\t" << "mov rdi, rbx" << std::endl;
 
         // copy byte for byte
@@ -326,11 +327,12 @@ std::string assign_utilities::do_assign(
 
         handle_assign << pop_used_registers(context, true).str();
     }
-    else if (assign_utilities::requires_copy(lhs_type)) {
+    else if (assign_utilities::requires_copy(lhs_type))
+    {
         handle_assign << push_used_registers(context, true).str();
 
         // set up our registers/arguments
-        handle_assign << "\t" << "mov rsi, rax" << std::endl;
+        handle_assign << "\t" << "mov rsi, " << src << std::endl;
         std::string destination_register_operand = "rbx";
         if (
             (dest.instruction_used == assign_utilities::MoveInstruction::LEA) &&
@@ -340,41 +342,66 @@ std::string assign_utilities::do_assign(
         }
         handle_assign << "\t" << "mov rdi, " << destination_register_operand << std::endl;
         
-        std::string proc_name;
-        std::string assign_instruction; // if we are storing the reference in a register, we will need a different assign instruction
+        if (lhs_type.get_primary() == STRUCT)
+        {
+            /*
 
-        // if we have an array, we don't need to worry about the address changing (they are never resized by array_copy)
-        if (lhs_type.get_primary() == ARRAY) {
-            handle_assign << "\t" << "mov ecx, " << lhs_type.get_subtype().get_width() << std::endl;
-            proc_name = "sinl_array_copy";
+            structs require copies as well, but we need to know its width
+            because of this, we can essentially perform a memcpy
+
+            */
+
+            const auto& struct_data = structs.find(lhs_type.get_struct_name(), line);
+            handle_assign << "\t" << "mov ecx, " << struct_data.get_width() << std::endl;
+            handle_assign << "\t" << "rep movsb" << std::endl;
         }
-        // strings are different; they are automatically resized and so string_copy will return an address
-        else {
-            if (dest.in_register) {
-                assign_instruction = "mov " + dest.address_for_lea + ", rax";
+        else
+        {
+            std::string proc_name;
+            std::string assign_instruction; // if we are storing the reference in a register, we will need a different assign instruction
+
+            // if we have an array, we don't need to worry about the address changing (they are never resized by array_copy)
+            // todo: arrays of structures
+            if (lhs_type.get_primary() == ARRAY) {
+                handle_assign << "\t" << "mov ecx, " << lhs_type.get_subtype().get_width() << std::endl;
+                proc_name = "sinl_array_copy";
             }
-            else {
-                // todo: verify this works generally
-                // if we don't have an address (e.g., it's a binary), then we can use mov with the dest
-                if (dest.can_use_lea) {
-                    handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+            // strings are different; they are automatically resized and so string_copy will return an address
+            else if (lhs_type.get_primary() == STRING)
+            {
+                if (dest.in_register) {
+                    assign_instruction = "mov " + dest.address_for_lea + ", " + src;
                 }
                 else {
-                    handle_assign << "\t" << "mov r15, " << dest.address_for_lea << std::endl;  // still uses 'address_for_lea'
+                    // todo: verify this works generally
+                    // if we don't have an address (e.g., it's a binary), then we can use mov with the dest
+                    
+                    // we want to use r15, so if src is r15, move it to rax
+                    if (src_reg == R15) handle_assign << "mov rax, r15" << std::endl;
+
+                    if (dest.can_use_lea) {
+                        handle_assign << "\t" << "lea r15, " << dest.address_for_lea << std::endl;
+                    }
+                    else {
+                        handle_assign << "\t" << "mov r15, " << dest.address_for_lea << std::endl;  // still uses 'address_for_lea'
+                    }
+                    assign_instruction = "mov [r15], " + src;
                 }
-                assign_instruction = "mov [r15], rax";
+
+                proc_name = "sinl_string_copy";
+            }
+            else
+            {
+                throw TypeException(line);
             }
 
-            proc_name = "sinl_string_copy"; // todo: why is this being done with a struct? this should just be a memcpy
-        }
-        // todo: other copy types
+            // call the function
+            handle_assign << function_util::call_sincall_subroutine(proc_name);
 
-        // call the function
-        handle_assign << function_util::call_sincall_subroutine(proc_name);
-
-        // now, if we had a string, we need to move the returned address into where the string is located
-        if (lhs_type.get_primary() == STRING) {
-            handle_assign << "\t" << assign_instruction << std::endl;
+            // now, if we had a string, we need to move the returned address into where the string is located
+            if (lhs_type.get_primary() == STRING) {
+                handle_assign << "\t" << assign_instruction << std::endl;
+            }
         }
 
         handle_assign << pop_used_registers(context, true).str();
@@ -397,4 +424,71 @@ std::string assign_utilities::do_assign(
     }
     
     return handle_assign.str();
+}
+
+std::string assign_utilities::zero_assign(const reg src_reg,
+                        const DataType& lhs_type,
+                        const destination_information& dest,
+                        register_usage& context,
+                        const struct_table& structs,
+                        const unsigned int line)
+{
+    /*
+
+    zero_assign
+    Zero-initializes a type requiring a copy
+
+    This could be initialized to use stosb/stosw/stosd/stosq, depending on type width.
+
+    */
+
+    std::stringstream zero_assign_ss;
+    zero_assign_ss << push_used_registers(context).str();
+
+    std::string src = register_usage::get_register_name(src_reg, lhs_type);
+
+    std::string destination_register_operand = "rbx";
+    if (
+        (dest.instruction_used == assign_utilities::MoveInstruction::LEA) &&
+        (lhs_type.get_primary() == STRING || lhs_type.get_qualities().is_dynamic())
+    ) {
+        destination_register_operand = "[rbx]";
+    }
+    zero_assign_ss << "\t" << "mov rdi, " << destination_register_operand << std::endl;
+    
+    if (lhs_type.get_primary() == STRUCT)
+    {
+        auto& struct_information = structs.find(lhs_type.get_struct_name(), line);
+        zero_assign_ss << "\t" << "mov ecx, " << struct_information.get_width() << std::endl;
+    }
+    else if (lhs_type.get_primary() == ARRAY )
+    {
+        // get the width of the array (in first dword of destination)
+        zero_assign_ss << "\t" << "mov eax, [rdi]" << std::endl;
+        zero_assign_ss << "\t" << "add rdi, " << sin_widths::ARRAY_LENGTH_SIZE << std::endl;
+
+        // todo: arrays of structures?
+        zero_assign_ss << "\t" << "xor edx, edx" << std::endl;
+        zero_assign_ss << "\t" << "mul eax, " << lhs_type.get_subtype().get_width() << std::endl;
+        zero_assign_ss << "\t" << "mov ecx, eax" << std::endl;
+    }
+    else if (lhs_type.get_primary() == STRING)
+    {
+        zero_assign_ss << "\t" << "mov ecx, [rdi]" << std::endl;
+        zero_assign_ss << "\t" << "add rdi, " << sin_widths::STRING_LENGTH_SIZE << std::endl;
+    }
+    else if (lhs_type.get_primary() == TUPLE)
+    {
+        zero_assign_ss << "\t" << "mov ecx, " << lhs_type.get_width() << std::endl;
+    }
+    else
+    {
+        throw TypeException(line);
+    }
+
+    zero_assign_ss << "\t" << "xor eax, eax" << std::endl;
+    zero_assign_ss << "\t" << "rep stosb" << std::endl;
+
+    zero_assign_ss << pop_used_registers(context).str();
+    return zero_assign_ss.str();
 }

@@ -30,4 +30,7 @@ namespace sin_widths {
     const size_t FLOAT_WIDTH = 4;
     const size_t DOUBLE_WIDTH = 8;
     const size_t HALF_WIDTH = 2;
+
+    const size_t STRING_LENGTH_SIZE = 4;
+    const size_t ARRAY_LENGTH_SIZE = 4;
 };

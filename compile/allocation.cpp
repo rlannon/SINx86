@@ -154,6 +154,7 @@ std::stringstream compiler::allocate(const Allocation& alloc_stmt) {
 				allocation_ss << construct_util::default_construct(
 					allocated,
 					this->symbols,
+					this->structs,
 					this->reg_stack.peek(),
 					alloc_stmt.get_line_number()
 				);
@@ -347,6 +348,7 @@ std::stringstream compiler::allocate(const Allocation& alloc_stmt) {
 				allocation_ss << construct_util::default_construct(
 					allocated,
 					this->symbols,
+					this->structs,
 					this->reg_stack.peek(),
 					alloc_stmt.get_line_number()
 				);

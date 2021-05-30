@@ -38,7 +38,7 @@ bool struct_table::contains(std::string name) {
 	return (it != this->structs.end());
 }
 
-struct_info& struct_table::find(const std::string& name, unsigned int line) {
+struct_info& struct_table::find(const std::string& name, const unsigned int line) {
 	/*
 	
 	find
@@ -46,7 +46,20 @@ struct_info& struct_table::find(const std::string& name, unsigned int line) {
 	
 	*/
 
-	std::unordered_map<std::string, struct_info>::iterator it = this->structs.find(name);
+	auto it = this->structs.find(name);
+
+	if (it == this->structs.end()) {
+		throw UndefinedException(line);
+	}
+	
+	return it->second;
+}
+
+const struct_info& struct_table::find(const std::string& name, const unsigned int line) const
+{
+	// Overload for const struct_table
+	
+	auto it = this->structs.find(name);
 
 	if (it == this->structs.end()) {
 		throw UndefinedException(line);
