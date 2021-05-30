@@ -155,10 +155,10 @@ std::string compiler::generate_construction(const Construction &construction_exp
     Generates code for a construction statement, storing the results in the data pointed to by _r_.
 
     */
-
+    
     std::stringstream construct_ss;
     std::string dest_reg = register_usage::get_register_name(r);
-    if (r != RBX)
+    if (r != RBX)   // todo: we really need a better solution
     {
         construct_ss << "\t" << "mov " << dest_reg << ", rbx" << std::endl;
     }
